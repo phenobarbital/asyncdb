@@ -1,6 +1,6 @@
-# README #
+# AsyncDB #
 
-This README would normally document whatever steps are necessary to get your application up and running.
+AsyncDB is a new library for database (and other datasource connections like RESTful services) connections used by T-ROC Navigator App.
 
 ### What is this repository for? ###
 
