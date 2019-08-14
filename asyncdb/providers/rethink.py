@@ -23,6 +23,8 @@ from asyncdb.utils import *
 from threading import Thread
 from rethinkdb import RethinkDB
 
+from asyncdb.providers import exception_handler
+
 from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 
 from rethinkdb.errors import ReqlError, RqlRuntimeError, RqlDriverError, ReqlRuntimeError, ReqlNonExistenceError
@@ -58,6 +60,10 @@ class rethink(BaseProvider):
         self._engine = rt
         # set asyncio type
         self._engine.set_loop_type("asyncio")
+        asyncio.set_event_loop(self._loop)
+        self._loop.set_exception_handler(exception_handler)
+        self._loop.set_debug(self._DEBUG)
+
 
     """
     Async Context magic Methods
@@ -148,7 +154,8 @@ class rethink(BaseProvider):
 
 
     async def sync(self, table):
-        """ sync
+        """
+        sync
             ensures that writes on a given table are written to permanent storage
         """
         if self._connection:

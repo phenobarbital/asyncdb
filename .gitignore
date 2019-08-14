@@ -121,6 +121,7 @@ files/
 
 # dumps de bd
 *.backup
+*.dump
 
 # Translations
 *.mo
