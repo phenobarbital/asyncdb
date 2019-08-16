@@ -214,6 +214,9 @@ class BaseProvider(ABC):
     def get_loop(self):
         return self._loop
 
+    def get_event_loop(self):
+        return self._loop
+    
     """
     Get Columns
     """
