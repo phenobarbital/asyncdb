@@ -27,7 +27,7 @@ from asyncdb.providers import exception_handler
 
 from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 
-from rethinkdb.errors import ReqlError, RqlRuntimeError, RqlDriverError, ReqlRuntimeError, ReqlNonExistenceError
+from rethinkdb.errors import ReqlError, RqlRuntimeError, RqlDriverError, ReqlRuntimeError, ReqlNonExistenceError, ReqlDriverError, ReqlOpFailedError
 rt = RethinkDB()
 
 logger = logging.getLogger(__name__)
@@ -79,6 +79,10 @@ class rethink(BaseProvider):
             if self._params['db']:
                 await self.db(self._params['db'])
         except ReqlRuntimeError as err:
+            error = "No database connection could be established: {}".format(str(err))
+            raise ProviderError(message = error, code = 503)
+            return False
+        except ReqlDriverError as err:
             error = "No database connection could be established: {}".format(str(err))
             raise ProviderError(message = error, code = 503)
             return False
@@ -174,8 +178,10 @@ class rethink(BaseProvider):
                 if field:
                     try:
                         return await self._engine.table(table).index_create(field, multi = multi).run(self._connection)
-                    except (RqlDriverError, RqlRuntimeError):
-                        return False
+                    except ReqlOpFailedError as err:
+                        raise ProviderError(message = err, code = 503)
+                    #except (RqlDriverError, RqlRuntimeError):
+                    #    return False
                 elif type(fields) == list and len(fields) > 0:
                     idx = []
                     for field in fields:
@@ -231,7 +237,7 @@ class rethink(BaseProvider):
             return []
 
     async def list_databases(self):
-        return await self.listdb(self)
+        return await self.listdb()
 
     async def list_tables(self):
         if self._connection:
@@ -310,7 +316,7 @@ class rethink(BaseProvider):
         if not table:
             raise EmptyStatement("Rethink: Table name is an empty string")
         if self._connection:
-            startTime = datetime.now()
+            #startTime = datetime.now()
             try:
                 data = await self._engine.table(table).filter(filter).nth(id).run(self._connection)
                 if data:
@@ -429,6 +435,9 @@ class rethink(BaseProvider):
         if self._connection:
             try:
                 inserted = await self._engine.table(table).insert(data).run(self._connection)
+                if inserted['errors'] > 0:
+                    raise ProviderError("INSERT Runtime Error: {}".format(inserted['first_error']))
+                    return False
                 return inserted
             except RqlRuntimeError as err:
                 error = "INSERT Runtime Error: {}".format(str(err))
@@ -437,8 +446,8 @@ class rethink(BaseProvider):
             except ReqlNonExistenceError:
                 raise ProviderError("Object {} doesnt exists".format(table))
                 return False
-            finally:
-                return await self._engine.table(table).sync().run(self._connection)
+            #finally:
+            #    return await self._engine.table(table).sync().run(self._connection)
         else:
             return False
 
@@ -452,6 +461,9 @@ class rethink(BaseProvider):
         if self._connection:
             try:
                 self._result = await self._engine.table(table).get(id).replace(data).run(self._connection)
+                if self._result['errors'] > 0:
+                    raise ProviderError("REPLACE Runtime Error: {}".format(self._result['first_error']))
+                    return False
                 return self._result
             except RqlRuntimeError as err:
                 error = "REPLACE Runtime Error: {}".format(str(err))
@@ -582,6 +594,7 @@ class rethink(BaseProvider):
             raise EmptyStatement("Rethink: Table name is an empty string")
 
         if self._connection:
+            error = None
             if min:
                 m = min
             else:
@@ -591,11 +604,15 @@ class rethink(BaseProvider):
             else:
                 mx = self._engine.maxval
             try:
-                cursor = self._engine.table(table).order_by(index=idx).between(m, mx, index=idx).run(self._connection)
+                if idx != '':
+                    cursor = self._engine.table(table).order_by(index=idx).between(m, mx, index=idx).run(self._connection)
+                else:
+                    cursor = self._engine.table(table).between(m, mx).run(self._connection)
                 data = []
                 while (await cursor.fetch_next()):
                     item = await cursor.next()
                     data.append(item)
+                print('data', data)
                 if data:
                     self._result = data
                 else:
@@ -604,8 +621,8 @@ class rethink(BaseProvider):
                 error = str(err)
                 raise ProviderError(err)
                 return False
-            finally:
-                return [self._result, error]
+            #finally:
+            #    return [self._result, error]
 
     """
     Infraestructure for Functions, creating filter conditions
