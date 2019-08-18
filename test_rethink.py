@@ -45,8 +45,7 @@ async def connect(c):
         print ('- query:', await conn.query(table = 'tv_shows'))
         print ('- replace:', await conn.replace('tv_shows', id=1, data={'id': 1, 'title': 'New Show 1'}))
         print ('- match:', await conn.match(table = 'tv_shows', field='title', regexp='New'))
-        # TODO: Hacer funcionar between
-        #print ('- between:', await conn.between(table = 'tv_shows'))
+        print ('- between:', await conn.between(table = 'tv_shows', min=2, max=4))
 
         await conn.sync('test')
 

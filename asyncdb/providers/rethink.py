@@ -604,15 +604,14 @@ class rethink(BaseProvider):
             else:
                 mx = self._engine.maxval
             try:
-                if idx != '':
-                    cursor = self._engine.table(table).order_by(index=idx).between(m, mx, index=idx).run(self._connection)
+                if idx:
+                    cursor = await self._engine.table(table).order_by(index=idx).between(m, mx, index=idx).run(self._connection)
                 else:
-                    cursor = self._engine.table(table).between(m, mx).run(self._connection)
+                    cursor = await self._engine.table(table).between(m, mx).run(self._connection)
                 data = []
                 while (await cursor.fetch_next()):
                     item = await cursor.next()
                     data.append(item)
-                print('data', data)
                 if data:
                     self._result = data
                 else:
@@ -621,8 +620,10 @@ class rethink(BaseProvider):
                 error = str(err)
                 raise ProviderError(err)
                 return False
-            #finally:
-            #    return [self._result, error]
+            finally:
+                return [self._result, error]
+        else:
+            return None
 
     """
     Infraestructure for Functions, creating filter conditions
