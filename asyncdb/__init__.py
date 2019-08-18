@@ -73,7 +73,6 @@ class AsyncDB(object):
         logger.debug("Provider Path: %s" % classpath)
         try:
             obj = module_exists(self._name, classpath)
-            print(obj)
             if obj:
                 self._provider = obj(**kwargs)
             else:

@@ -29,6 +29,9 @@ class pgPool(BasePool):
         if loop:
             loop.set_exception_handler(exception_handler)
 
+    def get_event_loop(self):
+        return self._loop
+
     async def init_connection(self, connection):
         # Setup jsonb encoder/decoder
         def _encoder(value):
@@ -110,7 +113,7 @@ class pgPool(BasePool):
             print("Interface Warning: {}".format(str(err)))
             return False
         if self._connection:
-            db = pg(pool = self)
+            db = pg(pool=self)
             db.set_connection(self._connection)
         return db
 

@@ -49,7 +49,7 @@ class sa(BaseProvider, Thread):
         self._loop = None
         # create a new loop before thread
         self._loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._loop)
+        #asyncio.set_event_loop(self._loop)
         self._loop.set_exception_handler(exception_handler)
         self._loop.set_debug(self._DEBUG)
         # calling parent Thread
