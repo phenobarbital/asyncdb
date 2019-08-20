@@ -27,7 +27,7 @@ from asyncdb.providers import exception_handler
 
 from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 
-from rethinkdb.errors import ReqlError, RqlRuntimeError, RqlDriverError, ReqlRuntimeError, ReqlNonExistenceError, ReqlDriverError, ReqlOpFailedError
+from rethinkdb.errors import ReqlError, RqlRuntimeError, RqlDriverError, ReqlRuntimeError, ReqlNonExistenceError, ReqlDriverError, ReqlOpFailedError,ReqlResourceLimitError,ReqlOpIndeterminateError
 rt = RethinkDB()
 
 logger = logging.getLogger(__name__)
@@ -299,9 +299,18 @@ class rethink(BaseProvider):
                     self._result = data
                 else:
                     raise NoDataFound(message = "Empty Result", code = 404)
+            except ReqlNonExistenceError as err:
+                error = "Query Runtime Error: {}".format(str(err))
+                raise ReqlNonExistenceError(error)
             except RqlRuntimeError as err:
                 error = "Query Runtime Error: {}".format(str(err))
-                raise ProviderError(error)
+                raise  NoDataFound(error)
+            except ReqlResourceLimitError as error:
+                error = "Query Runtime Error: {}".format(str(err))
+                raise  ReqlResourceLimitError(error)
+            except ReqlOpIndeterminateError as error:
+                error = "Query Runtime Error: {}".format(str(err))
+                raise  ReqlOpIndeterminateError(error)
             finally:
                 #self._generated = datetime.now() - startTime
                 return [self._result, error]
