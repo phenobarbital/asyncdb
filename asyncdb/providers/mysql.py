@@ -175,19 +175,22 @@ class mysql(BaseProvider):
         self._loop.set_exception_handler(exception_handler)
         self._loop.set_debug(self._DEBUG)
 
-    async def close(self, timeout = 5):
+    async def close(self):
         """
         Closing a Connection
         """
         try:
             if self._connection:
-                if not self._connection.is_closed():
-                    logger.debug("Closing Connection, id: {}".format(self._connection.get_server_pid()))
+                if not self._connection._closed:
+                    logger.debug("Closing Connection")
                     try:
                         if self._pool:
+                            #pass
                             await self._pool.pool().release(self._connection)
                         else:
-                            await self._connection.close(timeout = timeout)
+                            #pass
+                            #
+                            self._connection.close()
                     except Exception as err:
                         await self._connection.terminate()
                         self._connection = None
@@ -226,7 +229,7 @@ class mysql(BaseProvider):
     """
     async def release(self):
         try:
-            if not await self._connection.is_closed():
+            if not await self._connection._closed:
                 if self._pool:
                     release = asyncio.create_task(self._pool.release(self._connection, timeout = 10))
                     asyncio.ensure_future(release, loop=self._loop)
@@ -588,16 +591,18 @@ class mysql(BaseProvider):
             # remove fields and where_cond
             sql = sentence.format_map(SafeDict(fields = '*', where_cond = ''))
             if not self.connected:
-                self.connection()
+                self._loop.run_until_complete(self.connection())
             prepared, error = self._loop.run_until_complete(self.prepare(sql))
             if not error:
                 self._columns = self.get_columns()
             else:
+                print('Error in Get Query', error)
                 return False
         except (ProviderError, StatementError) as err:
+            print('ProviderError or StatementError Exception in Get Query', e)
             return False
         except Exception as e:
-            print(e)
+            print('Exception in Get Query', e)
             return False
         return sql
 
