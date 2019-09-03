@@ -251,7 +251,7 @@ class mysql(BaseProvider):
         if self._pool:
             return self._pool._connected
         elif self._connection:
-            return not self._connection.is_closed()
+            return not self._connection.closed
 
     """
     Preparing a sentence
