@@ -251,7 +251,7 @@ class mysql(BaseProvider):
         if self._pool:
             return self._pool._connected
         elif self._connection:
-            return not self._connection.closed
+            return not self._connection._closed
 
     """
     Preparing a sentence
@@ -283,6 +283,7 @@ class mysql(BaseProvider):
             return [self._prepared, error]
 
     async def query(self, sentence=''):
+        logger.debug("Start Query function")
         error = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
