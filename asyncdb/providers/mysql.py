@@ -291,7 +291,7 @@ class mysql(BaseProvider):
         finally:
             return [self._prepared, error]
 
-    async def query(self, sentence=''):
+    async def query(self, sentence='', size=100000000000):
         #logger.debug("Start Query function")
         error = None
         if not sentence:
@@ -301,7 +301,7 @@ class mysql(BaseProvider):
         try:
             startTime = datetime.now()
             await self._cursor.execute(sentence)
-            self._result = await self._cursor.fetchall()
+            self._result = await self.fetchmany(size)
             if not self._result:
                 raise NoDataFound("Mysql: No Data was Found")
                 return [None, "Mysql: No Data was Found"]
@@ -327,7 +327,7 @@ class mysql(BaseProvider):
             #stmt = await self._connection.prepare(sentence)
             #self._columns = [a.name for a in stmt.get_attributes()]
             await self._cursor.execute(sentence)
-            self._result = await self._cursor.fetchone()
+            self._result = await self.fetchone()
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
             raise ProviderError(error)
@@ -412,24 +412,32 @@ class mysql(BaseProvider):
 
     async def forward(self, number):
         try:
-            return await self._cursor.forward(number)
+            return await self._cursor.scroll(number)
         except Exception as err:
             error = "Error forward Cursor: {}".format(str(err))
             raise Exception(error)
 
-    async def fetch(self, number = 1):
+    async def fetchall(self):
         try:
-            return await self._cursor.fetch(number)
+            return await self._cursor.fetchall()
         except Exception as err:
-            error = "Error Fetch Cursor: {}".format(str(err))
+            error = "Error FetchAll Cursor: {}".format(str(err))
             raise Exception(error)
 
-    async def fetchrow(self):
+    async def fetchmany(self, size=None):
         try:
-            return await self._cursor.fetchrow()
+            return await self._cursor.fetchmany(size)
         except Exception as err:
-            error = "Error Fetchrow Cursor: {}".format(str(err))
+            error = "Error FetchMany Cursor: {}".format(str(err))
             raise Exception(error)
+
+    async def fetchone(self):
+        try:
+            return await self._cursor.fetchone()
+        except Exception as err:
+            error = "Error FetchOne Cursor: {}".format(str(err))
+            raise Exception(error)
+
 
     """
     Cursor Iterator Context
