@@ -220,7 +220,6 @@ class mysql(BaseProvider):
                                             password=self._params['password'],
                                             db=self._params['database'], 
                                             loop=self._loop)
-            print('-- self._pool', self._pool, dir(self._pool))
             self._connection = await self._pool.acquire()
             self._cursor = await self._connection.cursor()
             if self._connection:
@@ -258,7 +257,7 @@ class mysql(BaseProvider):
     @property
     def connected(self):
         if self._pool:
-            return self._pool._connected
+            return not self._pool._closed
         elif self._connection:
             return not self._connection.closed
 
