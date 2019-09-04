@@ -85,14 +85,16 @@ class mysqlPool(BasePool):
             conn = self._connection
         else:
             conn = connection
-        #try:
-            release = asyncio.create_task(self._pool.release(conn))
+        try:
+            await self._pool.release(conn)
+            #print('r', r)
+            #release = asyncio.create_task(r)
             # await self._pool.release(connection, timeout = timeout)
-            release = asyncio.ensure_future(release, loop=self._loop)
-            await asyncio.wait_for(release, timeout=timeout, loop=self._loop)
+            #release = asyncio.ensure_future(release, loop=self._loop)
+            #await asyncio.wait_for(release, timeout=timeout, loop=self._loop)
             # await release
-       # except Exception as err:
-            #raise ProviderError("Release Error: {}".format(str(err)))
+        except Exception as err:
+            raise ProviderError("Release Error: {}".format(str(err)))
 
     """
     close
@@ -124,11 +126,12 @@ class mysqlPool(BasePool):
     """
 
     async def close(self):
-        try:
-            if self._connection:
-                await self._pool.release(self._connection, timeout=2)
-        except Exception as err:
-            raise ProviderError("Release Error: {}".format(str(err)))
+        #try:
+        #    if self._connection:
+        #        print('self._pool', self._pool)
+        #        await self._pool.release(self._connection)
+        #except Exception as err:
+        #    raise ProviderError("Release Error: {}".format(str(err)))
         try:
             await self._pool.close()
         except Exception as err:
@@ -175,6 +178,7 @@ class mysql(BaseProvider):
         self._loop.set_exception_handler(exception_handler)
         self._loop.set_debug(self._DEBUG)
 
+
     async def close(self):
         """
         Closing a Connection
@@ -211,18 +215,24 @@ class mysql(BaseProvider):
         self._connection = None
         self._connected = False
         try:
-            if self._pool:
-                self._connection = await self._pool.pool().acquire()
-            else:
-                self._connection = await aiomysql.create_pool(host=self._params['host'], user=self._params['user'],password=self._params['password'],db=self._params['database'], loop=self._loop)
+            if not self._pool:
+                print('## NO HAY self._pool')
+                self._pool = await aiomysql.create_pool(
+                                            host=self._params['host'], 
+                                            user=self._params['user'],
+                                            password=self._params['password'],
+                                            db=self._params['database'], 
+                                            loop=self._loop)
+            self._connection = await self._pool.pool().acquire()
             if self._connection:
+                print('## NO HAY self._connection')
                 self._connected = True
                 self._initialized_on = time.time()
         except Exception as err:
             self._connection = None
             raise ProviderError("connection Error, Terminated: {}".format(str(err)))
         finally:
-            return self
+            return self._connection
 
     """
     Release a Connection
@@ -389,14 +399,15 @@ class mysql(BaseProvider):
     Cursor Context
     """
     async def cursor(self, sentence):
+        logger.debug("Cursor")
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
         if not self._connection:
             await self.connection()
-        self._transaction = self._connection.transaction()
-        await self._transaction.start()
-        self._cursor = await self._connection.cursor(sentence)
-        return self
+        #self._transaction = self._connection.transaction()
+        #await self._transaction.start()
+        self._cursor = await self._connection.acquire().cursor()
+        return self._cursor
 
     async def forward(self, number):
         try:
