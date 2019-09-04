@@ -324,9 +324,10 @@ class mysql(BaseProvider):
         if not self._connection:
             await self.connection()
         try:
-            stmt = await self._connection.prepare(sentence)
-            self._columns = [a.name for a in stmt.get_attributes()]
-            self._result = await stmt.fetchrow()
+            #stmt = await self._connection.prepare(sentence)
+            #self._columns = [a.name for a in stmt.get_attributes()]
+            await self._cursor.execute(sentence)
+            self._result = await self._cursor.fetchone()
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
             raise ProviderError(error)
@@ -350,7 +351,7 @@ class mysql(BaseProvider):
         if not self._connection:
             await self.connection()
         try:
-            result = await self._connection.execute(sentence)
+            result = await self._cursor.execute(sentence)
             return [result, None]
             return [None, error]
         except Exception as err:
