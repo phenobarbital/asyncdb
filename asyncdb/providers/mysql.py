@@ -361,17 +361,19 @@ class mysql(BaseProvider):
         finally:
             return [result, error]
 
-    async def executemany(self, sentence='', *args):
+    async def executemany(self, sentence='', args = []):
         error = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
         if not self._connection:
             await self.connection()
         try:
-            async with self._connection.transaction():
-                await self._connection.executemany(sentence, args)
+            await self.begin()
+            await self._cursor.executemany(sentence, args)
+            await self.commit()
             return False
         except Exception as err:
+            await self.rollback()
             error = "Error on Execute: {}".format(str(err))
             self._loop.call_exception_handler(err)
             raise Exception(error)
@@ -381,20 +383,23 @@ class mysql(BaseProvider):
     """
     Transaction Context
     """
-    async def transaction(self):
+    async def begin(self):
         if not self._connection:
             await self.connection()
-        self._transaction = self._connection.transaction()
-        await self._transaction.start()
+        await self._connection.begin()
         return self
 
     async def commit(self):
-        if self._transaction:
-            await self._transaction.commit()
+        if not self._connection:
+            await self.connection()
+        await self._connection.commit()
+        return self
 
     async def rollback(self):
-        if self._transaction:
-            await self._transaction.rollback()
+        if not self._connection:
+            await self.connection()
+        await self._connection.rollback()
+        return self
 
     """
     Cursor Context
