@@ -185,18 +185,15 @@ class mysql(BaseProvider):
         """
         try:
             if self._connection:
-                if not self._connection._closed:
+                if not self._connection.closed:
                     logger.debug("Closing Connection")
                     try:
                         if self._pool:
-                            #pass
-                            await self._pool.pool().release(self._connection)
+                            self._pool.close()
                         else:
-                            #pass
-                            #
                             self._connection.close()
                     except Exception as err:
-                        await self._connection.terminate()
+                        self._pool.terminate()
                         self._connection = None
                         raise ProviderError("Connection Error, Terminated: {}".format(str(err)))
         except Exception as err:
@@ -214,22 +211,24 @@ class mysql(BaseProvider):
         """
         self._connection = None
         self._connected = False
+        self._cursor = None
         try:
             if not self._pool:
-                print('## NO HAY self._pool')
                 self._pool = await aiomysql.create_pool(
                                             host=self._params['host'], 
                                             user=self._params['user'],
                                             password=self._params['password'],
                                             db=self._params['database'], 
                                             loop=self._loop)
-            self._connection = await self._pool.pool().acquire()
+            print('-- self._pool', self._pool, dir(self._pool))
+            self._connection = await self._pool.acquire()
+            self._cursor = await self._connection.cursor()
             if self._connection:
-                print('## NO HAY self._connection')
                 self._connected = True
                 self._initialized_on = time.time()
         except Exception as err:
             self._connection = None
+            self._cursor = None
             raise ProviderError("connection Error, Terminated: {}".format(str(err)))
         finally:
             return self._connection
@@ -239,7 +238,7 @@ class mysql(BaseProvider):
     """
     async def release(self):
         try:
-            if not await self._connection._closed:
+            if not await self._connection.closed:
                 if self._pool:
                     release = asyncio.create_task(self._pool.release(self._connection, timeout = 10))
                     asyncio.ensure_future(release, loop=self._loop)
@@ -261,7 +260,7 @@ class mysql(BaseProvider):
         if self._pool:
             return self._pool._connected
         elif self._connection:
-            return not self._connection._closed
+            return not self._connection.closed
 
     """
     Preparing a sentence
@@ -293,7 +292,7 @@ class mysql(BaseProvider):
             return [self._prepared, error]
 
     async def query(self, sentence=''):
-        logger.debug("Start Query function")
+        #logger.debug("Start Query function")
         error = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
@@ -301,7 +300,8 @@ class mysql(BaseProvider):
             await self.connection()
         try:
             startTime = datetime.now()
-            self._result = await asyncio.shield(self._connection.fetch(sentence))
+            await self._cursor.execute(sentence)
+            self._result = await self._cursor.fetchall()
             if not self._result:
                 raise NoDataFound("Mysql: No Data was Found")
                 return [None, "Mysql: No Data was Found"]
@@ -398,15 +398,10 @@ class mysql(BaseProvider):
     """
     Cursor Context
     """
-    async def cursor(self, sentence):
+    async def cursor(self, sentence = ''):
         logger.debug("Cursor")
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
         if not self._connection:
             await self.connection()
-        #self._transaction = self._connection.transaction()
-        #await self._transaction.start()
-        self._cursor = await self._connection.acquire().cursor()
         return self._cursor
 
     async def forward(self, number):
