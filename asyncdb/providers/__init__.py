@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 #sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 from asyncdb.providers.exceptions import *
 
-#logging.basicConfig(level=logging.CRITICAL)
+logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
 _providers = {}
@@ -216,7 +216,7 @@ class BaseProvider(ABC):
 
     def get_event_loop(self):
         return self._loop
-    
+
     """
     Get Columns
     """
