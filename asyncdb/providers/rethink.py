@@ -494,7 +494,8 @@ class rethink(BaseProvider):
         if self._connection:
             if id:
                 try:
-                    self._result = await self._engine.table(table).get(id).update(data).run(self._connection)
+                    self._result = await self._engine.table(table).get(id).update(data, return_changes=False).run(self._connection)
+                    #self._result = await self._engine.table(table).get(id).update(data).run(self._connection)
                     return self._result
                 except RqlRuntimeError as err:
                     error = "UPDATE Runtime Error: {}".format(str(err))
@@ -505,7 +506,8 @@ class rethink(BaseProvider):
                     return False
             elif type(filter) == dict and len(filter) > 0:
                 try:
-                    self._result = await self._engine.table(table).filter(filter).update(data).run(self._connection)
+                    self._result = await self._engine.table(table).filter(filter).update(data, return_changes=False).run(self._connection)
+                    #self._result = await self._engine.table(table).filter(filter).update(data).run(self._connection)
                     return self._result
                 except RqlRuntimeError as err:
                     error = "REPLACE Runtime Error: {}".format(str(err))
