@@ -15,8 +15,8 @@ params = {
     'db': 'test'
 }
 
-rt = rethink(params=params)
-#rt = AsyncDB('rethink', params=params)
+#rt = rethink(params=params)
+rt = AsyncDB('rethink', params=params)
 
 async def connect(c):
     async with await c.connection() as conn:
@@ -32,11 +32,11 @@ async def connect(c):
         print ('- list_databases:', await conn.list_databases())
         print ('- list_tables:', await conn.list_tables())
         print ('- insert:', await conn.insert('tv_shows', [
-                                                {'id': 1, 'title': 'Show 1'}, 
+                                                {'id': 1, 'title': 'Show 1'},
                                                 {'id': 2, 'title': 'Show 2'},
-                                                {'id': 3, 'title': 'Show 3'}, 
+                                                {'id': 3, 'title': 'Show 3'},
                                                 {'id': 4, 'title': 'Show 4'},
-                                                {'id': 5, 'title': 'Show 5'}, 
+                                                {'id': 5, 'title': 'Show 5'},
                                                 {'id': 6, 'title': 'Show 6'},
                                             ]))
         print ('- get:', await conn.get(table='tv_shows', id=2))
