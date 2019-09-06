@@ -184,8 +184,9 @@ class asyncORM(object):
         """
         setter
         """
-        #print("DEFINE ATTRIBUTE: name {}, value {} is system {}".format(name, value, hasattr(self, name)))
-        if name in self.__dict__:
+        #print("DEFINE ATTRIBUTE: name {}, value {} is system {}".format(name, value, hasattr(self, name)))\
+        if self.__dict__.get(name):
+        #if name in self.__dict__:
             self.__dict__[name] = value
         elif name in self._columns:
             if isinstance(value, list):
@@ -199,6 +200,7 @@ class asyncORM(object):
                     self._val[name] = "'{}'".format(value.replace("'", r"''"))
         else:
             raise KeyError("asyncORM Error: Invalid Column %s" % name)
+        object.__setattr__(self, name, value)
 
 
     def columns(self):
