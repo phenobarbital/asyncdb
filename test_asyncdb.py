@@ -23,6 +23,7 @@ loop = asyncio.get_event_loop()
 asyncio.set_event_loop(loop)
 
 from asyncdb import AsyncDB, AsyncPool
+from asyncdb.exceptions import ProviderError, NoDataFound, StatementError
 
 asyncpg_url = 'postgres://troc-pgdata:z!7ru$7aNuy=za@127.0.0.1:5432/navigator_dev'
 
@@ -72,7 +73,11 @@ async def connect(c):
         #TODO: repair error io.UnsupportedOperation: read
         #await c.copy_to_table(table = 'stores', schema = 'test', columns = [ 'store_id', 'store_name'], source = '/home/jesuslara/proyectos/navigator-next/stores.csv')
         # copy from asyncpg records
-        await c.copy_into_table(table = 'stores', schema = 'test', columns = [ 'store_id', 'store_name'], source = stores)
+        try:
+            await c.copy_into_table(table = 'stores', schema = 'test', columns = [ 'store_id', 'store_name'], source = stores)
+        except (StatementError, ProviderError) as err:
+            print(str(err))
+            return False
 
 
 async def prepared(p):

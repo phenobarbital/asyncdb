@@ -11,7 +11,7 @@ import json
 
 import asyncio
 import asyncpg
-from asyncpg.exceptions import TooManyConnectionsError, InternalClientError, ConnectionDoesNotExistError, InterfaceError, InterfaceWarning, PostgresError, PostgresSyntaxError, FatalPostgresError, UndefinedColumnError
+from asyncpg.exceptions import InvalidSQLStatementNameError, TooManyConnectionsError, InternalClientError, ConnectionDoesNotExistError, InterfaceError, InterfaceWarning, PostgresError, PostgresSyntaxError, FatalPostgresError, UndefinedTableError, UndefinedColumnError
 
 from asyncdb.providers import BasePool, BaseProvider, registerProvider, exception_handler
 
@@ -591,18 +591,21 @@ class pg(BaseProvider):
             await self.connection()
         try:
             result = await self._connection.copy_records_to_table(table_name=table, schema_name=schema, columns=columns, records=source)
-            print(result)
             return result
-        except (asyncpg.exceptions.UndefinedTableError):
-            error = "Error on Copy, Table doesnt exists: {}".format(str(table))
+        except (UndefinedTableError) as err:
+            error = "Error on Copy: {}, Table doesnt exists: {}".format(str(err), str(table))
             raise StatementError(error)
-        except (asyncpg.exceptions.InvalidSQLStatementNameError, asyncpg.exceptions.UndefinedTableError) as err:
+            return False
+        except (InvalidSQLStatementNameError, UndefinedColumnError) as err:
             error = "Error on Copy, Invalid Statement Error: {}".format(str(err))
             self._loop.call_exception_handler(err)
             raise StatementError(error)
         except (asyncpg.exceptions.UniqueViolationError) as err:
             error = "Error on Copy, Constraint Violated: {}".format(str(err))
             raise DataError(error)
+        except (asyncpg.exceptions.InterfaceError) as err:
+            error = "Error on Copy into Table Function: {}".format(str(err))
+            raise ProviderError(error)
         except Exception as err:
             error = "Error on Table Copy: {}".format(str(err))
             raise Exception(error)
