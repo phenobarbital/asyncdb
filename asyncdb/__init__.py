@@ -10,7 +10,7 @@ from asyncdb.providers import *
 from asyncdb.meta import asyncORM, asyncRecord
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
 logger.debug("Running AsyncDB version %s" % __version__)
