@@ -48,7 +48,6 @@ Please have a look at the Contribution Guide
 
 * Writing tests
 * Code review
-* Other guidelines
 
 ### Who do I talk to? ###
 
