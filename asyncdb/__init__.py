@@ -10,12 +10,6 @@ from asyncdb.providers import *
 from asyncdb.meta import asyncORM, asyncRecord
 
 
-logging.basicConfig(level=logging.CRITICAL)
-logger = logging.getLogger(__name__)
-
-logger.debug("Running AsyncDB version %s" % __version__)
-
-
 def module_exists(module_name, classpath):
     try:
         # try to using importlib
@@ -28,7 +22,7 @@ def module_exists(module_name, classpath):
             obj = __import__(classpath, fromlist=[module_name])
             return obj
         except ImportError:
-            logger.debug("No Provider {} Found".format(module_name))
+            #logger.debug("No Provider {} Found".format(module_name))
             raise NotSupported(message = "No Provider %s Found" % module_name, code = 404)
             return False
 
@@ -43,7 +37,7 @@ class AsyncPool(object):
     def __new__(self, provider = 'dummy', **kwargs):
         self._provider = None
         self._name = provider
-        logger.debug('Load Pool Provider: {}'.format(self._name))
+        #logger.debug('Load Pool Provider: {}'.format(self._name))
         classpath = 'asyncdb.providers.{provider}'.format(provider=self._name)
         poolName = '{}Pool'.format(self._name)
         try:
@@ -68,9 +62,9 @@ class AsyncDB(object):
     def __new__(self, provider = 'dummy', **kwargs):
         self._provider = None
         self._name = provider
-        logger.debug('Load Provider: {}'.format(self._name))
+        #logger.debug('Load Provider: {}'.format(self._name))
         classpath = 'asyncdb.providers.{provider}'.format(provider=self._name)
-        logger.debug("Provider Path: %s" % classpath)
+        #logger.debug("Provider Path: %s" % classpath)
         try:
             obj = module_exists(self._name, classpath)
             if obj:
