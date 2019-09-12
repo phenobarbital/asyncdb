@@ -1,23 +1,18 @@
 # -*- coding: utf-8 -*-
-import logging
 import importlib
 import asyncio
 import sys
 import os.path
 from abc import ABC, abstractmethod
-#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 from asyncdb.providers.exceptions import *
-
-logging.basicConfig(level=logging.CRITICAL)
-logger = logging.getLogger(__name__)
 
 _providers = {}
 
 async def shutdown(loop, signal=None):
     """Cleanup tasks tied to the service's shutdown."""
-    if signal:
-        logging.info(f"Received exit signal {signal.name}...")
-    logging.info("Closing connections")
+    # if signal:
+    #     logging.info(f"Received exit signal {signal.name}...")
+    # logging.info("Closing connections")
     asyncio.gather(*asyncio.Task.all_tasks()).cancel()
     loop.stop()
 
@@ -27,7 +22,7 @@ def exception_handler(loop, context):
         msg = context.get("exception", context["message"])
         print("Caught AsyncDB Exception: {}".format(str(msg)))
         # Canceling pending tasks and stopping the loop
-        logging.info("Shutting down...")
+        # logging.info("Shutting down...")
         asyncio.create_task(shutdown(loop))
 
 
@@ -72,7 +67,7 @@ class BasePool(ABC):
 
 
     def is_closed(self):
-        logger.debug("Connection closed: %s" % self._pool._closed)
+        #logger.debug("Connection closed: %s" % self._pool._closed)
         return self._pool._closed
 
     '''
@@ -230,7 +225,7 @@ class BaseProvider(ABC):
     async def test_connection(self):
         if self._test_query is None:
             raise NotImplementedError()
-        logger.debug("{}: Running Test".format(self._provider))
+        #logger.debug("{}: Running Test".format(self._provider))
         try:
             return await self.query(self._test_query)
         except Exception as err:
@@ -318,6 +313,6 @@ class BaseProvider(ABC):
 
 def registerProvider(provider):
     global _providers
-    logger.debug("Registering new Provider %s of type (%s), syntax: %s.", provider.name(), provider.type(), provider.dialect())
+    #logger.debug("Registering new Provider %s of type (%s), syntax: %s.", provider.name(), provider.type(), provider.dialect())
     _providers[provider.type()] = provider
     #TODO: try to load provider
