@@ -18,12 +18,12 @@ from asyncdb.exceptions import ProviderError, NoDataFound
 
 redis_url = 'redis://localhost:6379/3'
 
-#rd = AsyncPool('redis', dsn=redis_url, loop=loop)
+rd = AsyncPool('redis', dsn=redis_url, loop=loop)
 #rd = redisPool(dsn=redis_url, loop=loop)
-#loop.run_until_complete(rd.connect())
+loop.run_until_complete(rd.connect())
 
-rd = AsyncDB('redis', dsn=redis_url, loop=loop)
-loop.run_until_complete(rd.connection())
+# rd = AsyncDB('redis', dsn=redis_url, loop=loop)
+# loop.run_until_complete(rd.connection())
 
 async def test_redis(conn):
     await conn.execute('set', 'Test1', 'UltraTest')
@@ -48,11 +48,11 @@ try:
         value = loop.run_until_complete(conn.execute('get', 'my-key'))
         print('raw value:', value)
     # adquire a new connection (with pool)
-    #r = loop.run_until_complete(rd.acquire())
-    #loop.run_until_complete(r.execute('set', 'my-key', 'UltraKey'))
-    #value = loop.run_until_complete(r.execute('get', 'my-key'))
-    #print('new value:', value)
-    loop.run_until_complete(test_redis(rd))
+    r = loop.run_until_complete(rd.acquire())
+    loop.run_until_complete(r.execute('set', 'my-key', 'UltraKey'))
+    value = loop.run_until_complete(r.execute('get', 'my-key'))
+    print('new value:', value)
+    loop.run_until_complete(test_redis(r))
 finally:
     loop.run_until_complete(rd.close())
     loop.close()

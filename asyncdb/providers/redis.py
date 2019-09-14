@@ -91,8 +91,10 @@ class redisPool(BasePool):
             if self._pool.closed:
                 await self._pool.connect()
             self._connection = await self._pool.acquire()
+        except (aioredis.PoolClosedError) as err:
+            raise ConnectionError("Redis Pool is already closed: {}".format(str(err)))
         except (aioredis.ConnectionClosedError, aioredis.ConnectionDoesNotExistError) as err:
-            raise ConnectionTimeout("Unable to connect to database: {}".format(str(err)))
+            raise ConnectionError("Redis Pool is closed o doesnt exists: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Unknown Error: {}".format(str(err)))
             return False
