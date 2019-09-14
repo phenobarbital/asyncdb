@@ -35,6 +35,7 @@ async def test_redis(conn):
     await conn.set_hash('user', user)
     if conn.exists('user'):
         print(await conn.get_hash('user'))
+        await conn.delete('user')
 
 try:
     loop.run_until_complete(rd.connect())

@@ -19,7 +19,6 @@ from asyncdb.utils import *
 import objectpath
 
 logger = logging.getLogger(__name__)
-##logger.setLevel('DEBUG')
 
 class redisPool(BasePool):
     _dsn = 'redis://{host}:{port}/{db}'
@@ -281,9 +280,9 @@ class redis(BaseProvider):
         except Exception as err:
             raise ProviderError("Redis Exists Unknown Error: {}".format(str(err)))
 
-    def delete(self, key, *keys):
+    async def delete(self, key, *keys):
         try:
-            return self._connection.delete(key, *keys)
+            return await self._connection.delete(key, *keys)
         except(aioredis.RedisError, aioredis.ProtocolError) as err:
             raise ProviderError("Redis Exists Error: {}".format(str(err)))
         except Exception as err:
@@ -399,6 +398,51 @@ class redis(BaseProvider):
     @asyncio.coroutine
     async def values(self, key):
         return await self.hvals(key)
+
+    async def hset(self, key, field, value):
+        """
+        Set the string value of a hash field (redis dict)
+        """
+        try:
+            await self._connection.hset(key, field, value)
+        except(aioredis.RedisError, aioredis.ProtocolError) as err:
+            raise ProviderError("Redis Hset Error: {}".format(str(err)))
+        except Exception as err:
+            raise ProviderError("Redis Hset Unknown Error: {}".format(str(err)))
+
+    async def hget(self, key, field):
+        """
+        get the value of a hash field (redis dict)
+        """
+        try:
+            return await self._connection.hset(key, field)
+        except(aioredis.RedisError, aioredis.ProtocolError) as err:
+            raise ProviderError("Redis Hget Error: {}".format(str(err)))
+        except Exception as err:
+            raise ProviderError("Redis Hget Unknown Error: {}".format(str(err)))
+
+    async def hexists(self, key, field, value):
+        """
+        Determine if hash field exists on redis dict
+        """
+        try:
+            await self._connection.hexists(key, field)
+        except(aioredis.RedisError, aioredis.ProtocolError) as err:
+            raise ProviderError("Redis hash exists Error: {}".format(str(err)))
+        except Exception as err:
+            raise ProviderError("Redis hash exists Unknown Error: {}".format(str(err)))
+
+    async def hdel(self, key, field, *fields):
+        """
+        Delete one or more hash fields
+        """
+        try:
+            await self._connection.hdel(key, field, *fields)
+        except(aioredis.RedisError, aioredis.ProtocolError) as err:
+            raise ProviderError("Redis Hset Error: {}".format(str(err)))
+        except Exception as err:
+            raise ProviderError("Redis Hset Unknown Error: {}".format(str(err)))
+
 
 """
 Registering this Provider
