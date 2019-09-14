@@ -370,6 +370,36 @@ class redis(BaseProvider):
     async def get_hash(self, key):
         return await self.hgetall(key)
 
+    async def hkeys(self, key):
+        """
+        Get the keys in a hash (redis dict)
+        """
+        try:
+            return await self._connection.hkeys(key)
+        except(aioredis.RedisError, aioredis.ProtocolError) as err:
+            raise ProviderError("Redis Hmset Error: {}".format(str(err)))
+        except Exception as err:
+            raise ProviderError("Redis Hmset Unknown Error: {}".format(str(err)))
+
+    async def hvals(self, key):
+        """
+        Get the keys in a hash (redis dict)
+        """
+        try:
+            return await self._connection.hkeys(key)
+        except(aioredis.RedisError, aioredis.ProtocolError) as err:
+            raise ProviderError("Redis Hmset Error: {}".format(str(err)))
+        except Exception as err:
+            raise ProviderError("Redis Hmset Unknown Error: {}".format(str(err)))
+
+    @asyncio.coroutine
+    async def keys(self, key):
+        return await self.hkeys(key)
+
+    @asyncio.coroutine
+    async def values(self, key):
+        return await self.hvals(key)
+
 """
 Registering this Provider
 """
