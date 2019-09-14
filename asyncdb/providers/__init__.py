@@ -25,7 +25,8 @@ def exception_handler(loop, context):
         print("Caught AsyncDB Exception: {}".format(str(msg)))
         # Canceling pending tasks and stopping the loop
         logger.info("Shutting down...")
-        asyncio.create_task(shutdown(loop))
+        #asyncio.create_task(shutdown(loop))
+        loop.run_until_complete(shutdown(loop))
 
 
 class BasePool(ABC):

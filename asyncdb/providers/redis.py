@@ -41,6 +41,9 @@ class redisPool(BasePool):
     def get_event_loop(self):
         return self._loop
 
+    def get_connection(self):
+        return self._connection
+
     """
     Context magic Methods
     """
@@ -65,9 +68,9 @@ class redisPool(BasePool):
                 encoding=self._encoding
             )
         except (aioredis.ConnectionRefusedError, aioredis.RedisError, aioredis.ConnectionDoesNotExistError) as err:
-            raise ProviderError("Unable to connect to database, connection Refused: {}".format(str(err)))
+            raise ProviderError("Unable to connect to Redis, connection Refused: {}".format(str(err)))
         except (aioredis.ConnectionTimeout, asyncio.TimeoutError) as err:
-            raise ConnectionTimeout("Unable to connect to database: {}".format(str(err)))
+            raise ConnectionTimeout("Unable to connect to Redis: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Unknown Error: {}".format(str(err)))
             return False
@@ -94,7 +97,7 @@ class redisPool(BasePool):
             raise ProviderError("Unknown Error: {}".format(str(err)))
             return False
         if self._connection:
-            db = redis(conn=self._connection)
+            db = redis(pool=self)
         return db
 
     async def release(self, connection=None):
@@ -161,10 +164,11 @@ class redis(BaseProvider):
     _loop = None
     _encoding = 'utf-8'
 
-    def __init__(self, dsn='', loop=None, conn=None, params={}):
+    def __init__(self, dsn='', loop=None, pool=None, params={}):
         super(redis, self).__init__(dsn=dsn, loop=loop, params=params)
-        if conn:
-            self._connection = aioredis.Redis(conn)
+        if pool:
+            self._pool = pool
+            self._connection = aioredis.Redis(pool.get_connection())
             self._connected = True
             self._initialized_on = time.time()
         try:
@@ -206,16 +210,28 @@ class redis(BaseProvider):
     # Create a redis pool
     @asyncio.coroutine
     async def connection(self):
-        logger.info("AsyncRedis: Connecting to {}".format(self._url))
+        logger.info("AsyncRedis: Connecting to {}".format(self._dsn))
         try:
-            self._connection = await aioredis.create_connection(self._dsn, loop=self._loop, encoding=self._encoding)
+            connection = await aioredis.create_connection(self._dsn, loop=self._loop, encoding=self._encoding)
+            self._connection = aioredis.Redis(connection)
+        except (aioredis.ConnectionRefusedError, aioredis.RedisError, aioredis.ConnectionDoesNotExistError) as err:
+            raise ProviderError("Unable to connect to Redis, connection Refused: {}".format(str(err)))
+        except (aioredis.ConnectionTimeout, asyncio.TimeoutError) as err:
+            raise ConnectionTimeout("Unable to connect to Redis: {}".format(str(err)))
         except Exception as err:
-            print("Redis Error: {}".format(str(err)))
+            raise ProviderError("Unknown Redis Error: {}".format(str(err)))
             return False
         # is connected
         if self._connection:
             self._connected = True
             self._initialized_on = time.time()
+
+    def release(self):
+        """
+        Release a connection and return into pool
+        """
+        if self._pool:
+            self._loop.run_until_complete(self._pool.release(connection=self._connection))
 
     @asyncio.coroutine
     async def close(self):
