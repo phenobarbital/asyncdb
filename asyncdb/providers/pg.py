@@ -365,7 +365,6 @@ class pg(BaseProvider):
             await self.connection()
         try:
             startTime = datetime.now()
-            #print(timeit.timeit('1 + 3 ', number=50000000))
             self._result = await asyncio.shield(self._connection.fetch(sentence))
             if not self._result:
                 raise NoDataFound("Pg: No Data was Found")
@@ -386,7 +385,8 @@ class pg(BaseProvider):
             self._loop.call_exception_handler(err)
             raise Exception(error)
         finally:
-            #    self._generated = datetime.now() - startTime
+            self._generated = datetime.now() - startTime
+            startTime = 0
             #    await self.close()
             return [self._result, error]
 

@@ -4,19 +4,32 @@ import asyncio
 
 import aioredis
 
+from asyncdb.providers import BaseProvider, registerProvider, exception_handler
 from asyncdb.exceptions import *
 from asyncdb.utils import *
 
-class asyncRedis(object):
+class redis(BaseProvider):
+    _provider = 'redis'
+    _syntax = 'json'
     _pool = None
-    _url = ''
+    _dsn = 'redis://{host}:{port}/{db}'
     _connection = None
     _connected = False
     _loop = None
 
-    def __init__(self, url='', loop=None):
-        self._url = url
-        self._loop = loop
+    def __init__(self, dsn='', loop=None, params={}):
+        self._params = params
+        if not dsn:
+            self._dsn = self.create_dsn(self._params)
+        else:
+            self._dsn = dsn
+        try:
+            self._DEBUG = bool(params['DEBUG'])
+        except KeyError:
+            self._DEBUG = False
+        self._loop.set_exception_handler(exception_handler)
+        self._loop.set_debug(self._DEBUG)
+        print(self._dsn)
 
     """
     Context magic Methods
@@ -133,3 +146,8 @@ class asyncRedis(object):
     @asyncio.coroutine
     async def get_key(self, key):
         return await self.get(key)
+
+"""
+Registering this Provider
+"""
+registerProvider(redis)
