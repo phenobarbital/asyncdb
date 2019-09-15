@@ -25,7 +25,7 @@ loop.run_until_complete(mp.connect())
 async def test_memcache(conn):
     await conn.set('Test2', 'No More Test')
     value = await conn.get('Test2')
-    print(value.decode('utf-8'))
+    print(value)
     await conn.set('Test3', 'Expiration Data', 10)
     value = await conn.get('Test3')
     print(value)
