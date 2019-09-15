@@ -220,7 +220,7 @@ class memcache(BaseProvider):
         except (aiomcache.exceptions.ClientException) as err:
             raise ProviderError("Get Memcache Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError("Redis Unknown Error: {}".format(str(err)))
+            raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
 
     async def delete(self, key):
         try:
@@ -229,6 +229,18 @@ class memcache(BaseProvider):
             raise ProviderError("Memcache Exists Error: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Memcache Exists Unknown Error: {}".format(str(err)))
+
+    async def multiget(self, *kwargs):
+        try:
+            ky = [bytes(key, 'utf-8') for key in kwargs]
+            print(ky)
+            result = await self._connection.multi_get(*ky)
+            print(result)
+            return [k.decode('utf-8') for k in result]
+        except (aiomcache.exceptions.ClientException) as err:
+            raise ProviderError("Get Memcache Error: {}".format(str(err)))
+        except Exception as err:
+            raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
 
 
 """

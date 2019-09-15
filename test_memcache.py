@@ -29,6 +29,8 @@ async def test_memcache(conn):
     await conn.set('Test3', 'Expiration Data', 10)
     value = await conn.get('Test3')
     print(value)
+    values = await conn.multiget('Test2', 'Test3')
+    print(values)
     await conn.delete('Test2')
 
 try:
