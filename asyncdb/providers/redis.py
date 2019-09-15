@@ -197,21 +197,19 @@ class redis(BaseProvider):
     def pool(self):
         return self._pool
 
-    def is_connected(self):
-        return self._connected
-
     def loop(self):
         return self._loop
 
     @property
     def redis(self):
         return self._connection
-    '''
-    __init async redis initialization
-    '''
+
     # Create a redis pool
     @asyncio.coroutine
     async def connection(self):
+        '''
+        __init async redis initialization
+        '''
         logger.info("AsyncRedis: Connecting to {}".format(self._dsn))
         try:
             connection = await aioredis.create_connection(self._dsn, loop=self._loop, encoding=self._encoding)

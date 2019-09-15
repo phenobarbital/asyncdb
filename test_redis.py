@@ -1,5 +1,4 @@
 import asyncio
-import aioredis
 import logging
 
 

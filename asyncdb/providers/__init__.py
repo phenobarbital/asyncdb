@@ -68,6 +68,8 @@ class BasePool(ABC):
     def is_connected(self):
         return self._connected
 
+    def get_connection(self):
+        return self._connection
 
     def is_closed(self):
         logger.debug("Connection closed: %s" % self._pool._closed)
@@ -179,6 +181,9 @@ class BaseProvider(ABC):
 
     def get_connection(self):
         return self._connection
+
+    def is_connected(self):
+        return self._connected
 
     @classmethod
     def name(self):
