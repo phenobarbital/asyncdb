@@ -30,6 +30,8 @@ class NotImplementedError(asyncDBException):
 class UninitializedError(ProviderError):
     """Exception when provider cant be initialized"""
 
+class ConnectionError(ProviderError):
+    """Generic Connection Error"""
 
 class ConnectionTimeout(ProviderError):
     """Connection Timeout Error"""
