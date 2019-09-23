@@ -15,12 +15,11 @@ import time
 from datetime import timedelta
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
+import dateutil.parser
 
 #from enumfields import Enum
 #import redis
 #from navigator.settings.settings import QUERYSET_REDIS
-
-
 
 
 def generate_key():
@@ -39,6 +38,35 @@ def current_month():
 
 def today(mask="%m/%d/%Y"):
     return time.strftime(mask)
+
+def truncate_decimal(value):
+    head, sep, tail = value.partition('.')
+    return head
+
+def year(value):
+    if value:
+        try:
+            newdate = dateutil.parser.parse(value)
+            #dt = datetime.datetime.strptime(newdate.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')
+            return newdate.date().year
+        except ValueError:
+            dt = value[:-4]
+            dt = datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+            return dt.date().year
+    else:
+        return None
+
+def month(value):
+    if value:
+        try:
+            newdate = dateutil.parser.parse(value)
+            return newdate.date().month
+        except ValueError:
+            dt = value[:-4]
+            dt = datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+            return dt.date().month
+    else:
+        return None
 
 def fdom():
     return (datetime.datetime.now()).strftime("%Y-%m-01")
