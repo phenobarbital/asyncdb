@@ -705,9 +705,9 @@ class rethink(BaseProvider):
                     val = is_udf(value)
                     if val:
                         self.conditions[key] = "{}".format(val)
-                    elif is_program_date(value):
-                        val = get_program_date(value)
-                        self.conditions[key] = "{}".format(val)
+                    #elif is_program_date(value):
+                    #    val = get_program_date(value)
+                    #    self.conditions[key] = "{}".format(val)
                     elif self.cond_definition and self.cond_definition[key] == 'field':
                         self.conditions[key] = "{}".format(value)
                     elif value == 'null' or value == 'NULL':
