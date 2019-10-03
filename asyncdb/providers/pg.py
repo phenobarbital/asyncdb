@@ -220,6 +220,8 @@ class pg(BaseProvider):
         asyncio.set_event_loop(self._loop)
         self._loop.set_exception_handler(exception_handler)
         self._loop.set_debug(self._DEBUG)
+        if pool:
+            self._pool = pool
 
     async def close(self, timeout = 5):
         """

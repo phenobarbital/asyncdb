@@ -29,6 +29,7 @@ from asyncdb.providers import exception_handler
 from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 
 from rethinkdb.errors import ReqlError, RqlRuntimeError, RqlDriverError, ReqlRuntimeError, ReqlNonExistenceError, ReqlDriverError, ReqlOpFailedError,ReqlResourceLimitError,ReqlOpIndeterminateError
+
 rt = RethinkDB()
 
 logger = logging.getLogger(__name__)
@@ -704,9 +705,9 @@ class rethink(BaseProvider):
                     val = is_udf(value)
                     if val:
                         self.conditions[key] = "{}".format(val)
-                    #elif is_program_date(value):
-                    #    val = get_program_date(value)
-                    #    self.conditions[key] = "{}".format(val)
+                    elif is_program_date(value):
+                        val = get_program_date(value)
+                        self.conditions[key] = "{}".format(val)
                     elif self.cond_definition and self.cond_definition[key] == 'field':
                         self.conditions[key] = "{}".format(value)
                     elif value == 'null' or value == 'NULL':
