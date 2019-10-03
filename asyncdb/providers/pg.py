@@ -759,8 +759,9 @@ class pg(BaseProvider):
         sql = sql.format_map(SafeDict(table=table))
         # set columns
         sql = sql.format_map(SafeDict(fields=','.join(data.keys())))
-        values = ','.join(str(v) for v in data.values())
+        values = ','.join(_escapeString(v) for v in data.values())
         sql = sql.format_map(SafeDict(values=values))
+        #print(sql)
         try:
             result = self._loop.run_until_complete(self._connection.execute(sql))
             if not result:
@@ -769,9 +770,16 @@ class pg(BaseProvider):
             else:
                 return result
         except Exception as err:
-            #print(sql)
+            print(sql)
             print(err)
             return False
+
+    def _escapeString(value):
+        v = value if value != 'None' else ""
+        v = str(v).replace("'", "''")
+        v = "'{}'".format(v) if type(v) == str else v
+        return v
+
 
 """
 Registering this Provider
