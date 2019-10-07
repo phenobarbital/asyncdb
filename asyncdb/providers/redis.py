@@ -214,9 +214,9 @@ class redis(BaseProvider):
         try:
             connection = await aioredis.create_connection(self._dsn, loop=self._loop, encoding=self._encoding)
             self._connection = aioredis.Redis(connection)
-        except (aioredis.ProtocolError, aioredis.RedisError, aioredis.AuthError) as err:
+        except (aioredis.ProtocolError, aioredis.AuthError) as err:
             raise ProviderError("Unable to connect to Redis, connection Refused: {}".format(str(err)))
-        except (aioredis.ConnectionTimeout, asyncio.TimeoutError) as err:
+        except (aioredis.RedisError, asyncio.TimeoutError) as err:
             raise ConnectionTimeout("Unable to connect to Redis: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Unknown Redis Error: {}".format(str(err)))

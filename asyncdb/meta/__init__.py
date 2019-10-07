@@ -151,7 +151,7 @@ class asyncORM(object):
             raise KeyError("asyncORM Error: Invalid Column %s" % name)
 
     def __contains__(self, key):
-        if name in self._columns:
+        if key in self._columns:
             return True
         else:
             return False
