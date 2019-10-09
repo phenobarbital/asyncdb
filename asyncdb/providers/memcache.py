@@ -216,7 +216,10 @@ class memcache(BaseProvider):
     async def get(self, key):
         try:
             result = await self._connection.get(bytes(key, 'utf-8'))
-            return result.decode('utf-8')
+            if result:
+                return result.decode('utf-8')
+            else:
+                return None
         except (aiomcache.exceptions.ClientException) as err:
             raise ProviderError("Get Memcache Error: {}".format(str(err)))
         except Exception as err:
