@@ -29,7 +29,6 @@ from asyncdb.providers import exception_handler
 from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 
 from rethinkdb.errors import ReqlError, RqlRuntimeError, RqlDriverError, ReqlRuntimeError, ReqlNonExistenceError, ReqlDriverError, ReqlOpFailedError,ReqlResourceLimitError,ReqlOpIndeterminateError
-
 rt = RethinkDB()
 
 logger = logging.getLogger(__name__)
