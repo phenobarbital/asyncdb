@@ -21,21 +21,20 @@ class asyncORM(object):
     _table = None
     _query = None
     _loop = None
+    _val = {}
 
     def __init__(self, db, result=None, type='new', loop=None):
-        object.__setattr__(self, '_connection', None)
-        object.__setattr__(self, '_loop', loop)
-        object.__setattr__(self, '_columns', [])
-        object.__setattr__(self, '_fields', {})
-        object.__setattr__(self, '_result', result)
+        self._columns = []
+        self._fields = {}
+        self._result = result
         if result:
             for row in result:
                 self._columns.append(row['column_name'])
                 self._fields[row['column_name']] = row['data_type']
-        object.__setattr__(self, '_type', type)
-        object.__setattr__(self, '_val', {})
-        object.__setattr__(self, '_table', None)
-        object.__setattr__(self, '_query', None)
+        self._type = type
+        self._val = {}
+        self._table = None
+        self._query = None
         if loop:
             self._loop = loop
         else:
@@ -131,6 +130,34 @@ class asyncORM(object):
         else:
             return False
 
+    def fetch(self):
+        return self.all()
+
+    def one(self):
+        """
+        one
+           Get only one row from query
+        """
+        print("Connection Status: %s" % self._connection.connected)
+        try:
+            self._query = self._connection.get_query(self._query)
+        except (ProviderError, StatementError) as err:
+            return False
+        if self._query:
+            self._columns = self._connection.get_columns()
+            try:
+                self._result, error = self._loop.run_until_complete(self._connection.queryrow(self._query))
+                if self._result and not error:
+                    return asyncRecord(result=self._result, columns=self._columns)
+            except NoDataFound:
+                print("NO DATA")
+                return False
+        else:
+            return False
+
+    def fetchrow(self):
+        return self.one()
+
     """
     Magic Methods
     """
@@ -184,9 +211,8 @@ class asyncORM(object):
         """
         setter
         """
-        #print("DEFINE ATTRIBUTE: name {}, value {} is system {}".format(name, value, hasattr(self, name)))\
-        if self.__dict__.get(name):
-        #if name in self.__dict__:
+        #print("DEFINE ATTRIBUTE: name {}, value {} is system {}".format(name, value, hasattr(self, name)))
+        if hasattr(self, name):
             self.__dict__[name] = value
         elif name in self._columns:
             if isinstance(value, list):
@@ -199,8 +225,10 @@ class asyncORM(object):
                 else:
                     self._val[name] = "'{}'".format(value.replace("'", r"''"))
         else:
+            #object.__setattr__(self, name, value)
             raise KeyError("asyncORM Error: Invalid Column %s" % name)
-        object.__setattr__(self, name, value)
+            return None
+
 
 
     def columns(self):
