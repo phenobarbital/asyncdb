@@ -195,9 +195,16 @@ class rethink(BaseProvider):
                 return False
 
 
-    async def create_table(self, table):
+    async def create_table(self, table, pk=None):
+        """
+        create_table
+           Create a new table with optional primary key
+        """
         try:
-            return await self._engine.db(self._db).table_create(table).run(self._connection)
+            if pk:
+                return await self._engine.db(self._db).table_create(table, primary_key=pk).run(self._connection)
+            else:
+                return await self._engine.db(self._db).table_create(table).run(self._connection)
         finally:
             return self
 
@@ -444,7 +451,7 @@ class rethink(BaseProvider):
         """
         if self._connection:
             try:
-                inserted = await self._engine.table(table).insert(data).run(self._connection)
+                inserted = await self._engine.table(table).insert(data, conflict="replace").run(self._connection)
                 if inserted['errors'] > 0:
                     raise ProviderError("INSERT Runtime Error: {}".format(inserted['first_error']))
                     return False
@@ -495,7 +502,7 @@ class rethink(BaseProvider):
         if self._connection:
             if id:
                 try:
-                    self._result = await self._engine.table(table).get(id).update(data, return_changes=False).run(self._connection)
+                    self._result = await self._engine.table(table).get(id).update(data).run(self._connection)
                     #self._result = await self._engine.table(table).get(id).update(data).run(self._connection)
                     return self._result
                 except RqlRuntimeError as err:
@@ -544,7 +551,7 @@ class rethink(BaseProvider):
             return False
 
 
-    async def update_conditions(self, table, data, filter = {}, fieldname = 'filterdate'):
+    async def update_conditions(self, table, data, filter={}, fieldname='filterdate'):
         """
         update_conditions
              update a record based on a fieldname
