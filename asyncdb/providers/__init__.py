@@ -142,13 +142,15 @@ class BaseProvider(ABC):
     _DEBUG = False
 
     def __init__(self, dsn='', loop=None, params={}):
+        self._params = {}
         if loop:
             self._loop = loop
             asyncio.set_event_loop(self._loop)
         else:
             self._loop = asyncio.get_event_loop()
         # get params
-        self._params = params
+        if params:
+            self._params = params
         if not dsn:
             self._dsn = self.create_dsn(self._params)
         else:
