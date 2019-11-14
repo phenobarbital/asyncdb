@@ -57,6 +57,7 @@ class rethink(BaseProvider):
 
     def __init__(self, loop=None, params={}, **kwargs):
         super(rethink, self).__init__(loop=loop, params=params)
+        self.conditions = {}
         # set rt object
         self._engine = rt
         # set asyncio type
@@ -652,6 +653,7 @@ class rethink(BaseProvider):
         return self
 
     def set_options(self, params):
+        print(" =========== PARAMS IS: %s" % params)
         # get fields and where_cond
         try:
             self.refresh = bool(params['refresh'])

@@ -13,20 +13,36 @@ logger = logging.getLogger(__name__)
 async def shutdown(loop, signal=None):
     """Cleanup tasks tied to the service's shutdown."""
     if signal:
-        logger.info(f"Received exit signal {signal.name}...")
-    logger.info("Closing connections")
-    asyncio.gather(*asyncio.Task.all_tasks()).cancel()
-    loop.stop()
+        logging.info(f"Received exit signal {signal.name}...")
+    logging.info("Closing all connections")
+    try:
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+        [task.cancel() for task in tasks]
+        logging.info(f"Cancelling {len(tasks)} outstanding tasks")
+        await asyncio.gather(*tasks, return_exceptions=True)
+    except asyncio.CancelledError:
+        print('Tasks has been canceled')
+    #asyncio.gather(*asyncio.Task.all_tasks()).cancel()
+    finally:
+        loop.stop()
 
 def exception_handler(loop, context):
     """Exception Handler for Asyncio Loops."""
+    # first, handle with default handler
+    loop.default_exception_handler(context)
     if context:
+        print(context)
+        exception = context.get('exception')
         msg = context.get("exception", context["message"])
-        print("Caught AsyncDB Exception: {}".format(str(msg)))
+        print("AsyncDB Exception was Caught: {}".format(str(msg)))
         # Canceling pending tasks and stopping the loop
-        logger.info("Shutting down...")
+    try:
+        logging.info("Shutting down...")
+        loop.call_soon_threadsafe(shutdown(loop))
         #asyncio.create_task(shutdown(loop))
-        loop.run_until_complete(shutdown(loop))
+    finally:
+        loop.close()
+        logging.info("Successfully shutdown AsyncDB service.")
 
 
 class BasePool(ABC):
@@ -142,13 +158,15 @@ class BaseProvider(ABC):
     _DEBUG = False
 
     def __init__(self, dsn='', loop=None, params={}):
+        self._params = {}
         if loop:
             self._loop = loop
             asyncio.set_event_loop(self._loop)
         else:
             self._loop = asyncio.get_event_loop()
         # get params
-        self._params = params
+        if params:
+            self._params = params
         if not dsn:
             self._dsn = self.create_dsn(self._params)
         else:
