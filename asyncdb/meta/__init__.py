@@ -41,6 +41,24 @@ class asyncORM(object):
             self._loop = asyncio.get_event_loop()
         self._connection = db
 
+    def __del__(self):
+        """
+        Del: try to cleanup the database connector.
+
+        """
+        if self._connection:
+            self._loop.run_until_complete(self._connection.close(timeout=5))
+
+
+    def close(self):
+        """
+        Close
+
+        Explicit closing a database connection
+        """
+        if self._connection:
+            self._loop.run_until_complete(self._connection.close(timeout=5))
+
     """
     Meta Definitions
     """
