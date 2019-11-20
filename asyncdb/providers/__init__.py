@@ -13,12 +13,12 @@ logger = logging.getLogger(__name__)
 async def shutdown(loop, signal=None):
     """Cleanup tasks tied to the service's shutdown."""
     if signal:
-        logging.info(f"Received exit signal {signal.name}...")
-    logging.info("Closing all connections")
+        logger.info(f"Received exit signal {signal.name}...")
+    logger.info("Closing all connections")
     try:
         tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
         [task.cancel() for task in tasks]
-        logging.info(f"Cancelling {len(tasks)} outstanding tasks")
+        logger.info(f"Cancelling {len(tasks)} outstanding tasks")
         await asyncio.gather(*tasks, return_exceptions=True)
     except asyncio.CancelledError:
         print('Tasks has been canceled')
@@ -37,12 +37,12 @@ def exception_handler(loop, context):
         print("AsyncDB Exception was Caught: {}".format(str(msg)))
         # Canceling pending tasks and stopping the loop
     try:
-        logging.info("Shutting down...")
-        loop.call_soon_threadsafe(shutdown(loop))
-        #asyncio.create_task(shutdown(loop))
+        logger.info("Shutting down...")
+        #loop.call_soon_threadsafe(shutdown(loop))
+        asyncio.create_task(shutdown(loop))
     finally:
         loop.close()
-        logging.info("Successfully shutdown AsyncDB service.")
+        logger.info("Successfully shutdown AsyncDB service.")
 
 
 class BasePool(ABC):
