@@ -365,7 +365,7 @@ class pg(BaseProvider):
             await self.connection()
         try:
             startTime = datetime.now()
-            self._result = await asyncio.shield(self._connection.fetch(sentence))
+            self._result = await self._connection.fetch(sentence)
             if not self._result:
                 raise NoDataFound("Pg: No Data was Found")
                 return [None, "Pg: No Data was Found"]
