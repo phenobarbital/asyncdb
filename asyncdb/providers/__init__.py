@@ -156,7 +156,7 @@ class BaseProvider(ABC):
     _params = {}
     _sta = ''
     _test_query = None
-    _timeout = 10
+    _timeout = 600
     _max_connections = 4
     _generated = None
     _DEBUG = False
