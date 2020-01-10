@@ -44,9 +44,9 @@ def exception_handler(loop, context):
         loop.run_until_complete(shutdown(loop))
         #loop.call_soon_threadsafe(shutdown(loop))
         #asyncio.create_task(shutdown(loop))
-    # finally:
+    finally:
     #     loop.close()
-    #     logging.info("Successfully shutdown AsyncDB service.")
+        logging.info("Successfully shutdown a Task on AsyncDB service.")
 
 
 class BasePool(ABC):
