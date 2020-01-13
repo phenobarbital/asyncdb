@@ -724,8 +724,10 @@ class rethink(BaseProvider):
                         self.conditions[key] = value
                     elif isinteger(value) or isnumber(value):
                         self.conditions[key] = value
+                    elif self.cond_definition and self.cond_definition[key] == 'date':
+                        self.conditions[key] = value.replace("'", '')
                     else:
-                        print("condition %s for value %s" % (key, value))
+                        print("RT condition %s for value %s" % (key, value))
                         self.conditions[key] = "{}".format(value)
             print('set_conditions: {}'.format(self.conditions))
         return self
