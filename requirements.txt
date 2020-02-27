@@ -10,7 +10,7 @@ cffi==1.12.3
 chardet==3.0.4
 django-enumfields==0.10.1
 et-xmlfile==1.0.1
-hiredis==1.0.0
+hiredis==1.0.1
 idna==2.8
 jdcal==1.4.1
 multidict==4.5.2
