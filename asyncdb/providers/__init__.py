@@ -29,7 +29,7 @@ async def shutdown(loop, signal=None):
 def exception_handler(loop, context):
     """Exception Handler for Asyncio Loops."""
     # first, handle with default handler
-    loop.default_exception_handler(context)
+    #loop.default_exception_handler(context)
     if context:
         print(context)
         try:
