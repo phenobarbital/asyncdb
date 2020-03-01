@@ -32,10 +32,12 @@ def exception_handler(loop, context):
     loop.default_exception_handler(context)
     if context:
         print(context)
-        if callable(context.get):
+        try:
             exception = context.get('exception')
             msg = context.get("exception", context["message"])
             print("Caught asyncDBException Exception: {}".format(str(msg)))
+        except AttributeError:
+            print("Caught Exception: {}".format(str(context)))
         # Canceling pending tasks and stopping the loop
     try:
         logging.info("Shutting down...")
