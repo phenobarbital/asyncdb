@@ -12,7 +12,39 @@ _providers = {}
 import logging
 from logging.config import dictConfig
 
-dictConfig(logging_config)
+loglevel = logging.INFO
+
+logger_config = dict(
+    version = 1,
+    formatters = {
+        "console": {
+            'format': '%(message)s'
+        },
+        "file": {
+            "format": "%(asctime)s: [%(levelname)s]: %(pathname)s: %(lineno)d: \n%(message)s\n"
+        },
+        'default': {
+            'format': '[%(levelname)s] %(asctime)s %(name)s: %(message)s'}
+        },
+    handlers = {
+        "console": {
+                "formatter": "console",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+                'level': loglevel
+        },
+        'StreamHandler': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'default',
+                'level': loglevel
+        }
+    root = {
+        'handlers': ['StreamHandler','console'],
+        'level': loglevel,
+        },
+)
+
+dictConfig(logger_config)
 logger = logging.getLogger('AsyncDB')
 
 async def shutdown(loop, signal=None):
