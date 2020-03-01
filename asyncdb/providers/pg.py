@@ -367,8 +367,7 @@ class pg(BaseProvider):
             startTime = datetime.now()
             self._result = await self._connection.fetch(sentence)
             if not self._result:
-                raise NoDataFound(message='Data was not found')
-                return [None, "Pg: No Data was Found"]
+                return [None, 'Data was not found']
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
             raise ProviderError(error)
@@ -382,12 +381,11 @@ class pg(BaseProvider):
             raise StatementError(error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            self._loop.call_exception_handler(err)
+            #self._loop.call_exception_handler(err)
             raise Exception(error)
         finally:
             self._generated = datetime.now() - startTime
             startTime = 0
-            #    await self.close()
             return [self._result, error]
 
 
