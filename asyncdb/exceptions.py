@@ -10,6 +10,9 @@ class asyncDBException(Exception):
     def __str__(self):
         return "{} Error Code: {}".format(self.message, self.code)
 
+    def get(self):
+        return self.message
+
 
 class DataError(asyncDBException, ValueError):
     """An error caused by invalid query input."""
