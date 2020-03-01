@@ -38,10 +38,11 @@ logger_config = dict(
                 'formatter': 'default',
                 'level': loglevel
         }
+    },
     root = {
         'handlers': ['StreamHandler','console'],
         'level': loglevel,
-        },
+    },
 )
 
 dictConfig(logger_config)
