@@ -367,7 +367,7 @@ class pg(BaseProvider):
             startTime = datetime.now()
             self._result = await self._connection.fetch(sentence)
             if not self._result:
-                raise NoDataFound("Pg: No Data was Found")
+                raise NoDataFound(message='Data was not found')
                 return [None, "Pg: No Data was Found"]
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
