@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import importlib
-import logging
 import asyncio
 import sys
 import os.path
@@ -8,44 +7,43 @@ from abc import ABC, abstractmethod
 from asyncdb.providers.exceptions import *
 
 _providers = {}
-logger = logging.getLogger(__name__)
 
-async def shutdown(loop, signal=None):
-    """Cleanup tasks tied to the service's shutdown."""
-    if signal:
-        logging.info(f"Received exit signal {signal.name}...")
-    logging.info("Closing all connections")
-    try:
-        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-        [task.cancel() for task in tasks]
-        logging.info(f"Cancelling {len(tasks)} outstanding tasks")
-        await asyncio.gather(*tasks, return_exceptions=True)
-    except asyncio.CancelledError:
-        print('Tasks has been canceled')
-    #asyncio.gather(*asyncio.Task.all_tasks()).cancel()
-    finally:
-        loop.stop()
-
-def exception_handler(loop, context):
-    """Exception Handler for Asyncio Loops."""
-    # first, handle with default handler
-    loop.default_exception_handler(context)
-    if context:
-        print(context)
-        try:
-            exception = context.get('exception')
-            msg = context.get("exception", context["message"])
-            print("Caught asyncDBException Exception: {}".format(str(msg)))
-        except AttributeError:
-            print("Caught Exception: {}".format(str(context)))
-        # Canceling pending tasks and stopping the loop
-    try:
-        logging.info("Shutting down...")
-        loop.call_soon_threadsafe(shutdown(loop))
-        #asyncio.create_task(shutdown(loop))
-    finally:
-        loop.close()
-        logging.info("Successfully shutdown the AsyncDB service.")
+# async def shutdown(loop, signal=None):
+#     """Cleanup tasks tied to the service's shutdown."""
+#     if signal:
+#         logging.info(f"Received exit signal {signal.name}...")
+#     logging.info("Closing all connections")
+#     try:
+#         tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+#         [task.cancel() for task in tasks]
+#         logging.info(f"Cancelling {len(tasks)} outstanding tasks")
+#         await asyncio.gather(*tasks, return_exceptions=True)
+#     except asyncio.CancelledError:
+#         print('Tasks has been canceled')
+#     #asyncio.gather(*asyncio.Task.all_tasks()).cancel()
+#     finally:
+#         loop.stop()
+#
+# def exception_handler(loop, context):
+#     """Exception Handler for Asyncio Loops."""
+#     # first, handle with default handler
+#     loop.default_exception_handler(context)
+#     if context:
+#         print(context)
+#         try:
+#             exception = context.get('exception')
+#             msg = context.get("exception", context["message"])
+#             print("Caught asyncDBException Exception: {}".format(str(msg)))
+#         except AttributeError:
+#             print("Caught Exception: {}".format(str(context)))
+#         # Canceling pending tasks and stopping the loop
+#     try:
+#         logging.info("Shutting down...")
+#         loop.call_soon_threadsafe(shutdown(loop))
+#         #asyncio.create_task(shutdown(loop))
+#     finally:
+#         loop.close()
+#         logging.info("Successfully shutdown the AsyncDB service.")
 
 #loop.set_exception_handler(exception_handler)
 #loop.add_signal_handler(signal.SIGINT, my_handler)
@@ -94,7 +92,7 @@ class BasePool(ABC):
         return self._connection
 
     def is_closed(self):
-        logger.debug("Connection closed: %s" % self._pool._closed)
+        #logger.debug("Connection closed: %s" % self._pool._closed)
         return self._pool._closed
 
     '''
@@ -257,7 +255,7 @@ class BaseProvider(ABC):
     async def test_connection(self):
         if self._test_query is None:
             raise NotImplementedError()
-        logger.debug("{}: Running Test".format(self._provider))
+        #logger.debug("{}: Running Test".format(self._provider))
         try:
             return await self.query(self._test_query)
         except Exception as err:
@@ -345,6 +343,6 @@ class BaseProvider(ABC):
 
 def registerProvider(provider):
     global _providers
-    logger.debug("Registering new Provider %s of type (%s), syntax: %s.", provider.name(), provider.type(), provider.dialect())
+    #logger.debug("Registering new Provider %s of type (%s), syntax: %s.", provider.name(), provider.type(), provider.dialect())
     _providers[provider.type()] = provider
     #TODO: try to load provider
