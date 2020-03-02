@@ -60,7 +60,8 @@ class pgPool(BasePool):
                 timeout=60,
                 command_timeout= self._timeout,
                 init=self.init_connection,
-                server_settings = {
+                server_settings={
+                    "application_name": 'Navigator',
                     "idle_in_transaction_session_timeout": 120
                 }
             )
