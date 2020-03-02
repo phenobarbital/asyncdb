@@ -53,11 +53,16 @@ class pgPool(BasePool):
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             self._pool = await asyncpg.create_pool(
                 dsn=self._dsn,
-                max_size=self._max_queries,
-                min_size=2,loop=self._loop,
-                max_inactive_connection_lifetime=100,
+                max_queries=self._max_queries,
+                min_size=4, max_size=500,
+                loop=self._loop,
+                max_inactive_connection_lifetime=30,
+                timeout=60,
                 command_timeout= self._timeout,
-                init=self.init_connection
+                init=self.init_connection,
+                server_settings = {
+                    "idle_in_transaction_session_timeout": 120
+                }
             )
         except TooManyConnectionsError as err:
             print("Too Many Connections Error: {}".format(str(err)))
