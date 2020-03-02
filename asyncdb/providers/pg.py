@@ -60,11 +60,10 @@ class pgPool(BasePool):
                 timeout=60,
                 command_timeout= self._timeout,
                 init=self.init_connection,
-                server_settings={"application_name": 'Navigator'},
-                # server_settings={
-                #     "application_name": 'Navigator',
-                #     "idle_in_transaction_session_timeout": 120
-                # }
+                server_settings={
+                    "application_name": 'Navigator',
+                    "idle_in_transaction_session_timeout": "10000"
+                }
             )
         except TooManyConnectionsError as err:
             print("Too Many Connections Error: {}".format(str(err)))
