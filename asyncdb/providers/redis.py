@@ -67,7 +67,7 @@ class redisPool(BasePool):
                 loop=self._loop,
                 encoding=self._encoding
             )
-        except (aioredis.ConnectionRefusedError, aioredis.RedisError, aioredis.ConnectionDoesNotExistError) as err:
+        except (aioredis.ConnectionRefusedError, aioredis.RedisError) as err:
             raise ProviderError("Unable to connect to Redis, connection Refused: {}".format(str(err)))
         except (aioredis.ConnectionTimeout, asyncio.TimeoutError) as err:
             raise ConnectionTimeout("Unable to connect to Redis: {}".format(str(err)))
@@ -93,7 +93,7 @@ class redisPool(BasePool):
             self._connection = await self._pool.acquire()
         except (aioredis.PoolClosedError) as err:
             raise ConnectionError("Redis Pool is already closed: {}".format(str(err)))
-        except (aioredis.ConnectionClosedError, aioredis.ConnectionDoesNotExistError) as err:
+        except (aioredis.ConnectionClosedError) as err:
             raise ConnectionError("Redis Pool is closed o doesnt exists: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Unknown Error: {}".format(str(err)))
