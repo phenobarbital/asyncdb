@@ -133,7 +133,10 @@ class mcache(BaseProvider):
     def get(self, key, default=None):
         try:
             result = self._connection.get(bytes(key, 'utf-8'), default)
-            return result.decode('utf-8')
+            if result:
+                return result.decode('utf-8')
+            else:
+                return None
         except (pylibmc.Error) as err:
             raise ProviderError("Get Memcache Error: {}".format(str(err)))
         except Exception as err:
@@ -144,7 +147,10 @@ class mcache(BaseProvider):
             ky = [bytes(key, 'utf-8') for key in kwargs]
             print(ky)
             result = self._connection.get_multi(ky)
-            return [k.decode('utf-8') for k in result]
+            if result:
+                return [k.decode('utf-8') for k in result]
+            else:
+                return None
         except (pylibmc.Error) as err:
             raise ProviderError("Get Memcache Error: {}".format(str(err)))
         except Exception as err:
