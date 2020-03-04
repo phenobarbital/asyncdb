@@ -10,12 +10,12 @@ from asyncdb.providers.exceptions import *
 from asyncdb.providers import *
 from asyncdb.meta import asyncORM, asyncRecord
 
-#logging.basicConfig(
-#    level=logging.CRITICAL,
-#    format='%(levelname)7s: %(message)s',
-#    stream=sys.stderr,
-#)
-#logging.disable(logging.CRITICAL)
+logging.basicConfig(
+   level=logging.CRITICAL,
+   format='%(levelname)7s: %(message)s',
+   stream=sys.stderr,
+)
+logging.disable(logging.CRITICAL)
 
 def module_exists(module_name, classpath):
     try:
