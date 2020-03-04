@@ -27,7 +27,9 @@ def test_memcache(conn):
     value = conn.get('Test&4')
     print(value)
 
-    values = conn.multiget('Test2', 'Test3')
+    conn.set_multi({'Test2':'Testing 2', 'Test3': 'Testing 3'})
+
+    values = conn.multiget('Test2', 'Test3', 'Test&4')
     print(values)
 
     conn.delete('Test2')

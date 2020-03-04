@@ -143,17 +143,7 @@ class mcache(BaseProvider):
             raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
 
     def get_multi(self, *kwargs):
-        try:
-            ky = [bytes(key, 'utf-8') for key in kwargs]
-            result = self._connection.get_multi(ky)
-            if result:
-                return [k.decode('utf-8') for k in result]
-            else:
-                return None
-        except (pylibmc.Error) as err:
-            raise ProviderError("Get Memcache Error: {}".format(str(err)))
-        except Exception as err:
-            raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
+        return self.multiget(kwargs)
 
     def delete(self, key):
         try:
@@ -167,7 +157,7 @@ class mcache(BaseProvider):
         try:
             ky = [bytes(key, 'utf-8') for key in kwargs]
             result = self._connection.delete_multi(ky)
-            return [k.decode('utf-8') for k in result]
+            return result
         except (pylibmc.Error) as err:
             raise ProviderError("Get Memcache Error: {}".format(str(err)))
         except Exception as err:
@@ -176,9 +166,9 @@ class mcache(BaseProvider):
     def multiget(self, *kwargs):
         try:
             ky = [bytes(key, 'utf-8') for key in kwargs]
-            result = self._connection.get_multi(*ky)
+            result = self._connection.get_multi(ky)
             if result:
-                return [k.decode('utf-8') for k in result]
+                return {key.decode('utf-8'):value for key,value  in result.items()}
         except (pylibmc.Error) as err:
             raise ProviderError("Get Memcache Error: {}".format(str(err)))
         except Exception as err:
