@@ -976,6 +976,7 @@ class rethink(BaseProvider):
             data = []
             try:
                 cursor = await search.distinct().run(self._connection)
+                print(cursor)
             except (RqlRuntimeError, ReqlRuntimeError) as err:
                 print("Error on rql query is %s" % err.message)
                 raise Exception("Error on RQL query is %s" % err.message)
