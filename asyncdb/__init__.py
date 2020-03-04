@@ -11,11 +11,11 @@ from asyncdb.providers import *
 from asyncdb.meta import asyncORM, asyncRecord
 
 logging.basicConfig(
-   level=logging.CRITICAL,
+   level=logging.INFO,
    format='%(levelname)7s: %(message)s',
    stream=sys.stderr,
 )
-logging.disable(logging.CRITICAL)
+logging.disable(logging.INFO)
 
 def module_exists(module_name, classpath):
     try:
