@@ -947,15 +947,9 @@ class rethink(BaseProvider):
         # fields and mapping
         if self.fields:
             if map:
-                if self.distinct: # add distinct
-                    search = search.pluck(self.fields).map(map).distinct()
-                else:
-                    search = search.pluck(self.fields).map(map)
+                search = search.pluck(self.fields).map(map)
             else:
-                if self.distinct: # add distinct
-                    search = search.pluck(self.fields).distinct()
-                else:
-                    search = search.pluck(self.fields)
+                search = search.pluck(self.fields)
 
         # ordering
         order = None
@@ -971,23 +965,28 @@ class rethink(BaseProvider):
             # add ordering
             search = search.order_by(order)
 
+        # adding distinct
+        if self.distinct:
+            search = search.distinct()
 
         if self._connection:
             data = []
+            self._result = None
             try:
-                cursor = await search.distinct().run(self._connection)
-                print(cursor)
-            except (RqlRuntimeError, ReqlRuntimeError) as err:
-                print("Error on rql query is %s" % err.message)
-                raise Exception("Error on RQL query is %s" % err.message)
-                return False
-            if order:
-                return cursor
-            else:
-                while (await cursor.fetch_next()):
-                    row = await cursor.next()
-                    data.append(row)
-                self._result = data
+                try:
+                    cursor = await search.run(self._connection)
+                except (RqlRuntimeError, ReqlRuntimeError) as err:
+                    print("Error on rql query is %s" % err.message)
+                    raise Exception("Error on RQL query is %s" % err.message)
+                    return False
+                if order or distinct:
+                    return cursor
+                else:
+                    while (await cursor.fetch_next()):
+                        row = await cursor.next()
+                        data.append(row)
+                    self._result = data
+            finally:
                 return self._result
 
 
