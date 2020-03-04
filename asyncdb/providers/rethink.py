@@ -54,6 +54,8 @@ class rethink(BaseProvider):
     where = None
     ordering = None
     qry_options = None
+    _group = None
+    distinct = None
 
     def __init__(self, loop=None, params={}, **kwargs):
         super(rethink, self).__init__(loop=loop, params=params)
@@ -684,6 +686,12 @@ class rethink(BaseProvider):
             del params['ordering']
         except KeyError:
             pass
+        # support for distinct
+        try:
+            self.distinct = params['distinct']
+            del params['distinct']
+        except KeyError:
+            pass
         try:
             self.qry_options = params['qry_options']
             del params['qry_options']
@@ -956,6 +964,10 @@ class rethink(BaseProvider):
                 order = orderby[0]
             # add ordering
             search = search.order_by(order)
+
+        # add distinct
+        if self.distinct:
+            search = search.distinct()
 
         if self._connection:
             data = []
