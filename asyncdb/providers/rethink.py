@@ -911,7 +911,7 @@ class rethink(BaseProvider):
             pass
 
         # build the search element
-        print(self._db)
+        #print(self._db)
         search = self._engine.db(self._db).table(table).has_fields(has_fields)
 
         result = self._engine.expr(True)
@@ -947,9 +947,15 @@ class rethink(BaseProvider):
         # fields and mapping
         if self.fields:
             if map:
-                search = search.pluck(self.fields).map(map)
+                if self.distinct: # add distinct
+                    search = search.pluck(self.fields).map(map).distinct()
+                else:
+                    search = search.pluck(self.fields).map(map)
             else:
-                search = search.pluck(self.fields)
+                if self.distinct: # add distinct
+                    search = search.pluck(self.fields).distinct()
+                else:
+                    search = search.pluck(self.fields)
 
         # ordering
         order = None
@@ -965,9 +971,6 @@ class rethink(BaseProvider):
             # add ordering
             search = search.order_by(order)
 
-        # add distinct
-        if self.distinct:
-            search = search.distinct()
 
         if self._connection:
             data = []
