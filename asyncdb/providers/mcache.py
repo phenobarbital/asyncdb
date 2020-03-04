@@ -145,7 +145,6 @@ class mcache(BaseProvider):
     def get_multi(self, *kwargs):
         try:
             ky = [bytes(key, 'utf-8') for key in kwargs]
-            print(ky)
             result = self._connection.get_multi(ky)
             if result:
                 return [k.decode('utf-8') for k in result]
@@ -167,7 +166,6 @@ class mcache(BaseProvider):
     def delete_multi(self, *kwargs):
         try:
             ky = [bytes(key, 'utf-8') for key in kwargs]
-            print(ky)
             result = self._connection.delete_multi(ky)
             return [k.decode('utf-8') for k in result]
         except (pylibmc.Error) as err:
@@ -178,10 +176,9 @@ class mcache(BaseProvider):
     def multiget(self, *kwargs):
         try:
             ky = [bytes(key, 'utf-8') for key in kwargs]
-            print(ky)
             result = self._connection.get_multi(*ky)
-            print(result)
-            return [k.decode('utf-8') for k in result]
+            if result:
+                return [k.decode('utf-8') for k in result]
         except (pylibmc.Error) as err:
             raise ProviderError("Get Memcache Error: {}".format(str(err)))
         except Exception as err:
