@@ -979,7 +979,7 @@ class rethink(BaseProvider):
                     print("Error on rql query is %s" % err.message)
                     raise Exception("Error on RQL query is %s" % err.message)
                     return False
-                if order or distinct:
+                if order or self.distinct:
                     return cursor
                 else:
                     while (await cursor.fetch_next()):
