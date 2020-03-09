@@ -62,7 +62,8 @@ class pgPool(BasePool):
                 init=self.init_connection,
                 server_settings={
                     "application_name": 'Navigator',
-                    "idle_in_transaction_session_timeout": "10000"
+                    "idle_in_transaction_session_timeout": "10000",
+                    "max_parallel_workers": "8"
                 }
             )
         except TooManyConnectionsError as err:
