@@ -44,7 +44,6 @@ logger_config = dict(
         'level': loglevel,
     },
 )
-
 dictConfig(logger_config)
 logger = logging.getLogger('AsyncDB')
 

@@ -54,6 +54,8 @@ class rethink(BaseProvider):
     where = None
     ordering = None
     qry_options = None
+    _group = None
+    distinct = None
 
     def __init__(self, loop=None, params={}, **kwargs):
         super(rethink, self).__init__(loop=loop, params=params)
@@ -684,6 +686,12 @@ class rethink(BaseProvider):
             del params['ordering']
         except KeyError:
             pass
+        # support for distinct
+        try:
+            self.distinct = params['distinct']
+            del params['distinct']
+        except KeyError:
+            pass
         try:
             self.qry_options = params['qry_options']
             del params['qry_options']
@@ -903,7 +911,7 @@ class rethink(BaseProvider):
             pass
 
         # build the search element
-        print(self._db)
+        #print(self._db)
         search = self._engine.db(self._db).table(table).has_fields(has_fields)
 
         result = self._engine.expr(True)
@@ -957,21 +965,29 @@ class rethink(BaseProvider):
             # add ordering
             search = search.order_by(order)
 
+        # adding distinct
+        if self.distinct:
+            search = search.distinct()
+
         if self._connection:
             data = []
+            self._result = None
             try:
-                cursor = await search.run(self._connection)
-            except (RqlRuntimeError, ReqlRuntimeError) as err:
-                print("Error on rql query is %s" % err.message)
-                raise Exception("Error on RQL query is %s" % err.message)
-                return False
-            if order:
-                return cursor
-            else:
-                while (await cursor.fetch_next()):
-                    row = await cursor.next()
-                    data.append(row)
-                self._result = data
+                try:
+                    cursor = await search.run(self._connection)
+                except (RqlRuntimeError, ReqlRuntimeError) as err:
+                    print("Error on rql query is %s" % err.message)
+                    raise Exception("Error on RQL query is %s" % err.message)
+                    return False
+                if order or self.distinct:
+                    self._result = cursor
+                    return self._result
+                else:
+                    while (await cursor.fetch_next()):
+                        row = await cursor.next()
+                        data.append(row)
+                    self._result = data
+            finally:
                 return self._result
 
 
