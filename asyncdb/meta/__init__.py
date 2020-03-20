@@ -47,7 +47,11 @@ class asyncORM(object):
 
         """
         if self._connection:
-            self._loop.run_until_complete(self._connection.close(timeout=5))
+            #self._loop.run_until_complete(self._connection.close(timeout=5))
+            try:
+                asyncio.ensure_future(self._connection.close(timeout=5))
+            except Exception as err:
+                pass
 
 
     def close(self):
@@ -57,7 +61,11 @@ class asyncORM(object):
         Explicit closing a database connection
         """
         if self._connection:
-            self._loop.run_until_complete(self._connection.close(timeout=5))
+            try:
+                asyncio.ensure_future(self._connection.close(timeout=5))
+            except Exception as err:
+                pass
+            #self._loop.run_until_complete()
 
     """
     Meta Definitions
