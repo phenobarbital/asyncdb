@@ -24,8 +24,8 @@ class pgPool(BasePool):
     _max_queries = 300
     _dsn = 'postgres://{user}:{password}@{host}:{port}/{database}'
 
-    def __init__(self, dsn='', loop=None, params={}):
-        super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params)
+    def __init__(self, dsn='', loop=None, params={}, **kwargs):
+        super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         if loop:
             loop.set_exception_handler(exception_handler)
 

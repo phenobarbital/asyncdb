@@ -89,14 +89,14 @@ class BasePool(ABC):
     _dsn = ''
     _loop = None
     _pool = None
-    _timeout = 60
+    _timeout = 600
     _max_queries = 300
     _connected = False
     _connection = None
     _params = None
     _DEBUG = False
 
-    def __init__(self, dsn='', loop=None, params={}):
+    def __init__(self, dsn='', loop=None, params={}, **kwargs):
         if loop:
             self._loop = loop
             asyncio.set_event_loop(self._loop)
@@ -111,6 +111,10 @@ class BasePool(ABC):
             self._DEBUG = bool(params['DEBUG'])
         except KeyError:
             self._DEBUG = False
+        try:
+            self._timeout = kwargs['timeout']
+        except KeyError:
+            pass
 
     def create_dsn(self, params):
         return self._dsn.format(**params)
@@ -197,7 +201,7 @@ class BaseProvider(ABC):
     _generated = None
     _DEBUG = False
 
-    def __init__(self, dsn='', loop=None, params={}):
+    def __init__(self, dsn='', loop=None, params={}, **kwargs):
         self._params = {}
         if loop:
             self._loop = loop
@@ -215,6 +219,10 @@ class BaseProvider(ABC):
             self._DEBUG = bool(params['DEBUG'])
         except KeyError:
             self._DEBUG = False
+        try:
+            self._timeout = kwargs['timeout']
+        except KeyError:
+            pass
 
     def create_dsn(self, params):
         if params:

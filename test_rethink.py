@@ -12,7 +12,7 @@ params = {
     'password': None,
     'host': 'localhost',
     'port': '28015',
-    'db': 'test'
+    'db': 'troc'
 }
 
 #rt = rethink(params=params)
