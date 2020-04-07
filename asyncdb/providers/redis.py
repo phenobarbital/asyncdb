@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Redis Provider.
+""" Redis async Provider.
 Notes on redis Provider
 --------------------
 This provider implements a few subset of funcionalities from aioredis, is a WIP
@@ -9,16 +9,13 @@ TODO:
 """
 
 import asyncio
-
 import aioredis
-import logging
 
 from asyncdb.providers import BasePool, BaseProvider, registerProvider, exception_handler
 from asyncdb.exceptions import *
 from asyncdb.utils import *
 import objectpath
 
-logger = logging.getLogger(__name__)
 
 class redisPool(BasePool):
     _dsn = 'redis://{host}:{port}/{db}'
@@ -58,7 +55,7 @@ class redisPool(BasePool):
         '''
         __init async db initialization
         '''
-        logger.info("AsyncRedis: Connecting to {}".format(self._dsn))
+        #logger.info("AsyncRedis: Connecting to {}".format(self._dsn))
         try:
             self._pool = await aioredis.create_pool(
                 self._dsn,
@@ -132,7 +129,7 @@ class redisPool(BasePool):
             close = asyncio.create_task(self._pool.wait_closed())
             close = asyncio.ensure_future(close, loop=self._loop)
             await asyncio.wait_for(close, timeout=timeout, loop=self._loop)
-            logger.info("AsyncRedis: Connection Closed")
+            #logger.info("AsyncRedis: Connection Closed")
         except Exception as err:
             print("Pool Closing Error: {}".format(str(err)))
             return False
@@ -210,7 +207,7 @@ class redis(BaseProvider):
         '''
         __init async redis initialization
         '''
-        logger.info("AsyncRedis: Connecting to {}".format(self._dsn))
+        #logger.info("AsyncRedis: Connecting to {}".format(self._dsn))
         try:
             connection = await aioredis.create_connection(self._dsn, loop=self._loop, encoding=self._encoding)
             self._connection = aioredis.Redis(connection)
