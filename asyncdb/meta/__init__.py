@@ -54,6 +54,15 @@ class asyncORM(object):
                 pass
 
 
+    async def terminate(self):
+        """
+        Close
+
+        Explicit closing a database connection
+        """
+        await self._connection.close(timeout=5)
+
+    
     def close(self):
         """
         Close
