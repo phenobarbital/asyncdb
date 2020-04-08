@@ -77,7 +77,7 @@ class mredis(BaseProvider):
             else:
                 self._pool = redis.ConnectionPool(**self._params)
             args = {**args, **kwargs}
-            logger.info("REDIS: Connecting to {}".format(self._params))
+            logger.info("Redis: Connecting to {}".format(self._params))
             self._connection = redis.Redis(connection_pool=self._pool, **args)
         except (redis.exceptions.ConnectionError) as err:
             raise ProviderError("Unable to connect to Redis, connection Refused: {}".format(str(err)))
