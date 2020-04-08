@@ -64,7 +64,7 @@ class mredis(BaseProvider):
     # Create a redis connection
     def connection(self, **kwargs):
         '''
-        __init async redis initialization
+        __init redis initialization
         '''
         try:
             args = {
@@ -132,9 +132,9 @@ class mredis(BaseProvider):
             raise ProviderError("Redis Unknown Error: {}".format(str(err)))
 
 
-    async def get(self, key):
+    def get(self, key):
         try:
-            return await self._connection.get(key)
+            return self._connection.get(key)
         except(redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis Error: {}".format(str(err)))
         except Exception as err:
