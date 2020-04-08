@@ -10,11 +10,13 @@ TODO:
 
 import asyncio
 import redis
-
+import logging
 from asyncdb.providers import BasePool, BaseProvider, registerProvider, exception_handler
 from asyncdb.exceptions import *
 from asyncdb.utils import *
 import objectpath
+
+logger = logging.getLogger('AsyncDB')
 
 class mredis(BaseProvider):
     _provider = 'redis'
@@ -27,7 +29,7 @@ class mredis(BaseProvider):
     _encoding = 'utf-8'
 
     def __init__(self, dsn='', loop=None, pool=None, params={}):
-        super(redis, self).__init__(dsn=dsn, loop=loop, params=params)
+        super(mredis, self).__init__(dsn=dsn, loop=loop, params=params)
         try:
             if params['encoding']:
                 self._encoding = params['encoding']
@@ -75,6 +77,7 @@ class mredis(BaseProvider):
             else:
                 self._pool = redis.ConnectionPool(**self._params)
             args = {**args, **kwargs}
+            logger.info("REDIS: Connecting to {}".format(self._params))
             self._connection = redis.Redis(connection_pool=self._pool, **args)
         except (redis.exceptions.ConnectionError) as err:
             raise ProviderError("Unable to connect to Redis, connection Refused: {}".format(str(err)))
