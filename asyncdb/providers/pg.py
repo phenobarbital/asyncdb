@@ -57,7 +57,7 @@ class pgPool(BasePool):
                 min_size=4, max_size=500,
                 loop=self._loop,
                 max_inactive_connection_lifetime=30,
-                timeout=60,
+                timeout= self._timeout,
                 command_timeout= self._timeout,
                 init=self.init_connection,
                 server_settings={
