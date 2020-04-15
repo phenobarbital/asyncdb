@@ -272,7 +272,12 @@ class pg(BaseProvider):
             if self._pool:
                 self._connection = await self._pool.pool().acquire()
             else:
-                self._connection = await asyncpg.connect(dsn=self._dsn, loop=self._loop, command_timeout= self._timeout)
+                self._connection = await asyncpg.connect(
+                    dsn=self._dsn,
+                    loop=self._loop,
+                    command_timeout=self._timeout,
+                    timeout= self._timeout
+                )
                 await self._connection.set_type_codec('json', encoder=_encoder, decoder=_decoder, schema='pg_catalog')
                 await self._connection.set_type_codec('jsonb', encoder=_encoder, decoder=_decoder, schema='pg_catalog' )
                 await self._connection.set_builtin_type_codec('hstore', codec_name='pg_contrib.hstore')
