@@ -62,7 +62,7 @@ class asyncORM(object):
         """
         await self._connection.close(timeout=5)
 
-    
+
     def close(self):
         """
         Close
@@ -197,7 +197,7 @@ class asyncORM(object):
     Magic Methods
     """
 
-    def __getitem__(self, key):
+    def __getitem__(self, name):
         """
         Sequence-like operators
         """
@@ -206,14 +206,14 @@ class asyncORM(object):
         else:
             return False
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, name, value):
         if name in self._columns:
             self._val[name] = value
         else:
             raise KeyError("asyncORM Error: Invalid Column %s" % name)
 
-    def __contains__(self, key):
-        if key in self._columns:
+    def __contains__(self, name):
+        if name in self._columns:
             return True
         else:
             return False
