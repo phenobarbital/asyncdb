@@ -64,7 +64,7 @@ class redisPool(BasePool):
                 loop=self._loop,
                 encoding=self._encoding
             )
-        except (aioredis.ConnectionTimeout, asyncio.TimeoutError) as err:
+        except (aioredis.ProtocolError) as err:
             raise ConnectionTimeout("Unable to connect to Redis: {}".format(str(err)))
         except (aioredis.RedisError) as err:
             raise ProviderError("Unable to connect to Redis, connection Refused: {}".format(str(err)))
