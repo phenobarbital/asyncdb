@@ -102,6 +102,9 @@ class rethink(BaseProvider):
     def engine(self):
         return self._engine
 
+    def connection(self):
+        return self._connection
+
     def create_dsn(self, params):
         return None
 
