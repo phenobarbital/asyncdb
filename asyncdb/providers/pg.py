@@ -24,7 +24,7 @@ class pgPool(BasePool):
     _max_queries = 300
     _dsn = 'postgres://{user}:{password}@{host}:{port}/{database}'
     _server_settings = {}
-    _init = None
+    init_func = None
 
     def __init__(self, dsn='', loop=None, params={}, **kwargs):
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
@@ -45,9 +45,9 @@ class pgPool(BasePool):
         await connection.set_type_codec('json', encoder=_encoder, decoder=_decoder, schema='pg_catalog')
         await connection.set_type_codec('jsonb', encoder=_encoder, decoder=_decoder, schema='pg_catalog' )
         await connection.set_builtin_type_codec('hstore', codec_name='pg_contrib.hstore')
-        if self._init:
+        if self.init_func:
             try:
-                await self._init(connection)
+                await self.init_func(connection)
             except Exception as err:
                 print('Error on Init Connection: {}'.format(err))
                 pass
