@@ -131,6 +131,9 @@ class BasePool(ABC):
     def get_connection(self):
         return self._connection
 
+    def engine(self):
+        return self._connection
+
     def is_closed(self):
         #logger.debug("Connection closed: %s" % self._pool._closed)
         return self._pool._closed
