@@ -24,6 +24,7 @@ class pgPool(BasePool):
     _max_queries = 300
     _dsn = 'postgres://{user}:{password}@{host}:{port}/{database}'
     _server_settings = {}
+    _init = None
 
     def __init__(self, dsn='', loop=None, params={}, **kwargs):
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
@@ -35,7 +36,7 @@ class pgPool(BasePool):
     def get_event_loop(self):
         return self._loop
 
-    async def init_connection(self, connection, callback=None):
+    async def init_connection(self, connection):
         # Setup jsonb encoder/decoder
         def _encoder(value):
             return json.dumps(value, cls=EnumEncoder)
@@ -44,9 +45,9 @@ class pgPool(BasePool):
         await connection.set_type_codec('json', encoder=_encoder, decoder=_decoder, schema='pg_catalog')
         await connection.set_type_codec('jsonb', encoder=_encoder, decoder=_decoder, schema='pg_catalog' )
         await connection.set_builtin_type_codec('hstore', codec_name='pg_contrib.hstore')
-        if callback:
+        if self._init:
             try:
-                await callback(connection)
+                await self._init(connection)
             except Exception as err:
                 print('Error on Init Connection: {}'.format(err))
                 pass
