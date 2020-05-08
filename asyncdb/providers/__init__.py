@@ -251,6 +251,9 @@ class BaseProvider(ABC):
     def get_connection(self):
         return self._connection
 
+    def engine(self):
+        return self._connection
+
     def is_connected(self):
         return self._connected
 
