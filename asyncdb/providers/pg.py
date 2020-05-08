@@ -23,11 +23,14 @@ logger = logging.getLogger(__name__)
 class pgPool(BasePool):
     _max_queries = 300
     _dsn = 'postgres://{user}:{password}@{host}:{port}/{database}'
+    _server_settings = {}
 
     def __init__(self, dsn='', loop=None, params={}, **kwargs):
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         if loop:
             loop.set_exception_handler(exception_handler)
+        if 'server_settings' in kwargs:
+            self._server_settings = kwargs['server_settings']
 
     def get_event_loop(self):
         return self._loop
@@ -68,7 +71,8 @@ class pgPool(BasePool):
                 server_settings={
                     "application_name": 'Navigator',
                     "idle_in_transaction_session_timeout": "10000",
-                    "max_parallel_workers": "16"
+                    "max_parallel_workers": "16",
+                    **self._server_settings
                 }
             )
         except TooManyConnectionsError as err:
