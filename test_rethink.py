@@ -2,6 +2,7 @@ import asyncio
 
 loop = asyncio.get_event_loop()
 asyncio.set_event_loop(loop)
+from querysource.QueryParser import RethinkParse
 
 from asyncdb import AsyncDB
 from asyncdb.providers.rethink import rethink
@@ -15,8 +16,18 @@ params = {
     'db': 'troc'
 }
 
+options = {
+    "database": "troc",
+    "table": 'troc_populartimes',
+    "fields": ["id", "address", "place_id", "company_slug"]
+    "filter": {
+        "company_slug": "best_buy",
+        "filterdate": "2019-09-03"
+    }
+}
 #rt = rethink(params=params)
 rt = AsyncDB('rethink', params=params)
+parser = RethinkParser(options=options)
 
 async def connect(c):
     async with await c.connection() as conn:

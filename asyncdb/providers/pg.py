@@ -32,7 +32,7 @@ class pgPool(BasePool):
     def get_event_loop(self):
         return self._loop
 
-    async def init_connection(self, connection):
+    async def init_connection(self, connection, callback=None):
         # Setup jsonb encoder/decoder
         def _encoder(value):
             return json.dumps(value, cls=EnumEncoder)
@@ -41,7 +41,12 @@ class pgPool(BasePool):
         await connection.set_type_codec('json', encoder=_encoder, decoder=_decoder, schema='pg_catalog')
         await connection.set_type_codec('jsonb', encoder=_encoder, decoder=_decoder, schema='pg_catalog' )
         await connection.set_builtin_type_codec('hstore', codec_name='pg_contrib.hstore')
-
+        if callback:
+            try:
+                await callback(connection)
+            except Exception as err:
+                print('Error on Init Connection: {}'.format(err))
+                pass
 
     '''
     __init async db initialization
@@ -63,7 +68,7 @@ class pgPool(BasePool):
                 server_settings={
                     "application_name": 'Navigator',
                     "idle_in_transaction_session_timeout": "10000",
-                    "max_parallel_workers": "8"
+                    "max_parallel_workers": "16"
                 }
             )
         except TooManyConnectionsError as err:
