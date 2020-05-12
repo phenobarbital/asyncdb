@@ -37,17 +37,26 @@ class postgres(BaseProvider, Thread):
     _query_raw = 'SELECT {fields} FROM {table} {where_cond}'
     _is_started = False
 
-    def __init__(self, dsn='', loop=None, pool=None, params={}):
-        super(postgres, self).__init__(dsn=dsn, loop=loop, params=params)
+    def __init__(self, dsn='', loop=None, pool=None, params={}, **kwargs):
+        self._params = params
+        if not dsn:
+            self._dsn = self.create_dsn(self._params)
+        else:
+            self._dsn = dsn
+        try:
+            self._timeout = kwargs['timeout']
+        except KeyError:
+            pass
         if loop:
             self._loop = loop
         else:
             self._loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._loop)
-        self._loop.set_exception_handler(exception_handler)
-        self._loop.set_debug(self._DEBUG)
+        #asyncio.set_event_loop(self._loop)
+        #self._loop.set_exception_handler(exception_handler)
+        #self._loop.set_debug(self._DEBUG)
         # calling parent Thread
         Thread.__init__(self)
+        self._logger = logging.getLogger(__name__)
 
     """
     Thread Methodss
@@ -130,6 +139,7 @@ class postgres(BaseProvider, Thread):
         sync-version of connection, for use with sync-methods
         """
         return self._loop.run_until_complete(self.connection())
+        #self._loop.run_until_complete(asyncio.wait([task]))
 
     async def connection(self):
         """
