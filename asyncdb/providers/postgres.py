@@ -18,6 +18,7 @@ from asyncdb.providers import BasePool, BaseProvider, registerProvider, exceptio
 
 from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 from asyncdb.utils import EnumEncoder, SafeDict
+from asyncdb.meta import asyncResult, asyncRecord
 
 class postgres(BaseProvider, Thread):
     _provider = 'postgresql'
@@ -226,6 +227,7 @@ class postgres(BaseProvider, Thread):
         Preparing a sentence
         """
         stmt = None
+        self._columns = []
         if not self._connection:
             await self.connection()
         try:
@@ -248,6 +250,7 @@ class postgres(BaseProvider, Thread):
             return stmt
 
     async def columns(self, sentence, *args):
+        self._columns = []
         if not self._connection:
             await self.connection()
         try:
@@ -377,6 +380,120 @@ class postgres(BaseProvider, Thread):
         finally:
             self.join()
             return [result, error]
+
+    """
+    Transaction Context
+    """
+    async def transaction(self):
+        if not self._connection:
+            await self.connection()
+        self._transaction = self._connection.transaction()
+        await self._transaction.start()
+        return self
+
+    async def commit(self):
+        if self._transaction:
+            await self._transaction.commit()
+
+    async def rollback(self):
+        if self._transaction:
+            await self._transaction.rollback()
+
+    """
+    Cursor Context
+    """
+    async def cursor(self, sentence):
+        if not sentence:
+            raise EmptyStatement("Sentence is an empty string")
+        if not self._connection:
+            await self.connection()
+        self._transaction = self._connection.transaction()
+        await self._transaction.start()
+        self._cursor = await self._connection.cursor(sentence)
+        return self
+
+    async def forward(self, number):
+        try:
+            return await self._cursor.forward(number)
+        except Exception as err:
+            error = "Error forward Cursor: {}".format(str(err))
+            raise Exception(error)
+
+    async def get(self, number = 1):
+        try:
+            return await self._cursor.fetch(number)
+        except Exception as err:
+            error = "Error Fetch Cursor: {}".format(str(err))
+            raise Exception(error)
+
+    async def getrow(self):
+        try:
+            return await self._cursor.fetchrow()
+        except Exception as err:
+            error = "Error Fetchrow Cursor: {}".format(str(err))
+            raise Exception(error)
+
+    """
+    Cursor Iterator Context
+    """
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        data = await self._cursor.fetchrow()
+        if data is not None:
+            return data
+        else:
+            raise StopAsyncIteration
+
+    """
+    Non-Async Methods
+    """
+    def fetchall(self, sentence):
+        error = None
+        self._result = None
+        try:
+            stmt = self._loop.run_until_complete(self.prepare(sentence))
+            if stmt:
+                result = self._loop.run_until_complete(stmt.fetch())
+                self._result = asyncResult(result=result, columns=self._columns)
+        except RuntimeError as err:
+            error = "Runtime Error: {}".format(str(err))
+            raise ProviderError(error)
+        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
+            error = "Sentence Error: {}".format(str(err))
+            raise StatementError(error)
+        except (asyncpg.exceptions.InvalidSQLStatementNameError, asyncpg.exceptions.UndefinedTableError) as err:
+            error = "Invalid Statement Error: {}".format(str(err))
+            raise StatementError(error)
+        except Exception as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
+        finally:
+            return [self._result, error]
+
+    def fetchone(self, sentence):
+        error = None
+        self._result = None
+        try:
+            row = self._loop.run_until_complete(self._connection.fetchrow(sentence))
+            if row:
+                self._result = asyncRecord(dict(row))
+        except RuntimeError as err:
+            error = "Runtime on Query Row Error: {}".format(str(err))
+            raise ProviderError(error)
+        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
+            error = "Sentence on Query Row Error: {}".format(str(err))
+            raise StatementError(error)
+        except (asyncpg.exceptions.InvalidSQLStatementNameError, asyncpg.exceptions.UndefinedTableError) as err:
+            error = "Invalid Statement Error: {}".format(str(err))
+            raise StatementError(error)
+        except Exception as err:
+            error = "Error on Query Row: {}".format(str(err))
+            raise Exception(error)
+        finally:
+            return [self._result, error]
+
 
 """
 Registering this Provider

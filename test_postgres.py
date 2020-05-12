@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 from asyncdb.providers.postgres import postgres
 
 # create a pool with parameters
@@ -16,6 +17,7 @@ loop = pg.get_loop() # get the running loop
 
 # asyncio version
 async def test_connection(db):
+    start = datetime.datetime.now()
     async with await db.connection() as conn:
         result, error = await conn.test_connection()
         print(result)
@@ -31,10 +33,16 @@ async def test_connection(db):
         # simple query
         sql = "SELECT * FROM troc.query_util WHERE query_slug = '{}'".format('walmart_stores')
         print(await conn.columns(sql))
-
+        # basic cursors
+        async for record in await conn.cursor("SELECT store_id, store_name FROM walmart.stores"):
+            print(record)
+        # basic metadata operations
+        exec_time = (datetime.datetime.now() - start).total_seconds()
+        print(f"Execution Time {exec_time:.3f}s\n")
 
 # non-async version
 def connection(db):
+    start = datetime.datetime.now()
     with db.connect() as conn:
         result, error = loop.run_until_complete(conn.test_connection())
         print(result)
@@ -46,6 +54,17 @@ def connection(db):
         result, error = loop.run_until_complete(conn.query(sql))
         for r in result:
             print(r)
+        # get non-async version of query and queryrow
+        row, error = conn.fetchone(sql)
+        if not error:
+            print(row)
+        result, error = conn.fetchall("SELECT store_id, store_name FROM walmart.stores")
+        print(result, error)
+        if result:
+            for r in result:
+                print(r)
+        exec_time = (datetime.datetime.now() - start).total_seconds()
+        print(f"Execution Time {exec_time:.3f}s\n")
 
 
 loop.run_until_complete(test_connection(pg))
