@@ -14,11 +14,14 @@ import asyncpg
 from threading import Thread
 
 from asyncpg.exceptions import InvalidSQLStatementNameError, TooManyConnectionsError, InternalClientError, ConnectionDoesNotExistError, InterfaceError, InterfaceWarning, PostgresError, PostgresSyntaxError, FatalPostgresError, UndefinedTableError, UndefinedColumnError
-from asyncdb.providers import BasePool, BaseProvider, registerProvider, exception_handler
+from asyncdb.providers import BasePool, BaseProvider, registerProvider, exception_handler, logger_config
 
 from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 from asyncdb.utils import EnumEncoder, SafeDict
 from asyncdb.meta import asyncResult, asyncRecord
+
+from logging.config import dictConfig
+dictConfig(logger_config)
 
 class postgres(BaseProvider, Thread):
     _provider = 'postgresql'
