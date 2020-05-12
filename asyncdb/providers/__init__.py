@@ -40,7 +40,7 @@ logger_config = dict(
         }
     },
     root = {
-        'handlers': ['StreamHandler','console'],
+        'handlers': ['StreamHandler'],
         'level': loglevel,
     },
 )
@@ -95,6 +95,7 @@ class BasePool(ABC):
     _connection = None
     _params = None
     _DEBUG = False
+    _logger = None
 
     def __init__(self, dsn='', loop=None, params={}, **kwargs):
         if loop:
@@ -115,6 +116,7 @@ class BasePool(ABC):
             self._timeout = kwargs['timeout']
         except KeyError:
             pass
+        self._logger = logging.getLogger(__name__)
 
     def create_dsn(self, params):
         return self._dsn.format(**params)
@@ -203,6 +205,7 @@ class BaseProvider(ABC):
     _max_connections = 4
     _generated = None
     _DEBUG = False
+    _logger = None
 
     def __init__(self, dsn='', loop=None, params={}, **kwargs):
         self._params = {}
@@ -226,6 +229,7 @@ class BaseProvider(ABC):
             self._timeout = kwargs['timeout']
         except KeyError:
             pass
+        self._logger = logging.getLogger(__name__)
 
     def create_dsn(self, params):
         if params:

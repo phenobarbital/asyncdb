@@ -474,7 +474,7 @@ class pg(BaseProvider):
             await self.connection()
         try:
             async with self._connection.transaction():
-                await self._connection.executemany(sentence, args)
+                await self._connection.executemany(sentence, *args)
         except InterfaceWarning as err:
             error = "Interface Warning: {}".format(str(err))
             raise ProviderError(error)
