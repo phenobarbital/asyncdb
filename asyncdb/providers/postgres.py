@@ -20,6 +20,7 @@ from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, Prov
 from asyncdb.utils import EnumEncoder, SafeDict
 from asyncdb.meta import asyncResult, asyncRecord
 
+import logging
 from logging.config import dictConfig
 dictConfig(logger_config)
 
