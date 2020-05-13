@@ -157,6 +157,7 @@ class postgres(threading.Thread, BaseProvider):
         if not self._is_started:
             self.start(target=self._connect) # start a thread
             self._is_started = True
+            self.join(timeout=self._timeout)
         return self
 
     def _connect(self):
@@ -538,7 +539,6 @@ class postgres(threading.Thread, BaseProvider):
             return [self._result, self._error]
 
     def fetchone(self, sentence):
-        #self.join(timeout=self._timeout)
         self.start(target=self._fetchone, args=(sentence,))
         self.join(timeout=self._timeout)
         return [self._result, self._error]
