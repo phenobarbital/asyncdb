@@ -11,7 +11,9 @@ import json
 
 import asyncio
 import asyncpg
+import threading
 from threading import Thread
+from functools import partial
 
 from asyncpg.exceptions import InvalidSQLStatementNameError, TooManyConnectionsError, InternalClientError, ConnectionDoesNotExistError, InterfaceError, InterfaceWarning, PostgresError, PostgresSyntaxError, FatalPostgresError, UndefinedTableError, UndefinedColumnError
 from asyncdb.providers import BasePool, BaseProvider, registerProvider, exception_handler, logger_config
@@ -24,7 +26,7 @@ import logging
 from logging.config import dictConfig
 dictConfig(logger_config)
 
-class postgres(Thread, BaseProvider):
+class postgres(threading.Thread, BaseProvider):
     _provider = 'postgresql'
     _syntax = 'sql'
     _test_query = "SELECT 1"
@@ -40,9 +42,12 @@ class postgres(Thread, BaseProvider):
     init_func = None
     _query_raw = 'SELECT {fields} FROM {table} {where_cond}'
     _is_started = False
+    _result = None
+    _error = None
 
     def __init__(self, dsn='', loop=None, pool=None, params={}, **kwargs):
         self._params = params
+        self._result = None
         if not dsn:
             self._dsn = self.create_dsn(self._params)
         else:
@@ -55,27 +60,31 @@ class postgres(Thread, BaseProvider):
             self._loop = loop
         else:
             self._loop = asyncio.new_event_loop()
-        #asyncio.set_event_loop(self._loop)
-        #self._loop.set_exception_handler(exception_handler)
-        #self._loop.set_debug(self._DEBUG)
+            asyncio.set_event_loop(self._loop)
         # calling parent Thread
-        Thread.__init__(self)
+        Thread.__init__(self, name='postgres')
+        self.stop_event = threading.Event()
         self._logger = logging.getLogger(__name__)
+
+    def get_connection(self):
+        self.join(timeout=self._timeout)
+        return self._connection
 
     """
     Thread Methodss
     """
-    def start(self):
-        #print('Running Start')
+    def start(self, target=None, args=()):
+        if target:
+            Thread.__init__(self, target=target, args=args)
+        else:
+            Thread.__init__(self, name='postgres')
         super(postgres, self).start()
 
     def join(self, timeout=5):
-        #print('Running Join')
         super(postgres, self).join(timeout=timeout)
 
-    def run(self):
-      #print ("Starting Connection")
-      super(postgres, self).run()
+    def stop(self):
+        self.stop_event.set()
 
     """
     Async Context magic Methods
@@ -85,7 +94,7 @@ class postgres(Thread, BaseProvider):
 
     async def __aexit__(self, exc_type, exc, tb):
         # clean up anything you need to clean up
-        await self.release(wait_close=5)
+        await self.close(timeout=5)
         pass
 
     """
@@ -94,8 +103,10 @@ class postgres(Thread, BaseProvider):
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
-        self._loop.run_until_complete(self.release())
+    def __exit__(self, type, value, traceback, *args):
+        self.start(target=self.release)
+        self.stop()
+        self.join(timeout=self._timeout)
 
     async def init_connection(self, connection):
         # Setup jsonb encoder/decoder
@@ -141,17 +152,16 @@ class postgres(Thread, BaseProvider):
 
         sync-version of connection, for use with sync-methods
         """
-        if not self._is_started:
-            self.start() # start a thread
-            self._is_started = True
-        #task = self._loop.create_task(self.db_fetchone())
-        #asyncio.ensure_future(task)
-        #self._loop.run_until_complete(asyncio.wait([task]))
         self._connection = None
         self._connected = False
+        if not self._is_started:
+            self.start(target=self._connect) # start a thread
+            self._is_started = True
         return self
-        #return self._loop.run_until_complete(self.connection())
-        #self._loop.run_until_complete(asyncio.wait([task]))
+
+    def _connect(self):
+        if not self._connection:
+            self._loop.run_until_complete(self.connection())
 
     async def connection(self):
         """
@@ -192,7 +202,7 @@ class postgres(Thread, BaseProvider):
             print(err)
         finally:
             if not self._is_started:
-                self.start() # start the thread
+                self.start() # start a thread
                 self._is_started = True
             return self
 
@@ -204,7 +214,6 @@ class postgres(Thread, BaseProvider):
         try:
             if self._connection:
                 if not self._connection.is_closed():
-                    print('CLOSING')
                     self._logger.info("Closing Connection, id: {}".format(self._connection.get_server_pid()))
                     try:
                         await self._connection.close(timeout=timeout)
@@ -222,19 +231,19 @@ class postgres(Thread, BaseProvider):
             self._connected = False
 
 
-    async def release(self, wait_close=10):
+    def release(self, wait_close=10):
         """
         Release a Connection
         """
         if self._connection:
             try:
                 if not self._connection.is_closed():
-                    await self._connection.close(timeout = wait_close)
+                    self._logger.info("Closing Connection, id: {}".format(self._connection.get_server_pid()))
+                    self._loop.run_until_complete(self._connection.close(timeout = wait_close))
             except (InterfaceError, RuntimeError) as err:
                 raise ProviderError("Release Interface Error: {}".format(str(err)))
                 return False
             finally:
-                self.join(timeout=wait_close)
                 self._connected = False
                 self._connection = None
 
@@ -359,23 +368,22 @@ class postgres(Thread, BaseProvider):
         get a SQL sentence and execute
         returns: results of the execution
         """
-        error = None
-        result = None
+        self._error = None
+        self._result = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
         if not self._connection:
             await self.connection()
         try:
-            result = await self._connection.execute(sentence, *args)
-            return [result, None]
+            self._result = await self._connection.execute(sentence, *args)
+            return [self._result, None]
         except InterfaceWarning as err:
-            error = "Interface Warning: {}".format(str(err))
+            self._error = "Interface Warning: {}".format(str(err))
             raise ProviderError(error)
         except Exception as err:
-            error = "Error on Execute: {}".format(str(err))
+            self._error = "Error on Execute: {}".format(str(err))
         finally:
-            self.join()
-            return [result, error]
+            return [self._result, self._error]
 
     async def executemany(self, sentence='', *args, timeout=None):
         """execute.
@@ -384,8 +392,8 @@ class postgres(Thread, BaseProvider):
         get a SQL sentence and execute
         returns: results of the execution
         """
-        error = None
-        result = None
+        self._error = None
+        self._result = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
         if not self._connection:
@@ -395,13 +403,12 @@ class postgres(Thread, BaseProvider):
                 await self._connection.executemany(sentence, timeout=timeout, *args)
             return [True, None]
         except InterfaceWarning as err:
-            error = "Interface Warning: {}".format(str(err))
+            self._error = "Interface Warning: {}".format(str(err))
             raise ProviderError(error)
         except Exception as err:
-            error = "Error on Execute: {}".format(str(err))
+            self._error = "Error on Execute: {}".format(str(err))
         finally:
-            self.join()
-            return [result, error]
+            return [True, self._error]
 
     """
     Transaction Context
@@ -471,8 +478,44 @@ class postgres(Thread, BaseProvider):
     """
     Non-Async Methods
     """
+    def test_connection(self):
+        self.start(target=self._test_connection)
+        self.join()
+        return [self._result, self._error]
+
+    def _test_connection(self):
+        self._error = None
+        self._result = None
+        if not self._connection:
+            self._loop.run_until_complete(self.connection())
+        try:
+            self._result = self._loop.run_until_complete(self._connection.fetch(self._test_query))
+        except Exception as err:
+            self._error = "Error on Query: {}".format(str(err))
+            print(self._error)
+            raise Exception(self._error)
+        finally:
+            return [self._result, self._error]
+
+    def perform(self, sentence):
+        self.start(target=self._execute, args=(sentence,))
+        if self.is_alive():
+            self.join(timeout=self._timeout)
+            return [self._result, self._error]
+
+    def _execute(self, sentence):
+        self._error = None
+        self._result = None
+        return self._loop.run_until_complete(self.execute(sentence))
+
     def fetchall(self, sentence):
-        error = None
+        self.start(target=self._fetchall, args=(sentence,))
+        if self.is_alive():
+            self.join(timeout=self._timeout)
+            return [self._result, self._error]
+
+    def _fetchall(self, sentence):
+        self._error = None
         self._result = None
         try:
             stmt = self._loop.run_until_complete(self.prepare(sentence))
@@ -480,41 +523,38 @@ class postgres(Thread, BaseProvider):
                 result = self._loop.run_until_complete(stmt.fetch())
                 self._result = asyncResult(result=result, columns=self._columns)
         except RuntimeError as err:
-            error = "Runtime Error: {}".format(str(err))
+            self._error = "Runtime Error: {}".format(str(err))
             raise ProviderError(error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
-            error = "Sentence Error: {}".format(str(err))
+            self._error = "Sentence Error: {}".format(str(err))
             raise StatementError(error)
         except (asyncpg.exceptions.InvalidSQLStatementNameError, asyncpg.exceptions.UndefinedTableError) as err:
-            error = "Invalid Statement Error: {}".format(str(err))
+            self._error = "Invalid Statement Error: {}".format(str(err))
             raise StatementError(error)
         except Exception as err:
-            error = "Error on Query: {}".format(str(err))
+            self._error = "Error on Query: {}".format(str(err))
             raise Exception(error)
         finally:
-            return [self._result, error]
+            return [self._result, self._error]
 
     def fetchone(self, sentence):
-        error = None
+        self.start(target=self._fetchone, args=(sentence,))
+        if self.is_alive():
+            self.join(timeout=self._timeout)
+            return [self._result, self._error]
+
+    def _fetchone(self, sentence):
+        self._error = None
         self._result = None
         try:
             row = self._loop.run_until_complete(self._connection.fetchrow(sentence))
             if row:
                 self._result = asyncRecord(dict(row))
-        except RuntimeError as err:
-            error = "Runtime on Query Row Error: {}".format(str(err))
-            raise ProviderError(error)
-        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
-            error = "Sentence on Query Row Error: {}".format(str(err))
-            raise StatementError(error)
-        except (asyncpg.exceptions.InvalidSQLStatementNameError, asyncpg.exceptions.UndefinedTableError) as err:
-            error = "Invalid Statement Error: {}".format(str(err))
-            raise StatementError(error)
         except Exception as err:
-            error = "Error on Query Row: {}".format(str(err))
-            raise Exception(error)
+            self._error = "Error on Query Row: {}".format(str(err))
+            raise Exception(self._error)
         finally:
-            return [self._result, error]
+            return [self._result, self._error]
 
 
 """
