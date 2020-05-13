@@ -538,7 +538,7 @@ class postgres(threading.Thread, BaseProvider):
             return [self._result, self._error]
 
     def fetchone(self, sentence):
-        self.join(timeout=self._timeout)
+        #self.join(timeout=self._timeout)
         self.start(target=self._fetchone, args=(sentence,))
         self.join(timeout=self._timeout)
         return [self._result, self._error]
