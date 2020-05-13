@@ -24,7 +24,7 @@ import logging
 from logging.config import dictConfig
 dictConfig(logger_config)
 
-class postgres(BaseProvider, Thread):
+class postgres(Thread, BaseProvider):
     _provider = 'postgresql'
     _syntax = 'sql'
     _test_query = "SELECT 1"
@@ -126,8 +126,7 @@ class postgres(BaseProvider, Thread):
     def terminate(self):
         if self._loop.is_running():
             self._loop.stop()
-        if not self._loop.is_closed():
-            self._loop.close()
+        self._loop.close()
         # finish the main thread
         try:
             self.join(timeout=5)
@@ -142,7 +141,16 @@ class postgres(BaseProvider, Thread):
 
         sync-version of connection, for use with sync-methods
         """
-        return self._loop.run_until_complete(self.connection())
+        if not self._is_started:
+            self.start() # start a thread
+            self._is_started = True
+        #task = self._loop.create_task(self.db_fetchone())
+        #asyncio.ensure_future(task)
+        #self._loop.run_until_complete(asyncio.wait([task]))
+        self._connection = None
+        self._connected = False
+        return self
+        #return self._loop.run_until_complete(self.connection())
         #self._loop.run_until_complete(asyncio.wait([task]))
 
     async def connection(self):
