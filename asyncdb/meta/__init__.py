@@ -389,6 +389,10 @@ class asyncRecord(object):
             return False
 
 
+    def __delitem__(self, key):
+        if self._row:
+            del self._row[key]
+
     def __getitem__(self, key):
         """
         Sequence-like operators
