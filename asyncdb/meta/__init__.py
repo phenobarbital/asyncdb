@@ -383,11 +383,12 @@ class asyncRecord(object):
     """
 
     def __contains__(self, key):
-        if name in self._columns:
+        if key in self._columns:
+            return True
+        elif key in self._row:
             return True
         else:
             return False
-
 
     def __delitem__(self, key):
         if self._row:
