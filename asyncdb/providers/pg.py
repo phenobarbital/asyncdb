@@ -238,6 +238,17 @@ class pg(BaseProvider):
         self._loop.set_exception_handler(exception_handler)
         self._loop.set_debug(self._DEBUG)
 
+    """
+    Async Context magic Methods
+    """
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        # clean up anything you need to clean up
+        await self.close(timeout=5)
+        pass
+    
     async def close(self, timeout = 5):
         """
         Closing a Connection

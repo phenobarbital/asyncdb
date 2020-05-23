@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 from asyncdb.providers.postgres import postgres
+from asyncdb import AsyncDB
 
 loop = asyncio.get_event_loop()
 asyncio.set_event_loop(loop)

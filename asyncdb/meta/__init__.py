@@ -7,12 +7,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 from asyncdb.providers.exceptions import *
 from asyncdb.utils import SafeDict
 
-"""
-asyncORM
-   Class for basic record interaction on AsyncDB
-"""
 
 class asyncORM(object):
+    """
+    asyncORM
+       Class for basic record interaction on AsyncDB
+    """
     _fields = {}
     _columns = []
     _result = None
