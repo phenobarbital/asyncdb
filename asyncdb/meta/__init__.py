@@ -378,6 +378,9 @@ class asyncRecord(object):
     def get_result(self):
         return self._row
 
+    def columns(self):
+        return self._columns
+
     """
      Section: Simple magic methods
     """
