@@ -248,7 +248,17 @@ class pg(BaseProvider):
         # clean up anything you need to clean up
         await self.close(timeout=5)
         pass
-    
+
+    """
+    Context magic Methods
+    """
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback, *args):
+        await self.close(timeout=5)
+        pass
+
     async def close(self, timeout = 5):
         """
         Closing a Connection
