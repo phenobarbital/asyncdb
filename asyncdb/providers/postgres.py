@@ -143,7 +143,7 @@ class postgres(threading.Thread, BaseProvider):
             self.join(timeout=5)
         finally:
             #self._logger.info('Thread Killed')
-            return
+            return True
 
 
     def connect(self):
@@ -240,7 +240,7 @@ class postgres(threading.Thread, BaseProvider):
         if self._connection:
             try:
                 if not self._connection.is_closed():
-                    self._logger.info("Closing Connection, id: {}".format(self._connection.get_server_pid()))
+                    #self._logger.info("Closing Connection, id: {}".format(self._connection.get_server_pid()))
                     self._loop.run_until_complete(self._connection.close(timeout = wait_close))
             except (InterfaceError, RuntimeError) as err:
                 raise ProviderError("Release Interface Error: {}".format(str(err)))
