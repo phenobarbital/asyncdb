@@ -142,7 +142,7 @@ class postgres(threading.Thread, BaseProvider):
         try:
             self.join(timeout=5)
         finally:
-            self._logger.info('Thread Killed')
+            #self._logger.info('Thread Killed')
             return
 
 
@@ -180,7 +180,7 @@ class postgres(threading.Thread, BaseProvider):
                 timeout= self._timeout
             )
             if self._connection:
-                self._logger.info("Open Connection to {}, id: {}".format(self._dsn, self._connection.get_server_pid()))
+                #self._logger.info("Open Connection to {}, id: {}".format(self._dsn, self._connection.get_server_pid()))
                 await self.init_connection(self._connection)
                 self._connected = True
                 self._initialized_on = time.time()
@@ -215,7 +215,8 @@ class postgres(threading.Thread, BaseProvider):
         try:
             if self._connection:
                 if not self._connection.is_closed():
-                    self._logger.info("Closing Connection, id: {}".format(self._connection.get_server_pid()))
+                    #if self._DEBUG:
+                    #    self._logger.info("Closing Connection, id: {}".format(self._connection.get_server_pid()))
                     try:
                         await self._connection.close(timeout=timeout)
                         self.join(timeout=timeout)
