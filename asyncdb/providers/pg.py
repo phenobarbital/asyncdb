@@ -256,7 +256,7 @@ class pg(BaseProvider):
         return self
 
     def __exit__(self, type, value, traceback, *args):
-        await self.close(timeout=5)
+        self.terminate()
         pass
 
     async def close(self, timeout = 5):

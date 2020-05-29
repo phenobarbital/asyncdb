@@ -44,7 +44,7 @@ class AsyncPool(object):
     def __new__(self, provider = 'dummy', **kwargs):
         self._provider = None
         self._name = provider
-        #logger.debug('Load Pool Provider: {}'.format(self._name))
+        #logger.info('Load Pool Provider: {}'.format(self._name))
         classpath = 'asyncdb.providers.{provider}'.format(provider=self._name)
         poolName = '{}Pool'.format(self._name)
         try:
