@@ -302,8 +302,10 @@ class rethink(BaseProvider):
             data = []
             try:
                 self._columns = await self._engine.table(table).get(1).keys().run(self._connection)
+                print(self._columns)
                 if not filter:
                     cursor = await self._engine.db(self._db).table(table).run(self._connection)
+                    print(cursor)
                 else:
                     cursor = await self._engine.db(self._db).table(table).filter(filter).run(self._connection)
                 while (await cursor.fetch_next()):
