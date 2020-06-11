@@ -69,10 +69,11 @@ def exception_handler(loop, context):
     loop.default_exception_handler(context)
     if context:
         try:
+            print(context)
             exception = context.get('exception')
             msg = context.get("exception", context["message"])
             print("Caught DB Exception Exception: {}".format(str(msg)))
-        except AttributeError:
+        except (TypeError, AttributeError):
             print("Caught Exception: {}".format(str(context)))
         # Canceling pending tasks and stopping the loop
     try:
