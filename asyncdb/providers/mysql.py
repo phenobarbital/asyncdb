@@ -8,7 +8,7 @@ import json
 import asyncio
 import aiomysql
 
-from asyncdb.providers import BasePool, BaseProvider, registerProvider, exception_handler
+from asyncdb.providers import BasePool, BaseProvider, registerProvider
 
 from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 from asyncdb.utils import EnumEncoder, SafeDict
@@ -22,8 +22,6 @@ class mysqlPool(BasePool):
     def __init__(self, loop=None, params={}):
         logger.debug("Ready")
         super(mysqlPool, self).__init__(loop=loop, params=params)
-        if loop:
-            loop.set_exception_handler(exception_handler)
 
     def get_event_loop(self):
         return self._loop
@@ -175,8 +173,6 @@ class mysql(BaseProvider):
     def __init__(self, loop=None, pool=None, params={}):
         super(mysql, self).__init__(loop=loop, params=params)
         asyncio.set_event_loop(self._loop)
-        self._loop.set_exception_handler(exception_handler)
-        self._loop.set_debug(self._DEBUG)
 
 
     async def close(self):
@@ -215,10 +211,10 @@ class mysql(BaseProvider):
         try:
             if not self._pool:
                 self._pool = await aiomysql.create_pool(
-                                            host=self._params['host'], 
+                                            host=self._params['host'],
                                             user=self._params['user'],
                                             password=self._params['password'],
-                                            db=self._params['database'], 
+                                            db=self._params['database'],
                                             loop=self._loop)
             self._connection = await self._pool.acquire()
             self._cursor = await self._connection.cursor()
@@ -309,7 +305,6 @@ class mysql(BaseProvider):
             raise ProviderError(error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            self._loop.call_exception_handler(err)
             raise Exception(error)
         finally:
             #    self._generated = datetime.now() - startTime
@@ -332,7 +327,6 @@ class mysql(BaseProvider):
             raise ProviderError(error)
         except Exception as err:
             error = "Error on Query Row: {}".format(str(err))
-            self._loop.call_exception_handler(err)
             raise Exception(error)
         #finally:
             #await self.close()
@@ -355,7 +349,6 @@ class mysql(BaseProvider):
             return [None, error]
         except Exception as err:
             error = "Error on Execute: {}".format(str(err))
-            self._loop.call_exception_handler(err)
             raise [None, error]
         finally:
             return [result, error]
@@ -374,7 +367,6 @@ class mysql(BaseProvider):
         except Exception as err:
             await self.rollback()
             error = "Error on Execute: {}".format(str(err))
-            self._loop.call_exception_handler(err)
             raise Exception(error)
         finally:
             return error

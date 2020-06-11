@@ -9,7 +9,7 @@ import asyncio
 import aiomcache
 import logging
 
-from asyncdb.providers import BasePool, BaseProvider, registerProvider, exception_handler
+from asyncdb.providers import BasePool, BaseProvider, registerProvider
 from asyncdb.exceptions import *
 from asyncdb.utils import *
 
@@ -25,8 +25,6 @@ class memcachePool(BasePool):
     def __init__(self, loop=None, params={}):
         super(memcachePool, self).__init__(loop=loop, params=params)
         self._pool = None
-        if loop:
-            loop.set_exception_handler(exception_handler)
 
     def create_dsn(self, params):
         return params
@@ -120,8 +118,6 @@ class memcache(BaseProvider):
             self._connection = pool.get_connection()
             self._connected = True
             self._initialized_on = time.time()
-        self._loop.set_exception_handler(exception_handler)
-        self._loop.set_debug(self._DEBUG)
 
     """
     Context magic Methods

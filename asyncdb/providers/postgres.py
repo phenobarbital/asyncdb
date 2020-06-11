@@ -16,7 +16,7 @@ from threading import Thread
 from functools import partial
 
 from asyncpg.exceptions import InvalidSQLStatementNameError, TooManyConnectionsError, InternalClientError, ConnectionDoesNotExistError, InterfaceError, InterfaceWarning, PostgresError, PostgresSyntaxError, FatalPostgresError, UndefinedTableError, UndefinedColumnError
-from asyncdb.providers import BasePool, BaseProvider, registerProvider, exception_handler, logger_config
+from asyncdb.providers import BasePool, BaseProvider, registerProvider, logger_config
 
 from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 from asyncdb.utils import EnumEncoder, SafeDict

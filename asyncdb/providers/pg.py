@@ -13,7 +13,7 @@ import asyncio
 import asyncpg
 from asyncpg.exceptions import InvalidSQLStatementNameError, TooManyConnectionsError, InternalClientError, ConnectionDoesNotExistError, InterfaceError, InterfaceWarning, PostgresError, PostgresSyntaxError, FatalPostgresError, UndefinedTableError, UndefinedColumnError
 
-from asyncdb.providers import BasePool, BaseProvider, registerProvider, exception_handler
+from asyncdb.providers import BasePool, BaseProvider, registerProvider
 
 from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 from asyncdb.utils import EnumEncoder, SafeDict
@@ -28,8 +28,6 @@ class pgPool(BasePool):
 
     def __init__(self, dsn='', loop=None, params={}, **kwargs):
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
-        if loop:
-            loop.set_exception_handler(exception_handler)
         if 'server_settings' in kwargs:
             self._server_settings = kwargs['server_settings']
 
@@ -235,8 +233,6 @@ class pg(BaseProvider):
     def __init__(self, dsn='', loop=None, pool=None, params={}):
         super(pg, self).__init__(dsn=dsn, loop=loop, params=params)
         asyncio.set_event_loop(self._loop)
-        self._loop.set_exception_handler(exception_handler)
-        self._loop.set_debug(self._DEBUG)
 
     """
     Async Context magic Methods
@@ -416,15 +412,12 @@ class pg(BaseProvider):
             raise ProviderError(error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence Error: {}".format(str(err))
-            self._loop.call_exception_handler(err)
             raise StatementError(error)
         except (asyncpg.exceptions.InvalidSQLStatementNameError, asyncpg.exceptions.UndefinedTableError) as err:
             error = "Invalid Statement Error: {}".format(str(err))
-            self._loop.call_exception_handler(err)
             raise StatementError(error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            #self._loop.call_exception_handler(err)
             raise Exception(error)
         finally:
             self._generated = datetime.now() - startTime
@@ -447,7 +440,6 @@ class pg(BaseProvider):
             raise ProviderError(error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
-            self._loop.call_exception_handler(err)
             raise StatementError(error)
         except (asyncpg.exceptions.InvalidSQLStatementNameError, asyncpg.exceptions.UndefinedTableError) as err:
             error = "Invalid Statement Error: {}".format(str(err))

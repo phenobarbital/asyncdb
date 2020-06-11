@@ -14,7 +14,7 @@ from psycopg2.extras import NamedTupleCursor
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError, OperationalError
 
 
-from asyncdb.providers import BaseProvider, registerProvider, exception_handler
+from asyncdb.providers import BaseProvider, registerProvider
 from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 
 logger = logging.getLogger(__name__)
@@ -50,8 +50,6 @@ class sa(BaseProvider, Thread):
         # create a new loop before thread
         self._loop = asyncio.new_event_loop()
         #asyncio.set_event_loop(self._loop)
-        self._loop.set_exception_handler(exception_handler)
-        self._loop.set_debug(self._DEBUG)
         # calling parent Thread
         Thread.__init__(self)
         self.connect()

@@ -11,7 +11,7 @@ TODO:
 import asyncio
 import aioredis
 
-from asyncdb.providers import BasePool, BaseProvider, registerProvider, exception_handler
+from asyncdb.providers import BasePool, BaseProvider, registerProvider
 from asyncdb.exceptions import *
 from asyncdb.utils import *
 import objectpath
@@ -32,8 +32,6 @@ class redisPool(BasePool):
                 self._encoding = params['encoding']
         except KeyError:
             pass
-        if loop:
-            loop.set_exception_handler(exception_handler)
 
     def get_event_loop(self):
         return self._loop
@@ -175,8 +173,6 @@ class redis(BaseProvider):
                 self._encoding = params['encoding']
         except KeyError:
             pass
-        self._loop.set_exception_handler(exception_handler)
-        self._loop.set_debug(self._DEBUG)
 
     """
     Context magic Methods

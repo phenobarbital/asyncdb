@@ -9,7 +9,7 @@ import asyncio
 import pylibmc
 import logging
 
-from asyncdb.providers import BasePool, BaseProvider, registerProvider, exception_handler
+from asyncdb.providers import BasePool, BaseProvider, registerProvider
 from asyncdb.exceptions import *
 from asyncdb.utils import *
 
@@ -29,8 +29,6 @@ class mcache(BaseProvider):
 
     def __init__(self, loop=None, params={}):
         super(mcache, self).__init__(loop=loop, params=params)
-        self._loop.set_exception_handler(exception_handler)
-        self._loop.set_debug(self._DEBUG)
         self._server = ['{0}:{1}'.format(params['host'], params['port'])]
         try:
             if params['behaviors']:
