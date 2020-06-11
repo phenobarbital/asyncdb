@@ -52,13 +52,13 @@ async def shutdown(loop, signal=None):
     if signal:
         logger.info(f"Received exit signal {signal.name}...")
     logger.info("Closing all connections")
-    try:
-        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-        [task.cancel() for task in tasks]
-        logger.info(f"Cancelling {len(tasks)} outstanding tasks")
-        await asyncio.gather(*tasks, return_exceptions=True)
-    except asyncio.CancelledError:
-        print('Tasks has been canceled')
+    # try:
+    #     tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    #     [task.cancel() for task in tasks]
+    #     logger.info(f"Cancelling {len(tasks)} outstanding tasks")
+    #     await asyncio.gather(*tasks, return_exceptions=True)
+    # except asyncio.CancelledError:
+    #     print('Tasks has been canceled')
     # #asyncio.gather(*asyncio.Task.all_tasks()).cancel()
     # finally:
     #     loop.stop()
