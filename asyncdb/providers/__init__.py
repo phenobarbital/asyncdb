@@ -59,20 +59,19 @@ async def shutdown(loop, signal=None):
         await asyncio.gather(*tasks, return_exceptions=True)
     except asyncio.CancelledError:
         print('Tasks has been canceled')
-    #asyncio.gather(*asyncio.Task.all_tasks()).cancel()
-    finally:
-        loop.stop()
+    # #asyncio.gather(*asyncio.Task.all_tasks()).cancel()
+    # finally:
+    #     loop.stop()
 
 def exception_handler(loop, context):
     """Exception Handler for Asyncio Loops."""
     # first, handle with default handler
     loop.default_exception_handler(context)
     if context:
-        print(context)
         try:
             exception = context.get('exception')
             msg = context.get("exception", context["message"])
-            print("Caught asyncDBException Exception: {}".format(str(msg)))
+            print("Caught DB Exception Exception: {}".format(str(msg)))
         except AttributeError:
             print("Caught Exception: {}".format(str(context)))
         # Canceling pending tasks and stopping the loop
@@ -80,9 +79,9 @@ def exception_handler(loop, context):
         logger.info("Shutting down...")
         loop.call_soon_threadsafe(shutdown(loop))
         #asyncio.create_task(shutdown(loop))
-    finally:
-        loop.close()
-        logger.info("Successfully shutdown the AsyncDB service.")
+    # finally:
+    #     loop.close()
+    #     logger.info("Successfully shutdown the AsyncDB service.")
 
 
 class BasePool(ABC):
