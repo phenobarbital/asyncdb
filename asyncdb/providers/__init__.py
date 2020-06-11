@@ -52,16 +52,16 @@ async def shutdown(loop, signal=None):
     if signal:
         logger.info(f"Received exit signal {signal.name}...")
     logger.info("Closing all connections")
-    # try:
-    #     tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-    #     [task.cancel() for task in tasks]
-    #     logger.info(f"Cancelling {len(tasks)} outstanding tasks")
-    #     await asyncio.gather(*tasks, return_exceptions=True)
-    # except asyncio.CancelledError:
-    #     print('Tasks has been canceled')
-    # #asyncio.gather(*asyncio.Task.all_tasks()).cancel()
-    # finally:
-    #     loop.stop()
+    try:
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+        [task.cancel() for task in tasks]
+        logger.info(f"Cancelling {len(tasks)} outstanding tasks")
+        await asyncio.gather(*tasks, return_exceptions=True)
+    except asyncio.CancelledError:
+        print('Tasks has been canceled')
+    #asyncio.gather(*asyncio.Task.all_tasks()).cancel()
+    finally:
+        loop.stop()
 
 def exception_handler(loop, context):
     """Exception Handler for Asyncio Loops."""
@@ -76,12 +76,12 @@ def exception_handler(loop, context):
         except (TypeError, AttributeError):
             print("Caught Exception: {}".format(str(context)))
         # Canceling pending tasks and stopping the loop
-    try:
-        logger.info("Shutting down...")
-        loop.call_soon_threadsafe(shutdown(loop))
-        #asyncio.create_task(shutdown(loop))
-    except Exception as e:
-        print(e)
+    # try:
+    #     logger.info("Shutting down...")
+    #     #loop.call_soon_threadsafe(shutdown(loop))
+    #     #asyncio.create_task(shutdown(loop))
+    # except Exception as e:
+    #     print(e)
     # finally:
     #     loop.close()
     #     logger.info("Successfully shutdown the AsyncDB service.")
