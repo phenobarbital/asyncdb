@@ -79,6 +79,8 @@ def exception_handler(loop, context):
         logger.info("Shutting down...")
         loop.call_soon_threadsafe(shutdown(loop))
         #asyncio.create_task(shutdown(loop))
+    except Exception as e:
+        print(e)
     # finally:
     #     loop.close()
     #     logger.info("Successfully shutdown the AsyncDB service.")
