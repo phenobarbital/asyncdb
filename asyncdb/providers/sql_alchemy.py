@@ -77,6 +77,7 @@ class sql_alchemy(BaseProvider):
     def close(self):
         if self._connection:
             self._connection.close()
+        self._logger.info('Closing Connection: {}'.format(self._engine))
         self._engine.dispose()
 
     def terminate(self):
