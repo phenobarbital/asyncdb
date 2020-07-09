@@ -20,14 +20,20 @@ from asyncdb.utils import EnumEncoder, SafeDict
 
 logger = logging.getLogger(__name__)
 
+max_cached_statement_lifetime=600
+max_cacheable_statement_size=1024 * 15
+
 class pgPool(BasePool):
     _max_queries = 300
     _dsn = 'postgres://{user}:{password}@{host}:{port}/{database}'
     _server_settings = {}
     init_func = None
+    _autocommit = True
 
     def __init__(self, dsn='', loop=None, params={}, **kwargs):
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        if 'autocommit' in kwargs:
+            self._autocommit = kwargs['autocommit']
         if 'server_settings' in kwargs:
             self._server_settings = kwargs['server_settings']
 
@@ -49,6 +55,9 @@ class pgPool(BasePool):
             except Exception as err:
                 print('Error on Init Connection: {}'.format(err))
                 pass
+        if self._autocommit:
+            await connection.execute('SET AUTOCOMMIT = ON;')
+
 
     '''
     __init async db initialization
@@ -71,6 +80,8 @@ class pgPool(BasePool):
                     "application_name": 'Navigator',
                     "idle_in_transaction_session_timeout": "10000",
                     "max_parallel_workers": "16",
+                    max_cached_statement_lifetime=max_cached_statement_lifetime,
+                    max_cacheable_statement_size=max_cacheable_statement_size,
                     **self._server_settings
                 }
             )
@@ -303,7 +314,9 @@ class pg(BaseProvider):
                     dsn=self._dsn,
                     loop=self._loop,
                     command_timeout=self._timeout,
-                    timeout= self._timeout
+                    timeout= self._timeout,
+                    max_cached_statement_lifetime=max_cached_statement_lifetime,
+                    max_cacheable_statement_size=max_cacheable_statement_size
                 )
                 await self._connection.set_type_codec('json', encoder=_encoder, decoder=_decoder, schema='pg_catalog')
                 await self._connection.set_type_codec('jsonb', encoder=_encoder, decoder=_decoder, schema='pg_catalog' )
