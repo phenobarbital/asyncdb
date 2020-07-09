@@ -28,17 +28,23 @@ class pgPool(BasePool):
     _dsn = 'postgres://{user}:{password}@{host}:{port}/{database}'
     _server_settings = {}
     init_func = None
-    _autocommit = True
+    setup_func = None
 
     def __init__(self, dsn='', loop=None, params={}, **kwargs):
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
-        if 'autocommit' in kwargs:
-            self._autocommit = kwargs['autocommit']
         if 'server_settings' in kwargs:
             self._server_settings = kwargs['server_settings']
 
     def get_event_loop(self):
         return self._loop
+
+    async def setup_connection(self, connection):
+        if self.setup_func:
+            try:
+                await self.setup_func(connection)
+            except Exception as err:
+                print('Error on Setup Connection: {}'.format(err))
+                pass
 
     async def init_connection(self, connection):
         # Setup jsonb encoder/decoder
@@ -55,9 +61,6 @@ class pgPool(BasePool):
             except Exception as err:
                 print('Error on Init Connection: {}'.format(err))
                 pass
-        if self._autocommit:
-            await connection.execute('SET AUTOCOMMIT = ON;')
-
 
     '''
     __init async db initialization
@@ -76,12 +79,13 @@ class pgPool(BasePool):
                 timeout= self._timeout,
                 command_timeout= self._timeout,
                 init=self.init_connection,
+                setup=self.setup_connection,
+                max_cached_statement_lifetime=max_cached_statement_lifetime,
+                max_cacheable_statement_size=max_cacheable_statement_size,
                 server_settings={
                     "application_name": 'Navigator',
                     "idle_in_transaction_session_timeout": "10000",
                     "max_parallel_workers": "16",
-                    max_cached_statement_lifetime=max_cached_statement_lifetime,
-                    max_cacheable_statement_size=max_cacheable_statement_size,
                     **self._server_settings
                 }
             )
@@ -322,6 +326,12 @@ class pg(BaseProvider):
                 await self._connection.set_type_codec('jsonb', encoder=_encoder, decoder=_decoder, schema='pg_catalog' )
                 await self._connection.set_builtin_type_codec('hstore', codec_name='pg_contrib.hstore')
             if self._connection:
+                if self.init_func:
+                    try:
+                        await self.init_func(self._connection)
+                    except Exception as err:
+                        print('Error on Init Connection: {}'.format(err))
+                        pass
                 self._connected = True
                 self._initialized_on = time.time()
         except TooManyConnectionsError as err:

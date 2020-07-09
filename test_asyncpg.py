@@ -8,8 +8,8 @@ from asyncdb.providers.pg import pgPool, pg
 #from asyncdb.providers.sa import sa
 # create a pool with parameters
 params = {
-    'user': 'troc-pgdata',
-    'password': 'z!7ru$7aNuy=za',
+    'user': 'troc_pgdata',
+    'password': '12345678',
     'host': '127.0.0.1',
     'port': '5432',
     'database': 'navigator_dev',
