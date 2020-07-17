@@ -24,6 +24,7 @@ pkg-resources==0.0.0
 psycopg2-binary==2.8.4
 pycparser==2.19
 python-dateutil==2.8.0
+pylibmc==1.6.1
 pytz==2020.1
 redis==3.3.6
 Represent==1.6.0
