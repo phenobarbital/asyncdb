@@ -67,7 +67,7 @@ class pgPool(BasePool):
     '''
     # Create a database connection pool
     async def connect(self):
-        logger.debug("AsyncPg: Connecting to {}".format(self._dsn))
+        logger.debug("AsyncPg (Pool): Connecting to {}".format(self._dsn))
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             self._pool = await asyncpg.create_pool(

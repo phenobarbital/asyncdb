@@ -50,6 +50,9 @@ class postgresql(BaseProvider, Thread):
         Thread.__init__(self)
         self._engine = self.connect()
 
+    def __del__(self):
+        self._loop.run_until_complete(self.terminate())
+
     """
     Context magic Methods
     """
