@@ -74,7 +74,6 @@ class pgPool(BasePool):
                 dsn=self._dsn,
                 max_queries=self._max_queries,
                 min_size=4, max_size=500,
-                loop=self._loop,
                 max_inactive_connection_lifetime=30,
                 timeout= self._timeout,
                 command_timeout= self._timeout,
@@ -316,7 +315,6 @@ class pg(BaseProvider):
             else:
                 self._connection = await asyncpg.connect(
                     dsn=self._dsn,
-                    loop=self._loop,
                     command_timeout=self._timeout,
                     timeout= self._timeout,
                     max_cached_statement_lifetime=max_cached_statement_lifetime,
