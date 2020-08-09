@@ -173,7 +173,6 @@ class pgPool(BasePool):
     """
     async def wait_close(self, gracefully = True):
         if self._pool:
-            logger.debug("AsyncPg: Closing Pool")
             # try to closing main connection
             try:
                 if self._connection:
