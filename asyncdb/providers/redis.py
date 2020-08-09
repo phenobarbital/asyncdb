@@ -122,13 +122,6 @@ class redisPool(BasePool):
         except (aioredis.errors.PoolClosedError, aioredis.ConnectionClosedError) as err:
             raise ProviderError("Connection close Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError("Redis Unknown Error: {}".format(str(err)))
-        try:
-            close = asyncio.create_task(self._pool.wait_closed())
-            close = asyncio.ensure_future(close, loop=self._loop)
-            await asyncio.wait_for(close, timeout=timeout, loop=self._loop)
-            #logger.info("AsyncRedis: Connection Closed")
-        except Exception as err:
             print("Pool Closing Error: {}".format(str(err)))
             return False
 
