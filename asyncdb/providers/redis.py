@@ -191,7 +191,6 @@ class redis(BaseProvider):
         return self._connection
 
     # Create a redis pool
-    @asyncio.coroutine
     async def connection(self):
         '''
         __init async redis initialization
@@ -219,7 +218,7 @@ class redis(BaseProvider):
         if self._pool:
             self._loop.run_until_complete(self._pool.release(connection=self._connection))
 
-    @asyncio.coroutine
+
     async def close(self):
         if self._connection:
             try:
@@ -330,11 +329,11 @@ class redis(BaseProvider):
         except Exception as err:
             raise ProviderError("Redis Expiration Unknown Error: {}".format(str(err)))
 
-    @asyncio.coroutine
+
     async def set_key(self, key, value):
         await self.set(key, value)
 
-    @asyncio.coroutine
+
     async def get_key(self, key):
         return await self.get(key)
 
@@ -363,11 +362,11 @@ class redis(BaseProvider):
         except Exception as err:
             raise ProviderError("Redis Hmset Unknown Error: {}".format(str(err)))
 
-    @asyncio.coroutine
+
     async def set_hash(self, key, *args, **kwargs):
         await self.hmset(key, *args, **kwargs)
 
-    @asyncio.coroutine
+
     async def get_hash(self, key):
         return await self.hgetall(key)
 
@@ -393,11 +392,11 @@ class redis(BaseProvider):
         except Exception as err:
             raise ProviderError("Redis Hmset Unknown Error: {}".format(str(err)))
 
-    @asyncio.coroutine
+
     async def keys(self, key):
         return await self.hkeys(key)
 
-    @asyncio.coroutine
+
     async def values(self, key):
         return await self.hvals(key)
 
