@@ -187,7 +187,6 @@ class postgresql(BaseProvider, Thread):
             return [ row, error ]
 
 
-    @asyncio.coroutine
     async def query(self, sentence=''):
         """
         Running a Query

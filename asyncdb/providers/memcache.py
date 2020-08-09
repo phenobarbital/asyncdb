@@ -129,7 +129,6 @@ class memcache(BaseProvider):
         self.release()
 
     # Create a memcache Connection
-    @asyncio.coroutine
     async def connection(self):
         '''
         __init async Memcache initialization

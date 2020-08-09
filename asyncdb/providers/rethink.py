@@ -101,7 +101,6 @@ class rethink(BaseProvider):
     def create_dsn(self, params):
         return None
 
-    @asyncio.coroutine
     async def close(self, wait=True):
         try:
             if self._connection:
@@ -116,7 +115,6 @@ class rethink(BaseProvider):
     """
     Basic Methods
     """
-    @asyncio.coroutine
     def db(self, db):
         self._db = db
         try:
