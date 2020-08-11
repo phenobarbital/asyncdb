@@ -62,7 +62,7 @@ class rethink(BaseProvider):
         self._engine = rt
         # set asyncio type
         self._engine.set_loop_type("asyncio")
-        asyncio.set_event_loop(self._loop)
+        #asyncio.set_event_loop(self._loop)
 
 
     """
@@ -115,7 +115,7 @@ class rethink(BaseProvider):
     """
     Basic Methods
     """
-    def db(self, db):
+    async def db(self, db):
         self._db = db
         try:
             self._connection.use(self._db)
@@ -246,6 +246,7 @@ class rethink(BaseProvider):
 
     async def list_databases(self):
         return await self.listdb()
+
 
     async def list_tables(self):
         if self._connection:
