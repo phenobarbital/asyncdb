@@ -20,7 +20,7 @@ openpyxl==3.0.5
 outcome==1.0.1
 pandas==1.1.1
 pkg-resources==0.0.0
-psycopg2-binary==2.8.4
+psycopg2-binary==2.8.6
 pycparser==2.19
 python-dateutil==2.8.0
 pylibmc==1.6.1
