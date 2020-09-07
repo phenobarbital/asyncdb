@@ -21,7 +21,7 @@ outcome==1.0.1
 pandas==1.1.1
 pkg-resources==0.0.0
 psycopg2-binary==2.8.6
-pycparser==2.19
+pycparser==2.20
 python-dateutil==2.8.0
 pylibmc==1.6.1
 pytz==2020.1
