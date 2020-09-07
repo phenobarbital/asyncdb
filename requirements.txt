@@ -5,7 +5,7 @@ asyncio==3.4.3
 asyncio-redis==0.16.0
 asyncpg==0.21.0
 attrs==20.2.0
-bcrypt==3.1.6
+bcrypt==3.2.0
 certifi==2019.6.16
 cffi==1.12.3
 chardet==3.0.4
