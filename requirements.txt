@@ -11,7 +11,7 @@ cffi==1.14.2
 chardet==3.0.4
 et-xmlfile==1.0.1
 hiredis==1.1.0
-idna==2.8
+idna==2.10
 jdcal==1.4.1
 multidict==4.5.2
 numpy==1.16.2
