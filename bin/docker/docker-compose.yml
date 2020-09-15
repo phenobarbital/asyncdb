@@ -1,0 +1,110 @@
+version: '3.1'
+
+services:
+  django:
+    volumes:
+      - /home/jesuslara/proyectos/navigator/navigator-next:/home/troc/code
+      - /home/ubuntu/symbits:/home/ubuntu/symbits
+    restart: 'no'
+    build:
+      context: /home/jesuslara/proyectos/navigator/navigator-next
+      dockerfile: ./Dockerfile
+    ports:
+      - 8000:8000
+    depends_on:
+      - postgres
+      - redis
+      - rethinkdb
+      - memcached
+    networks:
+      infranet:
+        aliases:
+          - 'next'
+  api:
+    volumes:
+      - /home/jesuslara/proyectos/navigator/query_api:/home/troc/code
+    restart: 'no'
+    build:
+      context: /home/jesuslara/proyectos/navigator/query_api
+      dockerfile: ./Dockerfile
+    command: python /home/troc/code/run.py
+    ports:
+      - 5000:5000
+    depends_on:
+      - postgres
+      - redis
+      - rethinkdb
+      - memcached
+    networks:
+      infranet:
+        aliases:
+          - 'api'
+  front:
+    volumes:
+      - /home/jesuslara/proyectos/navigator/navigator-next/extensions/front/Application:/app
+    restart: 'no'
+    build:
+      context: /home/jesuslara/proyectos/navigator/navigator-next/extensions/front/Application
+      dockerfile: ./Dockerfile
+    working_dir: /app
+    command: npm start
+    ports:
+      - 4200:4200
+    networks:
+      infranet:
+        aliases:
+          - 'front'
+  memcached:
+    container_name: memcached
+    image: memcached
+    restart: 'no'
+    command:
+      - '-m 256'
+    ports:
+      - '11211:11211'
+  rethinkdb:
+    image: rethinkdb
+    restart: 'no'
+    ports:
+      - 8080:8080
+      - 28015:28015
+      - 29015:29015
+    volumes:
+      - /home/jesuslara/docker/volumes/rethink:/data
+      - /home/jesuslara:/opt
+    networks:
+      infranet:
+        aliases:
+          - 'dwh'
+  redis:
+    image: redis
+    restart: 'no'
+    ports:
+      - 6379:6379
+    networks:
+      infranet:
+        aliases:
+          - 'redis'
+  postgres:
+    image: postgres:11-alpine
+    build: ./postgres
+    restart: 'no'
+    command: postgres -c logging_collector=on -c log_destination=stderr -c log_directory=/logs
+    ports:
+      - '5432:5432'
+    volumes:
+      - /home/jesuslara/docker/volumes/postgres:/var/lib/postgresql/data
+      - /home/jesuslara:/opt
+      - /home/jesuslara/docker/volumes/logs/postgres:/logs
+    environment:
+      - PG_DB_USER=troc_pgdata
+      - PG_DB_SPUSER=troc-pgdata
+      - PG_DB_PASSWORD=12345678
+      - PG_DB_DATABASE=navigator_dev
+      - POSTGRES_PASSWORD=12345678
+    networks:
+      infranet:
+        aliases:
+          - 'postgres'
+networks:
+  infranet:
