@@ -101,11 +101,11 @@ services:
       - "MYSQL_USER=${mysql_MYSQL_USER}"
       - "MYSQL_PASSWORD=${mysql_MYSQL_PASSWORD}"
       - "MYSQL_ROOT_PASSWORD=${mysql_MYSQL_PASSWORD}"
-      ports:
-        - '3306:3306'
-      expose:
-        - '3306'
-      volumes:
-        - ${mysql_datadir}:/var/lib/mysql
+    ports:
+      - '3306:3306'
+    expose:
+      - '3306'
+    volumes:
+      - ${mysql_datadir}:/var/lib/mysql
 networks:
   infranet:

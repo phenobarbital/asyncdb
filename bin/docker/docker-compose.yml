@@ -1,31 +1,12 @@
 version: '3.1'
 
 services:
-  django:
-    volumes:
-      - /home/jesuslara/proyectos/navigator/navigator-next:/home/troc/code
-      - /home/ubuntu/symbits:/home/ubuntu/symbits
-    restart: 'no'
-    build:
-      context: /home/jesuslara/proyectos/navigator/navigator-next
-      dockerfile: ./Dockerfile
-    ports:
-      - 8000:8000
-    depends_on:
-      - postgres
-      - redis
-      - rethinkdb
-      - memcached
-    networks:
-      infranet:
-        aliases:
-          - 'next'
   api:
     volumes:
-      - /home/jesuslara/proyectos/navigator/query_api:/home/troc/code
+      - /home/to-user/Documents/projects/mobileinsight/query_api:/home/troc/code
     restart: 'no'
     build:
-      context: /home/jesuslara/proyectos/navigator/query_api
+      context: /home/to-user/Documents/projects/mobileinsight/query_api
       dockerfile: ./Dockerfile
     command: python /home/troc/code/run.py
     ports:
@@ -35,25 +16,31 @@ services:
       - redis
       - rethinkdb
       - memcached
+    extra_hosts:
+      - nav-api.dev.local:192.168.1.13
+      - navigator-dev.dev.local:192.168.1.13
+      - rethink.dev.local:192.168.1.13
+      - postgres.dev.local:192.168.1.13
     networks:
       infranet:
         aliases:
           - 'api'
-  front:
-    volumes:
-      - /home/jesuslara/proyectos/navigator/navigator-next/extensions/front/Application:/app
+  influxdb:
+    container_name: influxdb
+    image: influxdb
     restart: 'no'
-    build:
-      context: /home/jesuslara/proyectos/navigator/navigator-next/extensions/front/Application
-      dockerfile: ./Dockerfile
-    working_dir: /app
-    command: npm start
+    volumes:
+      - /root/docker/volumes/influxdb:/data
+    environment:
+      - INFLUXDB_GRAPHITE_ENABLED=true
+      - INFLUXDB_DB=navigator_dev
+      - INFLUXDB_ADMIN_USER=troc_pgdata
+      - INFLUXDB_ADMIN_PASSWORD=12345678
+      - INFLUXDB_USER=influxdata
+      - INFLUXDB_USER_PASSWORD=12345678
     ports:
-      - 4200:4200
-    networks:
-      infranet:
-        aliases:
-          - 'front'
+      - '8086:8086'
+      - '2003:2003'
   memcached:
     container_name: memcached
     image: memcached
@@ -70,8 +57,8 @@ services:
       - 28015:28015
       - 29015:29015
     volumes:
-      - /home/jesuslara/docker/volumes/rethink:/data
-      - /home/jesuslara:/opt
+      - /root/docker/volumes/rethink:/data
+      - /home/to-user/Documents/projects/mobileinsight/backup:/opt
     networks:
       infranet:
         aliases:
@@ -93,12 +80,12 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - /home/jesuslara/docker/volumes/postgres:/var/lib/postgresql/data
-      - /home/jesuslara:/opt
-      - /home/jesuslara/docker/volumes/logs/postgres:/logs
+      - /root/docker/volumes/postgres:/var/lib/postgresql/data
+      - /home/to-user/Documents/projects/mobileinsight/backup:/opt
+      - /root/docker/volumes/logs/postgres:/logs
     environment:
       - PG_DB_USER=troc_pgdata
-      - PG_DB_SPUSER=troc-pgdata
+      - PG_DB_SPUSER=troc_pgdata
       - PG_DB_PASSWORD=12345678
       - PG_DB_DATABASE=navigator_dev
       - POSTGRES_PASSWORD=12345678
@@ -106,5 +93,19 @@ services:
       infranet:
         aliases:
           - 'postgres'
+  mysql:
+    image: mysql
+    restart: 'no'
+    environment:
+      - MYSQL_DATABASE=navigator_dev
+      - MYSQL_USER=troc_pgdata
+      - MYSQL_PASSWORD=
+      - MYSQL_ROOT_PASSWORD=
+    ports:
+      - '3306:3306'
+    expose:
+      - '3306'
+    volumes:
+      - /root/docker/volumes/cassandra:/var/lib/mysql
 networks:
   infranet:
