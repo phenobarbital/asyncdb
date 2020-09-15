@@ -89,7 +89,7 @@ while [ $# -gt 0 ]; do
         INSTALL=1
         INSTALL_DOCKER=1
         ;;
-    install-docker)
+    --install-docker)
         INSTALL_DOCKER=1
         ;;
     --configure)
