@@ -70,6 +70,7 @@ EOF
 }
 
 INSTALL=0
+INSTALL_DOCKER=0
 CONFIGURE=0
 LAUNCH=0
 START=0
@@ -79,13 +80,17 @@ PERMISSION=0
 RESTOREDB=0
 
 # processing arguments
-ARGS=`getopt -n$0 -u -a -o r:n:m:d:l:h --longoptions debug,usage,verbose,permission,restoredb,version,help,install,configure,launch,stop,environment,start,stop -- "$@"`
+ARGS=`getopt -n$0 -u -a -o r:n:m:d:l:h --longoptions debug,usage,verbose,permission,restoredb,version,help,install,install-docker,configure,launch,stop,environment,start,stop -- "$@"`
 eval set -- "$ARGS"
 
 while [ $# -gt 0 ]; do
 	case "$1" in
     --install)
         INSTALL=1
+        INSTALL_DOCKER=1
+        ;;
+    install-docker)
+        INSTALL_DOCKER=1
         ;;
     --configure)
         CONFIGURE=1
@@ -136,7 +141,7 @@ shift
 done
 
 
-install_docker()
+install_env()
 {
   if [ -z "${network_interface}" ]; then
     iface=$(first_iface)
@@ -186,17 +191,20 @@ EOF
 
  info "Installing Docker: "
  package_list "${install_docker[*]}"
+}
 
- info "Get current Docker Images:"
- x=0
- for i in ${docker_images[*]}; do
-     if is_debug; then
-         debug "Docker Image: $i";
-     fi
-     docker pull "${i}"
-     [ "$i" = "$x" ]
-     x="$((x+1))"
- done
+install_docker()
+{
+  info "Get current Docker Images:"
+  x=0
+  for i in ${docker_images[*]}; do
+      if is_debug; then
+          debug "Docker Image: $i";
+      fi
+      docker pull "${i}"
+      [ "$i" = "$x" ]
+      x="$((x+1))"
+  done
 }
 
 restore_db()
@@ -370,7 +378,10 @@ configure_environment()
 main()
 {
   if [ "$INSTALL" -eq 1 ]; then
-   install_docker
+    install_env
+  fi
+  if ["$INSTALL_DOCKER" -eq 1 ]; then
+    install_docker
   fi
   if [ "$CONFIGURE" -eq 1 ]; then
    config_docker
