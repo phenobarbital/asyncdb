@@ -380,7 +380,7 @@ main()
   if [ "$INSTALL" -eq 1 ]; then
     install_env
   fi
-  if ["$INSTALL_DOCKER" -eq 1 ]; then
+  if [ "$INSTALL_DOCKER" -eq 1 ]; then
     install_docker
   fi
   if [ "$CONFIGURE" -eq 1 ]; then
