@@ -1,0 +1,101 @@
+version: 1.0
+environment: dev
+projectsdir: /home/to-user/Documents/projects/mobileinsight
+iplocal: 192.168.1.13
+network:
+  # interface for get local IP address (empty: auto-discover)
+  interface:
+  # domain for hosts
+  domain: dev.local
+hosts:
+  - navigator-dev
+  - nav-api
+  - rethink
+  - postgres
+install:
+  key: https://download.docker.com/linux/ubuntu/gpg
+  repository: https://download.docker.com/linux/ubuntu
+  # need curl and other stuff installed
+  dependencies:
+    - libcurl4
+    - curl
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
+  docker:
+    - docker-ce
+    - docker-compose
+docker:
+  version: 3.1
+  autostart: true
+  autorestart: no
+  images:
+    - postgres:11-alpine
+    - rethinkdb:2.4
+    - python:3.8.5-slim-buster
+    - influxdb:1.7-alpine
+    - mysql:latest
+    - redis:latest
+    - memcached:latest
+    - ldap-ad-it:latest
+    - msssql-server:2017-latest-ubuntu
+    - cassandra:4.0
+  containers:
+    - memcached
+    - rethinkdb
+    - redis
+    - postgres
+    - api
+    - mysql
+    - cassandra
+    - influxdb
+conf:
+  basedir: $HOME/docker/volumes
+  volumes:
+    - postgres
+    - rethink
+    - cassandra
+    - influxdb
+    - mysql
+    - logs/postgres
+api:
+  source: $projectsdir/query_api
+  host: nav-api.dev.local
+  port: 5000
+postgres:
+  image: postgres:11-alpine
+  PG_SPUSER: troc_pgdata
+  PG_USER: troc_pgdata
+  PG_PASSWORD: 12345678
+  PG_PORT: 5432
+  PG_DATABASE: navigator_dev
+  datadir: $HOME/docker/volumes/postgres
+  logdir: $HOME/docker/volumes/logs/postgres
+  backupdir: $projectsdir/backup
+  restore: 1
+  restore_cpus: 8
+rethink:
+  datadir: $HOME/docker/volumes/rethink
+  backupdir: $projectsdir/backup
+memcached:
+  port: 11211
+redis:
+  port: 6379
+cassandra:
+  CASSANDRA_CLUSTER_NAME: navigator
+  datadir: $HOME/docker/volumes/cassandra
+mysql:
+  MYSQL_ROOT_PASSWORD: 12345678
+  MYSQL_DATABASE: navigator_dev
+  MYSQL_USER: troc_pgdata
+  datadir: $HOME/docker/volumes/cassandra
+influxdb:
+  port: 8086
+  INFLUXDB_GRAPHITE_ENABLED: true
+  INFLUXDB_DB: navigator_dev
+  INFLUXDB_ADMIN_USER: troc_pgdata
+  INFLUXDB_ADMIN_PASSWORD: 12345678
+  INFLUXDB_USER: influxdata
+  INFLUXDB_USER_PASSWORD: 12345678
+  datadir: $HOME/docker/volumes/influxdb
