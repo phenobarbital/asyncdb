@@ -107,5 +107,16 @@ services:
       - '3306'
     volumes:
       - ${mysql_datadir}:/var/lib/mysql
+  cassandra:
+    image: cassandra
+    restart: '${docker_autorestart}'
+    environment:
+      - "CASSANDRA_CLUSTER_NAME=${cassandra_CASSANDRA_CLUSTER_NAME}"
+    ports:
+      - '7000:7000'
+    expose:
+      - '7000'
+    volumes:
+      - ${cassandra_datadir}:/data
 networks:
   infranet:
