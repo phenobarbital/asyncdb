@@ -110,13 +110,12 @@ ENV/
 .ropeproject
 
 # Docker
-docker/
+#docker/
 db-docker/
-docker-compose.yml
+#docker-compose.yml
 Dockerfile
 
 #tmp files
-files/
 #temp/
 
 # dumps de bd
