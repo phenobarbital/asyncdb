@@ -148,4 +148,5 @@ target/
 *.crt
 *.key
 *.env
+*.pem
 
