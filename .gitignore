@@ -113,7 +113,7 @@ ENV/
 #docker/
 db-docker/
 #docker-compose.yml
-Dockerfile
+#Dockerfile
 
 #tmp files
 #temp/
