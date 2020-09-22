@@ -143,3 +143,10 @@ target/
 
 # Mac
 .DS_Store
+
+
+*.crt
+*.key
+*.env
+*.pem
+
