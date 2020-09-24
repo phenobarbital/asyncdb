@@ -155,6 +155,8 @@ class pgPool(BasePool):
             conn = self._connection
         else:
             conn = connection
+        if isinstance(connection, pg):
+            conn = connection.engine()
         try:
             release = asyncio.create_task(self._pool.release(conn, timeout = 10))
             #await self._pool.release(connection, timeout = timeout)
