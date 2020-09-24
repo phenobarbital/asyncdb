@@ -29,11 +29,14 @@ class pgPool(BasePool):
     _server_settings = {}
     init_func = None
     setup_func = None
+    _max_clients = 500
 
     def __init__(self, dsn='', loop=None, params={}, **kwargs):
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         if 'server_settings' in kwargs:
             self._server_settings = kwargs['server_settings']
+        if 'max_clients' in kwargs:
+            self._max_clients = kwargs['max_clients']
 
     def get_event_loop(self):
         return self._loop
@@ -73,8 +76,8 @@ class pgPool(BasePool):
             self._pool = await asyncpg.create_pool(
                 dsn=self._dsn,
                 max_queries=self._max_queries,
-                min_size=4, max_size=500,
-                max_inactive_connection_lifetime=30,
+                min_size=10, max_size=self._max_clients,
+                max_inactive_connection_lifetime=60,
                 timeout= self._timeout,
                 command_timeout= self._timeout,
                 init=self.init_connection,
