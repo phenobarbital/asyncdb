@@ -73,23 +73,25 @@ class pgPool(BasePool):
         logger.debug("AsyncPg (Pool): Connecting to {}".format(self._dsn))
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
+            server_settings={
+                "application_name": 'Navigator',
+                "idle_in_transaction_session_timeout": "10000",
+                "tcp_keepalives_idle": "600",
+                "max_parallel_workers": "16"
+            }
+            server_settings = {**server_settings, **self._server_settings}
             self._pool = await asyncpg.create_pool(
                 dsn=self._dsn,
                 max_queries=self._max_queries,
                 min_size=10, max_size=self._max_clients,
-                max_inactive_connection_lifetime=60,
+                max_inactive_connection_lifetime=10,
                 timeout= self._timeout,
                 command_timeout= self._timeout,
                 init=self.init_connection,
                 setup=self.setup_connection,
                 max_cached_statement_lifetime=max_cached_statement_lifetime,
                 max_cacheable_statement_size=max_cacheable_statement_size,
-                server_settings={
-                    "application_name": 'Navigator',
-                    "idle_in_transaction_session_timeout": "10000",
-                    "max_parallel_workers": "16",
-                    **self._server_settings
-                }
+                server_settings=server_settings
             )
         except TooManyConnectionsError as err:
             print("Too Many Connections Error: {}".format(str(err)))
