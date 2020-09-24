@@ -162,7 +162,7 @@ class pgPool(BasePool):
             conn = connection.engine()
         try:
             #release = asyncio.create_task(self._pool.release(conn, timeout = 10))
-            await self._pool.release(connection, timeout = timeout)
+            await self._pool.release(conn, timeout = timeout)
             #release = asyncio.ensure_future(release, loop=self._loop)
             #await asyncio.wait_for(release, timeout = timeout, loop=self._loop)
         except InterfaceError as err:
