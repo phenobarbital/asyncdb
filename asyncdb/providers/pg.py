@@ -161,10 +161,10 @@ class pgPool(BasePool):
         if isinstance(connection, pg):
             conn = connection.engine()
         try:
-            #release = asyncio.create_task(self._pool.release(conn, timeout = 10))
-            await self._pool.release(conn, timeout = timeout)
+            release = asyncio.create_task(self._pool.release(conn, timeout = 10))
+            #await self._pool.release(conn, timeout = timeout)
             #release = asyncio.ensure_future(release, loop=self._loop)
-            #await asyncio.wait_for(release, timeout = timeout, loop=self._loop)
+            await asyncio.wait_for(release, timeout = timeout, loop=self._loop)
         except InterfaceError as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
         except InternalClientError as err:
@@ -194,7 +194,7 @@ class pgPool(BasePool):
                 if gracefully:
                     await self._pool.expire_connections()
                 close = asyncio.create_task(self._pool.close())
-                await asyncio.wait_for(close, timeout = timeout)
+                await asyncio.wait_for(close, timeout = timeout, loop=self._loop)
             except Exception as err:
                 print("Pool Error: {}".format(str(err)))
                 await self._pool.terminate()
