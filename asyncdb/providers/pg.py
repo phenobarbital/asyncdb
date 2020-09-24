@@ -168,7 +168,8 @@ class pgPool(BasePool):
         except InterfaceError as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
         except InternalClientError as err:
-            print("PoolConnectionHolder.release() called on a free connection holder")
+            logging.debug('Connection already released, PoolConnectionHolder.release() called on a free connection holder')
+            #print("PoolConnectionHolder.release() called on a free connection holder")
             return False
         except Exception as err:
             raise ProviderError("Release Error: {}".format(str(err)))
@@ -178,25 +179,28 @@ class pgPool(BasePool):
     close
         Close Pool Connection
     """
-    async def wait_close(self, gracefully = True):
+    async def wait_close(self, gracefully=True, timeout=10):
         if self._pool:
             # try to closing main connection
             try:
                 if self._connection:
                     await self._pool.release(self._connection, timeout = 2)
-            except InterfaceError as err:
+            except (InternalClientError, InterfaceError) as err:
                 raise ProviderError("Release Interface Error: {}".format(str(err)))
             except Exception as err:
                 raise ProviderError("Release Error: {}".format(str(err)))
             # at now, try to closing pool
             try:
-                await self._pool.close()
-                #await self._pool.terminate()
+                if gracefully:
+                    await self._pool.expire_connections()
+                close = asyncio.create_task(self._pool.close())
+                await asyncio.wait_for(close, timeout = timeout)
             except Exception as err:
                 print("Pool Error: {}".format(str(err)))
                 await self._pool.terminate()
                 raise ProviderError("Pool Error: {}".format(str(err)))
             finally:
+                await self._pool.terminate()
                 self._pool = None
 
     """
