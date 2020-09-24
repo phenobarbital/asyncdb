@@ -169,9 +169,9 @@ class pgPool(BasePool):
             await asyncio.wait_for(release, timeout = timeout, loop=self._loop)
         except InterfaceError as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
-        except InternalClientError as err:
-            print("PoolConnectionHolder.release() called on a free connection holder")
-            return False
+        # except InternalClientError as err:
+        #     print("PoolConnectionHolder.release() called on a free connection holder")
+        #     return False
         except Exception as err:
             raise ProviderError("Release Error: {}".format(str(err)))
 
