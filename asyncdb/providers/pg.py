@@ -15,7 +15,7 @@ from asyncpg.exceptions import InvalidSQLStatementNameError, TooManyConnectionsE
 
 from asyncdb.providers import BasePool, BaseProvider, registerProvider
 
-from asyncdb.providers.exceptions import EmptyStatement, InternalClientError, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
+from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 from asyncdb.utils import EnumEncoder, SafeDict
 
 logger = logging.getLogger(__name__)
