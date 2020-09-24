@@ -200,7 +200,7 @@ class pgPool(BasePool):
                 await self._pool.terminate()
                 raise ProviderError("Pool Error: {}".format(str(err)))
             finally:
-                await self._pool.terminate()
+                #await self._pool.terminate()
                 self._pool = None
 
     """
