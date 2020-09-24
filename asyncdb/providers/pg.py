@@ -15,7 +15,7 @@ from asyncpg.exceptions import InvalidSQLStatementNameError, TooManyConnectionsE
 
 from asyncdb.providers import BasePool, BaseProvider, registerProvider
 
-from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
+from asyncdb.providers.exceptions import EmptyStatement, InternalClientError, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 from asyncdb.utils import EnumEncoder, SafeDict
 
 logger = logging.getLogger(__name__)
@@ -160,14 +160,18 @@ class pgPool(BasePool):
             conn = connection
         if isinstance(connection, pg):
             conn = connection.engine()
+        if conn.is_closed():
+            return True # we don't have to do anything, is already closed
         try:
             release = asyncio.create_task(self._pool.release(conn, timeout = 10))
             #await self._pool.release(connection, timeout = timeout)
-            release = asyncio.ensure_future(release, loop=self._loop)
+            #release = asyncio.ensure_future(release, loop=self._loop)
             await asyncio.wait_for(release, timeout = timeout, loop=self._loop)
-            #await release
         except InterfaceError as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
+        except InternalClientError as err:
+            print("PoolConnectionHolder.release() called on a free connection holder")
+            return False
         except Exception as err:
             raise ProviderError("Release Error: {}".format(str(err)))
 
