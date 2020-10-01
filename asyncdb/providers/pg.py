@@ -29,11 +29,14 @@ class pgPool(BasePool):
     _server_settings = {}
     init_func = None
     setup_func = None
+    _max_clients = 500
 
     def __init__(self, dsn='', loop=None, params={}, **kwargs):
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         if 'server_settings' in kwargs:
             self._server_settings = kwargs['server_settings']
+        if 'max_clients' in kwargs:
+            self._max_clients = kwargs['max_clients']
 
     def get_event_loop(self):
         return self._loop
@@ -70,23 +73,25 @@ class pgPool(BasePool):
         logger.debug("AsyncPg (Pool): Connecting to {}".format(self._dsn))
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
+            server_settings={
+                "application_name": 'Navigator',
+                "idle_in_transaction_session_timeout": "10000",
+                "tcp_keepalives_idle": "600",
+                "max_parallel_workers": "16"
+            }
+            server_settings = {**server_settings, **self._server_settings}
             self._pool = await asyncpg.create_pool(
                 dsn=self._dsn,
                 max_queries=self._max_queries,
-                min_size=4, max_size=500,
-                max_inactive_connection_lifetime=30,
+                min_size=10, max_size=self._max_clients,
+                max_inactive_connection_lifetime=10,
                 timeout= self._timeout,
                 command_timeout= self._timeout,
                 init=self.init_connection,
                 setup=self.setup_connection,
                 max_cached_statement_lifetime=max_cached_statement_lifetime,
                 max_cacheable_statement_size=max_cacheable_statement_size,
-                server_settings={
-                    "application_name": 'Navigator',
-                    "idle_in_transaction_session_timeout": "10000",
-                    "max_parallel_workers": "16",
-                    **self._server_settings
-                }
+                server_settings=server_settings
             )
         except TooManyConnectionsError as err:
             print("Too Many Connections Error: {}".format(str(err)))
@@ -155,14 +160,19 @@ class pgPool(BasePool):
             conn = self._connection
         else:
             conn = connection
+        if isinstance(connection, pg):
+            conn = connection.engine()
         try:
             release = asyncio.create_task(self._pool.release(conn, timeout = 10))
-            #await self._pool.release(connection, timeout = timeout)
-            release = asyncio.ensure_future(release, loop=self._loop)
+            #await self._pool.release(conn, timeout = timeout)
+            #release = asyncio.ensure_future(release, loop=self._loop)
             await asyncio.wait_for(release, timeout = timeout, loop=self._loop)
-            #await release
         except InterfaceError as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
+        except InternalClientError as err:
+            logging.debug('Connection already released, PoolConnectionHolder.release() called on a free connection holder')
+            #print("PoolConnectionHolder.release() called on a free connection holder")
+            return False
         except Exception as err:
             raise ProviderError("Release Error: {}".format(str(err)))
 
@@ -171,25 +181,28 @@ class pgPool(BasePool):
     close
         Close Pool Connection
     """
-    async def wait_close(self, gracefully = True):
+    async def wait_close(self, gracefully=True, timeout=10):
         if self._pool:
             # try to closing main connection
             try:
                 if self._connection:
                     await self._pool.release(self._connection, timeout = 2)
-            except InterfaceError as err:
+            except (InternalClientError, InterfaceError) as err:
                 raise ProviderError("Release Interface Error: {}".format(str(err)))
             except Exception as err:
                 raise ProviderError("Release Error: {}".format(str(err)))
             # at now, try to closing pool
             try:
-                await self._pool.close()
-                #await self._pool.terminate()
+                if gracefully:
+                    await self._pool.expire_connections()
+                close = asyncio.create_task(self._pool.close())
+                await asyncio.wait_for(close, timeout = timeout, loop=self._loop)
             except Exception as err:
                 print("Pool Error: {}".format(str(err)))
                 await self._pool.terminate()
                 raise ProviderError("Pool Error: {}".format(str(err)))
             finally:
+                #await self._pool.terminate()
                 self._pool = None
 
     """
