@@ -60,8 +60,8 @@ async def shutdown(loop, signal=None):
     except asyncio.CancelledError:
         print('Tasks has been canceled')
     #asyncio.gather(*asyncio.Task.all_tasks()).cancel()
-    finally:
-        loop.stop()
+    # finally:
+    #     loop.stop()
 
 def exception_handler(loop, context):
     """Exception Handler for Asyncio Loops."""
