@@ -57,12 +57,13 @@ class rethink(BaseProvider):
 
     def __init__(self, loop=None, params={}, **kwargs):
         super(rethink, self).__init__(loop=loop, params=params)
+        self._loop = asyncio.get_event_loop()
         self.conditions = {}
         # set rt object
         self._engine = rt
         # set asyncio type
         self._engine.set_loop_type("asyncio")
-        #asyncio.set_event_loop(self._loop)
+        asyncio.set_event_loop(self._loop)
 
 
     """
