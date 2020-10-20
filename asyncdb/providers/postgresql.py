@@ -5,35 +5,42 @@ This provider implements a basic set of funcionalities from aiopg sqlalchemy and
 """
 
 import asyncio
+from threading import Thread
+
 import aiopg
 from aiopg.sa import create_engine
 from psycopg2.extras import NamedTupleCursor
+from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
 
-from sqlalchemy.exc import SQLAlchemyError, DatabaseError, OperationalError
-from threading import Thread
-
-from . import *
-from ..exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
+from ..exceptions import (
+    ConnectionTimeout,
+    DataError,
+    EmptyStatement,
+    NoDataFound,
+    ProviderError,
+    StatementError,
+    TooManyConnections,
+)
 from ..utils import EnumEncoder
+from . import *
 
 logger = logging.getLogger(__name__)
 
 
 class postgresql(BaseProvider, Thread):
-    _provider = 'postgresql'
-    _syntax = 'sql'
+    _provider = "postgresql"
+    _syntax = "sql"
     _test_query = "SELECT 1::integer as column"
-    _dsn = 'postgresql://{user}:{password}@{host}:{port}/{database}'
-    #_dsn = 'dbname={database} user={user} password={password} host={host} port={port}'
+    _dsn = "postgresql://{user}:{password}@{host}:{port}/{database}"
+    # _dsn = 'dbname={database} user={user} password={password} host={host} port={port}'
     _loop = None
     _pool = None
-    #_engine = None
+    # _engine = None
     _connection = None
     _connected = False
     _initialized_on = None
 
-
-    def __init__(self, dsn='', loop=None, params={}):
+    def __init__(self, dsn="", loop=None, params={}):
         self._params = params
         if not dsn:
             self._dsn = self.create_dsn(self._params)
@@ -56,6 +63,7 @@ class postgresql(BaseProvider, Thread):
     """
     Context magic Methods
     """
+
     def __enter__(self):
         return self
 
@@ -65,23 +73,25 @@ class postgresql(BaseProvider, Thread):
     """
     Thread Methodss
     """
+
     def start(self):
-        logging.debug('Running Start')
+        logging.debug("Running Start")
         Thread.start(self)
 
     def join(self):
-        logging.debug('Running Join')
+        logging.debug("Running Join")
         Thread.join(self)
 
-
     def run(self):
-        logging.debug('Running RUN')
+        logging.debug("Running RUN")
 
     def close(self):
-        logging.debug('Running Close')
+        logging.debug("Running Close")
         if self._loop:
             try:
-                self._loop.run_until_complete(asyncio.wait_for(self.terminate(), timeout = 5))
+                self._loop.run_until_complete(
+                    asyncio.wait_for(self.terminate(), timeout=5)
+                )
             finally:
                 # close loop
                 self._loop.close()
@@ -103,17 +113,23 @@ class postgresql(BaseProvider, Thread):
                 self._engine.terminate()
 
     def connect(self):
-        logging.debug('Running connect')
+        logging.debug("Running connect")
         try:
-            return self._loop.run_until_complete(create_engine(dsn=self._dsn, maxsize=self._max_connections,timeout=self._timeout,loop=self._loop))
-            #return self._loop.run_until_complete(aiopg.create_pool(dsn=self._dsn, maxsize=self._max_connections,timeout=self._timeout,loop=self._loop))
+            return self._loop.run_until_complete(
+                create_engine(
+                    dsn=self._dsn,
+                    maxsize=self._max_connections,
+                    timeout=self._timeout,
+                    loop=self._loop,
+                )
+            )
+            # return self._loop.run_until_complete(aiopg.create_pool(dsn=self._dsn, maxsize=self._max_connections,timeout=self._timeout,loop=self._loop))
         except (SQLAlchemyError, DatabaseError, OperationalError) as err:
             self._engine = None
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._engine = None
             raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
-
 
     def connection(self):
         """
@@ -150,13 +166,11 @@ class postgresql(BaseProvider, Thread):
         finally:
             self._connection = None
 
-
-    async def prepare(self, sentence=''):
+    async def prepare(self, sentence=""):
         """
         Preparing a sentence
         """
         error = None
-
 
     def test_connection(self):
         """
@@ -168,26 +182,27 @@ class postgresql(BaseProvider, Thread):
             raise NotImplementedError()
         logger.debug("{}: Running Test".format(self._provider))
         try:
-            #cursor = self._loop.run_until_complete(self._connection.cursor(cursor_factory=NamedTupleCursor))
-            #self._loop.run_until_complete(cursor.execute(self._test_query))
-            result = self._loop.run_until_complete(self._connection.execute(self._test_query))
+            # cursor = self._loop.run_until_complete(self._connection.cursor(cursor_factory=NamedTupleCursor))
+            # self._loop.run_until_complete(cursor.execute(self._test_query))
+            result = self._loop.run_until_complete(
+                self._connection.execute(self._test_query)
+            )
             row = self._loop.run_until_complete(result.fetchone())
             if row:
                 row = dict(row)
-            #print(cursor.description)
-            #row = dict()
-            #print(row)
-            #cursor.close()
+            # print(cursor.description)
+            # row = dict()
+            # print(row)
+            # cursor.close()
             if error:
                 logger.debug("Test Error: {}".format(error))
         except Exception as err:
             error = str(err)
-            raise ProviderError(message = str(err), code = 0)
+            raise ProviderError(message=str(err), code=0)
         finally:
-            return [ row, error ]
+            return [row, error]
 
-
-    async def query(self, sentence=''):
+    async def query(self, sentence=""):
         """
         Running a Query
         """
@@ -195,7 +210,7 @@ class postgresql(BaseProvider, Thread):
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
         try:
-            logger.debug('Running Query {}'.format(sentence))
+            logger.debug("Running Query {}".format(sentence))
             result = await self._connection.execute(sentence)
             if result:
                 rows = await result.fetchall()
@@ -209,8 +224,7 @@ class postgresql(BaseProvider, Thread):
         finally:
             return [self._result, error]
 
-
-    async def queryrow(self, sentence=''):
+    async def queryrow(self, sentence=""):
         """
         Running Query and return only one row
         """
@@ -218,7 +232,7 @@ class postgresql(BaseProvider, Thread):
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
         try:
-            logger.debug('Running Query {}'.format(sentence))
+            logger.debug("Running Query {}".format(sentence))
             result = await self._connection.execute(sentence)
             if result:
                 row = await result.fetchone()
@@ -232,8 +246,7 @@ class postgresql(BaseProvider, Thread):
         finally:
             return [self._result, error]
 
-
-    async def execute(self, sentence=''):
+    async def execute(self, sentence=""):
         """Execute a transaction
         get a SQL sentence and execute
         returns: results of the execution
@@ -244,7 +257,7 @@ class postgresql(BaseProvider, Thread):
         if not self._connection:
             self.connection()
         try:
-            logger.debug('Execute Sentence {}'.format(sentence))
+            logger.debug("Execute Sentence {}".format(sentence))
             result = await self._engine.execute(sentence)
             self._result = result
         except (DatabaseError, OperationalError) as err:
@@ -256,22 +269,23 @@ class postgresql(BaseProvider, Thread):
         finally:
             return [self._result, error]
 
-
     """
     Cursor Context
     """
+
     async def cursor(self, sentence):
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
-        logger.debug('Creating Cursor {}'.format(sentence))
+        logger.debug("Creating Cursor {}".format(sentence))
         self._cursor = await self._connection.execute(sentence)
-        #self._cursor = await self._connection.cursor(cursor_factory=NamedTupleCursor)
-        #await self._cursor.execute(sentence)
+        # self._cursor = await self._connection.cursor(cursor_factory=NamedTupleCursor)
+        # await self._cursor.execute(sentence)
         return self
 
     """
     Cursor Iterator Context
     """
+
     def __aiter__(self):
         return self
 
@@ -288,11 +302,11 @@ class postgresql(BaseProvider, Thread):
     """
     Fetching a Cursor
     """
+
     async def fetchrow(self):
         pass
 
-
-    async def fetch(self, number = 1):
+    async def fetch(self, number=1):
         pass
 
 

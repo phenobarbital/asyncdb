@@ -1,8 +1,10 @@
-import sys
-import os.path
 import asyncio
+import os.path
+import sys
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+)
 
 from asyncdb.providers.exceptions import *
 from asyncdb.utils import SafeDict
@@ -13,24 +15,25 @@ class asyncORM(object):
     asyncORM
        Class for basic record interaction on AsyncDB
     """
+
     _fields = {}
     _columns = []
     _result = None
     _connection = None
-    _type = 'new'
+    _type = "new"
     _table = None
     _query = None
     _loop = None
     _val = {}
 
-    def __init__(self, db, result=None, type='new', loop=None):
+    def __init__(self, db, result=None, type="new", loop=None):
         self._columns = []
         self._fields = {}
         self._result = result
         if result:
             for row in result:
-                self._columns.append(row['column_name'])
-                self._fields[row['column_name']] = row['data_type']
+                self._columns.append(row["column_name"])
+                self._fields[row["column_name"]] = row["data_type"]
         self._type = type
         self._val = {}
         self._table = None
@@ -47,12 +50,11 @@ class asyncORM(object):
 
         """
         if self._connection:
-            #self._loop.run_until_complete(self._connection.close(timeout=5))
+            # self._loop.run_until_complete(self._connection.close(timeout=5))
             try:
                 asyncio.ensure_future(self._connection.close(timeout=5))
             except Exception as err:
                 pass
-
 
     async def terminate(self):
         """
@@ -61,7 +63,6 @@ class asyncORM(object):
         Explicit closing a database connection
         """
         await self._connection.close(timeout=5)
-
 
     def close(self):
         """
@@ -74,16 +75,16 @@ class asyncORM(object):
                 asyncio.ensure_future(self._connection.close(timeout=5))
             except Exception as err:
                 pass
-            #self._loop.run_until_complete()
+            # self._loop.run_until_complete()
 
     """
     Meta Definitions
     """
+
     def get_table(self):
         return self._table
 
-
-    def table(self, table, loop = None):
+    def table(self, table, loop=None):
         """
         Set a Table definition from DB
           TODO: check for table exists
@@ -107,12 +108,11 @@ class asyncORM(object):
         todo: detect when field is missing
         """
         if type(fields) == str:
-            self._fields = [x.strip() for x in fields.split(',')]
+            self._fields = [x.strip() for x in fields.split(",")]
         elif type(fields) == list:
             self._fields = fields
-        self._query = self._connection.fields(sentence = self._query, fields = fields)
+        self._query = self._connection.fields(sentence=self._query, fields=fields)
         return self
-
 
     def filter(self, filter={}, **kwargs):
         """
@@ -121,15 +121,11 @@ class asyncORM(object):
         """
         where = {}
         if filter:
-            self._query = self._connection.where(
-                sentence=self._query, where=filter
-                )
+            self._query = self._connection.where(sentence=self._query, where=filter)
         if len(kwargs) > 0:
             where.update(kwargs)
-            #print("HERE %s" % where)
-            self._query = self._connection.where(
-                sentence=self._query, where=where
-                )
+            # print("HERE %s" % where)
+            self._query = self._connection.where(sentence=self._query, where=where)
         return self
 
     def orderby(self, order):
@@ -138,9 +134,7 @@ class asyncORM(object):
            define Ordering criteria
         """
         if order:
-            self._query = self._connection.orderby(
-                sentence=self._query, ordering=order
-                )
+            self._query = self._connection.orderby(sentence=self._query, ordering=order)
         return self
 
     def all(self):
@@ -156,7 +150,9 @@ class asyncORM(object):
         if self._query:
             self._columns = self._connection.get_columns()
             try:
-                self._result, error = self._loop.run_until_complete(self._connection.query(self._query))
+                self._result, error = self._loop.run_until_complete(
+                    self._connection.query(self._query)
+                )
                 if self._result and not error:
                     return asyncResult(result=self._result, columns=self._columns)
             except NoDataFound:
@@ -181,7 +177,9 @@ class asyncORM(object):
         if self._query:
             self._columns = self._connection.get_columns()
             try:
-                self._result, error = self._loop.run_until_complete(self._connection.queryrow(self._query))
+                self._result, error = self._loop.run_until_complete(
+                    self._connection.queryrow(self._query)
+                )
                 if self._result and not error:
                     return asyncRecord(result=self._result, columns=self._columns)
             except NoDataFound:
@@ -223,7 +221,7 @@ class asyncORM(object):
 
     def __getattr__(self, name):
         """
-         getter
+        getter
         """
         if self._val:
             try:
@@ -241,30 +239,27 @@ class asyncORM(object):
         else:
             return False
 
-
     def __setattr__(self, name, value):
         """
         setter
         """
-        #print("DEFINE ATTRIBUTE: name {}, value {} is system {}".format(name, value, hasattr(self, name)))
+        # print("DEFINE ATTRIBUTE: name {}, value {} is system {}".format(name, value, hasattr(self, name)))
         if hasattr(self, name):
             self.__dict__[name] = value
         elif name in self._columns:
             if isinstance(value, list):
-                values = ','.join("'{}'".format(str(v)) for v in value)
+                values = ",".join("'{}'".format(str(v)) for v in value)
                 self._val[name] = "ARRAY[{}]".format(values)
             else:
                 type = self._fields[name]
-                if type in ['integer', "double precision", "long", "float", "numeric"]:
+                if type in ["integer", "double precision", "long", "float", "numeric"]:
                     self._val[name] = value
                 else:
                     self._val[name] = "'{}'".format(value.replace("'", r"''"))
         else:
-            #object.__setattr__(self, name, value)
+            # object.__setattr__(self, name, value)
             raise KeyError("asyncORM Error: Invalid Column %s" % name)
             return None
-
-
 
     def columns(self):
         """
@@ -276,6 +271,7 @@ class asyncORM(object):
     """
     Simply ORM-like methods
     """
+
     def new(self):
         """
         new
@@ -288,9 +284,9 @@ class asyncORM(object):
             result = self._connection.column_info(table=self._table)
             if result:
                 for row in result:
-                    self._columns.append(row['column_name'])
-                    self._fields[row['column_name']] = row['data_type']
-                    self._type = 'new'
+                    self._columns.append(row["column_name"])
+                    self._fields[row["column_name"]] = row["data_type"]
+                    self._type = "new"
                 return self
             else:
                 return False
@@ -303,12 +299,9 @@ class asyncORM(object):
            saving the result
         """
         table = self.get_table()
-        if self._type == 'new':
+        if self._type == "new":
             try:
-                result = self._connection.insert(
-                    table=table,
-                    data=self._val
-                )
+                result = self._connection.insert(table=table, data=self._val)
                 return result
             except Exception as err:
                 print(err)
@@ -322,6 +315,7 @@ class asyncResult(object):
     asyncResult
        Class for a Resultset Object
     """
+
     _result = {}
     _columns = []
     _idx = 0
@@ -340,7 +334,7 @@ class asyncResult(object):
 
     def __next__(self):
         """
-         Next: next object from iterator
+        Next: next object from iterator
         """
         if self._idx < len(self._result):
             row = self._result[self._idx]
@@ -348,6 +342,7 @@ class asyncResult(object):
             return asyncRecord(row, self._columns)
         # End of Iteration
         raise StopIteration
+
 
 class asyncRecord(object):
     """
@@ -357,6 +352,7 @@ class asyncRecord(object):
       params:
           result: asyncpg resultset
     """
+
     _row = {}
     _columns = []
 
@@ -408,7 +404,7 @@ class asyncRecord(object):
 
     def __getattr__(self, attr):
         """
-         Attributes for dict keys
+        Attributes for dict keys
         """
         if self._row:
             try:

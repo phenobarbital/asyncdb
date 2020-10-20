@@ -4,33 +4,53 @@ Notes on pg Provider
 This provider implements all funcionalities from asyncpg
 (cursors, transactions, copy from and to files, pools, native data types, etc) but using Threads
 """
-import sys
-from datetime import datetime
-import time
-import json
-
 import asyncio
-import asyncpg
-import threading
-from threading import Thread
-from functools import partial
-
-from asyncpg.exceptions import InvalidSQLStatementNameError, TooManyConnectionsError, InternalClientError, ConnectionDoesNotExistError, InterfaceError, InterfaceWarning, PostgresError, PostgresSyntaxError, FatalPostgresError, UndefinedTableError, UndefinedColumnError
-from asyncdb.providers import BasePool, BaseProvider, registerProvider, logger_config
-
-from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
-from asyncdb.utils import EnumEncoder, SafeDict
-from asyncdb.meta import asyncResult, asyncRecord
-
+import json
 import logging
+import sys
+import threading
+import time
+from datetime import datetime
+from functools import partial
 from logging.config import dictConfig
+from threading import Thread
+
+import asyncpg
+from asyncpg.exceptions import (
+    ConnectionDoesNotExistError,
+    FatalPostgresError,
+    InterfaceError,
+    InterfaceWarning,
+    InternalClientError,
+    InvalidSQLStatementNameError,
+    PostgresError,
+    PostgresSyntaxError,
+    TooManyConnectionsError,
+    UndefinedColumnError,
+    UndefinedTableError,
+)
+
+from asyncdb.meta import asyncRecord, asyncResult
+from asyncdb.providers import BasePool, BaseProvider, logger_config, registerProvider
+from asyncdb.providers.exceptions import (
+    ConnectionTimeout,
+    DataError,
+    EmptyStatement,
+    NoDataFound,
+    ProviderError,
+    StatementError,
+    TooManyConnections,
+)
+from asyncdb.utils import EnumEncoder, SafeDict
+
 dictConfig(logger_config)
 
+
 class postgres(threading.Thread, BaseProvider):
-    _provider = 'postgresql'
-    _syntax = 'sql'
+    _provider = "postgresql"
+    _syntax = "sql"
     _test_query = "SELECT 1"
-    _dsn = 'postgres://{user}:{password}@{host}:{port}/{database}'
+    _dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
     _loop = None
     _connection = None
     _connected = False
@@ -40,12 +60,12 @@ class postgres(threading.Thread, BaseProvider):
     _transaction = None
     _initialized_on = None
     init_func = None
-    _query_raw = 'SELECT {fields} FROM {table} {where_cond}'
+    _query_raw = "SELECT {fields} FROM {table} {where_cond}"
     _is_started = False
     _result = None
     _error = None
 
-    def __init__(self, dsn='', loop=None, pool=None, params={}, **kwargs):
+    def __init__(self, dsn="", loop=None, pool=None, params={}, **kwargs):
         self._params = params
         self._result = None
         if not dsn:
@@ -53,7 +73,7 @@ class postgres(threading.Thread, BaseProvider):
         else:
             self._dsn = dsn
         try:
-            self._timeout = kwargs['timeout']
+            self._timeout = kwargs["timeout"]
         except KeyError:
             pass
         if loop:
@@ -62,7 +82,7 @@ class postgres(threading.Thread, BaseProvider):
             self._loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self._loop)
         # calling parent Thread
-        Thread.__init__(self, name='postgres')
+        Thread.__init__(self, name="postgres")
         self.stop_event = threading.Event()
         self._logger = logging.getLogger(__name__)
 
@@ -73,11 +93,12 @@ class postgres(threading.Thread, BaseProvider):
     """
     Thread Methodss
     """
+
     def start(self, target=None, args=()):
         if target:
             Thread.__init__(self, target=target, args=args)
         else:
-            Thread.__init__(self, name='postgres')
+            Thread.__init__(self, name="postgres")
         super(postgres, self).start()
 
     def join(self, timeout=5):
@@ -89,6 +110,7 @@ class postgres(threading.Thread, BaseProvider):
     """
     Async Context magic Methods
     """
+
     async def __aenter__(self):
         return self
 
@@ -100,6 +122,7 @@ class postgres(threading.Thread, BaseProvider):
     """
     Context magic Methods
     """
+
     def __enter__(self):
         return self
 
@@ -112,26 +135,46 @@ class postgres(threading.Thread, BaseProvider):
         # Setup jsonb encoder/decoder
         def _encoder(value):
             return json.dumps(value, cls=EnumEncoder)
+
         def _decoder(value):
             return json.loads(value)
+
         def interval_encoder(delta):
             ndelta = delta.normalized()
-            return (ndelta.years * 12 + ndelta.months, ndelta.days,
-                 ((ndelta.hours * 3600 +
-                    ndelta.minutes * 60 +
-                    ndelta.seconds) * 1000000 +
-                  ndelta.microseconds))
+            return (
+                ndelta.years * 12 + ndelta.months,
+                ndelta.days,
+                (
+                    (ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds)
+                    * 1000000
+                    + ndelta.microseconds
+                ),
+            )
+
         def interval_decoder(tup):
             return relativedelta(months=tup[0], days=tup[1], microseconds=tup[2])
-        await connection.set_type_codec('json', encoder=_encoder, decoder=_decoder, schema='pg_catalog')
-        await connection.set_type_codec('jsonb', encoder=_encoder, decoder=_decoder, schema='pg_catalog' )
-        await connection.set_builtin_type_codec('hstore', codec_name='pg_contrib.hstore')
-        await connection.set_type_codec('interval', schema='pg_catalog', encoder=interval_encoder, decoder=interval_decoder, format='tuple')
+
+        await connection.set_type_codec(
+            "json", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
+        )
+        await connection.set_type_codec(
+            "jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
+        )
+        await connection.set_builtin_type_codec(
+            "hstore", codec_name="pg_contrib.hstore"
+        )
+        await connection.set_type_codec(
+            "interval",
+            schema="pg_catalog",
+            encoder=interval_encoder,
+            decoder=interval_decoder,
+            format="tuple",
+        )
         if self.init_func:
             try:
                 await self.init_func(connection)
             except Exception as err:
-                print('Error on Init Connection: {}'.format(err))
+                print("Error on Init Connection: {}".format(err))
                 pass
 
     def terminate(self):
@@ -142,9 +185,8 @@ class postgres(threading.Thread, BaseProvider):
         try:
             self.join(timeout=5)
         finally:
-            #self._logger.info('Thread Killed')
+            # self._logger.info('Thread Killed')
             return True
-
 
     def connect(self):
         """
@@ -155,7 +197,7 @@ class postgres(threading.Thread, BaseProvider):
         self._connection = None
         self._connected = False
         if not self._is_started:
-            self.start(target=self._connect) # start a thread
+            self.start(target=self._connect)  # start a thread
             self._is_started = True
             self.join(timeout=self._timeout)
         return self
@@ -177,10 +219,10 @@ class postgres(threading.Thread, BaseProvider):
                 dsn=self._dsn,
                 loop=self._loop,
                 command_timeout=self._timeout,
-                timeout= self._timeout
+                timeout=self._timeout,
             )
             if self._connection:
-                #self._logger.info("Open Connection to {}, id: {}".format(self._dsn, self._connection.get_server_pid()))
+                # self._logger.info("Open Connection to {}, id: {}".format(self._dsn, self._connection.get_server_pid()))
                 await self.init_connection(self._connection)
                 self._connected = True
                 self._initialized_on = time.time()
@@ -203,7 +245,7 @@ class postgres(threading.Thread, BaseProvider):
             print(err)
         finally:
             if not self._is_started:
-                self.start() # start a thread
+                self.start()  # start a thread
                 self._is_started = True
             return self
 
@@ -215,7 +257,7 @@ class postgres(threading.Thread, BaseProvider):
         try:
             if self._connection:
                 if not self._connection.is_closed():
-                    #if self._DEBUG:
+                    # if self._DEBUG:
                     #    self._logger.info("Closing Connection, id: {}".format(self._connection.get_server_pid()))
                     try:
                         await self._connection.close(timeout=timeout)
@@ -225,13 +267,14 @@ class postgres(threading.Thread, BaseProvider):
                     except Exception as err:
                         await self._connection.terminate()
                         self._connection = None
-                        raise ProviderError("Connection Error, Terminated: {}".format(str(err)))
+                        raise ProviderError(
+                            "Connection Error, Terminated: {}".format(str(err))
+                        )
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
         finally:
             self._connection = None
             self._connected = False
-
 
     def release(self, wait_close=10):
         """
@@ -240,8 +283,10 @@ class postgres(threading.Thread, BaseProvider):
         if self._connection:
             try:
                 if not self._connection.is_closed():
-                    #self._logger.info("Closing Connection, id: {}".format(self._connection.get_server_pid()))
-                    self._loop.run_until_complete(self._connection.close(timeout = wait_close))
+                    # self._logger.info("Closing Connection, id: {}".format(self._connection.get_server_pid()))
+                    self._loop.run_until_complete(
+                        self._connection.close(timeout=wait_close)
+                    )
             except (InterfaceError, RuntimeError) as err:
                 raise ProviderError("Release Interface Error: {}".format(str(err)))
                 return False
@@ -254,8 +299,7 @@ class postgres(threading.Thread, BaseProvider):
         if self._connection:
             return not self._connection.is_closed()
 
-
-    async def prepare(self, sentence='', *args):
+    async def prepare(self, sentence="", *args):
         """
         Preparing a sentence
         """
@@ -272,7 +316,10 @@ class postgres(threading.Thread, BaseProvider):
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
             raise StatementError(error)
-        except (asyncpg.exceptions.InvalidSQLStatementNameError, asyncpg.exceptions.UndefinedTableError) as err:
+        except (
+            asyncpg.exceptions.InvalidSQLStatementNameError,
+            asyncpg.exceptions.UndefinedTableError,
+        ) as err:
             error = "Invalid Statement Error: {}".format(str(err))
             raise StatementError(error)
         except Exception as err:
@@ -295,7 +342,10 @@ class postgres(threading.Thread, BaseProvider):
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
             raise StatementError(error)
-        except (asyncpg.exceptions.InvalidSQLStatementNameError, asyncpg.exceptions.UndefinedTableError) as err:
+        except (
+            asyncpg.exceptions.InvalidSQLStatementNameError,
+            asyncpg.exceptions.UndefinedTableError,
+        ) as err:
             error = "Invalid Statement Error: {}".format(str(err))
             raise StatementError(error)
         except Exception as err:
@@ -304,7 +354,7 @@ class postgres(threading.Thread, BaseProvider):
         finally:
             return self._columns
 
-    async def query(self, sentence=''):
+    async def query(self, sentence=""):
         """
         Query.
 
@@ -315,14 +365,17 @@ class postgres(threading.Thread, BaseProvider):
             startTime = datetime.now()
             self._result = await self._connection.fetch(sentence)
             if not self._result:
-                return [None, 'Data was not found']
+                return [None, "Data was not found"]
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
             raise ProviderError(error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence Error: {}".format(str(err))
             raise StatementError(error)
-        except (asyncpg.exceptions.InvalidSQLStatementNameError, asyncpg.exceptions.UndefinedTableError) as err:
+        except (
+            asyncpg.exceptions.InvalidSQLStatementNameError,
+            asyncpg.exceptions.UndefinedTableError,
+        ) as err:
             error = "Invalid Statement Error: {}".format(str(err))
             raise StatementError(error)
         except Exception as err:
@@ -333,7 +386,7 @@ class postgres(threading.Thread, BaseProvider):
             startTime = 0
             return [self._result, error]
 
-    async def queryrow(self, sentence=''):
+    async def queryrow(self, sentence=""):
         """
         queryrow.
 
@@ -354,7 +407,10 @@ class postgres(threading.Thread, BaseProvider):
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
             raise StatementError(error)
-        except (asyncpg.exceptions.InvalidSQLStatementNameError, asyncpg.exceptions.UndefinedTableError) as err:
+        except (
+            asyncpg.exceptions.InvalidSQLStatementNameError,
+            asyncpg.exceptions.UndefinedTableError,
+        ) as err:
             error = "Invalid Statement Error: {}".format(str(err))
             raise StatementError(error)
         except Exception as err:
@@ -363,7 +419,7 @@ class postgres(threading.Thread, BaseProvider):
         finally:
             return [self._result, error]
 
-    async def execute(self, sentence='', *args):
+    async def execute(self, sentence="", *args):
         """execute.
 
         Execute a transaction
@@ -387,7 +443,7 @@ class postgres(threading.Thread, BaseProvider):
         finally:
             return [self._result, self._error]
 
-    async def executemany(self, sentence='', *args, timeout=None):
+    async def executemany(self, sentence="", *args, timeout=None):
         """execute.
 
         Execute a transaction
@@ -415,6 +471,7 @@ class postgres(threading.Thread, BaseProvider):
     """
     Transaction Context
     """
+
     async def transaction(self):
         if not self._connection:
             await self.connection()
@@ -433,6 +490,7 @@ class postgres(threading.Thread, BaseProvider):
     """
     Cursor Context
     """
+
     async def cursor(self, sentence):
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
@@ -450,7 +508,7 @@ class postgres(threading.Thread, BaseProvider):
             error = "Error forward Cursor: {}".format(str(err))
             raise Exception(error)
 
-    async def get(self, number = 1):
+    async def get(self, number=1):
         try:
             return await self._cursor.fetch(number)
         except Exception as err:
@@ -467,6 +525,7 @@ class postgres(threading.Thread, BaseProvider):
     """
     Cursor Iterator Context
     """
+
     def __aiter__(self):
         return self
 
@@ -480,6 +539,7 @@ class postgres(threading.Thread, BaseProvider):
     """
     Non-Async Methods
     """
+
     def test_connection(self):
         self.start(target=self._test_connection)
         self.join()
@@ -491,7 +551,9 @@ class postgres(threading.Thread, BaseProvider):
         if not self._connection:
             self._loop.run_until_complete(self.connection())
         try:
-            self._result = self._loop.run_until_complete(self._connection.fetch(self._test_query))
+            self._result = self._loop.run_until_complete(
+                self._connection.fetch(self._test_query)
+            )
         except Exception as err:
             self._error = "Error on Query: {}".format(str(err))
             print(self._error)
@@ -530,7 +592,10 @@ class postgres(threading.Thread, BaseProvider):
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             self._error = "Sentence Error: {}".format(str(err))
             raise StatementError(error)
-        except (asyncpg.exceptions.InvalidSQLStatementNameError, asyncpg.exceptions.UndefinedTableError) as err:
+        except (
+            asyncpg.exceptions.InvalidSQLStatementNameError,
+            asyncpg.exceptions.UndefinedTableError,
+        ) as err:
             self._error = "Invalid Statement Error: {}".format(str(err))
             raise StatementError(error)
         except Exception as err:
