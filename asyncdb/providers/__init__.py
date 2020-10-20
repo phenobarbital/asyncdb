@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-import importlib
 import asyncio
-import sys
+import importlib
 import os.path
+import sys
 from abc import ABC, abstractmethod
+
 from asyncdb.providers.exceptions import *
 
 _providers = {}
@@ -15,37 +16,35 @@ from logging.config import dictConfig
 loglevel = logging.INFO
 
 logger_config = dict(
-    version = 1,
-    formatters = {
-        "console": {
-            'format': '%(message)s'
-        },
+    version=1,
+    formatters={
+        "console": {"format": "%(message)s"},
         "file": {
             "format": "%(asctime)s: [%(levelname)s]: %(pathname)s: %(lineno)d: \n%(message)s\n"
         },
-        'default': {
-            'format': '[%(levelname)s] %(asctime)s %(name)s: %(message)s'}
-        },
-    handlers = {
-        "console": {
-                "formatter": "console",
-                "class": "logging.StreamHandler",
-                "stream": "ext://sys.stdout",
-                'level': loglevel
-        },
-        'StreamHandler': {
-                'class': 'logging.StreamHandler',
-                'formatter': 'default',
-                'level': loglevel
-        }
+        "default": {"format": "[%(levelname)s] %(asctime)s %(name)s: %(message)s"},
     },
-    root = {
-        'handlers': ['StreamHandler'],
-        'level': loglevel,
+    handlers={
+        "console": {
+            "formatter": "console",
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+            "level": loglevel,
+        },
+        "StreamHandler": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+            "level": loglevel,
+        },
+    },
+    root={
+        "handlers": ["StreamHandler"],
+        "level": loglevel,
     },
 )
 dictConfig(logger_config)
-logger = logging.getLogger('AsyncDB')
+logger = logging.getLogger("AsyncDB")
+
 
 async def shutdown(loop, signal=None):
     """Cleanup tasks tied to the service's shutdown."""
@@ -58,10 +57,11 @@ async def shutdown(loop, signal=None):
         logger.info(f"Cancelling {len(tasks)} outstanding tasks")
         await asyncio.gather(*tasks, return_exceptions=True)
     except asyncio.CancelledError:
-        print('Tasks has been canceled')
-    #asyncio.gather(*asyncio.Task.all_tasks()).cancel()
+        print("Tasks has been canceled")
+    # asyncio.gather(*asyncio.Task.all_tasks()).cancel()
     # finally:
     #     loop.stop()
+
 
 def exception_handler(loop, context):
     """Exception Handler for Asyncio Loops."""
@@ -70,7 +70,7 @@ def exception_handler(loop, context):
     if context:
         try:
             print(context)
-            exception = context.get('exception')
+            exception = context.get("exception")
             msg = context.get("exception", context["message"])
             print("Caught DB Exception: {}".format(str(msg)))
         except (TypeError, AttributeError):
@@ -88,7 +88,7 @@ def exception_handler(loop, context):
 
 
 class BasePool(ABC):
-    _dsn = ''
+    _dsn = ""
     _loop = None
     _pool = None
     _timeout = 600
@@ -99,7 +99,7 @@ class BasePool(ABC):
     _DEBUG = False
     _logger = None
 
-    def __init__(self, dsn='', loop=None, params={}, **kwargs):
+    def __init__(self, dsn="", loop=None, params={}, **kwargs):
         if loop:
             self._loop = loop
             asyncio.set_event_loop(self._loop)
@@ -111,11 +111,11 @@ class BasePool(ABC):
         else:
             self._dsn = dsn
         try:
-            self._DEBUG = bool(params['DEBUG'])
+            self._DEBUG = bool(params["DEBUG"])
         except KeyError:
             self._DEBUG = False
         try:
-            self._timeout = kwargs['timeout']
+            self._timeout = kwargs["timeout"]
         except KeyError:
             pass
         self._logger = logging.getLogger(__name__)
@@ -126,6 +126,7 @@ class BasePool(ABC):
     """
     Properties
     """
+
     def pool(self):
         return self._pool
 
@@ -139,12 +140,12 @@ class BasePool(ABC):
         return self._connection
 
     def is_closed(self):
-        #logger.debug("Connection closed: %s" % self._pool._closed)
+        # logger.debug("Connection closed: %s" % self._pool._closed)
         return self._pool._closed
 
-    '''
+    """
     __init async db initialization
-    '''
+    """
     # Create a database connection pool
     @abstractmethod
     async def connect(self):
@@ -153,6 +154,7 @@ class BasePool(ABC):
     """
     Take a connection from the pool.
     """
+
     @abstractmethod
     async def acquire(self):
         pass
@@ -160,6 +162,7 @@ class BasePool(ABC):
     """
     Close Pool
     """
+
     @abstractmethod
     async def close(self):
         pass
@@ -167,9 +170,11 @@ class BasePool(ABC):
     """
     Release a connection from the pool
     """
+
     @abstractmethod
-    async def release(self, connection, timeout = 10):
+    async def release(self, connection, timeout=10):
         pass
+
 
 """
 Base
@@ -188,10 +193,12 @@ BaseDB
       result: asyncpg resultset
   TODO: change to BaseDBProvider
 """
+
+
 class BaseProvider(ABC):
-    _provider = 'base'
-    _syntax = 'sql' # can use QueryParser for parsing SQL queries
-    _dsn = ''
+    _provider = "base"
+    _syntax = "sql"  # can use QueryParser for parsing SQL queries
+    _dsn = ""
     _connection = None
     _connected = False
     _util = None
@@ -201,7 +208,7 @@ class BaseProvider(ABC):
     _dict = []
     _loop = None
     _params = {}
-    _sta = ''
+    _sta = ""
     _test_query = None
     _timeout = 600
     _max_connections = 4
@@ -209,7 +216,7 @@ class BaseProvider(ABC):
     _DEBUG = False
     _logger = None
 
-    def __init__(self, dsn='', loop=None, params={}, **kwargs):
+    def __init__(self, dsn="", loop=None, params={}, **kwargs):
         self._params = {}
         if loop:
             self._loop = loop
@@ -224,11 +231,11 @@ class BaseProvider(ABC):
         else:
             self._dsn = dsn
         try:
-            self._DEBUG = bool(params['DEBUG'])
+            self._DEBUG = bool(params["DEBUG"])
         except KeyError:
             self._DEBUG = False
         try:
-            self._timeout = kwargs['timeout']
+            self._timeout = kwargs["timeout"]
         except KeyError:
             pass
         self._logger = logging.getLogger(__name__)
@@ -243,15 +250,16 @@ class BaseProvider(ABC):
     """
     Async Context magic Methods
     """
+
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        await self.close(timeout = 5)
+        await self.close(timeout=5)
 
     @classmethod
     def type(self):
-        #return self.__name__.lower()
+        # return self.__name__.lower()
         return self._provider
 
     def get_connection(self):
@@ -274,6 +282,7 @@ class BaseProvider(ABC):
     """
     Properties
     """
+
     @property
     def columns(self):
         return self._columns
@@ -282,10 +291,8 @@ class BaseProvider(ABC):
     def connected(self):
         return self._connected
 
-
     def get_result(self):
         return self._result
-
 
     def set_connection(self, conn):
         if conn:
@@ -301,25 +308,27 @@ class BaseProvider(ABC):
     """
     Get Columns
     """
+
     def get_columns(self):
         return self._columns
-
 
     """
     Test Connnection
     """
+
     async def test_connection(self):
         if self._test_query is None:
             raise NotImplementedError()
-        #logger.debug("{}: Running Test".format(self._provider))
+        # logger.debug("{}: Running Test".format(self._provider))
         try:
             return await self.query(self._test_query)
         except Exception as err:
-            raise ProviderError(message = str(err), code = 0)
+            raise ProviderError(message=str(err), code=0)
 
     """
     Terminate a connection
     """
+
     def terminate(self):
         try:
             self._loop.run_until_complete(self.close())
@@ -334,6 +343,7 @@ class BaseProvider(ABC):
     """
     Get a connection from the pool
     """
+
     @abstractmethod
     async def connection(self):
         pass
@@ -341,14 +351,15 @@ class BaseProvider(ABC):
     """
     Prepare an statement
     """
+
     @abstractmethod
     async def prepare(self):
         pass
 
-
     """
     Prepare an statement
     """
+
     @abstractmethod
     async def prepare(self):
         pass
@@ -356,24 +367,27 @@ class BaseProvider(ABC):
     """
     Execute a sentence
     """
+
     @abstractmethod
-    async def execute(self, sentence = ''):
+    async def execute(self, sentence=""):
         pass
 
     """
     Making a Query and return result
     """
+
     @abstractmethod
-    async def query(self, sentence = ''):
+    async def query(self, sentence=""):
         pass
 
     @abstractmethod
-    async def queryrow(self, sentence = ''):
+    async def queryrow(self, sentence=""):
         pass
 
     """
     Close Connection
     """
+
     @abstractmethod
     async def close(self):
         pass
@@ -391,14 +405,16 @@ class BaseProvider(ABC):
     """
      DDL Methods
     """
-    def tables(self, schema = ''):
+
+    def tables(self, schema=""):
         pass
 
-    def table(self, table_name = ''):
+    def table(self, table_name=""):
         pass
+
 
 def registerProvider(provider):
     global _providers
-    #logger.debug("Registering new Provider %s of type (%s), syntax: %s.", provider.name(), provider.type(), provider.dialect())
+    # logger.debug("Registering new Provider %s of type (%s), syntax: %s.", provider.name(), provider.type(), provider.dialect())
     _providers[provider.type()] = provider
-    #TODO: try to load provider
+    # TODO: try to load provider

@@ -6,15 +6,16 @@ This provider implements a simple subset of funcionalities from aiomcache, this 
 """
 
 import asyncio
-import aiomcache
 import logging
 
-from asyncdb.providers import BasePool, BaseProvider, registerProvider
+import aiomcache
+
 from asyncdb.exceptions import *
+from asyncdb.providers import BasePool, BaseProvider, registerProvider
 from asyncdb.utils import *
 
-
 logger = logging.getLogger(__name__)
+
 
 class memcachePool(BasePool):
     _dsn = None
@@ -32,10 +33,10 @@ class memcachePool(BasePool):
     def get_event_loop(self):
         return self._loop
 
-
     """
     Context magic Methods
     """
+
     def __enter__(self):
         return self
 
@@ -45,7 +46,9 @@ class memcachePool(BasePool):
     async def connect(self):
         logger.info("AsyncMcache: Connecting to {}".format(self._params))
         try:
-            self._pool = aiomcache.Client(pool_size=self._max_queries, loop=self._loop, **self._params)
+            self._pool = aiomcache.Client(
+                pool_size=self._max_queries, loop=self._loop, **self._params
+            )
         except aiomcache.exceptions.ClientException as err:
             raise ProviderError("Unable to connect to Memcache: {}".format(str(err)))
         except Exception as err:
@@ -63,7 +66,7 @@ class memcachePool(BasePool):
         db = None
         self._connection = None
         try:
-            #self._connection = await self._pool.acquire()
+            # self._connection = await self._pool.acquire()
             self._connection = self._pool
         except aiomcache.exceptions.ClientException as err:
             raise ProviderError("Unable to connect to Memcache: {}".format(str(err)))
@@ -102,14 +105,14 @@ class memcachePool(BasePool):
 
 
 class memcache(BaseProvider):
-    _provider = 'memcache'
-    _syntax = 'nosql'
+    _provider = "memcache"
+    _syntax = "nosql"
     _pool = None
-    _dsn = ''
+    _dsn = ""
     _connection = None
     _connected = False
     _loop = None
-    _encoding = 'utf-8'
+    _encoding = "utf-8"
 
     def __init__(self, loop=None, pool=None, params={}):
         super(memcache, self).__init__(loop=loop, params=params)
@@ -122,6 +125,7 @@ class memcache(BaseProvider):
     """
     Context magic Methods
     """
+
     def __enter__(self):
         return self
 
@@ -130,9 +134,9 @@ class memcache(BaseProvider):
 
     # Create a memcache Connection
     async def connection(self):
-        '''
+        """
         __init async Memcache initialization
-        '''
+        """
         logger.info("AsyncMcache: Connecting to {}".format(self._params))
         try:
             self._connection = aiomcache.Client(loop=self._loop, **self._params)
@@ -153,16 +157,16 @@ class memcache(BaseProvider):
         Release a connection and return into pool
         """
         if self._pool:
-            self._loop.run_until_complete(self._pool.release(connection=self._connection))
+            self._loop.run_until_complete(
+                self._pool.release(connection=self._connection)
+            )
 
     async def close(self):
         """
         Closing memcache Connection
         """
         if self._pool:
-            await self._pool.release(
-                connection=self._connection
-            )
+            await self._pool.release(connection=self._connection)
         else:
             try:
                 await self._connection.close()
@@ -185,24 +189,28 @@ class memcache(BaseProvider):
             raise ProviderError("Unknown Memcache Error: {}".format(str(err)))
             return False
 
-    async def execute(self, sentence=''):
+    async def execute(self, sentence=""):
         pass
 
-    async def prepare(self, sentence=''):
+    async def prepare(self, sentence=""):
         pass
 
-    async def query(self, key='', *val):
+    async def query(self, key="", *val):
         return await self.get(key, val)
 
-    async def queryrow(self, key='', *args):
+    async def queryrow(self, key="", *args):
         return await self.get(key, val)
 
     async def set(self, key, value, timeout=None):
         try:
             if timeout:
-                return await self._connection.set(bytes(key, 'utf-8'), bytes(value, 'utf-8'), exptime=timeout)
+                return await self._connection.set(
+                    bytes(key, "utf-8"), bytes(value, "utf-8"), exptime=timeout
+                )
             else:
-                return await self._connection.set(bytes(key, 'utf-8'), bytes(value, 'utf-8'))
+                return await self._connection.set(
+                    bytes(key, "utf-8"), bytes(value, "utf-8")
+                )
         except (aiomcache.exceptions.ClientException) as err:
             raise ProviderError("Set Memcache Error: {}".format(str(err)))
         except Exception as err:
@@ -210,9 +218,9 @@ class memcache(BaseProvider):
 
     async def get(self, key):
         try:
-            result = await self._connection.get(bytes(key, 'utf-8'))
+            result = await self._connection.get(bytes(key, "utf-8"))
             if result:
-                return result.decode('utf-8')
+                return result.decode("utf-8")
             else:
                 return None
         except (aiomcache.exceptions.ClientException) as err:
@@ -222,7 +230,7 @@ class memcache(BaseProvider):
 
     async def delete(self, key):
         try:
-            return await self._connection.delete(bytes(key, 'utf-8'))
+            return await self._connection.delete(bytes(key, "utf-8"))
         except (aiomcache.exceptions.ClientException) as err:
             raise ProviderError("Memcache Exists Error: {}".format(str(err)))
         except Exception as err:
@@ -230,11 +238,11 @@ class memcache(BaseProvider):
 
     async def multiget(self, *kwargs):
         try:
-            ky = [bytes(key, 'utf-8') for key in kwargs]
+            ky = [bytes(key, "utf-8") for key in kwargs]
             print(ky)
             result = await self._connection.multi_get(*ky)
             print(result)
-            return [k.decode('utf-8') for k in result]
+            return [k.decode("utf-8") for k in result]
         except (aiomcache.exceptions.ClientException) as err:
             raise ProviderError("Get Memcache Error: {}".format(str(err)))
         except Exception as err:

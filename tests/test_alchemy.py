@@ -1,6 +1,8 @@
 import asyncio
-from asyncdb.providers.sql_alchemy import sql_alchemy
+
 from asyncdb import AsyncDB, AsyncPool
+from asyncdb.providers.sql_alchemy import sql_alchemy
+
 
 def exception_handler(loop, context):
     """Exception Handler for Asyncio Loops."""
@@ -11,6 +13,7 @@ def exception_handler(loop, context):
         logging.info("Shutting down...")
         loop.run_until_complete(shutdown(loop))
 
+
 loop = asyncio.get_event_loop()
 loop.set_debug(True)
 loop.set_exception_handler(exception_handler)
@@ -18,21 +21,21 @@ loop.set_exception_handler(exception_handler)
 # create a pool with parameters
 # create a pool with parameters
 params = {
-    'user': 'troc_pgdata',
-    'password': '12345678',
-    'host': '127.0.0.1',
-    'port': '5432',
-    'database': 'navigator_dev',
-    'DEBUG': True
+    "user": "troc_pgdata",
+    "password": "12345678",
+    "host": "127.0.0.1",
+    "port": "5432",
+    "database": "navigator_dev",
+    "DEBUG": True,
 }
 
 sa = sql_alchemy(params=params)
 with sa.connection() as conn:
     result = conn.test_connection()
-    table, error = conn.query('SELECT * FROM walmart.stores')
+    table, error = conn.query("SELECT * FROM walmart.stores")
     for row in table:
         print(row)
-    store, error = conn.queryrow('SELECT * FROM walmart.stores')
+    store, error = conn.queryrow("SELECT * FROM walmart.stores")
     print(store)
 
 with sa.transaction() as trans:
