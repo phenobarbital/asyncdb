@@ -9,7 +9,8 @@ from setuptools import find_packages, setup
 
 setup(
     name="asyncdb",
-    version="1.0.0",
+    version=open("VERSION").read().strip(),
+    python_requires=">=3.7.0",
     url="https://github.com/phenobarbital/asyncdb",
     description="Asyncio Datasource library",
     long_description="Asynchronous library for data source connections, used by Navigator",
@@ -52,9 +53,17 @@ setup(
         'rethinkdb==2.4.7',
         'sqlalchemy==1.3.20',
         'openpyxl==3.0.5',
-        'zeep==4.0.0',
         'lxml==4.6.0',
-        'isodate==0.6.0'
+        'isodate==0.6.0',
+        'dask==2.30.0',
+        'pandas==1.1.3',
+        'hiredis==1.1.0',
+        'aiomcache==0.6.0',
+        'sqlalchemy==1.3.20',
+        'sqlalchemy==aio-0.16.0',
+        'redis==3.5.3',
+        'pylibmc==1.6.1',
+        'attrs==20.2.0'
     ],
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/asyncdb",
