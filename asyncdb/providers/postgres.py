@@ -32,7 +32,7 @@ from asyncpg.exceptions import (
 
 from asyncdb.meta import asyncRecord, asyncResult
 from asyncdb.providers import BasePool, BaseProvider, logger_config, registerProvider
-from asyncdb.providers.exceptions import (
+from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
     EmptyStatement,

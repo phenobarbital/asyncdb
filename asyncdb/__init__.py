@@ -6,10 +6,9 @@ import sys
 
 __version__ = "0.0.2"
 
-from asyncdb.meta import asyncORM, asyncRecord
-from asyncdb.providers import *
-from asyncdb.providers.exceptions import *
-
+from .meta import asyncORM, asyncRecord
+#from .providers import *
+from .exceptions import NotSupported, asyncDBException, ProviderError
 
 def module_exists(module_name, classpath):
     try:
@@ -23,7 +22,7 @@ def module_exists(module_name, classpath):
             obj = __import__(classpath, fromlist=[module_name])
             return obj
         except ImportError:
-            # logger.debug("No Provider {} Found".format(module_name))
+            logging.exception("No Provider {} Found".format(module_name))
             raise NotSupported(message="No Provider %s Found" % module_name, code=404)
             return False
 
@@ -33,20 +32,20 @@ def module_exists(module_name, classpath):
 """
 
 
-class AsyncPool(object):
+class AsyncPool:
     _provider = None
     _name = ""
 
-    def __new__(self, provider="dummy", **kwargs):
-        self._provider = None
-        self._name = provider
+    def __new__(cls, provider="dummy", **kwargs):
+        cls._provider = None
+        cls._name = provider
         # logger.info('Load Pool Provider: {}'.format(self._name))
-        classpath = "asyncdb.providers.{provider}".format(provider=self._name)
-        poolName = "{}Pool".format(self._name)
+        classpath = "asyncdb.providers.{provider}".format(provider=cls._name)
+        poolName = "{}Pool".format(cls._name)
         try:
             obj = module_exists(poolName, classpath)
             if obj:
-                self._provider = obj(**kwargs)
+                cls._provider = obj(**kwargs)
             else:
                 raise asyncDBException(
                     message="Cannot Load Pool provider {}".format(poolName)
@@ -54,28 +53,28 @@ class AsyncPool(object):
         except Exception as err:
             raise ProviderError(message=str(err), code=404)
         finally:
-            return self._provider
+            return cls._provider
 
 
-class AsyncDB(object):
+class AsyncDB:
     _provider = None
     _name = ""
 
     def __new__(self, provider="dummy", **kwargs):
-        self._provider = None
-        self._name = provider
+        cls._provider = None
+        cls._name = provider
         # logger.debug('Load Provider: {}'.format(self._name))
-        classpath = "asyncdb.providers.{provider}".format(provider=self._name)
+        classpath = "asyncdb.providers.{provider}".format(provider=cls._name)
         # logger.debug("Provider Path: %s" % classpath)
         try:
-            obj = module_exists(self._name, classpath)
+            obj = module_exists(cls._name, classpath)
             if obj:
-                self._provider = obj(**kwargs)
+                cls._provider = obj(**kwargs)
             else:
                 raise asyncDBException(
-                    message="Cannot Load provider {}".format(self._name)
+                    message="Cannot Load provider {}".format(cls._name)
                 )
         except Exception as err:
             raise ProviderError(message=str(err), code=404)
         finally:
-            return self._provider
+            return cls._provider

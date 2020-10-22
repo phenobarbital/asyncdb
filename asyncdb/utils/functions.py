@@ -19,13 +19,14 @@ from dateutil import parser
 from dateutil.relativedelta import relativedelta
 import pytz
 
-CACHE_HOST = os.getenv('CACHEHOST', default='localhost')
-CACHE_PORT = os.getenv('CACHEPORT', default=6379)
+CACHE_HOST = os.getenv("CACHEHOST", default="localhost")
+CACHE_PORT = os.getenv("CACHEPORT", default=6379)
 CACHE_URL = "redis://{}:{}".format(CACHE_HOST, CACHE_PORT)
-CACHE_DB = os.getenv('QUERYSET_DB', default=0)
-QUERY_VARIABLES = f'redis://{CACHE_HOST}:{CACHE_PORT}/{CACHE_DB}'
+CACHE_DB = os.getenv("QUERYSET_DB", default=0)
+QUERY_VARIABLES = f"redis://{CACHE_HOST}:{CACHE_PORT}/{CACHE_DB}"
 
 CACHEDB = redis.StrictRedis.from_url(QUERY_VARIABLES)
+
 
 class SafeDict(dict):
     """
@@ -34,16 +35,20 @@ class SafeDict(dict):
     Allow to using partial format strings
 
     """
+
     def __missing__(self, key):
         """Missing method for SafeDict."""
-        return '{' + key + '}'
+        return "{" + key + "}"
+
 
 def generate_key():
     return binascii.hexlify(os.urandom(20)).decode()
 
+
 # hash utilities
 def get_hash(value):
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
 
 def truncate_decimal(value):
     head, sep, tail = value.partition(".")
@@ -65,14 +70,18 @@ def current_month():
 def today(mask="%m/%d/%Y"):
     return time.strftime(mask)
 
+
 def get_current_date():
     return datetime.utcnow().date()
+
 
 def a_visit():
     return timezone.now() + timezone.timedelta(minutes=30)
 
+
 def due_date():
     return timezone.now() + timezone.timedelta(days=1)
+
 
 def year(value):
     if value:
@@ -87,11 +96,13 @@ def year(value):
     else:
         return None
 
+
 def get_last_week_date(mask="%Y-%m-%d"):
     today = date.today()
-    offset = (today.weekday() - 5)%7
+    offset = (today.weekday() - 5) % 7
     last_saturday = today - timedelta(days=offset)
     return last_saturday.strftime(mask)
+
 
 def month(value):
     if value:
@@ -109,6 +120,7 @@ def month(value):
 def fdom():
     return (datetime.datetime.now()).strftime("%Y-%m-01")
 
+
 def ldom():
     return (datetime.datetime.now() + relativedelta(day=31)).strftime("%Y-%m-%d")
 
@@ -116,11 +128,14 @@ def ldom():
 def now():
     return datetime.datetime.now()
 
+
 def due_date(days=1):
     return datetime.datetime.now() + timedelta(days=days)
 
+
 def yesterday():
     return (datetime.datetime.now() - timedelta(1)).strftime("%Y-%m-%d")
+
 
 def isdate(value):
     try:
@@ -129,25 +144,36 @@ def isdate(value):
     except ValueError:
         return False
 
+
 is_date = isdate
 
-def first_dow(mask='%Y-%m-%d'):
+
+def first_dow(mask="%Y-%m-%d"):
     today = datetime.datetime.now()
-    fdow = (today - timedelta(today.weekday()))
+    fdow = today - timedelta(today.weekday())
     return fdow.strftime(mask)
 
+
 def midnight_yesterday(mask="%m/%d/%Y"):
-    midnight = datetime.datetime.combine(datetime.datetime.now() - timedelta(1), datetime.datetime.min.time())
+    midnight = datetime.datetime.combine(
+        datetime.datetime.now() - timedelta(1), datetime.datetime.min.time()
+    )
     return midnight.strftime(mask)
 
-def to_midnight(value, mask='%Y-%m-%d'):
-    midnight = datetime.datetime.combine((value+timedelta(1)), datetime.datetime.min.time())
+
+def to_midnight(value, mask="%Y-%m-%d"):
+    midnight = datetime.datetime.combine(
+        (value + timedelta(1)), datetime.datetime.min.time()
+    )
     return midnight.strftime(mask)
+
 
 """
 Formatting Functions
 """
-def format_date(value='2019-01-01', mask="%Y-%m-%d %H:%M:%S"):
+
+
+def format_date(value="2019-01-01", mask="%Y-%m-%d %H:%M:%S"):
     """
     format_date.
 
@@ -165,25 +191,28 @@ def format_date(value='2019-01-01', mask="%Y-%m-%d %H:%M:%S"):
             raise ValueError(err)
             return None
 
+
 def to_date(value, mask="%Y-%m-%d %H:%M:%S", tz=None):
     if isinstance(value, datetime.datetime):
-        #print('to_date 1', value)
+        # print('to_date 1', value)
         return value
     else:
         try:
             result = datetime.datetime.strptime(str(value), mask)
             if tz is not None:
                 result = result.replace(tzinfo=pytz.timezone(tz))
-            #print('to_date 2', value, result)
+            # print('to_date 2', value, result)
             return result
         except Exception:
-            #print('to_date 3', 'dateparser')
-            return dateparser.parse(str(value), languages=['en', 'es'])
+            # print('to_date 3', 'dateparser')
+            return dateparser.parse(str(value), languages=["en", "es"])
 
 
 def to_time(value, mask="%H:%M:%S"):
     if value == 0:
-        return datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        return datetime.datetime.now().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
     if isinstance(value, datetime.datetime):
         return value
     else:
@@ -204,9 +233,12 @@ def build_date(value, mask="%Y-%m-%d %H:%M:%S"):
         return value
     else:
         if value == 0:
-            return datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            return datetime.datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
         else:
             return datetime.datetime.strptime(str(value), mask)
+
 
 def epoch_to_date(value):
     if value:
@@ -215,21 +247,29 @@ def epoch_to_date(value):
     else:
         return None
 
+
 def trim(value):
     if isinstance(value, str):
         return value.strip()
     else:
         return value
 
+
 def extract_string(value, exp=r"_((\d+)_(\d+))_", group=1, parsedate=False):
     match = re.search(r"{}".format(exp), value)
     if match:
-        result = match.group(group) if not parsedate else dateparser.parse(match.group(group))
+        result = (
+            match.group(group)
+            if not parsedate
+            else dateparser.parse(match.group(group))
+        )
         return result
+
 
 """
 Validation and data-type functions
 """
+
 
 def isdate(value):
     try:
@@ -237,6 +277,7 @@ def isdate(value):
         return True
     except ValueError:
         return False
+
 
 def isinteger(value):
     try:
@@ -268,8 +309,10 @@ def is_uuid(value):
     except ValueError:
         return False
 
+
 def plain_uuid(obj):
-    return str(obj).replace('-', '')
+    return str(obj).replace("-", "")
+
 
 def validate_type_uuid(value):
     try:
@@ -288,16 +331,17 @@ def is_boolean(value):
     else:
         return False
 
+
 def to_boolean(value):
     if isinstance(value, bool):
         return value
     elif value == None:
         return False
-    elif value == 'null' or value == 'NULL':
+    elif value == "null" or value == "NULL":
         return False
-    elif value == 'true' or value == 'TRUE' or value == 'True':
+    elif value == "true" or value == "TRUE" or value == "True":
         return True
-    elif value == 'false' or value == 'FALSE':
+    elif value == "false" or value == "FALSE":
         return False
     else:
         return bool(value)
@@ -319,15 +363,21 @@ def to_double(value):
         except Exception as e:
             print(e)
             return None
+
+
 """
 """
 PG_CONSTANTS = ["CURRENT_DATE", "CURRENT_TIMESTAMP"]
+
+
 def is_pgconstant(value):
     return value in PG_CONSTANTS
 
 
 UDF = ["CURRENT_YEAR", "CURRENT_MONTH", "TODAY", "YESTERDAY", "FDOM", "LDOM"]
-def is_udf(value:str, *args, **kwargs) -> Callable:
+
+
+def is_udf(value: str, *args, **kwargs) -> Callable:
     fn = None
     try:
         f = value.lower()
@@ -348,9 +398,11 @@ def is_udf(value:str, *args, **kwargs) -> Callable:
     finally:
         return fn
 
+
 """
 Redis Functions
 """
+
 
 def is_program_date(value, *args):
     try:
@@ -361,7 +413,8 @@ def is_program_date(value, *args):
     except Exception:
         return False
 
-def get_program_date(value, yesterday:bool = False, *args):
+
+def get_program_date(value, yesterday: bool = False, *args):
     opt = None
     try:
         if CACHEDB.exists(value):

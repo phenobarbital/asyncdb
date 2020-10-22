@@ -6,7 +6,7 @@ sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
 )
 
-from asyncdb.providers.exceptions import *
+from asyncdb.exceptions import *
 from asyncdb.utils import SafeDict
 
 

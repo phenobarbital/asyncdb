@@ -9,7 +9,7 @@ from datetime import datetime
 import aiomysql
 
 from asyncdb.providers import BasePool, BaseProvider, registerProvider
-from asyncdb.providers.exceptions import (
+from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
     EmptyStatement,
