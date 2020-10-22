@@ -25,6 +25,7 @@ setup(
     packages=find_packages(exclude=["contrib", "docs", "tests"]),
     install_requires=[
         'numpy >= 1.11.1',
+        'wheel==0.35.1',
         'asyncio==3.4.3',
         'python-dotenv==0.14.0',
         'PyDrive==1.3.1',
@@ -51,7 +52,6 @@ setup(
         'aioredis==1.3.1',
         'asyncpg==0.21.0',
         'rethinkdb==2.4.7',
-        'sqlalchemy==1.3.20',
         'openpyxl==3.0.5',
         'lxml==4.6.0',
         'isodate==0.6.0',
@@ -60,7 +60,7 @@ setup(
         'hiredis==1.1.0',
         'aiomcache==0.6.0',
         'sqlalchemy==1.3.20',
-        'sqlalchemy==aio-0.16.0',
+        'sqlalchemy-aio==0.16.0',
         'redis==3.5.3',
         'pylibmc==1.6.1',
         'attrs==20.2.0'
