@@ -1,8 +1,12 @@
 class asyncDBException(Exception):
     """Base class for other exceptions"""
-    def __init__(self, message = '', code = 0, *args):
+
+    def __init__(self, message="", code=0, *args):
         super(asyncDBException, self).__init__(*args)
-        self.args = (message, code, )
+        self.args = (
+            message,
+            code,
+        )
         self.message = message
         self.code = code
         print(args)
@@ -33,6 +37,7 @@ class UninitializedError(ProviderError):
 
 class ConnectionTimeout(ProviderError):
     """Connection Timeout Error"""
+
 
 class NoDataFound(ProviderError):
     """Raise when no data was found"""

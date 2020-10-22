@@ -6,41 +6,42 @@ This provider implements a simple subset of funcionalities from aiomcache, this 
 """
 
 import asyncio
-import pylibmc
 import logging
 
-from asyncdb.providers import BasePool, BaseProvider, registerProvider
+import pylibmc
+
 from asyncdb.exceptions import *
+from asyncdb.providers import BasePool, BaseProvider, registerProvider
 from asyncdb.utils import *
 
-logger = logging.getLogger('AsyncDB')
+logger = logging.getLogger("AsyncDB")
+
 
 class mcache(BaseProvider):
-    _provider = 'memcache'
-    _syntax = 'nosql'
+    _provider = "memcache"
+    _syntax = "nosql"
     _pool = None
-    _dsn = ''
+    _dsn = ""
     _connection = None
     _connected = False
     _loop = None
-    _encoding = 'utf-8'
+    _encoding = "utf-8"
     _server = None
     _behaviors = {"tcp_nodelay": True, "ketama": True}
 
     def __init__(self, loop=None, params={}):
         super(mcache, self).__init__(loop=loop, params=params)
-        self._server = ['{0}:{1}'.format(params['host'], params['port'])]
+        self._server = ["{0}:{1}".format(params["host"], params["port"])]
         try:
-            if params['behaviors']:
-                self._behaviors = {
-                    **self._behaviors, **params['behaviors']
-                }
+            if params["behaviors"]:
+                self._behaviors = {**self._behaviors, **params["behaviors"]}
         except KeyError:
             pass
 
     """
     Context magic Methods
     """
+
     def __enter__(self):
         return self
 
@@ -49,14 +50,13 @@ class mcache(BaseProvider):
 
     # Create a memcache Connection
     def connection(self):
-        '''
+        """
         __init Memcache initialization
-        '''
+        """
         logger.info("Memcache: Connecting to {}".format(self._params))
         try:
             self._connection = pylibmc.Client(
-                self._server, binary=True,
-                behaviors=self._behaviors
+                self._server, binary=True, behaviors=self._behaviors
             )
         except (pylibmc.Error) as err:
             raise ProviderError("Connection Error: {}".format(str(err)))
@@ -99,24 +99,26 @@ class mcache(BaseProvider):
             raise ProviderError("Unknown Memcache Error: {}".format(str(err)))
             return False
 
-    async def execute(self, sentence=''):
+    async def execute(self, sentence=""):
         pass
 
-    async def prepare(self, sentence=''):
+    async def prepare(self, sentence=""):
         pass
 
-    async def query(self, key='', *val):
+    async def query(self, key="", *val):
         return self.get_multi(key, val)
 
-    async def queryrow(self, key='', *args):
+    async def queryrow(self, key="", *args):
         return self.get(key, val)
 
     def set(self, key, value, timeout=None):
         try:
             if timeout:
-                return self._connection.set(bytes(key, 'utf-8'), bytes(value, 'utf-8'), time=timeout)
+                return self._connection.set(
+                    bytes(key, "utf-8"), bytes(value, "utf-8"), time=timeout
+                )
             else:
-                return self._connection.set(bytes(key, 'utf-8'), bytes(value, 'utf-8'))
+                return self._connection.set(bytes(key, "utf-8"), bytes(value, "utf-8"))
         except (pylibmc.Error) as err:
             raise ProviderError("Set Memcache Error: {}".format(str(err)))
         except Exception as err:
@@ -130,9 +132,9 @@ class mcache(BaseProvider):
 
     def get(self, key, default=None):
         try:
-            result = self._connection.get(bytes(key, 'utf-8'), default)
+            result = self._connection.get(bytes(key, "utf-8"), default)
             if result:
-                return result.decode('utf-8')
+                return result.decode("utf-8")
             else:
                 return None
         except (pylibmc.Error) as err:
@@ -145,7 +147,7 @@ class mcache(BaseProvider):
 
     def delete(self, key):
         try:
-            return self._connection.delete(bytes(key, 'utf-8'))
+            return self._connection.delete(bytes(key, "utf-8"))
         except (pylibmc.Error) as err:
             raise ProviderError("Memcache Exists Error: {}".format(str(err)))
         except Exception as err:
@@ -153,7 +155,7 @@ class mcache(BaseProvider):
 
     def delete_multi(self, *kwargs):
         try:
-            ky = [bytes(key, 'utf-8') for key in kwargs]
+            ky = [bytes(key, "utf-8") for key in kwargs]
             result = self._connection.delete_multi(ky)
             return result
         except (pylibmc.Error) as err:
@@ -163,10 +165,10 @@ class mcache(BaseProvider):
 
     def multiget(self, *kwargs):
         try:
-            ky = [bytes(key, 'utf-8') for key in kwargs]
+            ky = [bytes(key, "utf-8") for key in kwargs]
             result = self._connection.get_multi(ky)
             if result:
-                return {key.decode('utf-8'):value for key,value  in result.items()}
+                return {key.decode("utf-8"): value for key, value in result.items()}
         except (pylibmc.Error) as err:
             raise ProviderError("Get Memcache Error: {}".format(str(err)))
         except Exception as err:

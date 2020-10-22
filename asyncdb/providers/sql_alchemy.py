@@ -7,46 +7,53 @@ This provider implements a basic set of funcionalities from SQLAlchemy core
 """
 
 import asyncio
-from sqlalchemy import (create_engine, select)
+
 from psycopg2.extras import NamedTupleCursor
-from sqlalchemy.exc import SQLAlchemyError, DatabaseError, OperationalError
+from sqlalchemy import create_engine, select
+from sqlalchemy.dialects import mysql, postgresql
+from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
 from sqlalchemy.pool import NullPool
-from sqlalchemy.dialects import postgresql, mysql
 
 from asyncdb.providers import BaseProvider, registerProvider
+from asyncdb.providers.exceptions import (
+    ConnectionTimeout,
+    DataError,
+    EmptyStatement,
+    NoDataFound,
+    ProviderError,
+    StatementError,
+    TooManyConnections,
+)
 
-from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
 
 class sql_alchemy(BaseProvider):
-    _provider = 'sqlalchemy'
-    _syntax = 'sql'
+    _provider = "sqlalchemy"
+    _syntax = "sql"
     _test_query = "SELECT 1"
-    _dsn = '{driver}://{user}:{password}@{host}:{port}/{database}'
+    _dsn = "{driver}://{user}:{password}@{host}:{port}/{database}"
     _loop = None
     _pool = None
-    #_engine = None
+    # _engine = None
     _connection = None
     _connected = False
     _initialized_on = None
     _engine = None
     _engine_options = {
-        'connect_args': {
-            'connect_timeout': 360
-        },
-        'isolation_level': "AUTOCOMMIT",
-        'echo': False,
-        'encoding': 'utf8',
-        'implicit_returning': True
+        "connect_args": {"connect_timeout": 360},
+        "isolation_level": "AUTOCOMMIT",
+        "echo": False,
+        "encoding": "utf8",
+        "implicit_returning": True,
     }
     _transaction = None
 
-    def __init__(self, dsn='', loop=None, params={}, **kwargs):
+    def __init__(self, dsn="", loop=None, params={}, **kwargs):
         if params:
             try:
-                if not params['driver']:
-                    params['driver'] = 'postgresql'
+                if not params["driver"]:
+                    params["driver"] = "postgresql"
             except KeyError:
-                params['driver'] = 'postgresql'
+                params["driver"] = "postgresql"
         super(sql_alchemy, self).__init__(dsn, loop, params, **kwargs)
         asyncio.set_event_loop(self._loop)
         if kwargs:
@@ -77,7 +84,7 @@ class sql_alchemy(BaseProvider):
     def close(self):
         if self._connection:
             self._connection.close()
-        self._logger.info('Closing Connection: {}'.format(self._engine))
+        self._logger.info("Closing Connection: {}".format(self._engine))
         self._engine.dispose()
 
     def terminate(self):
@@ -94,7 +101,6 @@ class sql_alchemy(BaseProvider):
             finally:
                 self._connection = None
                 return True
-
 
     def connection(self):
         """
@@ -118,7 +124,7 @@ class sql_alchemy(BaseProvider):
         finally:
             return self
 
-    def prepare(self, sentence=''):
+    def prepare(self, sentence=""):
         """
         Preparing a sentence
         """
@@ -144,9 +150,9 @@ class sql_alchemy(BaseProvider):
                 self._logger.info("Test Error: {}".format(error))
         except Exception as err:
             error = str(err)
-            raise ProviderError(message = str(err), code = 0)
+            raise ProviderError(message=str(err), code=0)
         finally:
-            return [ row, error ]
+            return [row, error]
 
     def query(self, sentence):
         """
@@ -156,7 +162,7 @@ class sql_alchemy(BaseProvider):
         if not self._connection:
             self.connection()
         try:
-            self._logger.info('Running Query {}'.format(sentence))
+            self._logger.info("Running Query {}".format(sentence))
             result = self._connection.execute(sentence)
             if result:
                 rows = result.fetchall()
@@ -170,7 +176,7 @@ class sql_alchemy(BaseProvider):
         finally:
             return [self._result, error]
 
-    def queryrow(self, sentence=''):
+    def queryrow(self, sentence=""):
         """
         Running Query and return only one row
         """
@@ -178,7 +184,7 @@ class sql_alchemy(BaseProvider):
         if not self._connection:
             self.connection()
         try:
-            self._logger.debug('Running Query {}'.format(sentence))
+            self._logger.debug("Running Query {}".format(sentence))
             result = self._connection.execute(sentence)
             if result:
                 row = result.fetchone()
@@ -201,7 +207,7 @@ class sql_alchemy(BaseProvider):
         if not self._connection:
             self.connection()
         try:
-            self._logger.debug('Execute Sentence {}'.format(sentence))
+            self._logger.debug("Execute Sentence {}".format(sentence))
             result = self._connection.execute(sentence)
             self._result = result
         except (DatabaseError, OperationalError) as err:
@@ -216,6 +222,7 @@ class sql_alchemy(BaseProvider):
     """
     Transaction Context
     """
+
     def transaction(self):
         if not self._connection:
             self.connection()
@@ -243,6 +250,7 @@ class sql_alchemy(BaseProvider):
     """
     Context magic Methods
     """
+
     def __enter__(self):
         return self
 
@@ -250,6 +258,7 @@ class sql_alchemy(BaseProvider):
         if self._transaction:
             self.close_transaction()
         self.release()
+
 
 """
 Registering this Provider
