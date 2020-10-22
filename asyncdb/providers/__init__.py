@@ -5,7 +5,7 @@ import os.path
 import sys
 from abc import ABC, abstractmethod
 
-from asyncdb.providers.exceptions import *
+from asyncdb.exceptions import *
 
 _providers = {}
 

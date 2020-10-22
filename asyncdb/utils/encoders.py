@@ -8,25 +8,29 @@ import uuid
 import decimal
 from enum import Enum
 
+
 class DateEncoder(json.JSONEncoder):
     """
     DateEncoder.
        Date and Time encoder
     """
+
     def default(self, obj):
         if isinstance(obj, datetime):
             return str(obj)
-        elif hasattr(obj, 'isoformat'):
+        elif hasattr(obj, "isoformat"):
             return obj.isoformat()
         else:
             return str(object=obj)
         return json.JSONEncoder.default(self, obj)
+
 
 class NpEncoder(json.JSONEncoder):
     """
     npEncoder.
        Numpy number encoder for json
     """
+
     def default(self, obj):
         if isinstance(obj, np.integer):
             return int(obj)
@@ -37,16 +41,18 @@ class NpEncoder(json.JSONEncoder):
         else:
             return json.JSONEncoder.default(self, obj)
 
+
 class IntRangeEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, asyncpg.Range):
             up = obj.upper
             if isinstance(obj.upper, int):
-                up = obj.upper - 1 # discrete representation
+                up = obj.upper - 1  # discrete representation
             return [obj.lower, up]
         else:
             return str(object=obj)
         return json.JSONEncoder.default(self, obj)
+
 
 class pgRangeEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -56,6 +62,7 @@ class pgRangeEncoder(json.JSONEncoder):
             return str(object=obj)
         return json.JSONEncoder.default(self, obj)
 
+
 class EnumEncoder(json.JSONEncoder):
     """
     EnumEncoder
@@ -63,11 +70,12 @@ class EnumEncoder(json.JSONEncoder):
     Used to format objects into json-strings
 
     """
+
     def default(self, obj):
         """Format several data types into json-type equivalent
         Return a new cls JSON EnumEncoder
         """
-        if hasattr(obj, 'hex'):
+        if hasattr(obj, "hex"):
             return obj.hex
         elif isinstance(obj, Enum):
             if not obj.value:
@@ -78,9 +86,10 @@ class EnumEncoder(json.JSONEncoder):
             return str(object=obj)
         return json.JSONEncoder.default(self, obj)
 
+
 class DefaultEncoder(json.JSONEncoder):
     def default(self, obj):
-        if hasattr(obj, 'hex'):
+        if hasattr(obj, "hex"):
             return obj.hex
         elif isinstance(obj, Enum):
             if not obj.value:
@@ -93,10 +102,10 @@ class DefaultEncoder(json.JSONEncoder):
             except Exception as e:
                 return obj.hex
         elif isinstance(obj, decimal.Decimal):
-             return float(obj)
+            return float(obj)
         elif isinstance(obj, Decimal):
             return str(obj)
-        elif hasattr(obj, 'isoformat'):
+        elif hasattr(obj, "isoformat"):
             return obj.isoformat()
         elif isinstance(obj, asyncpg.Range):
             return [obj.lower, obj.upper]

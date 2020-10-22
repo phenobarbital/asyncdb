@@ -13,7 +13,7 @@ from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
 from sqlalchemy_aio import ASYNCIO_STRATEGY
 
 from asyncdb.providers import BaseProvider, registerProvider
-from asyncdb.providers.exceptions import (
+from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
     EmptyStatement,

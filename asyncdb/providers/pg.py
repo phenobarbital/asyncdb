@@ -26,7 +26,7 @@ from asyncpg.exceptions import (
 )
 
 from asyncdb.providers import BasePool, BaseProvider, registerProvider
-from asyncdb.providers.exceptions import (
+from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
     EmptyStatement,
@@ -303,7 +303,7 @@ class pg(BaseProvider):
     async def __aenter__(self):
         return self
 
-    #async def __aexit__(self, exc_type, exc, tb):
+    # async def __aexit__(self, exc_type, exc, tb):
     async def __aexit__(self, *args):
         # clean up anything you need to clean up
         await self.close(timeout=5)

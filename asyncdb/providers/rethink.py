@@ -32,7 +32,7 @@ from rethinkdb.errors import (
     RqlRuntimeError,
 )
 
-from asyncdb.providers.exceptions import (
+from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
     EmptyStatement,
