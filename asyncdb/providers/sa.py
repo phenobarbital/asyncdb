@@ -3,43 +3,49 @@ Notes on sqlalchemy async Provider
 --------------------
 This provider implements a basic set of funcionalities from SQLAlchemy core and use threads
 """
-import logging
 import asyncio
+import logging
 from threading import Thread
 
+from psycopg2.extras import NamedTupleCursor
+from sqlalchemy import create_engine, select
+from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
 from sqlalchemy_aio import ASYNCIO_STRATEGY
 
-from sqlalchemy import (create_engine, select)
-from psycopg2.extras import NamedTupleCursor
-from sqlalchemy.exc import SQLAlchemyError, DatabaseError, OperationalError
-
-
 from asyncdb.providers import BaseProvider, registerProvider
-from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
+from asyncdb.providers.exceptions import (
+    ConnectionTimeout,
+    DataError,
+    EmptyStatement,
+    NoDataFound,
+    ProviderError,
+    StatementError,
+    TooManyConnections,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class sa(BaseProvider, Thread):
-    _provider = 'sqlalchemy'
-    _syntax = 'sql'
+    _provider = "sqlalchemy"
+    _syntax = "sql"
     _test_query = "SELECT 1"
-    _dsn = '{driver}://{user}:{password}@{host}:{port}/{database}'
+    _dsn = "{driver}://{user}:{password}@{host}:{port}/{database}"
     _loop = None
     _pool = None
-    #_engine = None
+    # _engine = None
     _connection = None
     _connected = False
     _initialized_on = None
 
-    def __init__(self, dsn='', loop=None, params={}):
+    def __init__(self, dsn="", loop=None, params={}):
         self._params = params
         if not dsn:
             self._dsn = self.create_dsn(self._params)
         else:
             self._dsn = dsn
         try:
-            self._DEBUG = bool(params['DEBUG'])
+            self._DEBUG = bool(params["DEBUG"])
         except KeyError:
             self._DEBUG = False
         # create the variables
@@ -49,15 +55,15 @@ class sa(BaseProvider, Thread):
         self._loop = None
         # create a new loop before thread
         self._loop = asyncio.new_event_loop()
-        #asyncio.set_event_loop(self._loop)
+        # asyncio.set_event_loop(self._loop)
         # calling parent Thread
         Thread.__init__(self)
         self.connect()
 
-
     """
     Context magic Methods
     """
+
     def __enter__(self):
         return self
 
@@ -67,16 +73,17 @@ class sa(BaseProvider, Thread):
     """
     Thread Methodss
     """
+
     def start(self):
-        logging.debug('Running Start')
+        logging.debug("Running Start")
         Thread.start(self)
 
     def join(self):
-        logging.debug('Running Join')
+        logging.debug("Running Join")
         Thread.join(self)
 
     def connect(self):
-        logging.debug('Running Connect')
+        logging.debug("Running Connect")
         try:
             self._engine = create_engine(self._dsn, strategy=ASYNCIO_STRATEGY)
         except (SQLAlchemyError, DatabaseError, OperationalError) as err:
@@ -87,14 +94,15 @@ class sa(BaseProvider, Thread):
             raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
 
     def close(self):
-        logging.debug('Running Close')
+        logging.debug("Running Close")
         if self._loop:
             try:
-                self._loop.run_until_complete(asyncio.wait_for(self.terminate(), timeout = 5))
+                self._loop.run_until_complete(
+                    asyncio.wait_for(self.terminate(), timeout=5)
+                )
             finally:
                 # close loop
                 self._loop.close()
-
 
     async def terminate(self):
         """
@@ -111,7 +119,6 @@ class sa(BaseProvider, Thread):
                 await self._engine.wait_closed()
             finally:
                 self._engine.terminate()
-
 
     def connection(self):
         """
@@ -144,8 +151,7 @@ class sa(BaseProvider, Thread):
         finally:
             self._connection = None
 
-
-    async def prepare(self, sentence=''):
+    async def prepare(self, sentence=""):
         """
         Preparing a sentence
         """
@@ -162,7 +168,9 @@ class sa(BaseProvider, Thread):
             raise NotImplementedError()
         logger.debug("{}: Running Test".format(self._provider))
         try:
-            result = self._loop.run_until_complete(self._connection.execute(self._test_query))
+            result = self._loop.run_until_complete(
+                self._connection.execute(self._test_query)
+            )
             row = self._loop.run_until_complete(result.fetchone())
             if row:
                 row = dict(row)
@@ -170,9 +178,9 @@ class sa(BaseProvider, Thread):
                 logger.debug("Test Error: {}".format(error))
         except Exception as err:
             error = str(err)
-            raise ProviderError(message = str(err), code = 0)
+            raise ProviderError(message=str(err), code=0)
         finally:
-            return [ row, error ]
+            return [row, error]
 
     async def query(self, sentence):
         """
@@ -182,7 +190,7 @@ class sa(BaseProvider, Thread):
         if not self._connection:
             self.connection()
         try:
-            logger.debug('Running Query {}'.format(sentence))
+            logger.debug("Running Query {}".format(sentence))
             result = await self._connection.execute(sentence)
             if result:
                 rows = await result.fetchall()
@@ -196,7 +204,7 @@ class sa(BaseProvider, Thread):
         finally:
             return [self._result, error]
 
-    async def queryrow(self, sentence=''):
+    async def queryrow(self, sentence=""):
         """
         Running Query and return only one row
         """
@@ -204,7 +212,7 @@ class sa(BaseProvider, Thread):
         if not self._connection:
             self.connection()
         try:
-            logger.debug('Running Query {}'.format(sentence))
+            logger.debug("Running Query {}".format(sentence))
             result = await self._connection.execute(sentence)
             if result:
                 row = await result.fetchone()
@@ -227,7 +235,7 @@ class sa(BaseProvider, Thread):
         if not self._connection:
             self.connection()
         try:
-            logger.debug('Execute Sentence {}'.format(sentence))
+            logger.debug("Execute Sentence {}".format(sentence))
             result = await self._engine.execute(sentence)
             self._result = result
         except (DatabaseError, OperationalError) as err:

@@ -1,24 +1,33 @@
 #!/usr/bin/env python3
 
-import logging
-from datetime import datetime
-import time
-import json
-
 import asyncio
+import json
+import logging
+import time
+from datetime import datetime
+
 import aiomysql
 
 from asyncdb.providers import BasePool, BaseProvider, registerProvider
-
-from asyncdb.providers.exceptions import EmptyStatement, ConnectionTimeout, ProviderError, NoDataFound, StatementError, TooManyConnections, DataError
+from asyncdb.providers.exceptions import (
+    ConnectionTimeout,
+    DataError,
+    EmptyStatement,
+    NoDataFound,
+    ProviderError,
+    StatementError,
+    TooManyConnections,
+)
 from asyncdb.utils import EnumEncoder, SafeDict
 
 logger = logging.getLogger(__name__)
 
+
 class mysqlPool(BasePool):
     _max_queries = 300
-    #_dsn = 'mysql://{user}:{password}@{host}:{port}/{database}'
+    # _dsn = 'mysql://{user}:{password}@{host}:{port}/{database}'
     loop = asyncio.get_event_loop()
+
     def __init__(self, loop=None, params={}):
         logger.debug("Ready")
         super(mysqlPool, self).__init__(loop=loop, params=params)
@@ -26,9 +35,9 @@ class mysqlPool(BasePool):
     def get_event_loop(self):
         return self._loop
 
-    '''
+    """
     __init async db initialization
-    '''
+    """
 
     # Create a database connection pool
     async def connect(self):
@@ -37,16 +46,20 @@ class mysqlPool(BasePool):
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             self._pool = await aiomysql.create_pool(
-                host=self._params['host'],
-                user=self._params['user'],
-                password=self._params['password'],
-                db=self._params['database'],
-                loop=self._loop
+                host=self._params["host"],
+                user=self._params["user"],
+                password=self._params["password"],
+                db=self._params["database"],
+                loop=self._loop,
             )
         except TimeoutError as err:
-            raise ConnectionTimeout("Unable to connect to database: {}".format(str(err)))
+            raise ConnectionTimeout(
+                "Unable to connect to database: {}".format(str(err))
+            )
         except ConnectionRefusedError as err:
-            raise ProviderError("Unable to connect to database, connection Refused: {}".format(str(err)))
+            raise ProviderError(
+                "Unable to connect to database, connection Refused: {}".format(str(err))
+            )
         except Exception as err:
             raise ProviderError("Unknown Error: {}".format(str(err)))
             return False
@@ -77,7 +90,7 @@ class mysqlPool(BasePool):
     Release a connection from the pool
     """
 
-    async def release(self, connection = None, timeout=10):
+    async def release(self, connection=None, timeout=10):
         logger.debug("Release")
         if not connection:
             conn = self._connection
@@ -85,11 +98,11 @@ class mysqlPool(BasePool):
             conn = connection
         try:
             await self._pool.release(conn)
-            #print('r', r)
-            #release = asyncio.create_task(r)
+            # print('r', r)
+            # release = asyncio.create_task(r)
             # await self._pool.release(connection, timeout = timeout)
-            #release = asyncio.ensure_future(release, loop=self._loop)
-            #await asyncio.wait_for(release, timeout=timeout, loop=self._loop)
+            # release = asyncio.ensure_future(release, loop=self._loop)
+            # await asyncio.wait_for(release, timeout=timeout, loop=self._loop)
             # await release
         except Exception as err:
             raise ProviderError("Release Error: {}".format(str(err)))
@@ -124,11 +137,11 @@ class mysqlPool(BasePool):
     """
 
     async def close(self):
-        #try:
+        # try:
         #    if self._connection:
         #        print('self._pool', self._pool)
         #        await self._pool.release(self._connection)
-        #except Exception as err:
+        # except Exception as err:
         #    raise ProviderError("Release Error: {}".format(str(err)))
         try:
             await self._pool.close()
@@ -152,13 +165,12 @@ class mysqlPool(BasePool):
                 raise ProviderError("Execute Error: {}".format(str(err)))
 
 
-
 class mysql(BaseProvider):
 
-    _provider = 'mysql'
-    _syntax = 'sql'
+    _provider = "mysql"
+    _syntax = "sql"
     _test_query = "SELECT 1"
-    _dsn = 'mysql://{user}:{password}@{host}:{port}/{database}'
+    _dsn = "mysql://{user}:{password}@{host}:{port}/{database}"
     _loop = None
     _pool = None
     _connection = None
@@ -168,12 +180,11 @@ class mysql(BaseProvider):
     _cursor = None
     _transaction = None
     _initialized_on = None
-    _query_raw = 'SELECT {fields} FROM {table} {where_cond}'
+    _query_raw = "SELECT {fields} FROM {table} {where_cond}"
 
     def __init__(self, loop=None, pool=None, params={}):
         super(mysql, self).__init__(loop=loop, params=params)
         asyncio.set_event_loop(self._loop)
-
 
     async def close(self):
         """
@@ -191,7 +202,9 @@ class mysql(BaseProvider):
                     except Exception as err:
                         self._pool.terminate()
                         self._connection = None
-                        raise ProviderError("Connection Error, Terminated: {}".format(str(err)))
+                        raise ProviderError(
+                            "Connection Error, Terminated: {}".format(str(err))
+                        )
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
         finally:
@@ -211,11 +224,12 @@ class mysql(BaseProvider):
         try:
             if not self._pool:
                 self._pool = await aiomysql.create_pool(
-                                            host=self._params['host'],
-                                            user=self._params['user'],
-                                            password=self._params['password'],
-                                            db=self._params['database'],
-                                            loop=self._loop)
+                    host=self._params["host"],
+                    user=self._params["user"],
+                    password=self._params["password"],
+                    db=self._params["database"],
+                    loop=self._loop,
+                )
             self._connection = await self._pool.acquire()
             self._cursor = await self._connection.cursor()
             if self._connection:
@@ -231,15 +245,18 @@ class mysql(BaseProvider):
     """
     Release a Connection
     """
+
     async def release(self):
         try:
             if not await self._connection.closed:
                 if self._pool:
-                    release = asyncio.create_task(self._pool.release(self._connection, timeout = 10))
+                    release = asyncio.create_task(
+                        self._pool.release(self._connection, timeout=10)
+                    )
                     asyncio.ensure_future(release, loop=self._loop)
                     return await release
                 else:
-                    await self._connection.close(timeout = 5)
+                    await self._connection.close(timeout=5)
         except Exception as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
             return False
@@ -260,7 +277,8 @@ class mysql(BaseProvider):
     """
     Preparing a sentence
     """
-    async def prepare(self, sentence=''):
+
+    async def prepare(self, sentence=""):
         error = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
@@ -271,7 +289,7 @@ class mysql(BaseProvider):
             try:
                 stmt = await asyncio.shield(self._connection.prepare(sentence))
                 try:
-                    #print(stmt.get_attributes())
+                    # print(stmt.get_attributes())
                     self._columns = [a.name for a in stmt.get_attributes()]
                     self._prepared = stmt
                     self._parameters = stmt.get_parameters()
@@ -286,8 +304,8 @@ class mysql(BaseProvider):
         finally:
             return [self._prepared, error]
 
-    async def query(self, sentence='', size=100000000000):
-        #logger.debug("Start Query function")
+    async def query(self, sentence="", size=100000000000):
+        # logger.debug("Start Query function")
         error = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
@@ -311,15 +329,15 @@ class mysql(BaseProvider):
             #    await self.close()
             return [self._result, error]
 
-    async def queryrow(self, sentence=''):
+    async def queryrow(self, sentence=""):
         error = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
         if not self._connection:
             await self.connection()
         try:
-            #stmt = await self._connection.prepare(sentence)
-            #self._columns = [a.name for a in stmt.get_attributes()]
+            # stmt = await self._connection.prepare(sentence)
+            # self._columns = [a.name for a in stmt.get_attributes()]
             await self._cursor.execute(sentence)
             self._result = await self.fetchone()
         except RuntimeError as err:
@@ -328,11 +346,11 @@ class mysql(BaseProvider):
         except Exception as err:
             error = "Error on Query Row: {}".format(str(err))
             raise Exception(error)
-        #finally:
-            #await self.close()
+        # finally:
+        # await self.close()
         return [self._result, error]
 
-    async def execute(self, sentence=''):
+    async def execute(self, sentence=""):
         """Execute a transaction
         get a SQL sentence and execute
         returns: results of the execution
@@ -353,7 +371,7 @@ class mysql(BaseProvider):
         finally:
             return [result, error]
 
-    async def executemany(self, sentence='', args = []):
+    async def executemany(self, sentence="", args=[]):
         error = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
@@ -374,6 +392,7 @@ class mysql(BaseProvider):
     """
     Transaction Context
     """
+
     async def begin(self):
         if not self._connection:
             await self.connection()
@@ -395,7 +414,8 @@ class mysql(BaseProvider):
     """
     Cursor Context
     """
-    async def cursor(self, sentence = ''):
+
+    async def cursor(self, sentence=""):
         logger.debug("Cursor")
         if not self._connection:
             await self.connection()
@@ -429,10 +449,10 @@ class mysql(BaseProvider):
             error = "Error FetchOne Cursor: {}".format(str(err))
             raise Exception(error)
 
-
     """
     Cursor Iterator Context
     """
+
     def __aiter__(self):
         return self
 
@@ -447,7 +467,10 @@ class mysql(BaseProvider):
     COPY Functions
     type: [ text, csv, binary ]
     """
-    async def copy_from_table(self, table='', schema='public', output=None, type='csv', columns=None):
+
+    async def copy_from_table(
+        self, table="", schema="public", output=None, type="csv", columns=None
+    ):
         """table_copy
         get a copy of table data into a file, file-like object or a coroutine passed on "output"
         returns: num of rows copied.
@@ -456,14 +479,22 @@ class mysql(BaseProvider):
         if not self._connection:
             await self.connection()
         try:
-            result = await self._connection.copy_from_table(table_name=table, schema_name=schema, columns=columns, format=type, output=output)
+            result = await self._connection.copy_from_table(
+                table_name=table,
+                schema_name=schema,
+                columns=columns,
+                format=type,
+                output=output,
+            )
             print(result)
             return result
         except Exception as err:
             error = "Error on Table Copy: {}".format(str(err))
             raise Exception(error)
 
-    async def copy_to_table(self, table='', schema='public', source=None, type='csv', columns=None):
+    async def copy_to_table(
+        self, table="", schema="public", source=None, type="csv", columns=None
+    ):
         """copy_to_table
         get data from a file, file-like object or a coroutine passed on "source" and copy into table
         returns: num of rows copied.
@@ -472,14 +503,22 @@ class mysql(BaseProvider):
         if not self._connection:
             await self.connection()
         try:
-            result = await self._connection.copy_to_table(table_name=table, schema_name=schema, columns=columns, format=type, source=source)
+            result = await self._connection.copy_to_table(
+                table_name=table,
+                schema_name=schema,
+                columns=columns,
+                format=type,
+                source=source,
+            )
             print(result)
             return result
         except Exception as err:
             error = "Error on Table Copy: {}".format(str(err))
             raise Exception(error)
 
-    async def copy_into_table(self, table='', schema='public', source=None, columns=None):
+    async def copy_into_table(
+        self, table="", schema="public", source=None, columns=None
+    ):
         """copy_into_table
         get data from records (any iterable object) and save into table
         returns: num of rows copied.
@@ -488,7 +527,9 @@ class mysql(BaseProvider):
         if not self._connection:
             await self.connection()
         try:
-            result = await self._connection.copy_records_to_table(table_name=table, schema_name=schema, columns=columns, records=source)
+            result = await self._connection.copy_records_to_table(
+                table_name=table, schema_name=schema, columns=columns, records=source
+            )
             print(result)
             return result
         except Exception as err:
@@ -501,78 +542,85 @@ class mysql(BaseProvider):
 
     def table(self, table):
         try:
-            return self._query_raw.format_map(SafeDict(table = table))
+            return self._query_raw.format_map(SafeDict(table=table))
         except Exception as e:
             print(e)
             return False
 
-    def fields(self, sentence, fields = None):
+    def fields(self, sentence, fields=None):
         _sql = False
         if not fields:
-            _sql = sentence.format_map(SafeDict(fields = '*'))
+            _sql = sentence.format_map(SafeDict(fields="*"))
         elif type(fields) == str:
-            _sql = sentence.format_map(SafeDict(fields = fields))
+            _sql = sentence.format_map(SafeDict(fields=fields))
         elif type(fields) == list:
-            _sql = sentence.format_map(SafeDict(fields = ','.join(fields)))
+            _sql = sentence.format_map(SafeDict(fields=",".join(fields)))
         return _sql
 
     """
     where
       add WHERE conditions to SQL
     """
+
     def where(self, sentence, where):
-        sql = ''
+        sql = ""
         if sentence:
-            where_string = ''
+            where_string = ""
             if not where:
-                sql = sentence.format_map(SafeDict(where_cond = ''))
+                sql = sentence.format_map(SafeDict(where_cond=""))
             elif type(where) == dict:
                 where_cond = []
                 for key, value in where.items():
-                    #print("KEY {}, VAL: {}".format(key, value))
+                    # print("KEY {}, VAL: {}".format(key, value))
                     if type(value) == str or type(value) == int:
-                        if value == 'null' or value == 'NULL':
+                        if value == "null" or value == "NULL":
                             where_string.append("%s IS NULL" % (key))
-                        elif value == '!null' or value == '!NULL':
+                        elif value == "!null" or value == "!NULL":
                             where_string.append("%s IS NOT NULL" % (key))
-                        elif key.endswith('!'):
+                        elif key.endswith("!"):
                             where_cond.append("%s != %s" % (key[:-1], value))
                         else:
-                            if type(value) == str and value.startswith("'") and value.endswith("'"):
+                            if (
+                                type(value) == str
+                                and value.startswith("'")
+                                and value.endswith("'")
+                            ):
                                 where_cond.append("%s = %s" % (key, "{}".format(value)))
                             elif type(value) == int:
                                 where_cond.append("%s = %s" % (key, "{}".format(value)))
                             else:
-                                where_cond.append("%s = %s" % (key, "'{}'".format(value)))
+                                where_cond.append(
+                                    "%s = %s" % (key, "'{}'".format(value))
+                                )
                     elif type(value) == bool:
                         val = str(value)
                         where_cond.append("%s = %s" % (key, val))
                     else:
-                        val = ','.join(map(str, value))
+                        val = ",".join(map(str, value))
                         if type(val) == str and "'" not in val:
                             where_cond.append("%s IN (%s)" % (key, "'{}'".format(val)))
                         else:
                             where_cond.append("%s IN (%s)" % (key, val))
-                #if 'WHERE ' in sentence:
+                # if 'WHERE ' in sentence:
                 #    where_string = ' AND %s' % (' AND '.join(where_cond))
-                #else:
-                where_string = ' WHERE %s' % (' AND '.join(where_cond))
+                # else:
+                where_string = " WHERE %s" % (" AND ".join(where_cond))
                 print("WHERE cond is %s" % where_string)
-                sql = sentence.format_map(SafeDict(where_cond = where_string))
+                sql = sentence.format_map(SafeDict(where_cond=where_string))
             elif type(where) == str:
                 where_string = where
-                if not where.startswith('WHERE'):
-                    where_string = ' WHERE %s' % where
-                sql = sentence.format_map(SafeDict(where_cond = where_string))
+                if not where.startswith("WHERE"):
+                    where_string = " WHERE %s" % where
+                sql = sentence.format_map(SafeDict(where_cond=where_string))
             else:
-                sql = sentence.format_map(SafeDict(where_cond = ''))
+                sql = sentence.format_map(SafeDict(where_cond=""))
             del where
             del where_string
             return sql
         else:
             return False
 
-    def limit(self, sentence, limit = 1):
+    def limit(self, sentence, limit=1):
         """
         LIMIT
           add limiting to SQL
@@ -581,7 +629,7 @@ class mysql(BaseProvider):
             return "{q} LIMIT {limit}".format(q=sentence, limit=limit)
         return self
 
-    def orderby(self, sentence, ordering = []):
+    def orderby(self, sentence, ordering=[]):
         """
         LIMIT
           add limiting to SQL
@@ -590,7 +638,9 @@ class mysql(BaseProvider):
             if type(ordering) == str:
                 return "{q} ORDER BY {ordering}".format(q=sentence, ordering=ordering)
             elif type(ordering) == list:
-                return "{q} ORDER BY {ordering}".format(q=sentence, ordering=', '.join(ordering))
+                return "{q} ORDER BY {ordering}".format(
+                    q=sentence, ordering=", ".join(ordering)
+                )
         return self
 
     def get_query(self, sentence):
@@ -601,20 +651,20 @@ class mysql(BaseProvider):
         sql = sentence
         try:
             # remove fields and where_cond
-            sql = sentence.format_map(SafeDict(fields = '*', where_cond = ''))
+            sql = sentence.format_map(SafeDict(fields="*", where_cond=""))
             if not self.connected:
                 self._loop.run_until_complete(self.connection())
             prepared, error = self._loop.run_until_complete(self.prepare(sql))
             if not error:
                 self._columns = self.get_columns()
             else:
-                print('Error in Get Query', error)
+                print("Error in Get Query", error)
                 return False
         except (ProviderError, StatementError) as err:
-            print('ProviderError or StatementError Exception in Get Query', e)
+            print("ProviderError or StatementError Exception in Get Query", e)
             return False
         except Exception as e:
-            print('Exception in Get Query', e)
+            print("Exception in Get Query", e)
             return False
         return sql
 
@@ -623,7 +673,9 @@ class mysql(BaseProvider):
         column_info
           get column information about a table
         """
-        discover = "SELECT attname AS column_name, atttypid::regtype AS data_type FROM pg_attribute WHERE attrelid = '{}'::regclass AND attnum > 0 AND NOT attisdropped ORDER  BY attnum".format(table)
+        discover = "SELECT attname AS column_name, atttypid::regtype AS data_type FROM pg_attribute WHERE attrelid = '{}'::regclass AND attnum > 0 AND NOT attisdropped ORDER  BY attnum".format(
+            table
+        )
         try:
             result, error = self._loop.run_until_complete(self.query(discover))
             if result:
@@ -640,11 +692,11 @@ class mysql(BaseProvider):
         insert
            insert the result onto a table
         """
-        sql = 'INSERT INTO {table} ({fields}) VALUES ({values})'
+        sql = "INSERT INTO {table} ({fields}) VALUES ({values})"
         sql = sql.format_map(SafeDict(table=table))
         # set columns
-        sql = sql.format_map(SafeDict(fields=','.join(data.keys())))
-        values = ','.join(str(v) for v in data.values())
+        sql = sql.format_map(SafeDict(fields=",".join(data.keys())))
+        values = ",".join(str(v) for v in data.values())
         sql = sql.format_map(SafeDict(values=values))
         try:
             result = self._loop.run_until_complete(self._connection.execute(sql))
@@ -654,9 +706,10 @@ class mysql(BaseProvider):
             else:
                 return result
         except Exception as err:
-            #print(sql)
+            # print(sql)
             print(err)
             return False
+
 
 """
 Registering this Provider
