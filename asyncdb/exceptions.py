@@ -2,9 +2,8 @@ import asyncio
 import logging
 from typing import Any
 
+
 # from pprint import pprint
-
-
 async def shutdown(loop, signal=None):
     """Cleanup tasks tied to the service's shutdown."""
     if signal:
@@ -14,8 +13,7 @@ async def shutdown(loop, signal=None):
     logging.info("Closing all connections")
     try:
         tasks = [
-            task.cancel()
-            for task in asyncio.all_tasks()
+            task.cancel() for task in asyncio.all_tasks()
             if task is not asyncio.current_task() and not task.done()
         ]
         # [task.cancel() for task in tasks]
@@ -43,7 +41,9 @@ def default_exception_handler(loop, context: Any):
     if not isinstance(context["exception"], asyncio.CancelledError):
         exception = type(task.exception())
         try:
-            logging.exception(f"{exception.__name__!s}*{msg}* over task {task}")
+            logging.exception(
+                f"{exception.__name__!s}*{msg}* over task {task}"
+            )
             raise exception(msg)
         finally:
             loop.stop()
@@ -62,7 +62,6 @@ def _handle_done_tasks(task: asyncio.Task) -> Any:
 
 class asyncDBException(Exception):
     """Base class for other exceptions"""
-
     def __init__(self, message: str, *args, code: int = None, **kwargs):
         super(asyncDBException, self).__init__(*args, **kwargs)
         self.args = (
@@ -86,7 +85,6 @@ class asyncDBException(Exception):
 
 class ProviderError(asyncDBException):
     """Database Provider Error"""
-
     def __init__(self, message: str, *args, code: int = None, **kwargs):
         asyncDBException.__init__(self, message, code, *args, **kwargs)
 

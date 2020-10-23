@@ -11,7 +11,11 @@ import logging
 import pylibmc
 
 from asyncdb.exceptions import *
-from asyncdb.providers import BasePool, BaseProvider, registerProvider
+from asyncdb.providers import (
+    BasePool,
+    BaseProvider,
+    registerProvider,
+)
 from asyncdb.utils import *
 
 logger = logging.getLogger("AsyncDB")
@@ -83,7 +87,9 @@ class mcache(BaseProvider):
         except (pylibmc.Error) as err:
             raise ProviderError("Close Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError("Unknown Memcache Closing Error: {}".format(str(err)))
+            raise ProviderError(
+                "Unknown Memcache Closing Error: {}".format(str(err))
+            )
             return False
 
     def flush(self):
@@ -118,7 +124,9 @@ class mcache(BaseProvider):
                     bytes(key, "utf-8"), bytes(value, "utf-8"), time=timeout
                 )
             else:
-                return self._connection.set(bytes(key, "utf-8"), bytes(value, "utf-8"))
+                return self._connection.set(
+                    bytes(key, "utf-8"), bytes(value, "utf-8")
+                )
         except (pylibmc.Error) as err:
             raise ProviderError("Set Memcache Error: {}".format(str(err)))
         except Exception as err:
@@ -151,7 +159,9 @@ class mcache(BaseProvider):
         except (pylibmc.Error) as err:
             raise ProviderError("Memcache Exists Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError("Memcache Exists Unknown Error: {}".format(str(err)))
+            raise ProviderError(
+                "Memcache Exists Unknown Error: {}".format(str(err))
+            )
 
     def delete_multi(self, *kwargs):
         try:
@@ -168,7 +178,10 @@ class mcache(BaseProvider):
             ky = [bytes(key, "utf-8") for key in kwargs]
             result = self._connection.get_multi(ky)
             if result:
-                return {key.decode("utf-8"): value for key, value in result.items()}
+                return {
+                    key.decode("utf-8"): value
+                    for key, value in result.items()
+                }
         except (pylibmc.Error) as err:
             raise ProviderError("Get Memcache Error: {}".format(str(err)))
         except Exception as err:

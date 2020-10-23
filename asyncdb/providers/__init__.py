@@ -3,11 +3,20 @@ import asyncio
 import importlib
 import os.path
 import sys
-from abc import ABC, abstractmethod
-from typing import Callable, Optional
+from abc import (
+    ABC,
+    abstractmethod,
+)
+from typing import (
+    Callable,
+    Optional,
+)
 
 from asyncdb.exceptions import *
-from asyncdb.exceptions import _handle_done_tasks, default_exception_handler
+from asyncdb.exceptions import (
+    _handle_done_tasks,
+    default_exception_handler,
+)
 
 _providers = {}
 
@@ -151,7 +160,6 @@ Base
     * making BaseProvider more generic and create a BaseDBProvider
     * create a BaseHTTPProvider for RESTful services (rest api, redash, etc)
 """
-
 """
 BaseDB
     Abstract Class for DB Connection

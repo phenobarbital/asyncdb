@@ -7,7 +7,10 @@ import datetime
 import hashlib
 import os
 import time
-from datetime import date, timedelta
+from datetime import (
+    date,
+    timedelta,
+)
 from typing import Callable
 
 import dateparser
@@ -33,7 +36,6 @@ class SafeDict(dict):
     Allow to using partial format strings
 
     """
-
     def __missing__(self, key):
         """Missing method for SafeDict."""
         return "{" + key + "}"
@@ -56,6 +58,8 @@ def truncate_decimal(value):
 """
 Date-time Functions
 """
+
+
 # date utilities
 def current_year():
     return datetime.datetime.now().year
@@ -120,7 +124,8 @@ def fdom():
 
 
 def ldom():
-    return (datetime.datetime.now() + relativedelta(day=31)).strftime("%Y-%m-%d")
+    return (datetime.datetime.now() +
+            relativedelta(day=31)).strftime("%Y-%m-%d")
 
 
 def now():
@@ -258,8 +263,7 @@ def extract_string(value, exp=r"_((\d+)_(\d+))_", group=1, parsedate=False):
     if match:
         result = (
             match.group(group)
-            if not parsedate
-            else dateparser.parse(match.group(group))
+            if not parsedate else dateparser.parse(match.group(group))
         )
         return result
 
