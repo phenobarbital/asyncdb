@@ -14,6 +14,43 @@ async def connect(db):
         result, error = await conn.query('SELECT * FROM tests')
         for row in result:
             print(row)
+        table = """
+            CREATE TABLE airports (
+            iata text PRIMARY KEY,
+            city text,
+            country text
+            )
+        """
+        await conn.execute(table)
+        data = [
+            ('ORD', 'Chicago', 'United States'),
+            ('JFK', 'New York City', 'United States'),
+            ('CDG', 'Paris', 'France'),
+            ('LHR', 'London', 'United Kingdom'),
+            ('DME', 'Moscow', 'Russia'),
+            ('SVO', 'Moscow', 'Russia')
+        ]
+        airports = 'INSERT INTO airports VALUES(?, ?, ?)'
+        await conn.executemany(airports, data)
+        a_country = "United States"
+        a_city = "Moscow"
+        query = "SELECT * FROM airports WHERE country=? OR city=?"
+        async with await conn.fetch(query, (a_country, a_city)) as result:
+            async for row in result:
+                print(row)
+        # using prepare
+        print('Using Prepared Sentences')
+        b_country = 'France'
+        b_city = 'London'
+        async with conn.prepare(query, (b_country, b_city)) as cursor:
+            print('using iterator: ')
+            async for row in cursor:
+                print(row)
+            # its an iterable
+            print('Using Context Manager: ')
+            async with cursor:
+                print(await cursor.fetchall())
+            # this returns a cursor based object
 
 
 if __name__ == '__main__':
