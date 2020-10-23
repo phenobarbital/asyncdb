@@ -23,7 +23,8 @@ class sqliteCursor:
     _result: Any = None
     _sentence: str = ''
 
-    def __init__(self, provider, sentence:str, parameters: Iterable[Any] = None):
+    def __init__(self, provider, result: None, sentence:str, parameters: Iterable[Any] = None):
+        self._result = result
         self._provider = provider
         self._sentence = sentence
         self._params = parameters
