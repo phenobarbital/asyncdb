@@ -1,0 +1,7 @@
+[style]
+based_on_style = pep8
+split_before_logical_operator = true
+dedent_closing_brackets = true
+each_dict_entry_on_separate_line = true
+
+
