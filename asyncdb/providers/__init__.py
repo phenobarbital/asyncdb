@@ -6,7 +6,7 @@ import sys
 from abc import ABC, abstractmethod
 from asyncdb.exceptions import default_exception_handler, _handle_done_tasks
 from asyncdb.exceptions import *
-
+from typing import Callable, Optional
 
 _providers = {}
 
@@ -57,6 +57,7 @@ class BasePool(ABC):
     _params = None
     _DEBUG = False
     _logger = None
+    init_func: Optional[Callable] = None
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
         if loop:
@@ -168,8 +169,11 @@ class BaseProvider(ABC):
     _refresh = False
     _result = []
     _columns = []
+    _parameters = ()
+    _cursor = None
     _dict = []
     _loop = None
+    _pool = None
     _params = {}
     _sta = ""
     _test_query = None
@@ -178,6 +182,7 @@ class BaseProvider(ABC):
     _generated = None
     _DEBUG = False
     _logger = None
+    init_func: Optional[Callable] = None
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
         self._params = {}
@@ -217,12 +222,11 @@ class BaseProvider(ABC):
     """
     Async Context magic Methods
     """
-
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        await self.close(timeout=5)
+        await self.close()
 
     @classmethod
     def type(self):
