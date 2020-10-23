@@ -1,13 +1,11 @@
-import os
-import sys
-from datetime import datetime
 import json
 import numpy as np
 import asyncpg
 import uuid
 import decimal
+from decimal import Decimal
 from enum import Enum
-
+from datetime import datetime
 
 class DateEncoder(json.JSONEncoder):
     """
@@ -99,7 +97,7 @@ class DefaultEncoder(json.JSONEncoder):
         elif isinstance(obj, uuid.UUID):
             try:
                 return str(obj)
-            except Exception as e:
+            except Exception:
                 return obj.hex
         elif isinstance(obj, decimal.Decimal):
             return float(obj)

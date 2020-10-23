@@ -4,88 +4,47 @@ import importlib
 import os.path
 import sys
 from abc import ABC, abstractmethod
-
+from asyncdb.exceptions import default_exception_handler, _handle_done_tasks
 from asyncdb.exceptions import *
+
 
 _providers = {}
 
 # logging system
 import logging
-from logging.config import dictConfig
-
-loglevel = logging.INFO
-
-logger_config = dict(
-    version=1,
-    formatters={
-        "console": {"format": "%(message)s"},
-        "file": {
-            "format": "%(asctime)s: [%(levelname)s]: %(pathname)s: %(lineno)d: \n%(message)s\n"
-        },
-        "default": {"format": "[%(levelname)s] %(asctime)s %(name)s: %(message)s"},
-    },
-    handlers={
-        "console": {
-            "formatter": "console",
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stdout",
-            "level": loglevel,
-        },
-        "StreamHandler": {
-            "class": "logging.StreamHandler",
-            "formatter": "default",
-            "level": loglevel,
-        },
-    },
-    root={
-        "handlers": ["StreamHandler"],
-        "level": loglevel,
-    },
-)
-dictConfig(logger_config)
-logger = logging.getLogger("AsyncDB")
-
-
-async def shutdown(loop, signal=None):
-    """Cleanup tasks tied to the service's shutdown."""
-    if signal:
-        logger.info(f"Received exit signal {signal.name}...")
-    logger.info("Closing all connections")
-    try:
-        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-        [task.cancel() for task in tasks]
-        logger.info(f"Cancelling {len(tasks)} outstanding tasks")
-        await asyncio.gather(*tasks, return_exceptions=True)
-    except asyncio.CancelledError:
-        print("Tasks has been canceled")
-    # asyncio.gather(*asyncio.Task.all_tasks()).cancel()
-    # finally:
-    #     loop.stop()
-
-
-def exception_handler(loop, context):
-    """Exception Handler for Asyncio Loops."""
-    # first, handle with default handler
-    loop.default_exception_handler(context)
-    if context:
-        try:
-            print(context)
-            exception = context.get("exception")
-            msg = context.get("exception", context["message"])
-            print("Caught DB Exception: {}".format(str(msg)))
-        except (TypeError, AttributeError):
-            print("Caught Exception: {}".format(str(context)))
-        # Canceling pending tasks and stopping the loop
-    # try:
-    #     logger.info("Shutting down...")
-    #     #loop.call_soon_threadsafe(shutdown(loop))
-    #     #asyncio.create_task(shutdown(loop))
-    # except Exception as e:
-    #     print(e)
-    # finally:
-    #     loop.close()
-    #     logger.info("Successfully shutdown the AsyncDB service.")
-
+# from logging.config import dictConfig
+#
+# loglevel = logging.INFO
+#
+# logger_config = dict(
+#     version=1,
+#     formatters={
+#         "console": {"format": "%(message)s"},
+#         "file": {
+#             "format": "%(asctime)s: [%(levelname)s]: %(pathname)s: %(lineno)d: \n%(message)s\n"
+#         },
+#         "default": {"format": "[%(levelname)s] %(asctime)s %(name)s: %(message)s"},
+#     },
+#     handlers={
+#         "console": {
+#             "formatter": "console",
+#             "class": "logging.StreamHandler",
+#             "stream": "ext://sys.stdout",
+#             "level": loglevel,
+#         },
+#         "StreamHandler": {
+#             "class": "logging.StreamHandler",
+#             "formatter": "default",
+#             "level": loglevel,
+#         },
+#     },
+#     root={
+#         "handlers": ["StreamHandler"],
+#         "level": loglevel,
+#     },
+# )
+# dictConfig(logger_config)
+# logger = logging.getLogger("AsyncDB")
 
 class BasePool(ABC):
     _dsn = ""
@@ -102,9 +61,10 @@ class BasePool(ABC):
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
         if loop:
             self._loop = loop
-            asyncio.set_event_loop(self._loop)
         else:
             self._loop = asyncio.get_event_loop()
+            asyncio.set_event_loop(self._loop)
+        self._loop.set_exception_handler(default_exception_handler)
         self._params = params
         if not dsn:
             self._dsn = self.create_dsn(self._params)
@@ -113,7 +73,10 @@ class BasePool(ABC):
         try:
             self._DEBUG = bool(params["DEBUG"])
         except KeyError:
-            self._DEBUG = False
+            try:
+                self._DEBUG = kwargs['debug']
+            except KeyError:
+                self._DEBUG = False
         try:
             self._timeout = kwargs["timeout"]
         except KeyError:
@@ -220,9 +183,10 @@ class BaseProvider(ABC):
         self._params = {}
         if loop:
             self._loop = loop
-            asyncio.set_event_loop(self._loop)
         else:
             self._loop = asyncio.get_event_loop()
+            asyncio.set_event_loop(self._loop)
+        self._loop.set_exception_handler(default_exception_handler)
         # get params
         if params:
             self._params = params
@@ -233,7 +197,10 @@ class BaseProvider(ABC):
         try:
             self._DEBUG = bool(params["DEBUG"])
         except KeyError:
-            self._DEBUG = False
+            try:
+                self._DEBUG = kwargs['debug']
+            except KeyError:
+                self._DEBUG = False
         try:
             self._timeout = kwargs["timeout"]
         except KeyError:
@@ -415,6 +382,6 @@ class BaseProvider(ABC):
 
 def registerProvider(provider):
     global _providers
-    # logger.debug("Registering new Provider %s of type (%s), syntax: %s.", provider.name(), provider.type(), provider.dialect())
+    #logging.debug("Registering new Provider %s of type (%s), syntax: %s.", provider.name(), provider.type(), provider.dialect())
     _providers[provider.type()] = provider
     # TODO: try to load provider

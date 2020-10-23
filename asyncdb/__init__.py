@@ -3,10 +3,9 @@ import asyncio
 import importlib
 import logging
 import sys
-
-__version__ = "0.0.2"
-
 from .meta import asyncORM, asyncRecord
+
+__all__ = ['asyncORM', 'asyncRecord']
 
 # from .providers import *
 from .exceptions import NotSupported, asyncDBException, ProviderError
@@ -66,9 +65,8 @@ class AsyncDB:
     def __new__(cls, provider="dummy", **kwargs):
         cls._provider = None
         cls._name = provider
-        # logger.debug('Load Provider: {}'.format(self._name))
+        logging.debug(f'Loading Provider {cls._name}')
         classpath = "asyncdb.providers.{provider}".format(provider=cls._name)
-        # logger.debug("Provider Path: %s" % classpath)
         try:
             obj = module_exists(cls._name, classpath)
             if obj:
