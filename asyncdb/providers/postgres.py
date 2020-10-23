@@ -16,31 +16,19 @@ from logging.config import dictConfig
 from threading import Thread
 
 import asyncpg
-from asyncpg.exceptions import (
-    ConnectionDoesNotExistError,
-    FatalPostgresError,
-    InterfaceError,
-    InterfaceWarning,
-    InternalClientError,
-    InvalidSQLStatementNameError,
-    PostgresError,
-    PostgresSyntaxError,
-    TooManyConnectionsError,
-    UndefinedColumnError,
-    UndefinedTableError,
-)
+from asyncpg.exceptions import (ConnectionDoesNotExistError,
+                                FatalPostgresError, InterfaceError,
+                                InterfaceWarning, InternalClientError,
+                                InvalidSQLStatementNameError, PostgresError,
+                                PostgresSyntaxError, TooManyConnectionsError,
+                                UndefinedColumnError, UndefinedTableError)
 
+from asyncdb.exceptions import (ConnectionTimeout, DataError, EmptyStatement,
+                                NoDataFound, ProviderError, StatementError,
+                                TooManyConnections)
 from asyncdb.meta import asyncRecord, asyncResult
-from asyncdb.providers import BasePool, BaseProvider, logger_config, registerProvider
-from asyncdb.exceptions import (
-    ConnectionTimeout,
-    DataError,
-    EmptyStatement,
-    NoDataFound,
-    ProviderError,
-    StatementError,
-    TooManyConnections,
-)
+from asyncdb.providers import (BasePool, BaseProvider, logger_config,
+                               registerProvider)
 from asyncdb.utils import EnumEncoder, SafeDict
 
 dictConfig(logger_config)

@@ -12,16 +12,10 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
 from sqlalchemy_aio import ASYNCIO_STRATEGY
 
+from asyncdb.exceptions import (ConnectionTimeout, DataError, EmptyStatement,
+                                NoDataFound, ProviderError, StatementError,
+                                TooManyConnections)
 from asyncdb.providers import BaseProvider, registerProvider
-from asyncdb.exceptions import (
-    ConnectionTimeout,
-    DataError,
-    EmptyStatement,
-    NoDataFound,
-    ProviderError,
-    StatementError,
-    TooManyConnections,
-)
 
 logger = logging.getLogger(__name__)
 

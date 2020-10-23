@@ -11,30 +11,17 @@ import time
 from datetime import datetime
 
 import asyncpg
-from asyncpg.exceptions import (
-    ConnectionDoesNotExistError,
-    FatalPostgresError,
-    InterfaceError,
-    InterfaceWarning,
-    InternalClientError,
-    InvalidSQLStatementNameError,
-    PostgresError,
-    PostgresSyntaxError,
-    TooManyConnectionsError,
-    UndefinedColumnError,
-    UndefinedTableError,
-)
+from asyncpg.exceptions import (ConnectionDoesNotExistError,
+                                FatalPostgresError, InterfaceError,
+                                InterfaceWarning, InternalClientError,
+                                InvalidSQLStatementNameError, PostgresError,
+                                PostgresSyntaxError, TooManyConnectionsError,
+                                UndefinedColumnError, UndefinedTableError)
 
+from asyncdb.exceptions import (ConnectionTimeout, DataError, EmptyStatement,
+                                NoDataFound, ProviderError, StatementError,
+                                TooManyConnections)
 from asyncdb.providers import BasePool, BaseProvider, registerProvider
-from asyncdb.exceptions import (
-    ConnectionTimeout,
-    DataError,
-    EmptyStatement,
-    NoDataFound,
-    ProviderError,
-    StatementError,
-    TooManyConnections,
-)
 from asyncdb.utils import EnumEncoder, SafeDict
 
 logger = logging.getLogger(__name__)
@@ -286,7 +273,6 @@ class pg(BaseProvider):
     _transaction = None
     _initialized_on = None
     _query_raw = "SELECT {fields} FROM {table} {where_cond}"
-
 
     """
     Async Context magic Methods

@@ -1,29 +1,25 @@
 #!/usr/bin/env python3
-import os
 import asyncio
-import aiosqlite
+import os
+import sqlite3
 import time
 from typing import Any, Generator, Iterable, Optional
-import sqlite3
 
+import aiosqlite
+
+from asyncdb.exceptions import (ConnectionTimeout, DataError, EmptyStatement,
+                                NoDataFound, ProviderError, StatementError,
+                                TooManyConnections)
 from asyncdb.providers import BasePool, BaseProvider, registerProvider
-from asyncdb.exceptions import (
-    ConnectionTimeout,
-    DataError,
-    EmptyStatement,
-    NoDataFound,
-    ProviderError,
-    StatementError,
-    TooManyConnections,
-)
+
 
 class sqliteCursor:
     _connection = aiosqlite.Connection = None
     _provider: BaseProvider = None
     _result: Any = None
-    _sentence: str = ''
+    _sentence: str = ""
 
-    def __init__(self, provider, sentence:str, parameters: Iterable[Any] = None):
+    def __init__(self, provider, sentence: str, parameters: Iterable[Any] = None):
         self._provider = provider
         self._sentence = sentence
         self._params = parameters
@@ -51,7 +47,7 @@ class sqliteCursor:
     async def fetchone(self) -> Optional[sqlite3.Row]:
         return await self._result.fetchone()
 
-    async def fetchmany(self, size:int = None) -> Iterable[sqlite3.Row]:
+    async def fetchmany(self, size: int = None) -> Iterable[sqlite3.Row]:
         return await self._result.fetchmany(size)
 
     async def fetchall(self) -> Iterable[sqlite3.Row]:
@@ -66,7 +62,6 @@ class sqlite(BaseProvider):
     _prepared = None
     _initialized_on = None
     _query_raw = "SELECT {fields} FROM {table} {where_cond}"
-
 
     """
     Context magic Methods
@@ -103,11 +98,9 @@ class sqlite(BaseProvider):
         self._connection = None
         self._connected = False
         try:
-            print('Running Connect')
+            print("Running Connect")
             self._connection = aiosqlite.connect(
-                database=self._dsn,
-                loop=self._loop,
-                **kwargs
+                database=self._dsn, loop=self._loop, **kwargs
             )
             if self._connection:
                 self._connected = True
@@ -132,9 +125,7 @@ class sqlite(BaseProvider):
         self._connected = False
         try:
             self._connection = await aiosqlite.connect(
-                database=self._dsn,
-                loop=self._loop,
-                **kwargs
+                database=self._dsn, loop=self._loop, **kwargs
             )
             if self._connection:
                 if callable(self.init_func):
@@ -156,18 +147,17 @@ class sqlite(BaseProvider):
         finally:
             return self
 
-
     async def release(self):
         """
         Release a Connection
         """
         await self.close()
 
-    async def query(self, sentence:str = Any):
+    async def query(self, sentence: str = Any):
         """
         Getting a Query from Database
         """
-        #TODO: getting aiosql structures or sql-like function structures or query functions
+        # TODO: getting aiosql structures or sql-like function structures or query functions
         error = None
         self._result = None
         if not sentence:
@@ -186,8 +176,7 @@ class sqlite(BaseProvider):
             await self._cursor.close()
             return [self._result, error]
 
-
-    async def fetchall(self, sentence:str):
+    async def fetchall(self, sentence: str):
         """
         aliases for query, without error support
         """
@@ -208,7 +197,7 @@ class sqlite(BaseProvider):
             await self._cursor.close()
             return self._result
 
-    async def fetchmany(self, sentence:str, size:int = None):
+    async def fetchmany(self, sentence: str, size: int = None):
         """
         aliases for query, without error support
         """
@@ -229,11 +218,11 @@ class sqlite(BaseProvider):
             await self._cursor.close()
             return self._result
 
-    async def queryrow(self, sentence:str = Any):
+    async def queryrow(self, sentence: str = Any):
         """
         Getting a Query from Database
         """
-        #TODO: getting aiosql structures or sql-like function structures or query functions
+        # TODO: getting aiosql structures or sql-like function structures or query functions
         error = None
         self._result = None
         if not sentence:
@@ -252,7 +241,7 @@ class sqlite(BaseProvider):
             await self._cursor.close()
             return [self._result, error]
 
-    async def fetchone(self, sentence:str):
+    async def fetchone(self, sentence: str):
         """
         aliases for query, without error support
         """
@@ -273,7 +262,7 @@ class sqlite(BaseProvider):
             await self._cursor.close()
             return self._result
 
-    async def execute(self, sentence:str = Any, *args):
+    async def execute(self, sentence: str = Any, *args):
         """Execute a transaction
         get a SQL sentence and execute
         returns: results of the execution
@@ -295,7 +284,7 @@ class sqlite(BaseProvider):
             await self._cursor.close()
             return [result, error]
 
-    async def executemany(self, sentence:str, *args):
+    async def executemany(self, sentence: str, *args):
         error = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
@@ -312,20 +301,21 @@ class sqlite(BaseProvider):
             await self._cursor.close()
             return [result, error]
 
-    async def fetch(self, sentence:str, parameters: Iterable[Any] = None) -> Iterable:
+    async def fetch(self, sentence: str, parameters: Iterable[Any] = None) -> Iterable:
         """Helper to create a cursor and execute the given query."""
         if parameters is None:
             parameters = []
         result = await self._connection.execute(sentence, parameters)
         return result
 
-    def prepare(self, sentence:str, parameters: Iterable[Any] = None) -> Iterable:
+    def prepare(self, sentence: str, parameters: Iterable[Any] = None) -> Iterable:
         """Helper to create a cursor and execute the given query."""
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
         if parameters is None:
             parameters = []
         return sqliteCursor(self, sentence, parameters)
+
 
 # Registering this Provider
 registerProvider(sqlite)

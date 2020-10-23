@@ -14,16 +14,10 @@ from sqlalchemy.dialects import mysql, postgresql
 from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
 from sqlalchemy.pool import NullPool
 
+from asyncdb.exceptions import (ConnectionTimeout, DataError, EmptyStatement,
+                                NoDataFound, ProviderError, StatementError,
+                                TooManyConnections)
 from asyncdb.providers import BaseProvider, registerProvider
-from asyncdb.exceptions import (
-    ConnectionTimeout,
-    DataError,
-    EmptyStatement,
-    NoDataFound,
-    ProviderError,
-    StatementError,
-    TooManyConnections,
-)
 
 
 class sql_alchemy(BaseProvider):
