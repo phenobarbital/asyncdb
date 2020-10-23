@@ -19,6 +19,7 @@ format:
 
 lint:
 	python -m pylint --rcfile .pylint asyncdb/*.py
+	python -m pylint --rcfile .pylint asyncdb/utils/*.py
 	python -m black --check asyncdb
 
 test:
