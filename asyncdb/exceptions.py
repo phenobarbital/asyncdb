@@ -1,5 +1,5 @@
-import logging
 import asyncio
+import logging
 from typing import Any
 
 # from pprint import pprint
@@ -109,7 +109,8 @@ class ConnectionTimeout(ProviderError):
 
 class NoDataFound(ProviderError):
     """Raise when no data was found"""
-    message = 'No Data was Found'
+
+    message = "No Data was Found"
 
 
 class TooManyConnections(ProviderError):

@@ -8,16 +8,10 @@ from datetime import datetime
 
 import aiomysql
 
+from asyncdb.exceptions import (ConnectionTimeout, DataError, EmptyStatement,
+                                NoDataFound, ProviderError, StatementError,
+                                TooManyConnections)
 from asyncdb.providers import BasePool, BaseProvider, registerProvider
-from asyncdb.exceptions import (
-    ConnectionTimeout,
-    DataError,
-    EmptyStatement,
-    NoDataFound,
-    ProviderError,
-    StatementError,
-    TooManyConnections,
-)
 from asyncdb.utils import EnumEncoder, SafeDict
 
 logger = logging.getLogger(__name__)

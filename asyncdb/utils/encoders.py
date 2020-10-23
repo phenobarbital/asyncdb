@@ -1,11 +1,13 @@
-import json
-import numpy as np
-import asyncpg
-import uuid
 import decimal
+import json
+import uuid
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from datetime import datetime
+
+import asyncpg
+import numpy as np
+
 
 class DateEncoder(json.JSONEncoder):
     """

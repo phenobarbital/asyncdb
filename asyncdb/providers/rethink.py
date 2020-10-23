@@ -20,27 +20,15 @@ from datetime import datetime
 from threading import Thread
 
 from rethinkdb import RethinkDB
-from rethinkdb.errors import (
-    ReqlDriverError,
-    ReqlError,
-    ReqlNonExistenceError,
-    ReqlOpFailedError,
-    ReqlOpIndeterminateError,
-    ReqlResourceLimitError,
-    ReqlRuntimeError,
-    RqlDriverError,
-    RqlRuntimeError,
-)
+from rethinkdb.errors import (ReqlDriverError, ReqlError,
+                              ReqlNonExistenceError, ReqlOpFailedError,
+                              ReqlOpIndeterminateError, ReqlResourceLimitError,
+                              ReqlRuntimeError, RqlDriverError,
+                              RqlRuntimeError)
 
-from asyncdb.exceptions import (
-    ConnectionTimeout,
-    DataError,
-    EmptyStatement,
-    NoDataFound,
-    ProviderError,
-    StatementError,
-    TooManyConnections,
-)
+from asyncdb.exceptions import (ConnectionTimeout, DataError, EmptyStatement,
+                                NoDataFound, ProviderError, StatementError,
+                                TooManyConnections)
 from asyncdb.utils import *
 
 from . import *

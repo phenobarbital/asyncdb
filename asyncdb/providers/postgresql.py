@@ -12,15 +12,9 @@ from aiopg.sa import create_engine
 from psycopg2.extras import NamedTupleCursor
 from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
 
-from ..exceptions import (
-    ConnectionTimeout,
-    DataError,
-    EmptyStatement,
-    NoDataFound,
-    ProviderError,
-    StatementError,
-    TooManyConnections,
-)
+from ..exceptions import (ConnectionTimeout, DataError, EmptyStatement,
+                          NoDataFound, ProviderError, StatementError,
+                          TooManyConnections)
 from ..utils import EnumEncoder
 from . import *
 
