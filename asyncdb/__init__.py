@@ -22,17 +22,14 @@ def module_exists(module_name, classpath):
             obj = __import__(classpath, fromlist=[module_name])
             return obj
         except ImportError:
-            logging.exception("No Provider {} Found".format(module_name))
-            raise NotSupported(message="No Provider %s Found" % module_name, code=404)
-            return False
-
-
-"""
- Factory Proxy Interfaces for Providers
-"""
-
+            logging.exception(f'No Driver for provider {module_name} was found')
+            raise NotSupported(message=f"No Provider {module_name} Found", code=404)
 
 class AsyncPool:
+    """
+    AsyncPool.
+       Base class for Asyncio-based DB Pools.
+    """
     _provider = None
     _name = ""
 
@@ -46,21 +43,21 @@ class AsyncPool:
             obj = module_exists(poolName, classpath)
             if obj:
                 cls._provider = obj(**kwargs)
+                return cls._provider
             else:
                 raise asyncDBException(
                     message="Cannot Load Pool provider {}".format(poolName)
                 )
         except Exception as err:
             raise ProviderError(message=str(err), code=404)
-        finally:
-            return cls._provider
 
+# Factory Proxy Interfaces for Providers
 
 class AsyncDB:
     _provider = None
     _name = ""
 
-    def __new__(self, provider="dummy", **kwargs):
+    def __new__(cls, provider="dummy", **kwargs):
         cls._provider = None
         cls._name = provider
         # logger.debug('Load Provider: {}'.format(self._name))
@@ -70,11 +67,10 @@ class AsyncDB:
             obj = module_exists(cls._name, classpath)
             if obj:
                 cls._provider = obj(**kwargs)
+                return cls._provider
             else:
                 raise asyncDBException(
                     message="Cannot Load provider {}".format(cls._name)
                 )
         except Exception as err:
             raise ProviderError(message=str(err), code=404)
-        finally:
-            return cls._provider
