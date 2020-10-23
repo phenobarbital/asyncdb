@@ -109,6 +109,7 @@ class ConnectionTimeout(ProviderError):
 
 class NoDataFound(ProviderError):
     """Raise when no data was found"""
+    message = 'No Data was Found'
 
 
 class TooManyConnections(ProviderError):

@@ -281,20 +281,12 @@ class pg(BaseProvider):
     _syntax = "sql"
     _test_query = "SELECT 1"
     _dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
-    _loop = None
-    _pool = None
-    _connection = None
-    _connected = False
     _prepared = None
-    _parameters = ()
     _cursor = None
     _transaction = None
     _initialized_on = None
     _query_raw = "SELECT {fields} FROM {table} {where_cond}"
 
-    def __init__(self, dsn="", loop=None, pool=None, params={}):
-        super(pg, self).__init__(dsn=dsn, loop=loop, params=params)
-        asyncio.set_event_loop(self._loop)
 
     """
     Async Context magic Methods
@@ -485,6 +477,7 @@ class pg(BaseProvider):
 
     async def query(self, sentence=""):
         error = None
+        self._result = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
         if not self._connection:
