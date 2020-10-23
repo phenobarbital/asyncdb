@@ -58,4 +58,4 @@ Please have a look at the Contribution Guide
 
 ### License ###
 
-AsyncDB is dual-licensed under BSD and Apache 2.0 licenses.
+AsyncDB is copyright of Jesus Lara (https://phenobarbital.info) and is dual-licensed under BSD and Apache 2.0 licenses. I am providing code in this repository under an open source licenses, remember, this is my personal repository; the license that you receive is from me and not from my employeer.
