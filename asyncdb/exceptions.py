@@ -1,7 +1,7 @@
 import logging
 import asyncio
-from typing import Any, Type
-from pprint import pprint
+from typing import Any
+#from pprint import pprint
 
 
 async def shutdown(loop, signal=None):
@@ -13,11 +13,11 @@ async def shutdown(loop, signal=None):
     logging.info("Closing all connections")
     try:
         tasks = [
-            t
-            for t in asyncio.all_tasks()
-            if t is not asyncio.current_task() and not t.done()
+            task.cancel()
+            for task in asyncio.all_tasks()
+            if task is not asyncio.current_task() and not task.done()
         ]
-        [task.cancel() for task in tasks]
+        #[task.cancel() for task in tasks]
         logging.info(f"Cancelling {len(tasks)} outstanding tasks")
         await asyncio.gather(*tasks, return_exceptions=True)
     except asyncio.CancelledError:
@@ -39,36 +39,32 @@ def default_exception_handler(loop, context: Any):
         # is an error
         logging.exception(f"Exception raised by Task {task}, Error: {msg}")
         raise Exception(f"{msg}: task: {task}")
-    else:
-        if not isinstance(context["exception"], asyncio.CancelledError):
-            exception = type(task.exception())
-            try:
-                logging.exception(
-                    "{} *{}* over task {}".format(exception.__name__, msg, task)
-                )
-                raise exception(msg)
-            finally:
-                loop.stop()
-                logging.info("Successfully shutdown the AsyncDB Loop.")
-                loop.close()
+    if not isinstance(context["exception"], asyncio.CancelledError):
+        exception = type(task.exception())
+        try:
+            logging.exception(
+                f'{exception.__name__!s}*{msg}* over task {task}'
+            )
+            raise exception(msg)
+        finally:
+            loop.stop()
+            logging.info("Successfully shutdown the AsyncDB Loop.")
+            loop.close()
 
 
-def _handle_done_tasks(task: asyncio.Task, *args) -> Any:
-    result = None
+def _handle_done_tasks(task: asyncio.Task) -> Any:
     try:
-        result = task.result()
+        return task.result()
     except asyncio.CancelledError:
         pass  # Task cancellation should not be logged as an error.
     except Exception as err:
         logging.exception(f"Exception raised by Task {task}, error: {err}")
-    finally:
-        return result
 
 
 class asyncDBException(Exception):
     """Base class for other exceptions"""
 
-    def __init__(self, message: str = "", code: int = None, *args, **kwargs):
+    def __init__(self, message: str, *args, code: int = None, **kwargs):
         super(asyncDBException, self).__init__(*args, **kwargs)
         self.args = (
             message,
@@ -92,7 +88,7 @@ class asyncDBException(Exception):
 class ProviderError(asyncDBException):
     """Database Provider Error"""
 
-    def __init__(self, message: str = "", code: int = None, *args, **kwargs):
+    def __init__(self, message: str, *args, code: int = None, **kwargs):
         asyncDBException.__init__(self, message, code, *args, **kwargs)
 
 
