@@ -12,10 +12,19 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
 from sqlalchemy_aio import ASYNCIO_STRATEGY
 
-from asyncdb.exceptions import (ConnectionTimeout, DataError, EmptyStatement,
-                                NoDataFound, ProviderError, StatementError,
-                                TooManyConnections)
-from asyncdb.providers import BaseProvider, registerProvider
+from asyncdb.exceptions import (
+    ConnectionTimeout,
+    DataError,
+    EmptyStatement,
+    NoDataFound,
+    ProviderError,
+    StatementError,
+    TooManyConnections,
+)
+from asyncdb.providers import (
+    BaseProvider,
+    registerProvider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +94,9 @@ class sa(BaseProvider, Thread):
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._engine = None
-            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "Engine Error, Terminated: {}".format(str(err))
+            )
 
     def close(self):
         logging.debug("Running Close")
@@ -124,13 +135,17 @@ class sa(BaseProvider, Thread):
         self.start()
         try:
             if self._engine:
-                self._connection = self._loop.run_until_complete(self._engine.connect())
+                self._connection = self._loop.run_until_complete(
+                    self._engine.connect()
+                )
         except (SQLAlchemyError, DatabaseError, OperationalError) as err:
             self._connection = None
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._connection = None
-            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "Engine Error, Terminated: {}".format(str(err))
+            )
         finally:
             return self
 
@@ -141,7 +156,9 @@ class sa(BaseProvider, Thread):
         try:
             await self._connection.close()
         except Exception as err:
-            raise ProviderError("Release Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "Release Error, Terminated: {}".format(str(err))
+            )
         finally:
             self._connection = None
 
