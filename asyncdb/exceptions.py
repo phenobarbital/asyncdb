@@ -1,7 +1,8 @@
 import logging
 import asyncio
 from typing import Any
-#from pprint import pprint
+
+# from pprint import pprint
 
 
 async def shutdown(loop, signal=None):
@@ -17,7 +18,7 @@ async def shutdown(loop, signal=None):
             for task in asyncio.all_tasks()
             if task is not asyncio.current_task() and not task.done()
         ]
-        #[task.cancel() for task in tasks]
+        # [task.cancel() for task in tasks]
         logging.info(f"Cancelling {len(tasks)} outstanding tasks")
         await asyncio.gather(*tasks, return_exceptions=True)
     except asyncio.CancelledError:
@@ -42,9 +43,7 @@ def default_exception_handler(loop, context: Any):
     if not isinstance(context["exception"], asyncio.CancelledError):
         exception = type(task.exception())
         try:
-            logging.exception(
-                f'{exception.__name__!s}*{msg}* over task {task}'
-            )
+            logging.exception(f"{exception.__name__!s}*{msg}* over task {task}")
             raise exception(msg)
         finally:
             loop.stop()
