@@ -10,7 +10,11 @@ from threading import Thread
 import aiopg
 from aiopg.sa import create_engine
 from psycopg2.extras import NamedTupleCursor
-from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
+from sqlalchemy.exc import (
+    DatabaseError,
+    OperationalError,
+    SQLAlchemyError,
+)
 
 from ..exceptions import (
     ConnectionTimeout,
@@ -129,7 +133,9 @@ class postgresql(BaseProvider, Thread):
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._engine = None
-            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "Engine Error, Terminated: {}".format(str(err))
+            )
 
     def connection(self):
         """
@@ -141,13 +147,17 @@ class postgresql(BaseProvider, Thread):
         self.start()
         try:
             if self._engine:
-                self._connection = self._loop.run_until_complete(self._engine.acquire())
+                self._connection = self._loop.run_until_complete(
+                    self._engine.acquire()
+                )
         except (SQLAlchemyError, DatabaseError, OperationalError) as err:
             self._connection = None
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._connection = None
-            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "Engine Error, Terminated: {}".format(str(err))
+            )
         finally:
             return self
 
@@ -162,7 +172,9 @@ class postgresql(BaseProvider, Thread):
                 else:
                     self._connection.close()
         except Exception as err:
-            raise ProviderError("Release Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "Release Error, Terminated: {}".format(str(err))
+            )
         finally:
             self._connection = None
 

@@ -1,18 +1,19 @@
-import json
-import numpy as np
-import asyncpg
-import uuid
 import decimal
+import json
+import uuid
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from datetime import datetime
+
+import asyncpg
+import numpy as np
+
 
 class DateEncoder(json.JSONEncoder):
     """
     DateEncoder.
        Date and Time encoder
     """
-
     def default(self, obj):
         if isinstance(obj, datetime):
             return str(obj)
@@ -28,7 +29,6 @@ class NpEncoder(json.JSONEncoder):
     npEncoder.
        Numpy number encoder for json
     """
-
     def default(self, obj):
         if isinstance(obj, np.integer):
             return int(obj)
@@ -68,7 +68,6 @@ class EnumEncoder(json.JSONEncoder):
     Used to format objects into json-strings
 
     """
-
     def default(self, obj):
         """Format several data types into json-type equivalent
         Return a new cls JSON EnumEncoder
