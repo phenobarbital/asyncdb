@@ -4,11 +4,14 @@ import os
 import time
 from typing import (
     Any,
+    List,
+    Dict,
     Generator,
     Iterable,
     Optional,
 )
 import aioodbc
+from aioodbc.cursor import Cursor
 import pyodbc
 
 from asyncdb.exceptions import (
@@ -26,55 +29,59 @@ from asyncdb.providers import (
     registerProvider,
 )
 
-#
-# class odbcCursor:
-#     _connection = aiosqlite.Connection = None
-#     _provider: BaseProvider = None
-#     _result: Any = None
-#     _sentence: str = ''
-#
-#     def __init__(
-#         self,
-#         provider,
-#         result: None,
-#         sentence: str,
-#         parameters: Iterable[Any] = None
-#     ):
-#         self._result = result
-#         self._provider = provider
-#         self._sentence = sentence
-#         self._params = parameters
-#         self._connection = self._provider.get_connection()
-#
-#     async def __aenter__(self) -> "sqliteCursor":
-#         self._result = await self._connection.execute(
-#             self._sentence, self._params
-#         )
-#         return self
-#
-#     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-#         return await self._provider.close()
-#
-#     def __aiter__(self) -> "sqliteCursor":
-#         """The cursor is also an async iterator."""
-#         return self
-#
-#     async def __anext__(self) -> sqlite3.Row:
-#         """Use `cursor.fetchone()` to provide an async iterable."""
-#         row = await self._result.fetchone()
-#         if row is not None:
-#             return row
-#         else:
-#             raise StopAsyncIteration
-#
-#     async def fetchone(self) -> Optional[sqlite3.Row]:
-#         return await self._result.fetchone()
-#
-#     async def fetchmany(self, size: int = None) -> Iterable[sqlite3.Row]:
-#         return await self._result.fetchmany(size)
-#
-#     async def fetchall(self) -> Iterable[sqlite3.Row]:
-#         return await self._result.fetchall()
+
+class odbcCursor:
+    _cursor = None
+    _connection = None
+    _provider: BaseProvider = None
+    _result: Any = None
+    _sentence: str = ''
+
+    def __init__(
+        self,
+        provider = None,
+        result: Optional[List] = None,
+        sentence: str = '',
+        parameters: Iterable[Any] = None
+    ):
+        self._provider = provider
+        self._result = result
+        self._sentence = sentence
+        self._params = parameters
+        self._connection = self._provider.get_connection()
+
+    async def __aenter__(self) -> "odbcCursor":
+        self._cursor = await self._connection.cursor()
+        await self._cursor.execute(
+            self._sentence, self._params
+        )
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        return await self._provider.close()
+
+    def __aiter__(self) -> "odbcCursor":
+        """The cursor is also an async iterator."""
+        return self
+
+    async def __anext__(self):
+        """Use `cursor.fetchone()` to provide an async iterable."""
+        row = await self._cursor.fetchone()
+        #print(row)
+        #print(type(row)) is pyodbc.Row
+        if row is not None:
+            return row
+        else:
+            raise StopAsyncIteration
+
+    async def fetchone(self) -> Optional[Dict]:
+        return await self._cursor.fetchone()
+
+    async def fetchmany(self, size: int = None) -> Iterable[List]:
+        return await self._cursor.fetchmany(size)
+
+    async def fetchall(self) -> Iterable[List]:
+        return await self._cursor.fetchall()
 
 
 class odbc(BaseProvider):
@@ -345,7 +352,11 @@ class odbc(BaseProvider):
             raise EmptyStatement("Sentence is an empty string")
         if parameters is None:
             parameters = []
-        return odbcCursor(self, sentence=sentence, parameters=parameters)
+        try:
+            return odbcCursor(self, sentence=sentence, parameters=parameters)
+        except Exception as err:
+            print(err)
+            return False
 
 
 
