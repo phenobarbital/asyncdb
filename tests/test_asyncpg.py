@@ -66,7 +66,8 @@ loop.run_until_complete(connect(p))
 # call closing provider
 p.terminate()
 
-from sqlalchemy import Column, Integer, MetaData, Table, Text, create_engine, select
+from sqlalchemy import (Column, Integer, MetaData, Table, Text, create_engine,
+                        select)
 from sqlalchemy.schema import CreateTable, DropTable
 
 ## In-memory sqlite database cannot be accessed from different threads

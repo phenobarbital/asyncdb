@@ -3,15 +3,26 @@ import asyncio
 import importlib
 import os.path
 import sys
-from abc import ABC, abstractmethod
-from asyncdb.exceptions import default_exception_handler, _handle_done_tasks
+from abc import (
+    ABC,
+    abstractmethod,
+)
+from typing import (
+    Callable,
+    Optional,
+)
+
 from asyncdb.exceptions import *
-from typing import Callable, Optional
+from asyncdb.exceptions import (
+    _handle_done_tasks,
+    default_exception_handler,
+)
 
 _providers = {}
 
 # logging system
 import logging
+
 # from logging.config import dictConfig
 #
 # loglevel = logging.INFO
@@ -46,6 +57,7 @@ import logging
 # dictConfig(logger_config)
 # logger = logging.getLogger("AsyncDB")
 
+
 class BasePool(ABC):
     _dsn = ""
     _loop = None
@@ -75,7 +87,7 @@ class BasePool(ABC):
             self._DEBUG = bool(params["DEBUG"])
         except KeyError:
             try:
-                self._DEBUG = kwargs['debug']
+                self._DEBUG = kwargs["debug"]
             except KeyError:
                 self._DEBUG = False
         try:
@@ -148,7 +160,6 @@ Base
     * making BaseProvider more generic and create a BaseDBProvider
     * create a BaseHTTPProvider for RESTful services (rest api, redash, etc)
 """
-
 """
 BaseDB
     Abstract Class for DB Connection
@@ -203,7 +214,7 @@ class BaseProvider(ABC):
             self._DEBUG = bool(params["DEBUG"])
         except KeyError:
             try:
-                self._DEBUG = kwargs['debug']
+                self._DEBUG = kwargs["debug"]
             except KeyError:
                 self._DEBUG = False
         try:
@@ -222,6 +233,7 @@ class BaseProvider(ABC):
     """
     Async Context magic Methods
     """
+
     async def __aenter__(self):
         return self
 
@@ -386,6 +398,6 @@ class BaseProvider(ABC):
 
 def registerProvider(provider):
     global _providers
-    #logging.debug("Registering new Provider %s of type (%s), syntax: %s.", provider.name(), provider.type(), provider.dialect())
+    # logging.debug("Registering new Provider %s of type (%s), syntax: %s.", provider.name(), provider.type(), provider.dialect())
     _providers[provider.type()] = provider
     # TODO: try to load provider

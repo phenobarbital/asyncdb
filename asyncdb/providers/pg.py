@@ -25,7 +25,6 @@ from asyncpg.exceptions import (
     UndefinedTableError,
 )
 
-from asyncdb.providers import BasePool, BaseProvider, registerProvider
 from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
@@ -35,7 +34,15 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from asyncdb.utils import EnumEncoder, SafeDict
+from asyncdb.providers import (
+    BasePool,
+    BaseProvider,
+    registerProvider,
+)
+from asyncdb.utils import (
+    EnumEncoder,
+    SafeDict,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +59,8 @@ class pgPool(BasePool):
     _max_clients = 500
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
-        super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        super(pgPool,
+              self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if "max_clients" in kwargs:
@@ -96,6 +104,7 @@ class pgPool(BasePool):
     """
     __init async db initialization
     """
+
     # Create a database connection pool
     async def connect(self):
         logger.debug("AsyncPg (Pool): Connecting to {}".format(self._dsn))
@@ -132,7 +141,9 @@ class pgPool(BasePool):
             )
         except ConnectionRefusedError as err:
             raise ProviderError(
-                "Unable to connect to database, connection Refused: {}".format(str(err))
+                "Unable to connect to database, connection Refused: {}".format(
+                    str(err)
+                )
             )
         except ConnectionDoesNotExistError as err:
             raise ProviderError("Connection Error: {}".format(str(err)))
@@ -223,7 +234,9 @@ class pgPool(BasePool):
                 if self._connection:
                     await self._pool.release(self._connection, timeout=2)
             except (InternalClientError, InterfaceError) as err:
-                raise ProviderError("Release Interface Error: {}".format(str(err)))
+                raise ProviderError(
+                    "Release Interface Error: {}".format(str(err))
+                )
             except Exception as err:
                 raise ProviderError("Release Error: {}".format(str(err)))
             # at now, try to closing pool
@@ -259,7 +272,9 @@ class pgPool(BasePool):
             self._pool.terminate()
 
     def terminate(self, gracefully=True):
-        self._loop.run_until_complete(asyncio.wait_for(self.close(), timeout=5))
+        self._loop.run_until_complete(
+            asyncio.wait_for(self.close(), timeout=5)
+        )
 
     """
     Execute a connection into the Pool
@@ -271,7 +286,9 @@ class pgPool(BasePool):
                 result = await self._pool.execute(sentence, *args)
                 return result
             except InterfaceError as err:
-                raise ProviderError("Execute Interface Error: {}".format(str(err)))
+                raise ProviderError(
+                    "Execute Interface Error: {}".format(str(err))
+                )
             except Exception as err:
                 raise ProviderError("Execute Error: {}".format(str(err)))
 
@@ -286,12 +303,9 @@ class pg(BaseProvider):
     _transaction = None
     _initialized_on = None
     _query_raw = "SELECT {fields} FROM {table} {where_cond}"
-
-
     """
     Async Context magic Methods
     """
-
     async def __aenter__(self):
         return self
 
@@ -335,7 +349,9 @@ class pg(BaseProvider):
                         await self._connection.terminate()
                         self._connection = None
                         raise ProviderError(
-                            "Connection Error, Terminated: {}".format(str(err))
+                            "Connection Error, Terminated: {}".format(
+                                str(err)
+                            )
                         )
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
@@ -352,6 +368,7 @@ class pg(BaseProvider):
         """
         self._connection = None
         self._connected = False
+
         # Setup jsonb encoder/decoder
         def _encoder(value):
             return json.dumps(value, cls=EnumEncoder)
@@ -371,10 +388,16 @@ class pg(BaseProvider):
                     max_cacheable_statement_size=max_cacheable_statement_size,
                 )
                 await self._connection.set_type_codec(
-                    "json", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
+                    "json",
+                    encoder=_encoder,
+                    decoder=_decoder,
+                    schema="pg_catalog"
                 )
                 await self._connection.set_type_codec(
-                    "jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
+                    "jsonb",
+                    encoder=_encoder,
+                    decoder=_decoder,
+                    schema="pg_catalog"
                 )
                 await self._connection.set_builtin_type_codec(
                     "hstore", codec_name="pg_contrib.hstore"
@@ -389,7 +412,9 @@ class pg(BaseProvider):
                 self._connected = True
                 self._initialized_on = time.time()
         except TooManyConnectionsError as err:
-            raise TooManyConnections("Too Many Connections Error: {}".format(str(err)))
+            raise TooManyConnections(
+                "Too Many Connections Error: {}".format(str(err))
+            )
         except ConnectionDoesNotExistError as err:
             print("Connection Error: {}".format(str(err)))
             raise ProviderError("Connection Error: {}".format(str(err)))
@@ -490,7 +515,9 @@ class pg(BaseProvider):
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
             raise ProviderError(error)
-        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
+        except (
+            PostgresSyntaxError, UndefinedColumnError, PostgresError
+        ) as err:
             error = "Sentence Error: {}".format(str(err))
             raise StatementError(error)
         except (
@@ -520,7 +547,9 @@ class pg(BaseProvider):
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
             raise ProviderError(error)
-        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
+        except (
+            PostgresSyntaxError, UndefinedColumnError, PostgresError
+        ) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
             raise StatementError(error)
         except (
@@ -657,7 +686,12 @@ class pg(BaseProvider):
     """
 
     async def copy_from_table(
-        self, table="", schema="public", output=None, type="csv", columns=None
+        self,
+        table="",
+        schema="public",
+        output=None,
+        type="csv",
+        columns=None
     ):
         """table_copy
         get a copy of table data into a file, file-like object or a coroutine passed on "output"
@@ -683,7 +717,9 @@ class pg(BaseProvider):
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
-            error = "Error on Copy, Invalid Statement Error: {}".format(str(err))
+            error = "Error on Copy, Invalid Statement Error: {}".format(
+                str(err)
+            )
             self._loop.call_exception_handler(err)
             raise StatementError(error)
         except Exception as err:
@@ -691,7 +727,12 @@ class pg(BaseProvider):
             raise Exception(error)
 
     async def copy_to_table(
-        self, table="", schema="public", source=None, type="csv", columns=None
+        self,
+        table="",
+        schema="public",
+        source=None,
+        type="csv",
+        columns=None
     ):
         """copy_to_table
         get data from a file, file-like object or a coroutine passed on "source" and copy into table
@@ -717,7 +758,9 @@ class pg(BaseProvider):
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
-            error = "Error on Copy, Invalid Statement Error: {}".format(str(err))
+            error = "Error on Copy, Invalid Statement Error: {}".format(
+                str(err)
+            )
             self._loop.call_exception_handler(err)
             raise StatementError(error)
         except Exception as err:
@@ -736,7 +779,10 @@ class pg(BaseProvider):
             await self.connection()
         try:
             result = await self._connection.copy_records_to_table(
-                table_name=table, schema_name=schema, columns=columns, records=source
+                table_name=table,
+                schema_name=schema,
+                columns=columns,
+                records=source
             )
             return result
         except (asyncpg.exceptions.UndefinedTableError) as err:
@@ -746,7 +792,9 @@ class pg(BaseProvider):
             raise StatementError(error)
             return False
         except (InvalidSQLStatementNameError, UndefinedColumnError) as err:
-            error = "Error on Copy, Invalid Statement Error: {}".format(str(err))
+            error = "Error on Copy, Invalid Statement Error: {}".format(
+                str(err)
+            )
             raise StatementError(error)
         except (asyncpg.exceptions.UniqueViolationError) as err:
             error = "Error on Copy, Constraint Violated: {}".format(str(err))
@@ -803,13 +851,16 @@ class pg(BaseProvider):
                             where_cond.append("%s != %s" % (key[:-1], value))
                         else:
                             if (
-                                type(value) == str
-                                and value.startswith("'")
+                                type(value) == str and value.startswith("'")
                                 and value.endswith("'")
                             ):
-                                where_cond.append("%s = %s" % (key, "{}".format(value)))
+                                where_cond.append(
+                                    "%s = %s" % (key, "{}".format(value))
+                                )
                             elif type(value) == int:
-                                where_cond.append("%s = %s" % (key, "{}".format(value)))
+                                where_cond.append(
+                                    "%s = %s" % (key, "{}".format(value))
+                                )
                             else:
                                 where_cond.append(
                                     "%s = %s" % (key, "'{}'".format(value))
@@ -820,7 +871,9 @@ class pg(BaseProvider):
                     else:
                         val = ",".join(map(str, value))
                         if type(val) == str and "'" not in val:
-                            where_cond.append("%s IN (%s)" % (key, "'{}'".format(val)))
+                            where_cond.append(
+                                "%s IN (%s)" % (key, "'{}'".format(val))
+                            )
                         else:
                             where_cond.append("%s IN (%s)" % (key, val))
                 # if 'WHERE ' in sentence:
@@ -858,7 +911,9 @@ class pg(BaseProvider):
         """
         if sentence:
             if type(ordering) == str:
-                return "{q} ORDER BY {ordering}".format(q=sentence, ordering=ordering)
+                return "{q} ORDER BY {ordering}".format(
+                    q=sentence, ordering=ordering
+                )
             elif type(ordering) == list:
                 return "{q} ORDER BY {ordering}".format(
                     q=sentence, ordering=", ".join(ordering)
@@ -920,7 +975,9 @@ class pg(BaseProvider):
         sql = sql.format_map(SafeDict(values=values))
         # print(sql)
         try:
-            result = self._loop.run_until_complete(self._connection.execute(sql))
+            result = self._loop.run_until_complete(
+                self._connection.execute(sql)
+            )
             if not result:
                 print(result)
                 return False

@@ -1,17 +1,19 @@
 import asyncio
 from pprint import pprint
+
 from asyncdb import AsyncDB
 from asyncdb.exceptions import default_exception_handler
+
 
 async def connect(db):
     async with await db.connection() as conn:
         pprint(await conn.test_connection())
-        await conn.execute('create table tests(id integer, name text)')
-        many = 'INSERT INTO tests VALUES(?, ?)'
+        await conn.execute("create table tests(id integer, name text)")
+        many = "INSERT INTO tests VALUES(?, ?)"
         examples = [(2, "def"), (3, "ghi"), (4, "jkl")]
-        print(': Executing Insert of many entries: ')
+        print(": Executing Insert of many entries: ")
         await conn.executemany(many, examples)
-        result, error = await conn.query('SELECT * FROM tests')
+        result, error = await conn.query("SELECT * FROM tests")
         for row in result:
             print(row)
         table = """
@@ -23,14 +25,14 @@ async def connect(db):
         """
         await conn.execute(table)
         data = [
-            ('ORD', 'Chicago', 'United States'),
-            ('JFK', 'New York City', 'United States'),
-            ('CDG', 'Paris', 'France'),
-            ('LHR', 'London', 'United Kingdom'),
-            ('DME', 'Moscow', 'Russia'),
-            ('SVO', 'Moscow', 'Russia')
+            ("ORD", "Chicago", "United States"),
+            ("JFK", "New York City", "United States"),
+            ("CDG", "Paris", "France"),
+            ("LHR", "London", "United Kingdom"),
+            ("DME", "Moscow", "Russia"),
+            ("SVO", "Moscow", "Russia"),
         ]
-        airports = 'INSERT INTO airports VALUES(?, ?, ?)'
+        airports = "INSERT INTO airports VALUES(?, ?, ?)"
         await conn.executemany(airports, data)
         a_country = "United States"
         a_city = "Moscow"
@@ -43,18 +45,18 @@ async def connect(db):
         b_country = 'France'
         b_city = 'London'
         async with conn.prepare(query, (b_country, b_city)) as cursor:
-            print('using iterator: ')
+            print("using iterator: ")
             async for row in cursor:
                 print(row)
             # its an iterable
-            print('Using Context Manager: ')
+            print("Using Context Manager: ")
             async with cursor:
                 print(await cursor.fetchall())
             # this returns a cursor based object
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.set_exception_handler(default_exception_handler)
-    driver = AsyncDB('sqlite', params = { "database": ':memory:' }, loop=loop)
+    driver = AsyncDB("sqlite", params={"database": ":memory:"}, loop=loop)
     asyncio.run(connect(driver))
