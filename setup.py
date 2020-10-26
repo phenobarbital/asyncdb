@@ -65,6 +65,8 @@ setup(
         "redis==3.5.3",
         "pylibmc==1.6.1",
         "attrs==20.2.0",
+        "aioodbc==0.3.3",
+        "pyodbc==4.0.30",
     ],
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/asyncdb",
