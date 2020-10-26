@@ -23,7 +23,7 @@ class sqliteCursor:
     _result: Any = None
     _sentence: str = ''
 
-    def __init__(self, provider, result: None, sentence:str, parameters: Iterable[Any] = None):
+    def __init__(self, provider, result: Iterable = None, sentence:str = '', parameters: Iterable[Any] = None):
         self._result = result
         self._provider = provider
         self._sentence = sentence
@@ -326,7 +326,7 @@ class sqlite(BaseProvider):
             raise EmptyStatement("Sentence is an empty string")
         if parameters is None:
             parameters = []
-        return sqliteCursor(self, sentence, parameters)
+        return sqliteCursor(self, sentence=sentence, parameters=parameters)
 
 # Registering this Provider
 registerProvider(sqlite)

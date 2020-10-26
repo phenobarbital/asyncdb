@@ -39,7 +39,7 @@ async def connect(db):
             async for row in result:
                 print(row)
         # using prepare
-        print('Using Prepared Sentences')
+        print('Using Prepared Sentences: ')
         b_country = 'France'
         b_city = 'London'
         async with conn.prepare(query, (b_country, b_city)) as cursor:
