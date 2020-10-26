@@ -1,1 +1,1 @@
-sudo apt-get install libmemcached-dev zlib1g-dev unixodbc-dev
+sudo apt-get install libmemcached-dev zlib1g-dev unixodbc-dev libsqliteodbc
