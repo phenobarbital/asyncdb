@@ -11,10 +11,13 @@ import asyncio
 from psycopg2.extras import NamedTupleCursor
 from sqlalchemy import create_engine, select
 from sqlalchemy.dialects import mysql, postgresql
-from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
+from sqlalchemy.exc import (
+    DatabaseError,
+    OperationalError,
+    SQLAlchemyError,
+)
 from sqlalchemy.pool import NullPool
 
-from asyncdb.providers import BaseProvider, registerProvider
 from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
@@ -23,6 +26,10 @@ from asyncdb.exceptions import (
     ProviderError,
     StatementError,
     TooManyConnections,
+)
+from asyncdb.providers import (
+    BaseProvider,
+    registerProvider,
 )
 
 
@@ -39,7 +46,9 @@ class sql_alchemy(BaseProvider):
     _initialized_on = None
     _engine = None
     _engine_options = {
-        "connect_args": {"connect_timeout": 360},
+        "connect_args": {
+            "connect_timeout": 360
+        },
         "isolation_level": "AUTOCOMMIT",
         "echo": False,
         "encoding": "utf8",
@@ -72,7 +81,9 @@ class sql_alchemy(BaseProvider):
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._connection = None
-            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "Engine Error, Terminated: {}".format(str(err))
+            )
         finally:
             return self
 
@@ -97,7 +108,9 @@ class sql_alchemy(BaseProvider):
                     self._connection.close()
             except Exception as err:
                 self._connection = None
-                raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
+                raise ProviderError(
+                    "Engine Error, Terminated: {}".format(str(err))
+                )
             finally:
                 self._connection = None
                 return True
@@ -120,7 +133,9 @@ class sql_alchemy(BaseProvider):
         except Exception as err:
             print(err)
             self._connection = None
-            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "Engine Error, Terminated: {}".format(str(err))
+            )
         finally:
             return self
 
