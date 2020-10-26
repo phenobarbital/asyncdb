@@ -29,7 +29,7 @@ from asyncdb.providers import (
 
 
 class sqliteCursor:
-    _connection = aiosqlite.Connection = None
+    _connection: aiosqlite.Connection = None
     _provider: BaseProvider = None
     _result: Any = None
     _sentence: str = ''
