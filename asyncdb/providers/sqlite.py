@@ -342,7 +342,7 @@ class sqlite(BaseProvider):
         result = await self._connection.execute(sentence, parameters)
         return result
 
-    def prepare(
+    def cursor(
         self, sentence: str, parameters: Iterable[Any] = None
     ) -> Iterable:
         """Helper to create a cursor and execute the given query."""

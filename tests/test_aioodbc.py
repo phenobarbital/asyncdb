@@ -4,9 +4,11 @@ from pprint import pprint
 from asyncdb import AsyncDB
 from asyncdb.exceptions import default_exception_handler
 
+## Connection Pooling
 
 async def connect(db):
     async with await db.connection() as conn:
+        print('Getting Driver: ', conn)
         pprint(await conn.test_connection())
         await conn.execute("create table tests(id integer, name text)")
         many = "INSERT INTO tests VALUES(?, ?)"
@@ -40,7 +42,7 @@ async def connect(db):
         async with await conn.fetch(query, (a_country, a_city)) as result:
             async for row in result:
                 print(row)
-        # using prepare
+        # using Cursor Objects
         print('Using Cursor Objects: ')
         b_country = 'France'
         b_city = 'London'
@@ -58,5 +60,5 @@ async def connect(db):
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.set_exception_handler(default_exception_handler)
-    driver = AsyncDB("sqlite", params={"database": ":memory:"}, loop=loop)
+    driver = AsyncDB("odbc", params={"driver":"SQLite3", "database": ":memory:"}, loop=loop)
     asyncio.run(connect(driver))
