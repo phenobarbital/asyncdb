@@ -97,6 +97,10 @@ class sqlite(BaseProvider):
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         return await self.close()
 
+    async def prepare(self):
+        "Ignoring prepared sentences on SQLite"
+        pass
+
     async def close(self, timeout=5):
         """
         Closing Method for SQLite

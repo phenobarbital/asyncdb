@@ -1,6 +1,8 @@
 import asyncio
 from pprint import pprint
 
+from asyncdb.providers import odbc
+
 from asyncdb import AsyncDB
 from asyncdb.exceptions import default_exception_handler
 

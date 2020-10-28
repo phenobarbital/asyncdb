@@ -71,7 +71,7 @@ class asyncDBException(Exception):
         self.message = message
         if code:
             self.code = code
-        print(args)
+        #print(args)
 
     def __str__(self):
         if self.code:
