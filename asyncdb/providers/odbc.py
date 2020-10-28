@@ -24,9 +24,11 @@ from asyncdb.exceptions import (
     TooManyConnections,
 )
 from asyncdb.providers import (
-    BasePool,
-    BaseProvider,
     registerProvider,
+)
+
+from asyncdb.providers.sql import (
+    SQLProvider
 )
 
 
@@ -84,59 +86,17 @@ class odbcCursor:
         return await self._cursor.fetchall()
 
 
-class odbc(BaseProvider):
+class odbc(SQLProvider):
     _provider = "odbc"
-    _syntax = "sql"
-    _test_query = "SELECT 1"
     _dsn = "Driver={driver};Database={database}"
-    _prepared = None
-    _initialized_on = None
-    _query_raw = "SELECT {fields} FROM {table} {where_cond}"
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
         if 'host' in params:
             self._dsn = "DRIVER={driver};Database={database};server={host};uid={user};pwd={password}"
         super(odbc, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
-    """
-    Context magic Methods
-    """
-    async def __aenter__(self) -> "sqlite":
-        if not self._connection:
-            await self.connection()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        return await self.close()
-
     async def prepare(self):
         pass
-
-    async def close(self, timeout=5):
-        """
-        Closing Method for ODBC
-        """
-        try:
-            if self._connection:
-                if self._cursor:
-                    await self._cursor.close()
-                await asyncio.wait_for(
-                    self._connection.close(), timeout=timeout
-                )
-        except Exception as err:
-            raise ProviderError("ODBC: Closing Error: {}".format(str(err)))
-        finally:
-            self._connection = None
-            self._connected = False
-            return True
-
-    async def connect(self, **kwargs):
-        """
-        Get a proxy connection, alias of connection
-        """
-        self._connection = None
-        self._connected = False
-        return await self.connection(self, **kwargs)
 
     async def connection(self, **kwargs):
         """
@@ -166,12 +126,6 @@ class odbc(BaseProvider):
             raise ProviderError("ODBC Unknown Error: {}".format(str(err)))
         finally:
             return self
-
-    async def release(self):
-        """
-        Release a Connection
-        """
-        await self.close()
 
     async def query(self, sentence: str = Any):
         """
