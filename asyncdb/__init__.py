@@ -4,9 +4,6 @@ import importlib
 import logging
 import sys
 
-# Version of asyncdb  package
-__version__ = "2.0.0"
-
 from .meta import (
     asyncORM,
     asyncRecord,
@@ -21,27 +18,10 @@ from .exceptions import (
     asyncDBException,
 )
 
+from .providers import _PROVIDERS
+from .utils.functions import module_exists
 
-def module_exists(module_name, classpath):
-    try:
-        # try to using importlib
-        module = importlib.import_module(classpath, package="providers")
-        obj = getattr(module, module_name)
-        return obj
-    except ImportError:
-        try:
-            # try to using __import__
-            obj = __import__(classpath, fromlist=[module_name])
-            return obj
-        except ImportError:
-            logging.exception(
-                f"No Driver for provider {module_name} was found"
-            )
-            raise NotSupported(
-                message=f"No Provider {module_name} Found", code=404
-            )
-
-
+# Factory interface for Pool-based connectors
 class AsyncPool:
     """
     AsyncPool.
@@ -54,7 +34,6 @@ class AsyncPool:
     def __new__(cls, provider="dummy", **kwargs):
         cls._provider = None
         cls._name = provider
-        # logger.info('Load Pool Provider: {}'.format(self._name))
         classpath = "asyncdb.providers.{provider}".format(provider=cls._name)
         poolName = "{}Pool".format(cls._name)
         try:
@@ -71,8 +50,6 @@ class AsyncPool:
 
 
 # Factory Proxy Interfaces for Providers
-
-
 class AsyncDB:
     _provider = None
     _name = ""
@@ -80,7 +57,10 @@ class AsyncDB:
     def __new__(cls, provider="dummy", **kwargs):
         cls._provider = None
         cls._name = provider
-        logging.debug(f"Loading Provider {cls._name}")
+        if provider in _PROVIDERS:
+            obj = _PROVIDERS[provider]
+            cls._provider = obj(**kwargs)
+            return cls._provider
         classpath = "asyncdb.providers.{provider}".format(provider=cls._name)
         try:
             obj = module_exists(cls._name, classpath)

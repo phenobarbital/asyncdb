@@ -19,6 +19,8 @@ import pytz
 import redis
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
+import logging
+import importlib
 
 CACHE_HOST = os.getenv("CACHEHOST", default="localhost")
 CACHE_PORT = os.getenv("CACHEPORT", default=6379)
@@ -428,3 +430,25 @@ def get_program_date(value, yesterday: bool = False, *args):
             return yesterday()
         else:
             return opt
+
+"""
+Module Loading
+"""
+def module_exists(module_name, classpath):
+    try:
+        # try to using importlib
+        module = importlib.import_module(classpath, package="providers")
+        obj = getattr(module, module_name)
+        return obj
+    except ImportError:
+        try:
+            # try to using __import__
+            obj = __import__(classpath, fromlist=[module_name])
+            return obj
+        except ImportError:
+            logging.exception(
+                f"No Driver for provider {module_name} was found"
+            )
+            raise ImportError(
+                message=f"No Provider {module_name} Found"
+            )

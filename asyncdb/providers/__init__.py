@@ -17,8 +17,9 @@ from asyncdb.exceptions import (
     _handle_done_tasks,
     default_exception_handler,
 )
+from asyncdb.utils.functions import module_exists
 
-_providers = {}
+_PROVIDERS = {}
 
 # logging system
 import logging
@@ -267,7 +268,6 @@ class BaseProvider(ABC):
     async def test_connection(self):
         if self._test_query is None:
             raise NotImplementedError()
-        # logger.debug("{}: Running Test".format(self._provider))
         try:
             return await self.query(self._test_query)
         except Exception as err:
@@ -362,7 +362,11 @@ class BaseProvider(ABC):
 
 
 def registerProvider(provider):
-    global _providers
-    # logging.debug("Registering new Provider %s of type (%s), syntax: %s.", provider.name(), provider.type(), provider.dialect())
-    _providers[provider.type()] = provider
-    # TODO: try to load provider
+    global _PROVIDERS
+    name = provider.name()
+    classpath = f'asyncdb.providers.{name}'
+    try:
+        cls = module_exists(name, classpath)
+        _PROVIDERS[name] = cls
+    except ImportError as err:
+        raise ImportError(err)
