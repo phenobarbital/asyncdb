@@ -24,66 +24,25 @@ from asyncdb.exceptions import (
     TooManyConnections,
 )
 from asyncdb.providers import (
+    BaseProvider,
     registerProvider,
 )
 
 from asyncdb.providers.sql import (
-    SQLProvider
+    SQLProvider,
+    baseCursor
 )
 
 
-class odbcCursor:
-    _cursor = None
-    _connection = None
-    _provider: BaseProvider = None
-    _result: Any = None
-    _sentence: str = ''
-
-    def __init__(
-        self,
-        provider = None,
-        result: Optional[List] = None,
-        sentence: str = '',
-        parameters: Iterable[Any] = None
-    ):
-        self._provider = provider
-        self._result = result
-        self._sentence = sentence
-        self._params = parameters
-        self._connection = self._provider.get_connection()
+class odbcCursor(baseCursor):
 
     async def __aenter__(self) -> "odbcCursor":
+        "Redefining __aenter__ based on requirements of ODBC Cursors"
         self._cursor = await self._connection.cursor()
         await self._cursor.execute(
             self._sentence, self._params
         )
         return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        return await self._provider.close()
-
-    def __aiter__(self) -> "odbcCursor":
-        """The cursor is also an async iterator."""
-        return self
-
-    async def __anext__(self):
-        """Use `cursor.fetchone()` to provide an async iterable."""
-        row = await self._cursor.fetchone()
-        #print(row)
-        #print(type(row)) is pyodbc.Row
-        if row is not None:
-            return row
-        else:
-            raise StopAsyncIteration
-
-    async def fetchone(self) -> Optional[Dict]:
-        return await self._cursor.fetchone()
-
-    async def fetchmany(self, size: int = None) -> Iterable[List]:
-        return await self._cursor.fetchmany(size)
-
-    async def fetchall(self) -> Iterable[List]:
-        return await self._cursor.fetchall()
 
 
 class odbc(SQLProvider):
@@ -133,11 +92,7 @@ class odbc(SQLProvider):
         """
         #TODO: getting aiosql structures or sql-like function structures or query functions
         error = None
-        self._result = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         try:
             # getting cursor:
             self._cursor = await self._connection.cursor()
@@ -159,11 +114,7 @@ class odbc(SQLProvider):
         """
         aliases for query, without error support
         """
-        self._result = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         try:
             # getting cursor:
             self._cursor = await self._connection.cursor()
@@ -182,11 +133,7 @@ class odbc(SQLProvider):
         """
         aliases for query, without error support
         """
-        self._result = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         try:
             self._cursor = await self._connection.cursor()
             await self._cursor.execute(sentence)
@@ -209,11 +156,7 @@ class odbc(SQLProvider):
         """
         #TODO: getting aiosql structures or sql-like function structures or query functions
         error = None
-        self._result = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         try:
             self._cursor = await self._connection.cursor()
             await self._cursor.execute(sentence)
@@ -231,11 +174,7 @@ class odbc(SQLProvider):
         """
         aliases for queryrow, without error support
         """
-        self._result = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         try:
             self._cursor = await self._connection.cursor()
             await self._cursor.execute(sentence)
@@ -256,10 +195,7 @@ class odbc(SQLProvider):
         """
         error = None
         result = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         try:
             self._cursor = await self._connection.cursor()
             result = await self._cursor.execute(sentence, *args)
@@ -274,10 +210,7 @@ class odbc(SQLProvider):
 
     async def executemany(self, sentence: str, *args):
         error = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         try:
             self._cursor = await self._connection.cursor()
             result = await self._cursor.executemany(sentence, *args)
@@ -296,22 +229,10 @@ class odbc(SQLProvider):
         """Helper to create a cursor and execute the given query, returns a Native Cursor"""
         if parameters is None:
             parameters = []
+        await self.valid_operation(sentence)
         self._cursor = await self._connection.cursor()
         await self._cursor.execute(sentence, parameters)
         return self._cursor
-
-    def cursor(self, sentence: str, parameters: Iterable[Any] = None) -> Iterable:
-        """ Returns a iterable Cursor Object """
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if parameters is None:
-            parameters = []
-        try:
-            return odbcCursor(self, sentence=sentence, parameters=parameters)
-        except Exception as err:
-            print(err)
-            return False
-
 
 
 # Registering this Provider
