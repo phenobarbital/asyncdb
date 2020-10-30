@@ -67,6 +67,8 @@ setup(
         "attrs==20.2.0",
         "aioodbc==0.3.3",
         "pyodbc==4.0.30",
+        "python-rapidjson==0.9.3",
+        
     ],
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/asyncdb",
