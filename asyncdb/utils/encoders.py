@@ -100,8 +100,6 @@ class DefaultEncoder(json.JSONEncoder):
                 return obj.hex
         elif isinstance(obj, decimal.Decimal):
             return float(obj)
-        elif isinstance(obj, Decimal):
-            return str(obj)
         elif hasattr(obj, "isoformat"):
             return obj.isoformat()
         elif isinstance(obj, asyncpg.Range):
