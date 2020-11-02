@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-"""AsyncDB
+"""AsyncDB.
+
     Asynchronous library for data source connections, used by Navigator.
 See:
 https://github.com/phenobarbital/asyncdb
@@ -13,7 +14,8 @@ setup(
     python_requires=">=3.7.0",
     url="https://github.com/phenobarbital/asyncdb",
     description="Asyncio Datasource library",
-    long_description="Asynchronous library for data source connections, used by Navigator",
+    long_description="Asynchronous library for data source connections, \
+    used by Navigator",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -68,7 +70,7 @@ setup(
         "aioodbc==0.3.3",
         "pyodbc==4.0.30",
         "python-rapidjson==0.9.3",
-        
+
     ],
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/asyncdb",

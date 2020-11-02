@@ -1,1 +1,1 @@
-sudo apt-get install libmemcached-dev zlib1g-dev unixodbc-dev libsqliteodbc
+python3.8-dev python3.8-venv libmemcached-dev zlib1g-dev build-essential python-dev libffi-dev unixodbc unixodbc-dev libsqliteodbc
