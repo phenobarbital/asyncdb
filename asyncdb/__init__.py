@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import uvloop
 import importlib
 import logging
 import sys
@@ -20,6 +21,8 @@ from .exceptions import (
 
 from .providers import _PROVIDERS
 from .utils.functions import module_exists
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 # Factory interface for Pool-based connectors
 class AsyncPool:
