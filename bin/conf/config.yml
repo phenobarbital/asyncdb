@@ -47,7 +47,6 @@ docker:
     - rethinkdb
     - redis
     - postgres
-    - api
     - mysql
     - cassandra
     - influxdb
