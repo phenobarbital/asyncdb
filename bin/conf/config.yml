@@ -1,7 +1,7 @@
 version: 1.0
 environment: dev
-projectsdir: /home/to-user/Documents/projects/mobileinsight
-iplocal: 192.168.1.13
+projectsdir: /home/jesuslara/proyectos/navigator/
+iplocal: 192.168.1.131
 network:
   # interface for get local IP address (empty: auto-discover)
   interface:
@@ -61,7 +61,7 @@ conf:
     - mysql
     - logs/postgres
 api:
-  source: $projectsdir/query_api
+  source: $projectsdir/navapi
   host: nav-api.dev.local
   port: 5000
 postgres:
@@ -71,8 +71,8 @@ postgres:
   PG_PASSWORD: 12345678
   PG_PORT: 5432
   PG_DATABASE: navigator_dev
-  datadir: $HOME/docker/volumes/postgres
-  logdir: $HOME/docker/volumes/logs/postgres
+  datadir: $HOME/docker/postgres
+  logdir: $HOME/docker/logs/postgres
   backupdir: $projectsdir/backup
   restore: 1
   restore_cpus: 8
@@ -90,7 +90,7 @@ mysql:
   MYSQL_ROOT_PASSWORD: 12345678
   MYSQL_DATABASE: navigator_dev
   MYSQL_USER: troc_pgdata
-  datadir: $HOME/docker/volumes/cassandra
+  datadir: $HOME/docker/volumes/mysql
 influxdb:
   port: 8086
   INFLUXDB_GRAPHITE_ENABLED: true
