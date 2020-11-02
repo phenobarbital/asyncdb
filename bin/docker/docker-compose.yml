@@ -3,10 +3,10 @@ version: '3.1'
 services:
   api:
     volumes:
-      - /home/to-user/Documents/projects/mobileinsight/query_api:/home/troc/code
+      - /home/jesuslara/proyectos/navigator//navapi:/home/troc/code
     restart: 'no'
     build:
-      context: /home/to-user/Documents/projects/mobileinsight/query_api
+      context: /home/jesuslara/proyectos/navigator//navapi
       dockerfile: ./Dockerfile
     command: python /home/troc/code/run.py
     ports:
@@ -17,10 +17,10 @@ services:
       - rethinkdb
       - memcached
     extra_hosts:
-      - nav-api.dev.local:192.168.1.13
-      - navigator-dev.dev.local:192.168.1.13
-      - rethink.dev.local:192.168.1.13
-      - postgres.dev.local:192.168.1.13
+      - nav-api.dev.local:192.168.1.131
+      - navigator-dev.dev.local:192.168.1.131
+      - rethink.dev.local:192.168.1.131
+      - postgres.dev.local:192.168.1.131
     networks:
       infranet:
         aliases:
@@ -30,7 +30,7 @@ services:
     image: influxdb
     restart: 'no'
     volumes:
-      - /root/docker/volumes/influxdb:/data
+      - /home/jesuslara/docker/volumes/influxdb:/data
     environment:
       - INFLUXDB_GRAPHITE_ENABLED=true
       - INFLUXDB_DB=navigator_dev
@@ -57,8 +57,8 @@ services:
       - 28015:28015
       - 29015:29015
     volumes:
-      - /root/docker/volumes/rethink:/data
-      - /home/to-user/Documents/projects/mobileinsight/backup:/opt
+      - /home/jesuslara/docker/volumes/rethink:/data
+      - /home/jesuslara/proyectos/navigator//backup:/opt
     networks:
       infranet:
         aliases:
@@ -80,9 +80,9 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - /root/docker/volumes/postgres:/var/lib/postgresql/data
-      - /home/to-user/Documents/projects/mobileinsight/backup:/opt
-      - /root/docker/volumes/logs/postgres:/logs
+      - /home/jesuslara/docker/postgres:/var/lib/postgresql/data
+      - /home/jesuslara/proyectos/navigator//backup:/opt
+      - /home/jesuslara/docker/logs/postgres:/logs
     environment:
       - PG_DB_USER=troc_pgdata
       - PG_DB_SPUSER=troc_pgdata
@@ -106,6 +106,17 @@ services:
     expose:
       - '3306'
     volumes:
-      - /root/docker/volumes/cassandra:/var/lib/mysql
+      - /home/jesuslara/docker/volumes/mysql:/var/lib/mysql
+  cassandra:
+    image: cassandra
+    restart: 'no'
+    environment:
+      - CASSANDRA_CLUSTER_NAME=navigator
+    ports:
+      - '7000:7000'
+    expose:
+      - '7000'
+    volumes:
+      - /home/jesuslara/docker/volumes/cassandra:/data
 networks:
   infranet:
