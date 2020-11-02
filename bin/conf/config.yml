@@ -87,7 +87,7 @@ cassandra:
   CASSANDRA_CLUSTER_NAME: navigator
   datadir: $HOME/docker/volumes/cassandra
 mysql:
-  MYSQL_ROOT_PASSWORD: 12345678
+  MYSQL_PASSWORD: 12345678
   MYSQL_DATABASE: navigator_dev
   MYSQL_USER: troc_pgdata
   datadir: $HOME/docker/volumes/mysql
