@@ -29,7 +29,6 @@ setup(
         "numpy >= 1.11.1",
         "wheel==0.35.1",
         "asyncio==3.4.3",
-        "python-dotenv==0.14.0",
         "PyDrive==1.3.1",
         "uvloop==0.14.0",
         "objectpath==0.6.1",
