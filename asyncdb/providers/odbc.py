@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 import asyncio
 import os
-import sqlite3
 import time
 from typing import (
     Any,
+    List,
+    Dict,
     Generator,
     Iterable,
     Optional,
 )
-
-import aiosqlite
+import aioodbc
+from aioodbc.cursor import Cursor
+import pyodbc
 
 from asyncdb.exceptions import (
     ConnectionTimeout,
@@ -22,7 +24,6 @@ from asyncdb.exceptions import (
     TooManyConnections,
 )
 from asyncdb.providers import (
-    BasePool,
     BaseProvider,
     registerProvider,
 )
@@ -32,70 +33,29 @@ from asyncdb.providers.sql import (
     baseCursor
 )
 
-class sqliteCursor(baseCursor):
-    _connection: aiosqlite.Connection = None
 
-    async def __aenter__(self) -> "sqliteCursor":
-        self._cursor = await self._connection.execute(
+class odbcCursor(baseCursor):
+
+    async def __aenter__(self) -> "odbcCursor":
+        "Redefining __aenter__ based on requirements of ODBC Cursors"
+        self._cursor = await self._connection.cursor()
+        await self._cursor.execute(
             self._sentence, self._params
         )
         return self
 
-class sqlite(SQLProvider):
-    _provider = "sqlite"
-    _dsn = "{database}"
+
+class odbc(SQLProvider):
+    _provider = "odbc"
+    _dsn = "Driver={driver};Database={database}"
+
+    def __init__(self, dsn="", loop=None, params={}, **kwargs):
+        if 'host' in params:
+            self._dsn = "DRIVER={driver};Database={database};server={host};uid={user};pwd={password}"
+        super(odbc, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
     async def prepare(self):
-        "Ignoring prepared sentences on SQLite"
         pass
-
-    async def close(self, timeout=5):
-        """
-        Closing Method for SQLite
-        """
-        try:
-            if self._connection:
-                if self._cursor:
-                    await self._cursor.close()
-                await asyncio.wait_for(
-                    self._connection.close(), timeout=timeout
-                )
-        except Exception as err:
-            raise ProviderError("Close Error: {}".format(str(err)))
-        finally:
-            self._connection = None
-            self._connected = False
-            return True
-
-    def connect(self, **kwargs):
-        """
-        Get a proxy connection
-        """
-        self._connection = None
-        self._connected = False
-        try:
-            print('Running Connect')
-            self._connection = aiosqlite.connect(
-                database=self._dsn, loop=self._loop, **kwargs
-            )
-            if self._connection:
-                self._connected = True
-                self._initialized_on = time.time()
-        except aiosqlite.OperationalError:
-            raise ProviderError(
-                "Unable to Open Database File: {}".format(self._dsn)
-            )
-        except aiosqlite.DatabaseError as err:
-            print("Connection Error: {}".format(str(err)))
-            raise ProviderError(
-                "Database Connection Error: {}".format(str(err))
-            )
-        except aiosqlite.Error as err:
-            raise ProviderError("Internal Error: {}".format(str(err)))
-        except Exception as err:
-            raise ProviderError("SQLite Unknown Error: {}".format(str(err)))
-        finally:
-            return self
 
     async def connection(self, **kwargs):
         """
@@ -104,30 +64,25 @@ class sqlite(SQLProvider):
         self._connection = None
         self._connected = False
         try:
-            self._connection = await aiosqlite.connect(
-                database=self._dsn, loop=self._loop, **kwargs
+            self._connection = await aioodbc.connect(
+                dsn=self._dsn
             )
             if self._connection:
                 if callable(self.init_func):
                     try:
                         await self.init_func(self._connection)
                     except Exception as err:
-                        print("Error on Init Connection: {}".format(err))
+                        print("ODBC: Error on Init Connection: {}".format(err))
                 self._connected = True
                 self._initialized_on = time.time()
-        except aiosqlite.OperationalError:
-            raise ProviderError(
-                "Unable to Open Database File: {}".format(self._dsn)
-            )
-        except aiosqlite.DatabaseError as err:
-            print("Connection Error: {}".format(str(err)))
-            raise ProviderError(
-                "Database Connection Error: {}".format(str(err))
-            )
-        except aiosqlite.Error as err:
-            raise ProviderError("Internal Error: {}".format(str(err)))
+        except pyodbc.Error as err:
+            print('ERR ', err)
+            logging.exception(err)
+            raise ProviderError("ODBC Internal Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError("SQLite Unknown Error: {}".format(str(err)))
+            print('ERR ', err)
+            logging.exception(err)
+            raise ProviderError("ODBC Unknown Error: {}".format(str(err)))
         finally:
             return self
 
@@ -139,10 +94,15 @@ class sqlite(SQLProvider):
         error = None
         await self.valid_operation(sentence)
         try:
-            self._cursor = await self._connection.execute(sentence)
+            # getting cursor:
+            self._cursor = await self._connection.cursor()
+            await self._cursor.execute(sentence)
             self._result = await self._cursor.fetchall()
             if not self._result:
                 return [None, NoDataFound]
+        except pyodbc.Error as err:
+            error = "ODBC: Query Error: {}".format(err)
+            raise ProviderError(error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise ProviderError(error)
@@ -156,7 +116,9 @@ class sqlite(SQLProvider):
         """
         await self.valid_operation(sentence)
         try:
-            self._cursor = await self._connection.execute(sentence)
+            # getting cursor:
+            self._cursor = await self._connection.cursor()
+            await self._cursor.execute(sentence)
             self._result = await self._cursor.fetchall()
             if not self._result:
                 raise NoDataFound
@@ -173,10 +135,14 @@ class sqlite(SQLProvider):
         """
         await self.valid_operation(sentence)
         try:
-            self._cursor = await self._connection.execute(sentence)
+            self._cursor = await self._connection.cursor()
+            await self._cursor.execute(sentence)
             self._result = await self._cursor.fetchmany(size)
             if not self._result:
                 raise NoDataFound
+        except pyodbc.ProgrammingError as err:
+            error = "ODBC Query Error: {}".format(str(err))
+            raise ProviderError(error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise ProviderError(error)
@@ -192,7 +158,8 @@ class sqlite(SQLProvider):
         error = None
         await self.valid_operation(sentence)
         try:
-            self._cursor = await self._connection.execute(sentence)
+            self._cursor = await self._connection.cursor()
+            await self._cursor.execute(sentence)
             self._result = await self._cursor.fetchone()
             if not self._result:
                 return [None, NoDataFound]
@@ -205,11 +172,12 @@ class sqlite(SQLProvider):
 
     async def fetchone(self, sentence: str):
         """
-        aliases for query, without error support
+        aliases for queryrow, without error support
         """
         await self.valid_operation(sentence)
         try:
-            self._cursor = await self._connection.execute(sentence)
+            self._cursor = await self._connection.cursor()
+            await self._cursor.execute(sentence)
             self._result = await self._cursor.fetchone()
             if not self._result:
                 raise NoDataFound
@@ -229,7 +197,8 @@ class sqlite(SQLProvider):
         result = None
         await self.valid_operation(sentence)
         try:
-            result = await self._connection.execute(sentence, *args)
+            self._cursor = await self._connection.cursor()
+            result = await self._cursor.execute(sentence, *args)
             if result:
                 await self._connection.commit()
         except Exception as err:
@@ -243,7 +212,8 @@ class sqlite(SQLProvider):
         error = None
         await self.valid_operation(sentence)
         try:
-            result = await self._connection.executemany(sentence, *args)
+            self._cursor = await self._connection.cursor()
+            result = await self._cursor.executemany(sentence, *args)
             if result:
                 await self._connection.commit()
         except Exception as err:
@@ -256,13 +226,14 @@ class sqlite(SQLProvider):
     async def fetch(
         self, sentence: str, parameters: Iterable[Any] = None
     ) -> Iterable:
-        """Helper to create a cursor and execute the given query."""
-        await self.valid_operation(sentence)
+        """Helper to create a cursor and execute the given query, returns a Native Cursor"""
         if parameters is None:
             parameters = []
-        result = await self._connection.execute(sentence, parameters)
-        return result
+        await self.valid_operation(sentence)
+        self._cursor = await self._connection.cursor()
+        await self._cursor.execute(sentence, parameters)
+        return self._cursor
 
 
 # Registering this Provider
-registerProvider(sqlite)
+registerProvider(odbc)

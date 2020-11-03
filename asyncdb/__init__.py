@@ -1,81 +1,78 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import uvloop
 import importlib
 import logging
 import sys
 
-__version__ = "0.0.2"
+from .meta import (
+    asyncORM,
+    asyncRecord,
+)
 
-from asyncdb.meta import asyncORM, asyncRecord
-from asyncdb.providers import *
-from asyncdb.providers.exceptions import *
+__all__ = ["asyncORM", "asyncRecord"]
 
+# from .providers import *
+from .exceptions import (
+    NotSupported,
+    ProviderError,
+    asyncDBException,
+)
 
-def module_exists(module_name, classpath):
-    try:
-        # try to using importlib
-        module = importlib.import_module(classpath, package="providers")
-        obj = getattr(module, module_name)
-        return obj
-    except ImportError:
-        try:
-            # try to using __import__
-            obj = __import__(classpath, fromlist=[module_name])
-            return obj
-        except ImportError:
-            # logger.debug("No Provider {} Found".format(module_name))
-            raise NotSupported(message="No Provider %s Found" % module_name, code=404)
-            return False
+from .providers import _PROVIDERS
+from .utils.functions import module_exists
 
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-"""
- Factory Proxy Interfaces for Providers
-"""
+# Factory interface for Pool-based connectors
+class AsyncPool:
+    """
+    AsyncPool.
+       Base class for Asyncio-based DB Pools.
+    """
 
-
-class AsyncPool(object):
     _provider = None
     _name = ""
 
-    def __new__(self, provider="dummy", **kwargs):
-        self._provider = None
-        self._name = provider
-        # logger.info('Load Pool Provider: {}'.format(self._name))
-        classpath = "asyncdb.providers.{provider}".format(provider=self._name)
-        poolName = "{}Pool".format(self._name)
+    def __new__(cls, provider="dummy", **kwargs):
+        cls._provider = None
+        cls._name = provider
+        classpath = "asyncdb.providers.{provider}".format(provider=cls._name)
+        poolName = "{}Pool".format(cls._name)
         try:
             obj = module_exists(poolName, classpath)
             if obj:
-                self._provider = obj(**kwargs)
+                cls._provider = obj(**kwargs)
+                return cls._provider
             else:
                 raise asyncDBException(
                     message="Cannot Load Pool provider {}".format(poolName)
                 )
         except Exception as err:
             raise ProviderError(message=str(err), code=404)
-        finally:
-            return self._provider
 
 
-class AsyncDB(object):
+# Factory Proxy Interfaces for Providers
+class AsyncDB:
     _provider = None
     _name = ""
 
-    def __new__(self, provider="dummy", **kwargs):
-        self._provider = None
-        self._name = provider
-        # logger.debug('Load Provider: {}'.format(self._name))
-        classpath = "asyncdb.providers.{provider}".format(provider=self._name)
-        # logger.debug("Provider Path: %s" % classpath)
+    def __new__(cls, provider="dummy", **kwargs):
+        cls._provider = None
+        cls._name = provider
+        if provider in _PROVIDERS:
+            obj = _PROVIDERS[provider]
+            cls._provider = obj(**kwargs)
+            return cls._provider
+        classpath = "asyncdb.providers.{provider}".format(provider=cls._name)
         try:
-            obj = module_exists(self._name, classpath)
+            obj = module_exists(cls._name, classpath)
             if obj:
-                self._provider = obj(**kwargs)
+                cls._provider = obj(**kwargs)
+                return cls._provider
             else:
                 raise asyncDBException(
-                    message="Cannot Load provider {}".format(self._name)
+                    message="Cannot Load provider {}".format(cls._name)
                 )
         except Exception as err:
             raise ProviderError(message=str(err), code=404)
-        finally:
-            return self._provider
