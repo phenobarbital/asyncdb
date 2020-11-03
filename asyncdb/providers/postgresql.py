@@ -34,6 +34,16 @@ from asyncdb.providers.sql import (
     baseCursor
 )
 
+class postgresqlCursor(baseCursor):
+    _connection: aiopg.Connection = None
+
+    async def __aenter__(self) -> "postgresqlCursor":
+        #self._cursor = await self._connection.cursor(cursor_factory=NamedTupleCursor)
+        self._cursor = await self._connection.execute(
+            self._sentence, self._params
+        )
+        return self
+
 class postgresql(SQLProvider, Thread):
     _provider = "postgresql"
     _syntax = "sql"

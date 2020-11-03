@@ -301,6 +301,17 @@ class pgPool(BasePool):
                 raise ProviderError("Execute Error: {}".format(str(err)))
 
 
+class pglCursor(baseCursor):
+    _connection: asyncpg.Connection = None
+
+    async def __aenter__(self) -> "pglCursor":
+        if not self._connection:
+            await self.connection()
+        self._cursor = await self._connection.cursor(
+            self._sentence, self._params
+        )
+        return self
+
 class pg(SQLProvider):
     _provider = "postgresql"
     _syntax = "sql"
@@ -622,6 +633,7 @@ class pg(SQLProvider):
     Cursor Context
     """
 
+
     async def cursor(self, sentence):
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
@@ -792,188 +804,6 @@ class pg(SQLProvider):
         except Exception as err:
             error = "Error on Table Copy: {}".format(str(err))
             raise Exception(error)
-
-    """
-    Meta-Operations
-    """
-
-    def table(self, table):
-        try:
-            return self._query_raw.format_map(SafeDict(table=table))
-        except Exception as e:
-            print(e)
-            return False
-
-    def fields(self, sentence, fields=None):
-        _sql = False
-        if not fields:
-            _sql = sentence.format_map(SafeDict(fields="*"))
-        elif type(fields) == str:
-            _sql = sentence.format_map(SafeDict(fields=fields))
-        elif type(fields) == list:
-            _sql = sentence.format_map(SafeDict(fields=",".join(fields)))
-        return _sql
-
-    """
-    where
-      add WHERE conditions to SQL
-    """
-
-    def where(self, sentence, where):
-        sql = ""
-        if sentence:
-            where_string = ""
-            if not where:
-                sql = sentence.format_map(SafeDict(where_cond=""))
-            elif type(where) == dict:
-                where_cond = []
-                for key, value in where.items():
-                    # print("KEY {}, VAL: {}".format(key, value))
-                    if type(value) == str or type(value) == int:
-                        if value == "null" or value == "NULL":
-                            where_string.append("%s IS NULL" % (key))
-                        elif value == "!null" or value == "!NULL":
-                            where_string.append("%s IS NOT NULL" % (key))
-                        elif key.endswith("!"):
-                            where_cond.append("%s != %s" % (key[:-1], value))
-                        else:
-                            if (
-                                type(value) == str and value.startswith("'")
-                                and value.endswith("'")
-                            ):
-                                where_cond.append(
-                                    "%s = %s" % (key, "{}".format(value))
-                                )
-                            elif type(value) == int:
-                                where_cond.append(
-                                    "%s = %s" % (key, "{}".format(value))
-                                )
-                            else:
-                                where_cond.append(
-                                    "%s = %s" % (key, "'{}'".format(value))
-                                )
-                    elif type(value) == bool:
-                        val = str(value)
-                        where_cond.append("%s = %s" % (key, val))
-                    else:
-                        val = ",".join(map(str, value))
-                        if type(val) == str and "'" not in val:
-                            where_cond.append(
-                                "%s IN (%s)" % (key, "'{}'".format(val))
-                            )
-                        else:
-                            where_cond.append("%s IN (%s)" % (key, val))
-                # if 'WHERE ' in sentence:
-                #    where_string = ' AND %s' % (' AND '.join(where_cond))
-                # else:
-                where_string = " WHERE %s" % (" AND ".join(where_cond))
-                print("WHERE cond is %s" % where_string)
-                sql = sentence.format_map(SafeDict(where_cond=where_string))
-            elif type(where) == str:
-                where_string = where
-                if not where.startswith("WHERE"):
-                    where_string = " WHERE %s" % where
-                sql = sentence.format_map(SafeDict(where_cond=where_string))
-            else:
-                sql = sentence.format_map(SafeDict(where_cond=""))
-            del where
-            del where_string
-            return sql
-        else:
-            return False
-
-    def limit(self, sentence, limit=1):
-        """
-        LIMIT
-          add limiting to SQL
-        """
-        if sentence:
-            return "{q} LIMIT {limit}".format(q=sentence, limit=limit)
-        return self
-
-    def orderby(self, sentence, ordering=[]):
-        """
-        LIMIT
-          add limiting to SQL
-        """
-        if sentence:
-            if type(ordering) == str:
-                return "{q} ORDER BY {ordering}".format(
-                    q=sentence, ordering=ordering
-                )
-            elif type(ordering) == list:
-                return "{q} ORDER BY {ordering}".format(
-                    q=sentence, ordering=", ".join(ordering)
-                )
-        return self
-
-    def get_query(self, sentence):
-        """
-        get_query
-          Get formmated query
-        """
-        sql = sentence
-        try:
-            # remove fields and where_cond
-            sql = sentence.format_map(SafeDict(fields="*", where_cond=""))
-            if not self.connected:
-                self.connection()
-            prepared, error = self._loop.run_until_complete(self.prepare(sql))
-            if not error:
-                self._columns = self.get_columns()
-            else:
-                return False
-        except (ProviderError, StatementError) as err:
-            return False
-        except Exception as e:
-            print(e)
-            return False
-        return sql
-
-    def column_info(self, table):
-        """
-        column_info
-          get column information about a table
-        """
-        discover = "SELECT attname AS column_name, atttypid::regtype AS data_type FROM pg_attribute WHERE attrelid = '{}'::regclass AND attnum > 0 AND NOT attisdropped ORDER  BY attnum".format(
-            table
-        )
-        try:
-            result, error = self._loop.run_until_complete(self.query(discover))
-            if result:
-                return result
-        except (NoDataFound, ProviderError):
-            print(err)
-            return False
-        except Exception as err:
-            print(err)
-            return False
-
-    def insert(self, table, data, **kwargs):
-        """
-        insert
-           insert the result onto a table
-        """
-        sql = "INSERT INTO {table} ({fields}) VALUES ({values})"
-        sql = sql.format_map(SafeDict(table=table))
-        # set columns
-        sql = sql.format_map(SafeDict(fields=",".join(data.keys())))
-        values = ",".join(_escapeString(v) for v in data.values())
-        sql = sql.format_map(SafeDict(values=values))
-        # print(sql)
-        try:
-            result = self._loop.run_until_complete(
-                self._connection.execute(sql)
-            )
-            if not result:
-                print(result)
-                return False
-            else:
-                return result
-        except Exception as err:
-            print(sql)
-            print(err)
-            return False
 
 
 """
