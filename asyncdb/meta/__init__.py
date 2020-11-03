@@ -1,12 +1,5 @@
 import asyncio
-import os.path
-import sys
-
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
-)
-
-from asyncdb.exceptions import *
+from asyncdb.exceptions import ProviderError, NoDataFound, StatementError
 from asyncdb.utils import SafeDict
 
 
@@ -415,6 +408,10 @@ class asyncRecord(object):
             return self._row[key]
         else:
             return False
+
+    @property
+    def keys(self):
+        return self._columns
 
     def __getattr__(self, attr):
         """
