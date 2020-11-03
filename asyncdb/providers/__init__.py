@@ -251,11 +251,11 @@ class BaseProvider(ABC):
     def is_connected(self):
         return self._connected
 
-    #@classmethod
-    def name(self):
+    @classmethod
+    def driver(self):
         return self.__name__
 
-    #@classmethod
+    @classmethod
     def dialect(self):
         return self._syntax
 
@@ -394,7 +394,7 @@ class BaseProvider(ABC):
 
 def registerProvider(provider):
     global _PROVIDERS
-    name = provider.name()
+    name = provider.driver()
     classpath = f'asyncdb.providers.{name}'
     try:
         cls = module_exists(name, classpath)

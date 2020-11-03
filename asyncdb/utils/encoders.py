@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
+from rapidjson import Encoder as JSONEncoder
 
 import asyncpg
 import numpy as np
@@ -84,9 +85,16 @@ class EnumEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-class DefaultEncoder(json.JSONEncoder):
+class DefaultEncoder(JSONEncoder):
+    """
+    Basic Encoder using rapidjson
+    """
     def default(self, obj):
-        if hasattr(obj, "hex"):
+        if isinstance(obj, datetime):
+            return str(obj)
+        elif isinstance(obj, timedelta):
+            return obj.__str__()
+        elif hasattr(obj, 'hex'):
             return obj.hex
         elif isinstance(obj, Enum):
             if not obj.value:
@@ -96,14 +104,27 @@ class DefaultEncoder(json.JSONEncoder):
         elif isinstance(obj, uuid.UUID):
             try:
                 return str(obj)
-            except Exception:
+            except Exception as e:
                 return obj.hex
         elif isinstance(obj, decimal.Decimal):
-            return float(obj)
-        elif hasattr(obj, "isoformat"):
+             return float(obj)
+        elif isinstance(obj, Decimal):
+            return str(obj)
+        elif hasattr(obj, 'isoformat'):
             return obj.isoformat()
         elif isinstance(obj, asyncpg.Range):
             return [obj.lower, obj.upper]
         else:
-            return str(object=obj)
-        return json.JSONEncoder.default(self, obj)
+            #return str(obj)
+            raise TypeError('%r is not JSON serializable' % obj)
+
+class BaseEncoder:
+    """
+    Encoder replacement for json.dumps using rapidjson
+    """
+    def __init__(self, *args, **kwargs):
+        # Filter/adapt JSON arguments to RapidJSON ones
+        rjargs = ()
+        rjkwargs = {}
+        encoder = DefaultEncoder(*rjargs, **rjkwargs)
+        self.encode = encoder.__call__
