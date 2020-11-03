@@ -23,6 +23,37 @@ _PROVIDERS = {}
 
 # logging system
 import logging
+loglevel = logging.INFO
+logger_config = dict(
+    version = 1,
+    formatters = {
+        "console": {
+            'format': '%(message)s'
+        },
+        "file": {
+            "format": "%(asctime)s: [%(levelname)s]: %(pathname)s: %(lineno)d: \n%(message)s\n"
+        },
+        'default': {
+            'format': '[%(levelname)s] %(asctime)s %(name)s: %(message)s'}
+        },
+    handlers = {
+        "console": {
+                "formatter": "console",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+                'level': loglevel
+        },
+        'StreamHandler': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'default',
+                'level': loglevel
+        }
+        },
+    root = {
+        'handlers': ['StreamHandler','console'],
+        'level': loglevel,
+        },
+)
 
 class BasePool(ABC):
     _dsn = ""
