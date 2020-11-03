@@ -65,7 +65,7 @@ class asyncORM(object):
         """
         if self._connection:
             try:
-                asyncio.ensure_future(self._connection.close(timeout=5))
+                asyncio.get_running_loop().run_until_complete(self._connection.close(timeout=5))
             except Exception as err:
                 pass
             # self._loop.run_until_complete()
