@@ -68,6 +68,7 @@ setup(
         "aioodbc==0.3.3",
         "pyodbc==4.0.30",
         "python-rapidjson==0.9.3",
+        "rapidjson==1.0.0"
 
     ],
     extra_requires=[

@@ -12,10 +12,10 @@ import threading
 import time
 from datetime import datetime
 from functools import partial
-from logging.config import dictConfig
 from threading import Thread
 
 import asyncpg
+
 from asyncpg.exceptions import (
     ConnectionDoesNotExistError,
     FatalPostgresError,
@@ -44,20 +44,21 @@ from asyncdb.meta import (
     asyncResult,
 )
 from asyncdb.providers import (
-    BasePool,
-    BaseProvider,
-    logger_config,
     registerProvider,
 )
-from asyncdb.utils import (
-    EnumEncoder,
-    SafeDict,
+
+from asyncdb.utils import SafeDict
+
+from asyncdb.utils.encoders import (
+    BaseEncoder,
 )
 
-dictConfig(logger_config)
+from asyncdb.providers.sql import (
+    SQLProvider,
+    baseCursor
+)
 
-
-class postgres(threading.Thread, BaseProvider):
+class postgres(threading.Thread, SQLProvider):
     _provider = "postgresql"
     _syntax = "sql"
     _test_query = "SELECT 1"
@@ -145,7 +146,7 @@ class postgres(threading.Thread, BaseProvider):
     async def init_connection(self, connection):
         # Setup jsonb encoder/decoder
         def _encoder(value):
-            return json.dumps(value, cls=EnumEncoder)
+            return json.dumps(value, cls=BaseEncoder)
 
         def _decoder(value):
             return json.loads(value)

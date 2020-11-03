@@ -1,6 +1,7 @@
 from .encoders import (
     DefaultEncoder,
     EnumEncoder,
+    BaseEncoder
 )
 from .functions import (
     SafeDict,
@@ -9,5 +10,5 @@ from .functions import (
 )
 
 __all__ = [
-    "SafeDict", "DefaultEncoder", "EnumEncoder", "is_pgconstant", "is_udf"
+    "SafeDict", "DefaultEncoder", "BaseEncoder", "EnumEncoder", "is_pgconstant", "is_udf"
 ]
