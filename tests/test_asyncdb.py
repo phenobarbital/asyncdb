@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+from asyncdb import AsyncDB, AsyncPool
+from asyncdb.meta import asyncORM
+from asyncdb.exceptions import NoDataFound, ProviderError, StatementError
+
 """
 for this test needs to create:
     * a schema called test
@@ -22,10 +26,7 @@ import asyncio
 loop = asyncio.get_event_loop()
 asyncio.set_event_loop(loop)
 
-from asyncdb import AsyncDB, AsyncPool
-from asyncdb.exceptions import NoDataFound, ProviderError, StatementError
-
-asyncpg_url = "postgres://troc-pgdata:z!7ru$7aNuy=za@127.0.0.1:5432/navigator_dev"
+asyncpg_url = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator_dev"
 
 pool = AsyncPool("pg", dsn=asyncpg_url, loop=loop)
 loop.run_until_complete(pool.connect())
@@ -34,6 +35,25 @@ loop.run_until_complete(pool.release(connection=db.get_connection()))
 
 result = loop.run_until_complete(pool.execute("SELECT 1"))
 print(result)
+
+def adb():
+    #loop = asyncio.get_event_loop()
+    db = None
+    if pool.is_connected():
+        #db = asyncio.get_running_loop().run_until_complete(dbpool.acquire())
+        db = loop.run_until_complete(pool.acquire())
+    return asyncORM(db=db)
+
+def sharing_token(token):
+    db = adb()
+    try:
+        token = db.table('troc.tokens').filter(key=token).fields(['id', 'created_at', 'key', 'expiration']).fetchrow()
+        return token
+    except Exception as e:
+        print(f'Unknown Token on Middleware: {e}')
+        return False
+    finally:
+        db.close()
 
 
 async def connect(c):
@@ -102,11 +122,13 @@ async def prepared(p):
         print(await prepared.fetchval(20))
 
 
-# d = AsyncDB('pg', dsn = asyncpg_url, pool = pool, loop = loop)
-# loop.run_until_complete(connect(d))
-# pool.terminate()
-
-# standalone connection (without pool)
-e = AsyncDB("pg", dsn=asyncpg_url, loop=loop)
-loop.run_until_complete(connect(e))
-loop.run_until_complete(prepared(e))
+if __name__ == '__main__':
+    try:
+        a = sharing_token('67C1BEE8DDC0BB873930D04FAF16B338F8CB09490571F8901E534937D4EFA8EE33230C435BDA93B7C7CEBA67858C4F70321A0D92201947F13278F495F92DDC0BE5FDFCF0684704C78A3E7BA5133ACADBE2E238F25D568AEC4170EB7A0BE819CE8F758B890855E5445EB22BE52439FA377D00C9E4225BC6DAEDD2DAC084446E7F697BF1CEC129DFB84FA129B7B8881C66EEFD91A0869DAE5D71FD5055FCFF75')
+        print(a.columns())
+        # # test: first with db connected:
+        # e = AsyncDB("pg", dsn=asyncpg_url, loop=loop)
+        # loop.run_until_complete(connect(e))
+        # loop.run_until_complete(prepared(e))
+    finally:
+        pool.terminate()

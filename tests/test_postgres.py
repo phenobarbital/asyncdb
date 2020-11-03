@@ -2,7 +2,9 @@ import asyncio
 import datetime
 
 from asyncdb import AsyncDB
+from asyncdb.meta import asyncORM
 from asyncdb.providers.postgres import postgres
+from asyncdb.exceptions import NoDataFound, ProviderError, StatementError
 
 loop = asyncio.get_event_loop()
 asyncio.set_event_loop(loop)
@@ -16,9 +18,30 @@ params = {
     "database": "navigator_dev",
     "DEBUG": True,
 }
+asyncpg_url = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator_dev"
 
 pg = postgres(params=params)
 newloop = pg.get_loop()
+
+def adb():
+    try:
+        db = AsyncDB('postgres', dsn=asyncpg_url)
+        if db:
+            db.connect()
+        return asyncORM(db=db)
+    except Exception as err:
+        raise Exception(err)
+
+def sharing_token(token):
+    db = adb()
+    try:
+        token = db.table('troc.tokens').filter(key=token).fields(['id', 'created_at', 'key', 'expiration']).one()
+        return token
+    except Exception as e:
+        print(f'Unknown Token on Middleware: {e}')
+        return False
+    finally:
+        db.close()
 
 # asyncio version
 async def test_connection(db):
@@ -83,7 +106,16 @@ async def test_db(db):
     connection(pg)
 
 
-newloop.run_until_complete(test_connection(pg))
-loop.run_until_complete(test_db(pg))
-pg.terminate()  # closing all remaining threads and loop
-loop.close()
+if __name__ == '__main__':
+    try:
+        newloop.run_until_complete(test_connection(pg))
+        loop.run_until_complete(test_db(pg))
+        a = sharing_token('67C1BEE8DDC0BB873930D04FAF16B338F8CB09490571F8901E534937D4EFA8EE33230C435BDA93B7C7CEBA67858C4F70321A0D92201947F13278F495F92DDC0BE5FDFCF0684704C78A3E7BA5133ACADBE2E238F25D568AEC4170EB7A0BE819CE8F758B890855E5445EB22BE52439FA377D00C9E4225BC6DAEDD2DAC084446E7F697BF1CEC129DFB84FA129B7B8881C66EEFD91A0869DAE5D71FD5055FCFF75')
+        print(a.columns(), a.created_at)
+        # # test: first with db connected:
+        # e = AsyncDB("pg", dsn=asyncpg_url, loop=loop)
+        # loop.run_until_complete(connect(e))
+        # loop.run_until_complete(prepared(e))
+    finally:
+        pg.terminate()
+        loop.close()
