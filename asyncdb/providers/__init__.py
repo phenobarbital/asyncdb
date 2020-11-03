@@ -97,6 +97,18 @@ class BasePool(ABC):
         return self._dsn.format(**params)
 
     """
+    Context magic Methods
+    """
+    async def __aenter__(self) -> "sqlite":
+        if not self._connection:
+            await self.connection()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        # clean up anything you need to clean up
+        return await self.close(timeout=5)
+
+    """
     Properties
     """
 
@@ -137,7 +149,7 @@ class BasePool(ABC):
     """
 
     @abstractmethod
-    async def close(self):
+    async def close(self, **kwargs):
         pass
 
     """

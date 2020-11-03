@@ -25,18 +25,20 @@ from ..exceptions import (
     StatementError,
     TooManyConnections,
 )
-from ..utils import EnumEncoder
 from . import *
 
 logger = logging.getLogger(__name__)
 
+from asyncdb.providers.sql import (
+    SQLProvider,
+    baseCursor
+)
 
-class postgresql(BaseProvider, Thread):
+class postgresql(SQLProvider, Thread):
     _provider = "postgresql"
     _syntax = "sql"
     _test_query = "SELECT 1::integer as column"
     _dsn = "postgresql://{user}:{password}@{host}:{port}/{database}"
-    # _dsn = 'dbname={database} user={user} password={password} host={host} port={port}'
     _loop = None
     _pool = None
     # _engine = None
