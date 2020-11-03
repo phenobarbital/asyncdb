@@ -9,6 +9,7 @@ import asyncio
 import logging
 
 import pylibmc
+import time
 
 from asyncdb.exceptions import *
 from asyncdb.providers import (
