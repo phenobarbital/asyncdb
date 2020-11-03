@@ -5,6 +5,7 @@ This provider implements a basic set of funcionalities from SQLAlchemy core and 
 """
 import asyncio
 import logging
+import time
 from threading import Thread
 
 from psycopg2.extras import NamedTupleCursor

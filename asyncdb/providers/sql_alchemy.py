@@ -7,6 +7,7 @@ This provider implements a basic set of funcionalities from SQLAlchemy core
 """
 
 import asyncio
+import time
 
 from psycopg2.extras import NamedTupleCursor
 from sqlalchemy import create_engine, select
