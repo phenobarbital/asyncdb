@@ -1,10 +1,11 @@
 # AsyncDB #
 
-AsyncDB is a new library for database (and other datasource connections like RESTful services) connections used by T-ROC Navigator App.
+AsyncDB is a collection of different Database Drivers using asyncio-based connections, binary-connectors (as asyncpg) but providing an abstraction layer to easily connect to different data sources.
 
-### What is AsyncDB? ###
+### Why AsyncDB? ###
 
-The goal of AsyncDB is to provide a subset of providers (connectors) to access different databases and data sources for data interaction.
+The finality of AsyncDB is to provide us a subset of drivers (connectors) for accessing different databases and data sources for data interaction.
+The main goal of AsyncDB is using asyncio-based technologies.
 
 * Quick summary
 * Version
@@ -28,7 +29,7 @@ The goal of AsyncDB is to provide a subset of providers (connectors) to access d
 
 Currently AsyncDB supports the following databases:
 
-* PostgreSQL (requires asyncpg)
+* PostgreSQL (requires asyncpg and aiopg)
 * SQLite (requires aiosqlite)
 * mySQL (requires aiomysql)
 * SQLAlchemy (requires sqlalchemy_aio)
@@ -36,11 +37,12 @@ Currently AsyncDB supports the following databases:
 * Redis (requires aioredis)
 * Memcache (requires aiomcache)
 
-Future work:
-* MS SQL Server (non-asyncio using freeTDS)
-* Oracle
+#### Future work: ####
+* MS SQL Server (non-asyncio using freeTDS or using aiodbc)
 * Apache Cassandra
 * CouchBase
+* InfluxDB
+* Prometheus
 
 ### Contribution guidelines ###
 
@@ -56,4 +58,4 @@ Please have a look at the Contribution Guide
 
 ### License ###
 
-AsyncDB is dual-licensed under BSD and Apache 2.0 licenses.
+AsyncDB is copyright of Jesus Lara (https://phenobarbital.info) and is dual-licensed under BSD and Apache 2.0 licenses. I am providing code in this repository under an open source licenses, remember, this is my personal repository; the license that you receive is from me and not from my employeer.
