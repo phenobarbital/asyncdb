@@ -25,18 +25,30 @@ from ..exceptions import (
     StatementError,
     TooManyConnections,
 )
-from ..utils import EnumEncoder
 from . import *
 
 logger = logging.getLogger(__name__)
 
+from asyncdb.providers.sql import (
+    SQLProvider,
+    baseCursor
+)
 
-class postgresql(BaseProvider, Thread):
+class postgresqlCursor(baseCursor):
+    _connection: aiopg.Connection = None
+
+    async def __aenter__(self) -> "postgresqlCursor":
+        #self._cursor = await self._connection.cursor(cursor_factory=NamedTupleCursor)
+        self._cursor = await self._connection.execute(
+            self._sentence, self._params
+        )
+        return self
+
+class postgresql(SQLProvider, Thread):
     _provider = "postgresql"
     _syntax = "sql"
     _test_query = "SELECT 1::integer as column"
     _dsn = "postgresql://{user}:{password}@{host}:{port}/{database}"
-    # _dsn = 'dbname={database} user={user} password={password} host={host} port={port}'
     _loop = None
     _pool = None
     # _engine = None
@@ -182,7 +194,7 @@ class postgresql(BaseProvider, Thread):
         """
         Preparing a sentence
         """
-        error = None
+        return [sentence, error]
 
     def test_connection(self):
         """

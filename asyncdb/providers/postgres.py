@@ -39,10 +39,12 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
+
 from asyncdb.meta import (
     asyncRecord,
     asyncResult,
 )
+
 from asyncdb.providers import (
     registerProvider,
 )
@@ -325,12 +327,14 @@ class postgres(threading.Thread, SQLProvider):
         Preparing a sentence
         """
         stmt = None
+        error = None
         self._columns = []
         if not self._connection:
             await self.connection()
         try:
             stmt = await self._connection.prepare(sentence, *args)
             self._columns = [a.name for a in stmt.get_attributes()]
+            self._prepared = stmt
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
             raise ProviderError(error)
@@ -349,8 +353,7 @@ class postgres(threading.Thread, SQLProvider):
             error = "Error on Query Row: {}".format(str(err))
             raise Exception(error)
         finally:
-            # return the prepared statement
-            return stmt
+            return [self._prepared, error]
 
     async def columns(self, sentence, *args):
         self._columns = []
