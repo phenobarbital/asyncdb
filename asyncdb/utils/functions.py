@@ -43,6 +43,12 @@ class SafeDict(dict):
         return "{" + key + "}"
 
 
+def _escapeString(value):
+    v = value if value != "None" else ""
+    v = str(v).replace("'", "''")
+    v = "'{}'".format(v) if type(v) == str else v
+    return v
+
 def generate_key():
     return binascii.hexlify(os.urandom(20)).decode()
 

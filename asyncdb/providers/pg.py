@@ -39,9 +39,17 @@ from asyncdb.providers import (
     BaseProvider,
     registerProvider,
 )
+from asyncdb.utils.encoders import (
+    BaseEncoder,
+)
 from asyncdb.utils import (
-    EnumEncoder,
     SafeDict,
+    _escapeString,
+)
+
+from asyncdb.providers.sql import (
+    SQLProvider,
+    baseCursor
 )
 
 logger = logging.getLogger(__name__)
@@ -80,7 +88,7 @@ class pgPool(BasePool):
     async def init_connection(self, connection):
         # Setup jsonb encoder/decoder
         def _encoder(value):
-            return json.dumps(value, cls=EnumEncoder)
+            return json.dumps(value, cls=BaseEncoder)
 
         def _decoder(value):
             return json.loads(value)
@@ -293,7 +301,7 @@ class pgPool(BasePool):
                 raise ProviderError("Execute Error: {}".format(str(err)))
 
 
-class pg(BaseProvider):
+class pg(SQLProvider):
     _provider = "postgresql"
     _syntax = "sql"
     _test_query = "SELECT 1"
@@ -303,28 +311,7 @@ class pg(BaseProvider):
     _transaction = None
     _initialized_on = None
     _query_raw = "SELECT {fields} FROM {table} {where_cond}"
-    """
-    Async Context magic Methods
-    """
-    async def __aenter__(self):
-        return self
 
-    # async def __aexit__(self, exc_type, exc, tb):
-    async def __aexit__(self, *args):
-        # clean up anything you need to clean up
-        await self.close(timeout=5)
-        pass
-
-    """
-    Context magic Methods
-    """
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback, *args):
-        self.terminate()
-        pass
 
     async def close(self, timeout=5):
         """
@@ -371,7 +358,7 @@ class pg(BaseProvider):
 
         # Setup jsonb encoder/decoder
         def _encoder(value):
-            return json.dumps(value, cls=EnumEncoder)
+            return json.dumps(value, cls=BaseEncoder)
 
         def _decoder(value):
             return json.loads(value)
@@ -987,12 +974,6 @@ class pg(BaseProvider):
             print(sql)
             print(err)
             return False
-
-    def _escapeString(value):
-        v = value if value != "None" else ""
-        v = str(v).replace("'", "''")
-        v = "'{}'".format(v) if type(v) == str else v
-        return v
 
 
 """
