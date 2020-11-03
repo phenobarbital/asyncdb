@@ -251,11 +251,11 @@ class BaseProvider(ABC):
     def is_connected(self):
         return self._connected
 
-    @classmethod
+    #@classmethod
     def name(self):
         return self.__name__
 
-    @classmethod
+    #@classmethod
     def dialect(self):
         return self._syntax
 
