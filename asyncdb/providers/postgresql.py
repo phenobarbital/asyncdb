@@ -194,7 +194,7 @@ class postgresql(SQLProvider, Thread):
         """
         Preparing a sentence
         """
-        error = None
+        return [sentence, error]
 
     def test_connection(self):
         """
