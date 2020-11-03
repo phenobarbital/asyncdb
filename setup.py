@@ -43,7 +43,6 @@ setup(
         "tqdm==4.50.2",
         "tabulate==0.8.7",
         "python-magic==0.4.18",
-        "cryptography==3.1.1",
         "pgpy==0.5.3",
         "botocore==1.18.18",
         "boto3==1.15.18",
@@ -71,6 +70,9 @@ setup(
         "pyodbc==4.0.30",
         "python-rapidjson==0.9.3",
 
+    ],
+    extra_requires=[
+        'cryptography>=3.2'
     ],
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/asyncdb",
