@@ -7,7 +7,7 @@ This provider implements a simple subset of funcionalities from aiomcache, this 
 
 import asyncio
 import logging
-
+import time
 import aiomcache
 
 from asyncdb.exceptions import *
