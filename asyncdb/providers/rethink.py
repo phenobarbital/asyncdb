@@ -43,7 +43,7 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from asyncdb.utils import *
+from asyncdb.utils.functions import *
 
 from . import (
     BaseProvider,
