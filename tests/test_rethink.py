@@ -38,4 +38,9 @@ try:
     loop.run_until_complete(connect(rt))
 finally:
     loop.run_until_complete(rt.close())
-    loop.close()
+    # Find all running tasks:
+    pending = asyncio.all_tasks()
+    # Run loop until tasks done:
+    loop.run_until_complete(asyncio.gather(*pending))
+    print("Shutdown complete ...")
+    #loop.stop()
