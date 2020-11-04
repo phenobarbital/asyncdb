@@ -78,7 +78,10 @@ class rethink(BaseProvider):
 
     def __init__(self, loop=None, params={}, **kwargs):
         super(rethink, self).__init__(loop=loop, params=params)
-        self._loop = asyncio.get_event_loop()
+        if loop:
+            self._loop = loop
+        else:
+            self._loop = asyncio.get_event_loop()
         self.conditions = {}
         # set rt object
         self._engine = rt
@@ -86,12 +89,6 @@ class rethink(BaseProvider):
         self._engine.set_loop_type("asyncio")
         asyncio.set_event_loop(self._loop)
 
-    """
-    Async Context magic Methods
-    """
-
-    async def __aexit__(self, exc_type, exc, tb):
-        await self.close(wait=True)
 
     async def connection(self):
         logging.debug(
