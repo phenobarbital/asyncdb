@@ -21,6 +21,7 @@ from datetime import datetime
 from threading import Thread
 
 from rethinkdb import RethinkDB
+
 from rethinkdb.errors import (
     ReqlDriverError,
     ReqlError,
@@ -44,12 +45,12 @@ from asyncdb.exceptions import (
 )
 from asyncdb.utils import *
 
-from . import *
+from . import (
+    BaseProvider,
+    registerProvider,
+)
 
 rt = RethinkDB()
-
-logger = logging.getLogger(__name__)
-
 
 class rethink(BaseProvider):
     _provider = "rethinkdb"
@@ -93,7 +94,7 @@ class rethink(BaseProvider):
         await self.close(wait=True)
 
     async def connection(self):
-        logger.debug(
+        logging.debug(
             "RT Connection to host {} on port {} to database {}".format(
                 self._params["host"], self._params["port"], self._params["db"]
             )
@@ -110,6 +111,12 @@ class rethink(BaseProvider):
             return False
         except ReqlDriverError as err:
             error = "No database connection could be established: {}".format(
+                str(err)
+            )
+            raise ProviderError(message=error, code=503)
+            return False
+        except Exception as err:
+            error = "Exception on RethinkDB: {}".format(
                 str(err)
             )
             raise ProviderError(message=error, code=503)
@@ -137,7 +144,7 @@ class rethink(BaseProvider):
             self._connection = None
 
     def terminate(self):
-        logger.debug("Running Close")
+        logging.debug("Closing Rethink Connection")
         self._loop.run_until_complete(self.close())
 
     """
@@ -329,8 +336,8 @@ class rethink(BaseProvider):
     Derived Methods (mandatory)
     """
 
-    def test_connection(self):
-        pass
+    async def test_connection(self):
+        return await self._engine.db_list().run(self._connection)
 
     def execute(self):
         pass
