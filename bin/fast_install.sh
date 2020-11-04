@@ -18,7 +18,7 @@ sudo apt install -y  $(cat INSTALL)
 #sudo apt install -y python3.8-dev python3.8-venv libmemcached-dev zlib1g-dev build-essential python-dev libffi-dev unixodbc unixodbc-dev
 python3.8 -m venv .venv
 source .venv/bin/activate -m
-pip install --upgrade pip
+pip install --upgrade pip wheel setuptools
 # installing asyncdb
 python setup.py develop
 # install other requirements
