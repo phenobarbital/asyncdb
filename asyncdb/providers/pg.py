@@ -12,6 +12,7 @@ from datetime import datetime
 
 import asyncpg
 from asyncpg.exceptions import (
+    _handle_done_tasks,
     ConnectionDoesNotExistError,
     FatalPostgresError,
     InterfaceError,
@@ -255,13 +256,14 @@ class pgPool(BasePool):
                 pass
             try:
                 close = asyncio.create_task(self._pool.close())
+                close.add_done_callback(_handle_done_tasks)
                 await asyncio.wait_for(close, timeout=timeout, loop=self._loop)
             except Exception as err:
                 print("Pool Error: {}".format(str(err)))
                 raise ProviderError("Pool Error: {}".format(str(err)))
             finally:
                 self._pool.terminate()
-                self._pool = None
+                self._connected = False
 
     """
     Close Pool
@@ -279,7 +281,9 @@ class pgPool(BasePool):
             await self._pool.close()
         except Exception as err:
             print("Pool Closing Error: {}".format(str(err)))
+        finally:
             self._pool.terminate()
+            self._connected = False
 
     def terminate(self, gracefully=True):
         self._loop.run_until_complete(
