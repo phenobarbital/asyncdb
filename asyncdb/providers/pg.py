@@ -217,11 +217,10 @@ class pgPool(BasePool):
         if isinstance(connection, pg):
             conn = connection.engine()
         try:
-            if not conn.is_closed():
-                release = asyncio.create_task(self._pool.release(conn, timeout=10))
+            release = asyncio.create_task(self._pool.release(conn, timeout=10))
             #await self._pool.release(conn, timeout = timeout)
             #release = asyncio.ensure_future(release, loop=self._loop)
-                await asyncio.wait_for(release, timeout=timeout, loop=self._loop)
+            await asyncio.wait_for(release, timeout=timeout, loop=self._loop)
         except InterfaceError as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
         except InternalClientError as err:
