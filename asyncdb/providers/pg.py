@@ -251,6 +251,9 @@ class pgPool(BasePool):
             try:
                 if gracefully:
                     await self._pool.expire_connections()
+            except Exception as err:
+                pass
+            try:
                 close = asyncio.create_task(self._pool.close())
                 await asyncio.wait_for(close, timeout=timeout, loop=self._loop)
             except Exception as err:
@@ -258,7 +261,7 @@ class pgPool(BasePool):
                 await self._pool.terminate()
                 raise ProviderError("Pool Error: {}".format(str(err)))
             finally:
-                # await self._pool.terminate()
+                await self._pool.terminate()
                 self._pool = None
 
     """
