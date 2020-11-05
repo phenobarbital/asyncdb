@@ -120,7 +120,7 @@ class pgPool(BasePool):
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             server_settings = {
                 "application_name": "Navigator",
-                "idle_in_transaction_session_timeout": "10000",
+                "idle_in_transaction_session_timeout": "600",
                 "tcp_keepalives_idle": "600",
                 "max_parallel_workers": "16",
             }
@@ -130,7 +130,7 @@ class pgPool(BasePool):
                 max_queries=self._max_queries,
                 min_size=10,
                 max_size=self._max_clients,
-                max_inactive_connection_lifetime=10,
+                max_inactive_connection_lifetime=5,
                 timeout=self._timeout,
                 command_timeout=self._timeout,
                 init=self.init_connection,
