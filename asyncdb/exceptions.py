@@ -1,3 +1,4 @@
+import sys
 import asyncio
 import logging
 from typing import Any
@@ -68,12 +69,11 @@ class asyncDBException(Exception):
             message,
             code,
         )
-        self.message = message
         if code:
             self.code = code
-        #print(args)
 
     def __str__(self):
+        print(sys.exc_info()[2])
         if self.code:
             return f"{__name__} -> {self.message}, code {self.code}"
         else:
