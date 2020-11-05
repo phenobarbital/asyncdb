@@ -616,7 +616,7 @@ class postgres(threading.Thread, SQLProvider):
         self._error = None
         self._result = None
         try:
-            stmt = self._loop.run_until_complete(self.prepare(sentence))
+            stmt, error = self._loop.run_until_complete(self.prepare(sentence))
             if stmt:
                 result = self._loop.run_until_complete(stmt.fetch())
                 self._result = asyncResult(
