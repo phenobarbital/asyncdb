@@ -12,7 +12,6 @@ from datetime import datetime
 
 import asyncpg
 from asyncpg.exceptions import (
-    _handle_done_tasks,
     ConnectionDoesNotExistError,
     FatalPostgresError,
     InterfaceError,
@@ -27,6 +26,7 @@ from asyncpg.exceptions import (
 )
 
 from asyncdb.exceptions import (
+    _handle_done_tasks,
     ConnectionTimeout,
     DataError,
     EmptyStatement,
