@@ -99,9 +99,9 @@ class BasePool(ABC):
     """
     Context magic Methods
     """
-    async def __aenter__(self) -> "sqlite":
-        if not self._connection:
-            await self.connection()
+    async def __aenter__(self) -> "BasePool":
+        if not self._pool:
+            await self.connect()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -244,10 +244,12 @@ class BaseProvider(ABC):
     """
 
     async def __aenter__(self):
+        if not self._connection:
+            await self.connection()
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        await self.close()
+        await self.release()
 
     @classmethod
     def type(self):
@@ -290,6 +292,9 @@ class BaseProvider(ABC):
         if conn:
             self._connection = conn
             self._connected = True
+        else:
+            self._connection = None
+            self._connected = False
 
     def get_loop(self):
         return self._loop
@@ -312,6 +317,7 @@ class BaseProvider(ABC):
         if self._test_query is None:
             raise NotImplementedError()
         try:
+            print(self._test_query)
             return await self.query(self._test_query)
         except Exception as err:
             raise ProviderError(message=str(err), code=0)
