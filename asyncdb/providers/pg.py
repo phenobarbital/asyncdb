@@ -376,6 +376,9 @@ class pg(SQLProvider):
         """
         Get a connection
         """
+        if self._connection:
+            return self
+
         self._connection = None
         self._connected = False
 

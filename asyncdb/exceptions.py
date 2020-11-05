@@ -33,13 +33,15 @@ def default_exception_handler(loop, context: Any):
     logging.info("Exception Handler Caught")
     # first, handle with default handler
     loop.default_exception_handler(context)
-    msg = context.get("exception", context["message"])
-    task = context.get("task", context["future"])
     if not "exception" in context:
+        task = context.get("task", context["future"])
+        msg = context.get("exception", context["message"])
         # is an error
         logging.exception(f"Exception raised by Task {task}, Error: {msg}")
         raise Exception(f"{msg}: task: {task}")
     if not isinstance(context["exception"], asyncio.CancelledError):
+        task = context.get("task", context["future"])
+        msg = context.get("exception", context["message"])
         exception = type(task.exception())
         try:
             logging.exception(
@@ -71,14 +73,12 @@ class asyncDBException(Exception):
             message,
             code,
         )
+        self.message = message
         if code:
             self.code = code
 
     def __str__(self):
-        if self.code:
-            return f"{__name__} -> {self.message}, code {self.code}"
-        else:
-            return f"{__name__} -> {self.message}"
+        return f"{__name__} -> {self.message}"
 
     def get(self):
         return self.message
