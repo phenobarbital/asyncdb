@@ -53,3 +53,4 @@ if __name__ == "__main__":
     print('Working on huge datasets')
     loop.run_until_complete(pooler(pool))
     loop.run_until_complete(pool.wait_close(gracefully=True, timeout=5))
+    loop.stop()
