@@ -264,6 +264,7 @@ class pgPool(BasePool):
                     await self._pool.close()
             except Exception as err:
                 print(traceback.format_exc())
+                print(err.__class__, err.__dict__, err.message, err.args)
                 print("Pool Error: {}".format(str(err)))
                 raise ProviderError("Pool Error: {}".format(str(err)))
             finally:
