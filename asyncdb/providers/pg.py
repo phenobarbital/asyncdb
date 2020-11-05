@@ -9,6 +9,7 @@ import json
 import logging
 import time
 from datetime import datetime
+import traceback
 
 import asyncpg
 from asyncpg.exceptions import (
@@ -259,6 +260,7 @@ class pgPool(BasePool):
                 close.add_done_callback(_handle_done_tasks)
                 await asyncio.wait_for(close, timeout=timeout, loop=self._loop)
             except Exception as err:
+                print(traceback.format_exc())
                 print("Pool Error: {}".format(str(err)))
                 raise ProviderError("Pool Error: {}".format(str(err)))
             finally:
