@@ -63,6 +63,8 @@ def _handle_done_tasks(task: asyncio.Task) -> Any:
 
 class asyncDBException(Exception):
     """Base class for other exceptions"""
+    code: int = None
+
     def __init__(self, message: str, *args, code: int = None, **kwargs):
         super(asyncDBException, self).__init__(*args, **kwargs)
         self.args = (
@@ -73,7 +75,6 @@ class asyncDBException(Exception):
             self.code = code
 
     def __str__(self):
-        print(sys.exc_info()[2])
         if self.code:
             return f"{__name__} -> {self.message}, code {self.code}"
         else:
