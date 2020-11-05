@@ -250,15 +250,18 @@ class pgPool(BasePool):
             except Exception as err:
                 raise ProviderError("Release Error: {}".format(str(err)))
             # at now, try to closing pool
+            # try:
+            #     if gracefully:
+            #         await self._pool.expire_connections()
+            # except Exception as err:
+            #     pass
             try:
                 if gracefully:
-                    await self._pool.expire_connections()
-            except Exception as err:
-                pass
-            try:
-                close = asyncio.create_task(self._pool.close())
-                close.add_done_callback(_handle_done_tasks)
-                await asyncio.wait_for(close, timeout=timeout, loop=self._loop)
+                    close = asyncio.create_task(self._pool.close())
+                    close.add_done_callback(_handle_done_tasks)
+                    await asyncio.wait_for(close, timeout=timeout, loop=self._loop)
+                else:
+                    await self._pool.close()
             except Exception as err:
                 print(traceback.format_exc())
                 print("Pool Error: {}".format(str(err)))
