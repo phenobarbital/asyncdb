@@ -28,6 +28,7 @@ class DateEncoder(json.JSONEncoder):
 class NpEncoder(json.JSONEncoder):
     """
     npEncoder.
+
        Numpy number encoder for json
     """
     def default(self, obj):
@@ -66,11 +67,13 @@ class EnumEncoder(json.JSONEncoder):
     """
     EnumEncoder
     --------
-    Used to format objects into json-strings
 
+    Used to format objects into json-strings
     """
+
     def default(self, obj):
-        """Format several data types into json-type equivalent
+        """Format several data types into json-type equivalent.
+
         Return a new cls JSON EnumEncoder
         """
         if hasattr(obj, "hex"):
@@ -117,6 +120,7 @@ class DefaultEncoder(JSONEncoder):
         else:
             #return str(obj)
             raise TypeError('%r is not JSON serializable' % obj)
+
 
 class BaseEncoder:
     """
