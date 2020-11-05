@@ -26,7 +26,7 @@ async def shutdown(loop, signal=None):
         print("Asyncio Generic Error", err)
     finally:
         loop.stop()
-        loop.close()
+        #loop.close()
 
 
 def default_exception_handler(loop, context: Any):
