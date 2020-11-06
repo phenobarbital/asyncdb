@@ -26,7 +26,7 @@ setup(
     author_email="jlara@trocglobal.com",
     packages=find_packages(exclude=["contrib", "docs", "tests"]),
     install_requires=[
-        "numpy >= 1.11.1",
+        "numpy==1.19.4",
         "wheel==0.35.1",
         "asyncio==3.4.3",
         "PyDrive==1.3.1",
