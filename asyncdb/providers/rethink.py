@@ -29,9 +29,7 @@ from rethinkdb.errors import (
     ReqlOpFailedError,
     ReqlOpIndeterminateError,
     ReqlResourceLimitError,
-    ReqlRuntimeError,
-    RqlDriverError,
-    RqlRuntimeError,
+    ReqlRuntimeError
 )
 
 from asyncdb.exceptions import (
@@ -226,7 +224,7 @@ class rethink(BaseProvider):
                         )
                     except ReqlOpFailedError as err:
                         raise ProviderError(message=err, code=503)
-                    # except (RqlDriverError, RqlRuntimeError):
+                    # except (ReqlDriverError, ReqlRuntimeError):
                     #    return False
                 elif type(fields) == list and len(fields) > 0:
                     idx = []
@@ -238,7 +236,7 @@ class rethink(BaseProvider):
                                 name, idx
                             ).run(self._connection)
                         )
-                    except (RqlDriverError, RqlRuntimeError):
+                    except (ReqlDriverError, ReqlRuntimeError):
                         return False
             else:
                 return False
@@ -326,7 +324,7 @@ class rethink(BaseProvider):
                 self._engine.db(self._db
                                 ).table_drop(table).run(self._connection)
             )
-        except (RqlDriverError, RqlRuntimeError) as err:
+        except (ReqlDriverError, ReqlRuntimeError) as err:
             raise ProviderError(str(err))
 
     """
@@ -385,7 +383,7 @@ class rethink(BaseProvider):
             except ReqlNonExistenceError as err:
                 error = "Query Runtime Error: {}".format(str(err))
                 raise ReqlNonExistenceError(error)
-            except RqlRuntimeError as err:
+            except ReqlRuntimeError as err:
                 error = "Query Runtime Error: {}".format(str(err))
                 raise NoDataFound(error)
             except ReqlResourceLimitError as error:
@@ -421,7 +419,7 @@ class rethink(BaseProvider):
             except ReqlNonExistenceError as err:
                 error = "Empty Result: {}".format(str(err))
                 raise NoDataFound(error)
-            except (RqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
+            except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
                 error = "QueryRow Runtime Error: {}".format(str(err))
                 raise ProviderError(err)
                 return False
@@ -459,7 +457,7 @@ class rethink(BaseProvider):
             except ReqlNonExistenceError as err:
                 error = "Empty Result: {}".format(str(err))
                 raise NoDataFound(error)
-            except (RqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
+            except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
                 error = "QueryRow Runtime Error: {}".format(str(err))
                 raise ProviderError(err)
                 return False
@@ -500,7 +498,7 @@ class rethink(BaseProvider):
                 else:
                     raise NoDataFound(message="Empty Result", code=404)
                 return self._result
-            except RqlRuntimeError as err:
+            except ReqlRuntimeError as err:
                 error = "Query Get All Runtime Error: {}".format(str(err))
                 raise ProviderError(error)
                 return False
@@ -526,7 +524,7 @@ class rethink(BaseProvider):
                 else:
                     raise NoDataFound(message="Empty Result", code=404)
                 return self._result
-            except RqlRuntimeError as err:
+            except ReqlRuntimeError as err:
                 error = "Query Get All Runtime Error: {}".format(str(err))
                 raise ProviderError(error)
                 return False
@@ -554,7 +552,7 @@ class rethink(BaseProvider):
                     )
                     return False
                 return inserted
-            except RqlRuntimeError as err:
+            except ReqlRuntimeError as err:
                 error = "INSERT Runtime Error: {}".format(str(err))
                 raise ProviderError(error)
                 return False
@@ -587,7 +585,7 @@ class rethink(BaseProvider):
                     )
                     return False
                 return self._result
-            except RqlRuntimeError as err:
+            except ReqlRuntimeError as err:
                 error = "REPLACE Runtime Error: {}".format(str(err))
                 raise ProviderError(error)
                 return False
@@ -614,7 +612,7 @@ class rethink(BaseProvider):
                     )
                     # self._result = await self._engine.table(table).get(id).update(data).run(self._connection)
                     return self._result
-                except RqlRuntimeError as err:
+                except ReqlRuntimeError as err:
                     error = "UPDATE Runtime Error: {}".format(str(err))
                     raise ProviderError(error)
                     return False
@@ -632,7 +630,7 @@ class rethink(BaseProvider):
                     )
                     # self._result = await self._engine.table(table).filter(filter).update(data).run(self._connection)
                     return self._result
-                except RqlRuntimeError as err:
+                except ReqlRuntimeError as err:
                     error = "REPLACE Runtime Error: {}".format(str(err))
                     raise ProviderError(error)
                     return False
@@ -664,7 +662,7 @@ class rethink(BaseProvider):
                     )
                 )
                 return self._result
-            except RqlRuntimeError as err:
+            except ReqlRuntimeError as err:
                 error = "Literal Runtime Error: {}".format(str(err))
                 raise ProviderError(error)
                 return False
@@ -690,7 +688,7 @@ class rethink(BaseProvider):
                     ).filter(filter).update(data).run(self._connection)
                 )
                 return self._result
-            except RqlRuntimeError as err:
+            except ReqlRuntimeError as err:
                 error = "Update Conditions Error: {}".format(str(err))
                 raise ProviderError(error)
                 return False
@@ -718,7 +716,7 @@ class rethink(BaseProvider):
                         ).run(self._connection)
                     )
                     return self._result
-                except (RqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
+                except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
                     raise ProviderError(err)
                     return False
             elif type(filter) == dict and len(filter) > 0:
@@ -729,7 +727,7 @@ class rethink(BaseProvider):
                         ).run(self._connection)
                     )
                     return self._result
-                except (RqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
+                except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
                     raise ProviderError(err)
                     return False
             else:
@@ -782,7 +780,7 @@ class rethink(BaseProvider):
                     self._result = data
                 else:
                     raise NoDataFound(message="Empty Result", code=404)
-            except (RqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
+            except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
                 error = str(err)
                 raise ProviderError(err)
                 return False
@@ -1171,7 +1169,7 @@ class rethink(BaseProvider):
             try:
                 try:
                     cursor = await search.run(self._connection)
-                except (RqlRuntimeError, ReqlRuntimeError) as err:
+                except (ReqlRuntimeError, ReqlRuntimeError) as err:
                     print("Error on rql query is %s" % err.message)
                     raise Exception("Error on RQL query is %s" % err.message)
                     return False
