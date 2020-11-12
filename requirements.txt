@@ -77,7 +77,7 @@ PyYAML==5.3.1
 redis==3.5.3
 regex==2020.10.28
 Represent==1.6.0
-requests==2.24.0
+requests==2.25.0
 requests-oauthlib==1.3.0
 rethinkdb==2.4.7
 rsa==4.6
