@@ -1,14 +1,15 @@
 from dataclasses import Field as ff
-from dataclasses import dataclass, is_dataclass, fields, _FIELDS, asdict, MISSING
+from dataclasses import dataclass, is_dataclass, fields, _FIELDS, _FIELD, asdict, MISSING
 import datetime
 import typing
 import uuid
 from decimal import Decimal
 from asyncdb import AsyncDB
 from asyncdb.utils import colors, SafeDict, Msg
+from asyncdb.utils.encoders import DefaultEncoder
 from asyncdb.exceptions import NoDataFound
 #from navigator.conf import DATABASES
-from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
+from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union, InitVar
 from abc import ABC, abstractmethod
 import json
 import rapidjson as to_json
@@ -192,6 +193,7 @@ class Field(ff):
             default_factory = self._default_factory,
             **args
         )
+        self._field_type = _FIELD
 
     def __repr__(self):
         return (
@@ -211,18 +213,28 @@ def _dc_method_setattr(self, name: str, value: Any, *args, **kwargs) -> None:
     """
     method for overwrite setattr in Dataclasses
     """
-    if self.Meta.strict is True and name not in self._columns:
+    if self.Meta.frozen is True and name not in self._columns:
         raise TypeError(f"Cannot Modify attribute {name} of {self.modelName}, This DataClass is frozen (read-only class)")
     else:
         object.__setattr__(self, name, value)
-        self.__dt__[name] = value
-        if name not in self._columns:
+        if name not in self._columns.keys():
             try:
-                Msg('Warning: Field **{}** doesn\'t exists on Model {}'.format(name, self.__class__.__name__), 'WARN')
-                self._columns.append(name)
-                # self.__dataclass_fields__[name] = name
-                # self.__annotations__[name] = f.type
-                setattr(self, name, value)
+                if self.Meta.strict == True:
+                    Msg(
+                        'Warning: Field **{}** doesn\'t exists on Model {}'.format(
+                            name,
+                            self.modelName
+                            ), 'WARN'
+                    )
+                else:
+                    f = Field(
+                       required=False,
+                       default=value
+                    )
+                    f.name = name
+                    f.type = type(value)
+                    self._columns[name] = f
+                    setattr(self, name, value)
             except Exception as err:
                 print(err)
 
@@ -236,6 +248,8 @@ def make_dataclass(new_cls: Any, repr: bool = True, eq: bool = True, validate: b
     # TODO: add method for __post_init__
     __class__ = dc
     setattr(dc, "__setattr__", _dc_method_setattr)
+    # adding json encoder:
+    dc.__encoder__ = DefaultEncoder()
     return dc
 
 
@@ -247,6 +261,7 @@ class ModelMeta(type):
     """
     __slots__ = ()
     __valid__ = None
+    __encoder__ = None
 
     def __new__(cls, name, bases, attrs):
         """__new__ is a classmethod, even without @classmethod decorator
@@ -260,32 +275,51 @@ class ModelMeta(type):
         if '__annotations__' in attrs:
             annotations = attrs['__annotations__']
             cols = []
-            for name, type in annotations.items():
-                default = None
-                try:
-                    if name in attrs:
-                        default = attrs[name]
-                        del attrs[name]
-                except KeyError:
-                    pass
-                cols.append(name)
-                f = Field(
-                   factory=type,
-                   required=False,
-                   default=default
-                )
-                f.name = name
-                f.type = type
-                if name not in cls.__dict__:
-                    setattr(cls, name, f)
+            for field, type in annotations.items():
+                #print(field, type)
+                if field in attrs:
+                    df = attrs[field]
+                    if isinstance(df, Field):
+                        setattr(cls, field, df)
+                    else:
+                        f = Field(
+                           factory=type,
+                           required=False,
+                           default=df
+                        )
+                        f.name = field
+                        f.type = type
+                        setattr(cls, field, f)
+                else:
+                    f = Field(
+                       factory=type,
+                       required=False
+                    )
+                    f.name = field
+                    f.type = type
+                    setattr(cls, field, f)
+                cols.append(field)
             # set the slots of this class
             cls.__slots__ = tuple(cols)
         new_cls = super().__new__(cls, name, bases, attrs)
+        frozen = False
+        try:
+            # TODO: mix values from Meta to an existing meta
+            try:
+                frozen = new_cls.Meta.frozen
+            except AttributeError:
+                new_cls.Meta.frozen = False
+            try:
+                strict = new_cls.Meta.strict
+            except AttributeError:
+                new_cls.Meta.strict = False
+        except AttributeError:
+            new_cls.Meta = Meta
         if new_cls.__name__ == 'Model':
             if "__init__" in new_cls.__dict__:
                 class_init = getattr(new_cls, "__init__")
                 class_init(new_cls)
-        dc = make_dataclass(new_cls, frozen=False)
+        dc = make_dataclass(new_cls, frozen=frozen)
         MODELS[new_cls.__name__] = dc
         cols = dc.__dict__['__dataclass_fields__']
         dc._columns = cols
@@ -302,12 +336,21 @@ class ModelMeta(type):
         cls.__initialised__ = True
         super(ModelMeta, cls).__init__(*args, **kwargs)
 
+
+class Meta:
+    name: str = ''
+    schema: str = ''
+    app_label: str = 'default'
+    frozen: bool = False
+    strict: bool = True
+    driver: str = 'pg'
+
+
 class Model(metaclass=ModelMeta):
     __frozen__ = False
     _columns = []
     _fields = {}
     __columns__ = []
-    __dt__ = {}
     _connection = None
 
     def __init__(self, *args, **kwargs) -> None:
@@ -416,7 +459,7 @@ class Model(metaclass=ModelMeta):
         return asdict(self)
 
     def json(self):
-        return to_json.dumps(asdict(self))
+        return self.__encoder__(asdict(self))
 
     def is_valid(self):
         return bool(self.__valid__)
@@ -634,12 +677,7 @@ class Model(metaclass=ModelMeta):
             await self._connection.close(wait=5)
 
 
-    class Meta:
-        name: str = ''
-        schema: str = ''
-        app_label: str = 'default'
-        strict: bool = True
-        driver: str = 'pg'
+    Meta = Meta
 
 
 def Column(*,
