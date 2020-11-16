@@ -89,7 +89,7 @@ sqlalchemy-aio==0.16.0
 sqlparse==0.4.1
 tabulate==0.8.7
 toml==0.10.2
-tqdm==4.50.2
+tqdm==4.52.0
 typed-ast==1.4.1
 typing-extensions==3.7.4.3
 tzlocal==3.0b1
