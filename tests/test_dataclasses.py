@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
 from asyncdb.utils.models import Model, Column
+from dataclasses import asdict
 
 class User(Model):
     id: int = Column(required=True)
@@ -19,21 +20,24 @@ u.id = 1
 u.name = 'Admin'
 u.firstname = 'Super'
 u.lastname = 'Sayayin'
-u.ultra = False
+u.ultra = 'Ultra Sayayin'
 
 print(u.columns())
 print(u)
 cols = u.__slots__
 print(cols)
+print(u.schema(type='sql'))
 
-# class PyUser(Model):
-#     id: int = Column(default=1, required=True)
-#     name: str = Column(default='John Doe', required=False)
-#     signup_ts: datetime = Column(default=datetime.now(), required=False)
-#
-#
-# u = PyUser()
-# print(u)
+class PyUser(Model):
+    id: int = Column(default=1, required=True)
+    name: str = Column(default='John Doe', required=False)
+    signup_ts: datetime = Column(default=datetime.now(), required=False)
+
+u = PyUser()
+u.name = 'Jesus Lara'
+u.id = 2
+print(u)
+
 #
 # # class Employee(User):
 # #     status: int = 0

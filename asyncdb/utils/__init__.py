@@ -4,12 +4,14 @@ from .encoders import (
     BaseEncoder
 )
 from .functions import (
+    colors,
     SafeDict,
     is_pgconstant,
     is_udf,
-    _escapeString
+    _escapeString,
+    Msg
 )
 
 __all__ = [
-    "SafeDict", "DefaultEncoder", "BaseEncoder", "EnumEncoder", "is_pgconstant", "is_udf", "_escapeString"
+    "colors", "SafeDict", "DefaultEncoder", "BaseEncoder", "EnumEncoder", "is_pgconstant", "is_udf", "_escapeString", "Msg"
 ]

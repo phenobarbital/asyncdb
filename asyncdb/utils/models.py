@@ -5,7 +5,7 @@ import typing
 import uuid
 from decimal import Decimal
 from asyncdb import AsyncDB
-from asyncdb.utils import SafeDict
+from asyncdb.utils import colors, SafeDict, Msg
 from asyncdb.exceptions import NoDataFound
 #from navigator.conf import DATABASES
 from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
@@ -239,16 +239,16 @@ def _dc_method_setattr(self, name: str, value: Any, *args, **kwargs) -> None:
     method for overwrite setattr in Dataclasses
     """
     if self.Meta.strict is True and name not in self._columns:
-        raise TypeError(f"Cannot modify attribute {name} of {self}, this dataclass is marked as frozen")
+        raise TypeError(f"Cannot Modify attribute {name} of {self.modelName}, This DataClass is frozen (read-only class)")
     else:
         object.__setattr__(self, name, value)
         self.__dt__[name] = value
         if name not in self._columns:
             try:
-                print('Warning: Field **{}** doesnt exists on Model {}'.format(name, self.__class__.__name__))
+                Msg('Warning: Field **{}** doesnt exists on Model {}'.format(name, self.__class__.__name__), 'WARN')
                 self._columns.append(name)
-                #self.__dataclass_fields__[name] = f
-                #self.__annotations__[name] = f.type
+                # self.__dataclass_fields__[name] = name
+                # self.__annotations__[name] = f.type
                 setattr(self, name, value)
             except Exception as err:
                 print(err)
@@ -283,6 +283,8 @@ def make_dataclass(new_cls: Any, repr: bool = True, eq: bool = True, validate: b
 
 class ModelMeta(type):
     __slots__ = ()
+    __initialised__ = False
+    __valid__ = None
 
     def __new__(cls, name, bases, attrs):
         """__new__ is a classmethod, even without @classmethod decorator
@@ -301,21 +303,21 @@ class ModelMeta(type):
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
-        print(':: INITIALIZING MODEL META ::')
+        #print(':: INITIALIZING MODEL META ::')
         cls.modelName = cls.__name__
-        if cls.Meta.strict == True:
-            cls.__frozen__ = True
+        if cls.Meta.strict:
+            cls.__frozen__ = cls.Meta.strict
+        else:
+            cls.__frozen__ = False
+        cls.__initialised__ = True
         super(ModelMeta, cls).__init__(*args, **kwargs)
 
 class Model(metaclass=ModelMeta):
-    __initialised__ = False
-    __valid__ = None
     __frozen__ = False
     _columns = []
     _fields = {}
     __columns__ = []
     __dt__ = {}
-    __driver__ = None
     _connection = None
 
     def __init__(self, *args, **kwargs) -> None:
@@ -326,7 +328,7 @@ class Model(metaclass=ModelMeta):
         """
         Start validation of fields
         """
-        self.__initialised__ = self._validation()
+        self._validation()
 
     def _validation(self) -> None:
         """
@@ -396,10 +398,8 @@ class Model(metaclass=ModelMeta):
             print('=== ERRORS ===')
             print(errors)
             object.__setattr__(self, '__valid__', False)
-            return False
         else:
             object.__setattr__(self, '__valid__', True)
-            return True
 
     def _is_instanceof(self, value: Any, annotated_type: type) -> bool:
         result = False
