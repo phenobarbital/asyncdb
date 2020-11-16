@@ -231,22 +231,7 @@ def make_dataclass(new_cls: Any, repr: bool = True, eq: bool = True, validate: b
     make_dataclass.
        Create a Dataclass from a Class
     """
-    if '__annotations__' in new_cls.__dict__:
-        annotations = new_cls.__dict__['__annotations__']
-        cols = []
-        for name, type in annotations.items():
-            cols.append(name)
-            f = Field(
-               factory=type,
-               required=False
-            )
-            f.name = name
-            f.type = type
-            if name not in new_cls.__dict__:
-                setattr(new_cls, name, f)
-        new_cls.__slots__ = tuple(cols)
-        new_cls._columns = cols
-        new_cls._fields = annotations
+    # TODO: can build more complex dataclasses using make dataclass function
     dc = dataclass(unsafe_hash=True, init=True, frozen=frozen)(new_cls)
     # TODO: add method for __post_init__
     __class__ = dc
@@ -267,10 +252,35 @@ class ModelMeta(type):
         """__new__ is a classmethod, even without @classmethod decorator
         """
         if len(bases) > 1:
-            raise TypeError("Multiple inheritance of Nav data Models are forbidden")
-        # TODO: avoid ValueError: 'associate_id' in __slots__ conflicts with class variable
+            raise TypeError(
+                "Multiple inheritance of Nav data Models are forbidden"
+                )
+        # TODO: avoid ValueError: 'associate_id' in __slots__
+        # conflicts with class variable
+        if '__annotations__' in attrs:
+            annotations = attrs['__annotations__']
+            cols = []
+            for name, type in annotations.items():
+                default = None
+                try:
+                    if name in attrs:
+                        default = attrs[name]
+                        del attrs[name]
+                except KeyError:
+                    pass
+                cols.append(name)
+                f = Field(
+                   factory=type,
+                   required=False,
+                   default=default
+                )
+                f.name = name
+                f.type = type
+                if name not in cls.__dict__:
+                    setattr(cls, name, f)
+            # set the slots of this class
+            cls.__slots__ = tuple(cols)
         new_cls = super().__new__(cls, name, bases, attrs)
-
         if new_cls.__name__ == 'Model':
             if "__init__" in new_cls.__dict__:
                 class_init = getattr(new_cls, "__init__")
@@ -279,11 +289,11 @@ class ModelMeta(type):
         MODELS[new_cls.__name__] = dc
         cols = dc.__dict__['__dataclass_fields__']
         dc._columns = cols
-        dc.__slots__ = tuple(cols)
+        dc._fields = cols.keys()
+        #dc.__slots__ = tuple(cols)
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
-        #print(':: INITIALIZING MODEL META ::')
         cls.modelName = cls.__name__
         if cls.Meta.strict:
             cls.__frozen__ = cls.Meta.strict

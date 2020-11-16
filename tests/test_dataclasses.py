@@ -20,8 +20,8 @@ class User(Model):
 class Employee(User):
     associate_id: int
     email: str
-    chief: User = None
     status: int = 0
+    chief: User = None
 
 u = {
     "id": 1,
