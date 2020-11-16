@@ -1,83 +1,131 @@
 from datetime import datetime
 from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
 from asyncdb.utils.models import Model, Column
-from dataclasses import asdict
+from dataclasses import dataclass, asdict, fields
 
+#@dataclass
 class User(Model):
-    id: int = Column(required=True)
-    name: str = Column(required=True)
+    id: int
+    name: str
     firstname: str
     lastname: str
-    age: int = Column(default=42, required=True)
+    age: int
     class Meta:
         name = 'users'
         schema = 'public'
         app_label = 'troc'
         strict = False
 
-u = User()
-u.id = 1
-u.name = 'Admin'
-u.firstname = 'Super'
-u.lastname = 'Sayayin'
-u.ultra = 'Ultra Sayayin'
+#@dataclass
+class Employee(User):
+    associate_id: int
+    email: str
+    chief: User = None
+    status: int = 0
 
-print(u.columns())
+u = {
+    "id": 1,
+    "name": 'Admin',
+    "firstname": 'Super',
+    "lastname": 'Sayayin',
+    "age": 42
+}
+u = User(**u)
 print(u)
-cols = u.__slots__
-print(cols)
-print(u.schema(type='sql'))
+u.name = 'Jesus Ignacio Lara Gimenez'
+print(asdict(u))
 
-class PyUser(Model):
-    id: int = Column(default=1, required=True)
-    name: str = Column(default='John Doe', required=False)
-    signup_ts: datetime = Column(default=datetime.now(), required=False)
+employee = {
+    "id": 2,
+    "name": 'David Lara',
+    "firstname": 'David',
+    "lastname": 'Lara',
+    "age": 46,
+    "associate_id": 3,
+    "email": 'jesuslara@gmail.com'
+}
+e = Employee(**employee)
+e.chief = u
+#print(e.__dataclass_fields__, fields(e))
+print(asdict(e))
 
-u = PyUser()
-u.name = 'Jesus Lara'
-u.id = 2
-print(u)
-
+# class User(Model):
+#     id: int = Column(required=True)
+#     name: str = Column(required=True)
+#     firstname: str
+#     lastname: str
+#     age: int = Column(default=42, required=True)
+#     class Meta:
+#         name = 'users'
+#         schema = 'public'
+#         app_label = 'troc'
+#         strict = False
 #
-# # class Employee(User):
-# #     status: int = 0
-# #     associate_id: int = Column(required=True)
-# #     email: str = Column(required=False)
-# #     chief: User = Column(required=False)
-# #
-# # u = User(id=1, name='Jesus Lara')
-# # u.fuerza = True
-# # print(u)
-# # u.name = 'Jesus Ignacio Lara Gimenez'
-# # print(asdict(u))
-# #
-# # employee = {
-# #     "id": 1,
-# #     "name": 'Jesus Lara',
-# #     "associate_id": 3
-# # }
-# # e = Employee(**employee)
-# # e.email = 'jesuslara@gmail.com'
-# # e.chief = u
-# # #print('E')
-# # #print(e.__dataclass_fields__, fields(e))
-# # print(asdict(e))
-# #
-# # class PyUser(Model):
-# #     id: int
-# #     name: str = 'John Doe'
-# #     signup_ts: datetime = None
-# #     class Meta:
-# #         name = 'pyusers'
-# #         schema = 'public'
-# #         app_label = 'troc'
-# #         strict = False
-# #
-# #
-# # user = PyUser(id='42', signup_ts='2032-06-21T12:00')
-# # user.perolito = True
-# # print(user, user.perolito)
-# #
+# u = User()
+# u.id = 1
+# u.name = 'Admin'
+# u.firstname = 'Super'
+# u.lastname = 'Sayayin'
+# u.ultra = 'Ultra Sayayin'
+#
+# print(u.columns())
+# print(u)
+# cols = u.__slots__
+# print(cols)
+# print(u.schema(type='sql'))
+#
+# class PyUser(Model):
+#     id: int = Column(default=1, required=True)
+#     name: str = Column(default='John Doe', required=False)
+#     signup_ts: datetime = Column(default=datetime.now(), required=False)
+#
+# u = PyUser()
+# u.name = 'Jesus Lara'
+# u.id = 2
+# print(u)
+#
+#
+# class Employee(User):
+#     status: int = 0
+#     associate_id: int = Column(required=True)
+#     email: str = Column(required=False)
+#     chief: User = Column(required=False)
+#
+# u = User(id=1, name='Jesus Lara')
+# u.fuerza = True
+# print(u)
+# u.name = 'Jesus Ignacio Lara Gimenez'
+# print(asdict(u))
+#
+# employee = {
+#     "id": 1,
+#     "name": 'Jesus Lara',
+#     "associate_id": 3
+# }
+# e = Employee(**employee)
+# e.email = 'jesuslara@gmail.com'
+# e.chief = u
+# print(e.__dataclass_fields__, fields(e))
+# print(asdict(e))
+#
+#
+# class PyUser(Model):
+#     id: int
+#     name: str = 'John Doe'
+#     signup_ts: datetime = None
+#
+#     class Meta:
+#         name = 'pyusers'
+#         schema = 'public'
+#         app_label = 'troc'
+#         strict = False
+#
+#
+# user = PyUser(id='42', signup_ts='2032-06-21T12:00')
+# user.perolito = True
+# print(user, user.perolito)
+#
+#
 # class NavbarButton(Model):
 #     href: str
 #
@@ -123,12 +171,14 @@ print(u)
 #     ]
 # }
 #
+#
 # class Contact(Model):
 #     phone: str
 #     email: str
 #     address: str = Column(default='')
 #     zipcode: str = Column(default='')
 #     city: str = Column(required=False)
+#
 #
 # class Person(Model):
 #     name: str = Column(default='')
@@ -137,4 +187,4 @@ print(u)
 #
 #
 # ivan = Person(**person)
-# print(ivan)
+# print(ivan.json())

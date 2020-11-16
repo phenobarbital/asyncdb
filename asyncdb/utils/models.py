@@ -1,5 +1,5 @@
 from dataclasses import Field as ff
-from dataclasses import dataclass, is_dataclass, fields, _FIELDS, field, asdict, MISSING
+from dataclasses import dataclass, is_dataclass, fields, _FIELDS, asdict, MISSING
 import datetime
 import typing
 import uuid
@@ -91,6 +91,7 @@ class Entity:
         v = f'{value!s}' if Entity.string(type) else value
         return v
 
+
 """
 Class for Error validation
 """
@@ -103,33 +104,6 @@ class ValidationError:
     annotation: type
     exception: Optional[Exception]
 
-
-def Column(*,
-    default: Any = None,
-    init: bool = True,
-    primary_key: bool = False,
-    notnull: bool = False,
-    required: bool = False,
-    factory: Callable = MISSING,
-    min: Union[int, float, Decimal] = None,
-    max: Union[int, float, Decimal] = None,
-    validation: Callable = None,
-    **kwargs
-):
-    if default is not None and factory is not MISSING:
-        raise ValueError('Cannot specify both default and default_factory')
-    return Field(
-        default=default,
-        init=init,
-        primary_key=primary_key,
-        notnull=notnull,
-        required=required,
-        factory=factory,
-        min=min,
-        max=max,
-        validation=validation,
-        **kwargs
-    )
 
 # list of basic attributes:
 """
@@ -148,6 +122,7 @@ class Field(ff):
     _default_factory: Callable = MISSING
     _required: bool = False
     _pk: bool = False
+
     def __init__(
         self,
         default: Any = None,
@@ -224,13 +199,11 @@ class Field(ff):
             f'column={self.name!r},'
             f'type={self.type!r},'
             f'default={self.default!r})'
-    )
+            )
 
-    @property
     def required(self):
         return self._required
 
-    @property
     def primary_key(self):
         return self._pk
 
@@ -245,7 +218,7 @@ def _dc_method_setattr(self, name: str, value: Any, *args, **kwargs) -> None:
         self.__dt__[name] = value
         if name not in self._columns:
             try:
-                Msg('Warning: Field **{}** doesnt exists on Model {}'.format(name, self.__class__.__name__), 'WARN')
+                Msg('Warning: Field **{}** doesn\'t exists on Model {}'.format(name, self.__class__.__name__), 'WARN')
                 self._columns.append(name)
                 # self.__dataclass_fields__[name] = name
                 # self.__annotations__[name] = f.type
@@ -261,16 +234,16 @@ def make_dataclass(new_cls: Any, repr: bool = True, eq: bool = True, validate: b
     if '__annotations__' in new_cls.__dict__:
         annotations = new_cls.__dict__['__annotations__']
         cols = []
-        for field, type in annotations.items():
-            cols.append(field)
+        for name, type in annotations.items():
+            cols.append(name)
             f = Field(
                factory=type,
                required=False
             )
-            f.name = field
+            f.name = name
             f.type = type
-            if not field in new_cls.__dict__:
-                setattr(new_cls, field, f)
+            if name not in new_cls.__dict__:
+                setattr(new_cls, name, f)
         new_cls.__slots__ = tuple(cols)
         new_cls._columns = cols
         new_cls._fields = annotations
@@ -278,12 +251,16 @@ def make_dataclass(new_cls: Any, repr: bool = True, eq: bool = True, validate: b
     # TODO: add method for __post_init__
     __class__ = dc
     setattr(dc, "__setattr__", _dc_method_setattr)
-    dc.__initialised__ = True
     return dc
 
+
 class ModelMeta(type):
+    """
+    ModelMeta.
+
+    MetaClass object to create dataclasses for modeling Data Models.
+    """
     __slots__ = ()
-    __initialised__ = False
     __valid__ = None
 
     def __new__(cls, name, bases, attrs):
@@ -293,13 +270,16 @@ class ModelMeta(type):
             raise TypeError("Multiple inheritance of Nav data Models are forbidden")
         # TODO: avoid ValueError: 'associate_id' in __slots__ conflicts with class variable
         new_cls = super().__new__(cls, name, bases, attrs)
+
         if new_cls.__name__ == 'Model':
             if "__init__" in new_cls.__dict__:
                 class_init = getattr(new_cls, "__init__")
                 class_init(new_cls)
-        MODELS[new_cls.__name__] = new_cls
         dc = make_dataclass(new_cls, frozen=False)
+        MODELS[new_cls.__name__] = dc
         cols = dc.__dict__['__dataclass_fields__']
+        dc._columns = cols
+        dc.__slots__ = tuple(cols)
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
@@ -336,7 +316,8 @@ class Model(metaclass=ModelMeta):
         TODO: cover validations as length, not_null, required, etc
         """
         errors = {}
-        for field in fields(self):
+        for name, field in self.columns():
+            #print(name, field)
             key = field.name
             # print({
             #     "name": key,
@@ -352,15 +333,18 @@ class Model(metaclass=ModelMeta):
             annotated_type = field.type
             if val_type == 'type' or val == annotated_type or val is None:
                 # data not provided
-                if field.metadata['required'] == True and self.Meta.strict == True:
-                    errors[key] = ValidationError(
-                            field=key,
-                            value=None,
-                            value_type=None,
-                            error="Field Required",
-                            annotation=annotated_type,
-                            exception=None
-                        )
+                try:
+                    if field.metadata['required'] == True and self.Meta.strict == True:
+                        errors[key] = ValidationError(
+                                field=key,
+                                value=None,
+                                value_type=None,
+                                error="Field Required",
+                                annotation=annotated_type,
+                                exception=None
+                            )
+                except KeyError:
+                    continue
                 continue
             else:
                 #print(key, val, annotated_type)
@@ -416,7 +400,13 @@ class Model(metaclass=ModelMeta):
         return str(__class__)
 
     def columns(self):
-        return self._columns
+        return self._columns.items()
+
+    def dict(self):
+        return asdict(self)
+
+    def json(self):
+        return to_json.dumps(asdict(self))
 
     def is_valid(self):
         return bool(self.__valid__)
@@ -428,7 +418,7 @@ class Model(metaclass=ModelMeta):
         columns = {}
         try:
             if type == 'json':
-                for field in fields(self):
+                for name, field in self.columns():
                     key = field.name
                     type = field.type
                     columns[key] = {
@@ -448,7 +438,7 @@ class Model(metaclass=ModelMeta):
                 doc = f'CREATE TABLE {schema}.{table} (\n'
                 cols = []
                 pk = []
-                for field in fields(self):
+                for name, field in self.columns():
                     key = field.name
                     default = f'DEFAULT {field.default!r}' if isinstance(field.default, (str, int)) else ''
                     type = DB_TYPES[field.type]
@@ -485,7 +475,7 @@ class Model(metaclass=ModelMeta):
             cols = []
             source = []
             pk = []
-            for field in fields(self):
+            for name, field in self.columns():
                 column = field.name
                 datatype = field.type
                 value = Entity.toSQL(getattr(self, field.name), datatype)
@@ -640,3 +630,34 @@ class Model(metaclass=ModelMeta):
         app_label: str = 'default'
         strict: bool = True
         driver: str = 'pg'
+
+
+def Column(*,
+    default: Any = None,
+    init: bool = True,
+    primary_key: bool = False,
+    notnull: bool = False,
+    required: bool = False,
+    factory: Callable = MISSING,
+    min: Union[int, float, Decimal] = None,
+    max: Union[int, float, Decimal] = None,
+    validation: Callable = None,
+    **kwargs
+):
+    """
+    Column Function that returns a Field() object
+    """
+    if default is not None and factory is not MISSING:
+        raise ValueError('Cannot specify both default and default_factory')
+    return Field(
+        default=default,
+        init=init,
+        primary_key=primary_key,
+        notnull=notnull,
+        required=required,
+        factory=factory,
+        min=min,
+        max=max,
+        validation=validation,
+        **kwargs
+    )
