@@ -583,11 +583,41 @@ class Model(metaclass=ModelMeta):
             sql = sql.format_map(SafeDict(set_fields=values))
             try:
                 result = await conn.get_connection().execute(sql)
-                if result:
-                    print(result)
+                return result
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
+
+    async def delete(self, **kwargs):
+        """
+        Deleting a row Model based on Primary Key
+        """
+        if not self._connection:
+            self.get_connection(self)
+        result = None
+        async with await self._connection.connection() as conn:
+            table = f'{self.Meta.schema}.{self.Meta.name}'
+            source = []
+            pk = {}
+            cols = []
+            for name, field in self.columns():
+                column = field.name
+                datatype = field.type
+                value = Entity.toSQL(getattr(self, field.name), datatype)
+                if field.primary_key is True:
+                    pk[column] = value
+            # TODO: work in an "update, delete, insert" functions on asyncdb to abstract data-insertion
+            sql = 'DELETE FROM {table} {condition}'
+            condition = self.where(**pk)
+            sql = sql.format_map(SafeDict(table=table))
+            sql = sql.format_map(SafeDict(condition=condition))
+            try:
+                result = await conn.get_connection().execute(sql)
+                # DELETE 1
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
+        return result
 
     def get_connection(self):
         driver = self.Meta.driver if self.Meta.driver else None
@@ -702,39 +732,17 @@ class Model(metaclass=ModelMeta):
             prepared, error = await conn.prepare('SELECT * FROM walmart.stores')
             print(conn.get_columns())
 
-    async def delete(self, **kwargs):
-        """
-        Deleting a row Model based on Primary Key
-        """
-        if not self._connection:
-            self.get_connection(self)
-        async with await self._connection.connection() as conn:
-            table = f'{self.Meta.schema}.{self.Meta.name}'
-            source = []
-            pk = {}
-            cols = []
-            for name, field in self.columns():
-                column = field.name
-                datatype = field.type
-                value = Entity.toSQL(getattr(self, field.name), datatype)
-                if field.primary_key is True:
-                    pk[column] = value
-            # TODO: work in an "update, delete, insert" functions on asyncdb to abstract data-insertion
-            sql = 'DELETE FROM {table} {condition}'
-            condition = self.where(**pk)
-            sql = sql.format_map(SafeDict(table=table))
-            sql = sql.format_map(SafeDict(condition=condition))
-            try:
-                result = await conn.get_connection().execute(sql)
-                # DELETE 1
-                print(result)
-                return result
-            except Exception as err:
-                print(traceback.format_exc())
-                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
+    @classmethod
+    async def update(cls, conditions: dict = {}, **kwargs):
+        if not cls._connection:
+            cls.get_connection(cls)
+        async with await cls._connection.connection() as conn:
+            await conn.test_connection()
+            prepared, error = await conn.prepare('SELECT * FROM walmart.stores')
+            print(conn.get_columns())
 
     @classmethod
-    async def update(cls, conditions: dict ={}, **kwargs):
+    async def create(cls, **kwargs):
         if not cls._connection:
             cls.get_connection(cls)
         async with await cls._connection.connection() as conn:
