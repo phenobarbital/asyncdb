@@ -369,7 +369,7 @@ class Model(metaclass=ModelMeta):
         TODO: cover validations as length, not_null, required, etc
         """
         errors = {}
-        for name, field in self.columns():
+        for name, field in self.columns().items():
             #print(name, field)
             key = field.name
             # print({
@@ -453,7 +453,10 @@ class Model(metaclass=ModelMeta):
         return str(__class__)
 
     def columns(self):
-        return self._columns.items()
+        return self._columns
+
+    def fields(self):
+        return self._fields
 
     def dict(self):
         return asdict(self)
@@ -491,7 +494,7 @@ class Model(metaclass=ModelMeta):
                 doc = f'CREATE TABLE {schema}.{table} (\n'
                 cols = []
                 pk = []
-                for name, field in self.columns():
+                for name, field in self.columns().items():
                     key = field.name
                     default = None
                     try:
@@ -515,111 +518,10 @@ class Model(metaclass=ModelMeta):
         finally:
             return result
 
-    def fields(self, fields: Any =[]):
-        """
-        fields
-        todo: detect when field is missing
-        """
-        if type(fields) == str:
-            self.__columns__ = [x.strip() for x in fields.split(',')]
-        elif type(fields) == list:
-            self.__columns__ = fields
-        return self
-
-    async def insert(self):
-        if not self._connection:
-            self.get_connection(self)
-        async with await self._connection.connection() as conn:
-            table = '{schema}.{table}'.format(table=self.Meta.name, schema=self.Meta.schema)
-            cols = []
-            source = []
-            pk = []
-            for name, field in self.columns():
-                column = field.name
-                datatype = field.type
-                value = Entity.toSQL(getattr(self, field.name), datatype)
-                source.append(value)
-                cols.append(column)
-                if field.primary_key is True:
-                    pk.append(column)
-            try:
-                primary = 'RETURNING {}'.format(','.join(pk)) if pk else ''
-                columns = ','.join(cols)
-                values = ','.join(map(str, [Entity.escapeLiteral(v, type(v)) for v in source]))
-                insert = f'INSERT INTO {table} ({columns}) VALUES({values}) {primary}'
-                result = await conn.get_connection().fetchrow(insert)
-                if result:
-                    # setting the values dynamically from returning
-                    for f in pk:
-                        setattr(self, f, result[f])
-                return result
-            except Exception as err:
-                print(traceback.format_exc())
-                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
-
-    async def save(self, **kwargs):
-        if not self._connection:
-            self.get_connection(self)
-        async with await self._connection.connection() as conn:
-            table = f'{self.Meta.schema}.{self.Meta.name}'
-            source = []
-            pk = {}
-            cols = []
-            for name, field in self.columns():
-                column = field.name
-                datatype = field.type
-                value = Entity.toSQL(getattr(self, field.name), datatype)
-                source.append('{} = {}'.format(name, Entity.escapeLiteral(value, datatype)))
-                cols.append(column)
-                if field.primary_key is True:
-                    pk[column] = value
-            # TODO: work in an "update, delete, insert" functions on asyncdb to abstract data-insertion
-            sql = 'UPDATE {table} SET {set_fields} {condition}'
-            condition = self.where(**pk)
-            sql = sql.format_map(SafeDict(table=table))
-            sql = sql.format_map(SafeDict(condition=condition))
-            # set the columns
-            values = ', '.join(source)
-            sql = sql.format_map(SafeDict(set_fields=values))
-            try:
-                result = await conn.get_connection().execute(sql)
-                return result
-            except Exception as err:
-                print(traceback.format_exc())
-                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
-
-    async def delete(self, **kwargs):
-        """
-        Deleting a row Model based on Primary Key
-        """
-        if not self._connection:
-            self.get_connection(self)
-        result = None
-        async with await self._connection.connection() as conn:
-            table = f'{self.Meta.schema}.{self.Meta.name}'
-            source = []
-            pk = {}
-            cols = []
-            for name, field in self.columns():
-                column = field.name
-                datatype = field.type
-                value = Entity.toSQL(getattr(self, field.name), datatype)
-                if field.primary_key is True:
-                    pk[column] = value
-            # TODO: work in an "update, delete, insert" functions on asyncdb to abstract data-insertion
-            sql = 'DELETE FROM {table} {condition}'
-            condition = self.where(**pk)
-            sql = sql.format_map(SafeDict(table=table))
-            sql = sql.format_map(SafeDict(condition=condition))
-            try:
-                result = await conn.get_connection().execute(sql)
-                # DELETE 1
-            except Exception as err:
-                print(traceback.format_exc())
-                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
-        return result
-
     def get_connection(self):
+        """
+        Getting the database connection and driver based on parameters
+        """
         driver = self.Meta.driver if self.Meta.driver else None
         if driver:
             print('Getting data from Database: {}'.format(driver))
@@ -648,41 +550,83 @@ class Model(metaclass=ModelMeta):
                 params = self.Meta.credentials
             self._connection = AsyncDB(driver, params=params)
 
-    def where(self, **where):
+    # def fields(self, fields: Any =[]):
+    #     """
+    #     fields
+    #     todo: detect when field is missing
+    #     """
+    #     if type(fields) == str:
+    #         self.__columns__ = [x.strip() for x in fields.split(',')]
+    #     elif type(fields) == list:
+    #         self.__columns__ = fields
+    #     return self
+
+    async def insert(self):
+        if not self._connection:
+            self.get_connection(self)
+        result = None
+        async with await self._connection.connection() as conn:
+            try:
+                result = await self._connection.insert(
+                    model=self,
+                    fields=self.columns()
+                )
+                return result
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
+
+    async def save(self, **kwargs):
+        if not self._connection:
+            self.get_connection(self)
+        async with await self._connection.connection() as conn:
+            try:
+                result = await self._connection.save(
+                    model=self,
+                    fields=self.columns()
+                )
+                return result
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
+
+    async def delete(self, **kwargs):
         """
-        TODO: add conditions for BETWEEN, NOT NULL, NULL, etc
+        Deleting a row Model based on Primary Key
         """
-        result = ''
-        if not where:
-            return result
-        elif type(where) == str:
-            result = 'WHERE {}'.format(where)
-        elif type(where) == dict:
-            where_cond = []
-            for key, value in where.items():
-                f = self._columns[key]
-                datatype = f.type
-                if value is None or value == 'null' or value == 'NULL':
-                    where_cond.append(f'{key} is NULL')
-                elif value == '!null' or value == '!NULL':
-                    where_cond.append(f'{key} is NOT NULL')
-                elif type(value) == bool:
-                    val = str(value)
-                    where_cond.append(f'{key} is {value}')
-                elif isinstance(datatype, List):
-                    val = ', '.join(map(str, [Entity.escapeLiteral(v, type(v)) for v in value]))
-                    where_cond.append(f'ARRAY[{val}]<@ {key}::character varying[]')
-                elif Entity.is_array(datatype):
-                    val = ', '.join(map(str, [Entity.escapeLiteral(v, type(v)) for v in value]))
-                    where_cond.append(f'{key} IN ({val})')
-                else:
-                    # is an scalar value
-                    val = Entity.escapeLiteral(value, datatype)
-                    where_cond.append(f'{key}={val}')
-            result = '\nWHERE %s' % (' AND '.join(where_cond))
-            return result
-        else:
-            return result
+        if not self._connection:
+            self.get_connection(self)
+        result = None
+        async with await self._connection.connection() as conn:
+            try:
+                result = await self._connection.delete(
+                    model=self,
+                    fields=self.columns()
+                )
+                return result
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
+
+
+    """
+    Class-Methods for interacting with Data
+    """
+    # get all data
+    @classmethod
+    async def all(cls, **kwargs):
+        if not cls._connection:
+            cls.get_connection(cls)
+        async with await cls._connection.connection() as conn:
+            try:
+                result = await cls._connection.get_all(
+                    model=cls,
+                    **kwargs
+                )
+                return result
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error on query_all over table {}: {}'.format(cls.Meta.name, err))
 
     # classmethods for Data
     @classmethod
@@ -690,18 +634,18 @@ class Model(metaclass=ModelMeta):
         if not cls._connection:
             cls.get_connection(cls)
         async with await cls._connection.connection() as conn:
-            table = '{schema}.{table}'.format(table=cls.Meta.name, schema=cls.Meta.schema)
-            columns = ', '.join(cls._columns)
-            condition = cls.where(cls, **kwargs)
-            sql = f'SELECT {columns} FROM {table} {condition}'
-            result, error = await conn.queryrow(sql)
-            if error:
-                raise Exception(error)
-            if not result:
-                raise NoDataFound('{} object with condition {} Not Found!'.format(table, condition))
-            else:
-                return cls(**dict(result))
-
+            try:
+                result = await cls._connection.get_one(
+                    model=cls,
+                    **kwargs
+                )
+                if result:
+                    return cls(**dict(result))
+                else:
+                    raise NoDataFound('{} object with condition {} Not Found!'.format(table, condition))
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error on get {}: {}'.format(cls.Meta.name, err))
 
     @classmethod
     async def filter(cls, **kwargs):
