@@ -129,5 +129,5 @@ class BaseEncoder:
         # Filter/adapt JSON arguments to RapidJSON ones
         rjargs = ()
         rjkwargs = {}
-        encoder = DefaultEncoder(*rjargs, **rjkwargs)
+        encoder = DefaultEncoder(sort_keys=False, *rjargs, **rjkwargs)
         self.encode = encoder.__call__
