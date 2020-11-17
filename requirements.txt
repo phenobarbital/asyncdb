@@ -30,7 +30,7 @@ dateparser==0.7.6
 decorator==4.4.2
 et-xmlfile==1.0.1
 google-api-core==1.23.0
-google-api-python-client==1.12.5
+google-api-python-client==1.12.6
 google-auth==1.23.0
 google-auth-httplib2==0.0.4
 googleapis-common-protos==1.52.0
