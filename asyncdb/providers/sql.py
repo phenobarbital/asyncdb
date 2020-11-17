@@ -544,22 +544,57 @@ class SQLProvider(BaseProvider):
     async def filter(self, model: Model, **kwargs):
         if not self._connection:
             await self.connection()
+        pk = {}
+        cols = []
+        fields = model.columns(model)
         table = f'{model.Meta.schema}.{model.Meta.name}'
+        for name, field in fields.items():
+            column = field.name
+            datatype = field.type
+            cols.append(column)
+            if field.primary_key is True:
+                pk[column] = Entity.toSQL(getattr(model, field.name), datatype)
+        columns = ', '.join(cols)
+        condition = self._where(fields, **kwargs)
+        sql = f'SELECT {columns} FROM {table} {condition}'
+        try:
+            return await self._connection.fetch(sql)
+        except Exception as err:
+            print(traceback.format_exc())
+            raise Exception('Error on Insert over table {}: {}'.format(model.Meta.name, err))
+
+
+    async def update_rows(self, model: Model, conditions: dict, **kwargs):
+        if not self._connection:
+            await self.connection()
+        table = f'{model.Meta.schema}.{model.Meta.name}'
+        source = []
         pk = {}
         cols = []
         fields = model.columns(model)
         for name, field in fields.items():
             column = field.name
             datatype = field.type
-            value = Entity.toSQL(getattr(model, field.name), datatype)
             cols.append(column)
-            if field.primary_key is True:
-                pk[column] = value
+            if column in kwargs:
+                value = Entity.toSQL(kwargs[column], datatype)
+                source.append('{} = {}'.format(
+                    column,
+                    Entity.escapeLiteral(
+                        value, datatype
+                        )
+                    )
+                )
+        set_fields = ', '.join(source)
+        condition = self._where(fields, **conditions)
         columns = ', '.join(cols)
-        condition = self._where(fields, **kwargs)
-        sql = f'SELECT {columns} FROM {table} {condition}'
+        sql = f'UPDATE {table} SET {set_fields} {condition}'
+        print(sql)
         try:
-            return await self._connection.fetch(sql)
+            result = await self._connection.execute(sql)
+            if result:
+                sql = f'SELECT {columns} FROM {table} {condition}'
+                return await self._connection.fetch(sql)
         except Exception as err:
             print(traceback.format_exc())
             raise Exception('Error on Insert over table {}: {}'.format(model.Meta.name, err))

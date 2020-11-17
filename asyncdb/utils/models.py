@@ -666,7 +666,7 @@ class Model(metaclass=ModelMeta):
                 if result:
                     return [cls(**dict(r)) for r in result]
                 else:
-                    raise NoDataFound('{} object with condition {} Not Found!'.format(table, condition))
+                    raise NoDataFound('No data on table {} with condition {} was Found!'.format(cls.Meta.name, kwargs))
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception('Error on filter {}: {}'.format(cls.Meta.name, err))
@@ -686,9 +686,17 @@ class Model(metaclass=ModelMeta):
         if not cls._connection:
             cls.get_connection(cls)
         async with await cls._connection.connection() as conn:
-            await conn.test_connection()
-            prepared, error = await conn.prepare('SELECT * FROM walmart.stores')
-            print(conn.get_columns())
+            try:
+                result = await cls._connection.update_rows(
+                    model=cls,
+                    conditions=conditions,
+                    **kwargs
+                )
+                if result:
+                    return [cls(**dict(r)) for r in result]
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error Updating Table {}: {}'.format(cls.Meta.name, err))
 
     @classmethod
     async def create(cls, **kwargs):
@@ -703,7 +711,9 @@ class Model(metaclass=ModelMeta):
         if self._connection:
             await self._connection.close(wait=5)
 
-
+    """
+    Meta-information
+    """
     Meta = Meta
 
 
