@@ -286,10 +286,18 @@ async def new_user():
     # also, we can deleting as well
     await u.delete()
 
-async def get_users():
+async def get_all_users():
     users = await User.all()
     print('get all users: ')
     for user in users:
+        print(user)
+
+async def get_users(**kwargs):
+    users = await User.filter(**kwargs)
+    print('get users: ')
+    for user in users:
+        user.age = 48
+        await user.save()
         print(user)
 
 """
@@ -303,4 +311,5 @@ async methods:
 """
 asyncio.run(new_user())
 asyncio.run(get_user(age=42))
-asyncio.run(get_users())
+asyncio.run(get_all_users())
+asyncio.run(get_users(age=18, firstname='Román'))

@@ -631,6 +631,9 @@ class Model(metaclass=ModelMeta):
     # classmethods for Data
     @classmethod
     async def get(cls, **kwargs):
+        """
+        Return a new single record based on filter criteria
+        """
         if not cls._connection:
             cls.get_connection(cls)
         async with await cls._connection.connection() as conn:
@@ -655,17 +658,19 @@ class Model(metaclass=ModelMeta):
         if not cls._connection:
             cls.get_connection(cls)
         async with await cls._connection.connection() as conn:
-            table = '{schema}.{table}'.format(table=cls.Meta.name, schema=cls.Meta.schema)
-            columns = ', '.join(cls._columns)
-            condition = cls.where(cls, **kwargs)
-            sql = f'SELECT {columns} FROM {table} {condition}'
-            result, error = await conn.query(sql)
-            if error:
-                raise Exception(error)
-            if not result:
-                raise NoDataFound('{} object with condition {} Not Found!'.format(table, condition))
-            else:
-                return [cls(**dict(r)) for r in result]
+            try:
+                result = await cls._connection.filter(
+                    model=cls,
+                    **kwargs
+                )
+                if result:
+                    return [cls(**dict(r)) for r in result]
+                else:
+                    raise NoDataFound('{} object with condition {} Not Found!'.format(table, condition))
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error on filter {}: {}'.format(cls.Meta.name, err))
+
 
     @classmethod
     async def remove(cls, **kwargs):
