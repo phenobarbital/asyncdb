@@ -1,5 +1,6 @@
+import asyncio
 from dataclasses import Field as ff
-from dataclasses import dataclass, is_dataclass, fields, _FIELDS, _FIELD, asdict, MISSING
+from dataclasses import dataclass, is_dataclass, fields, _FIELDS, _FIELD, asdict, MISSING, InitVar
 import datetime
 import typing
 import uuid
@@ -9,7 +10,7 @@ from asyncdb.utils import colors, SafeDict, Msg
 from asyncdb.utils.encoders import DefaultEncoder
 from asyncdb.exceptions import NoDataFound
 #from navigator.conf import DATABASES
-from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union, InitVar
+from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
 from abc import ABC, abstractmethod
 import json
 import rapidjson as to_json
@@ -51,15 +52,6 @@ JSON_TYPES = {
     uuid.UUID: "uuid"
 }
 
-# def model_to_json(obj):
-#     dic = {
-#         field.name: field.value_from_object(obj)
-#         for field in obj._meta.fields
-#     }
-#     if len(dic):
-#         return to_json.dumps(dic)
-#     else:
-#         return None
 
 class Entity:
     @classmethod
@@ -193,7 +185,7 @@ class Field(ff):
             default_factory = self._default_factory,
             **args
         )
-        self._field_type = _FIELD
+        #self._field_type = _FIELD
 
     def __repr__(self):
         return (
@@ -203,9 +195,11 @@ class Field(ff):
             f'default={self.default!r})'
             )
 
+    @property
     def required(self):
         return self._required
 
+    @property
     def primary_key(self):
         return self._pk
 
@@ -493,10 +487,16 @@ class Model(metaclass=ModelMeta):
                 pk = []
                 for name, field in self.columns():
                     key = field.name
-                    default = f'DEFAULT {field.default!r}' if isinstance(field.default, (str, int)) else ''
+                    default = None
+                    try:
+                        default = field.metadata['db_default']
+                    except KeyError:
+                        if field.default:
+                            default = f'{field.default!r}'
+                    default = f'DEFAULT {default!s}' if isinstance(default, (str, int)) else ''
                     type = DB_TYPES[field.type]
-                    nn = 'NOT NULL' if field.required else ''
-                    if field.primary_key:
+                    nn = 'NOT NULL' if field.required is True else ''
+                    if field.primary_key is True:
                         pk.append(key)
                     cols.append(f' {key} {type} {nn} {default}')
                 doc = "{}{}".format(doc, ",\n".join(cols))
