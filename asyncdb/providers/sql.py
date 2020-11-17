@@ -565,6 +565,9 @@ class SQLProvider(BaseProvider):
 
 
     async def update_rows(self, model: Model, conditions: dict, **kwargs):
+        """
+        Updating some records and returned.
+        """
         if not self._connection:
             await self.connection()
         table = f'{model.Meta.schema}.{model.Meta.name}'
@@ -598,3 +601,11 @@ class SQLProvider(BaseProvider):
         except Exception as err:
             print(traceback.format_exc())
             raise Exception('Error on Insert over table {}: {}'.format(model.Meta.name, err))
+
+    async def create_rows(self, model: Model, rows: list):
+        """
+        Create all records based on rows and returned
+        """
+        if not self._connection:
+            await self.connection()
+        table = f'{model.Meta.schema}.{model.Meta.name}'
