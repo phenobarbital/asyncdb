@@ -82,6 +82,7 @@ class Entity:
     def toSQL(cls, value, type):
         v = 'NULL' if value == 'None' or value is None or value == 'null' or value == 'NULL' else value
         v = value if Entity.number(type) else value
+        v = str(value) if isinstance(value, uuid.UUID) else value
         v = f'{value!s}' if Entity.string(type) else value
         return v
 
@@ -342,10 +343,11 @@ class ModelMeta(type):
 class Meta:
     name: str = ''
     schema: str = ''
-    app_label: str = 'default'
+    app_label: str = ''
     frozen: bool = False
     strict: bool = True
     driver: str = None
+    credentials: dict = {}
 
 
 class Model(metaclass=ModelMeta):
@@ -545,8 +547,12 @@ class Model(metaclass=ModelMeta):
                 columns = ','.join(cols)
                 values = ','.join(map(str, [Entity.escapeLiteral(v, type(v)) for v in source]))
                 insert = f'INSERT INTO {table} ({columns}) VALUES({values}) {primary}'
-                id = await conn.get_connection().fetchval(insert)
-                return id
+                result = await conn.get_connection().fetchrow(insert)
+                if result:
+                    # setting the values dynamically from returning
+                    for f in pk:
+                        setattr(self, f, result[f])
+                return result
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
@@ -562,28 +568,28 @@ class Model(metaclass=ModelMeta):
         if driver:
             print('Getting data from Database: {}'.format(driver))
             # working with app labels
-            app = self.Meta.app_label if self.Meta.app_label else None
-            #db = DATABASES[app]
-            db = {}
-            params = {
-                'user': '',
-                'password': '',
-                'host': 'localhost',
-                'port': '5432',
-                'database': 'navigator',
-            }
             try:
-                params = {
-                    'user': db['USER'],
-                    'password': db['PASSWORD'],
-                    'host': db['HOST'],
-                    'port': db['PORT'],
-                    'database': db['NAME']
-                }
-                if 'SCHEMA' in db:
-                    params['schema'] = db['SCHEMA']
-            except KeyError:
-                pass
+                app = self.Meta.app_label if self.Meta.app_label else None
+            except AttributeError:
+                app = None
+            if app:
+                # TODO: get formula to got app database list
+                # db = DATABASES[app]
+                db = {}
+                try:
+                    params = {
+                        'user': db['USER'],
+                        'password': db['PASSWORD'],
+                        'host': db['HOST'],
+                        'port': db['PORT'],
+                        'database': db['NAME']
+                    }
+                    if 'SCHEMA' in db:
+                        params['schema'] = db['SCHEMA']
+                except KeyError:
+                    pass
+            elif self.Meta.credentials:
+                params = self.Meta.credentials
             self._connection = AsyncDB(driver, params=params)
 
     def where(self, **where):
@@ -598,7 +604,8 @@ class Model(metaclass=ModelMeta):
         elif type(where) == dict:
             where_cond = []
             for key, value in where.items():
-                datatype = self._fields[key]
+                f = self._columns[key]
+                datatype = f.type
                 if value is None or value == 'null' or value == 'NULL':
                     where_cond.append(f'{key} is NULL')
                 elif value == '!null' or value == '!NULL':

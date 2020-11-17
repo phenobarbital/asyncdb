@@ -247,49 +247,55 @@ class User(Model):
     class Meta:
         name = 'users'
         schema = 'public'
-        app_label = 'troc'
         driver = 'pg'
+        credentials = {
+            'user': 'troc_pgdata',
+            'password': '12345678',
+            'host': 'localhost',
+            'port': '5432',
+            'database': 'navigator_dev',
+        }
         strict = False
 
 u = User()
 print(u.schema(type='sql'))
 
-# #TODO: definition of Operators
-# # from models.operators import or, not
-# # or(value) returns OR instead AND
-# # not if value is an IN, returns NOT IN
-# async def get_user(id):
-#     user = await User.get(id=1)
-#     user.name = 'Jesus Ignacio Jose Lara Gimenez'
-#     user.age+=1
-#     print(user)
-#     await user.save()
-#
-# async def new_user():
-#     data = {
-#         "id": 2,
-#         "firstname": 'David',
-#         "lastname": 'Lara',
-#         "name": 'Rafael David Lara'
-#     }
-#     u = User(**data)
-#     await u.insert()
-#
-# async def get_users():
-#     users = await User.filter(lastname='Lara')
-#     print('get all users: ')
-#     for user in users:
-#         print(user)
-#
-# """
-# async methods:
-#   get
-#   filter
-#   -
-#   fetch
-#   fetchone
-#   query
-# """
-#
-# asyncio.run(get_user(1))
-# asyncio.run(get_users())
+#TODO: definition of Operators
+# from models.operators import or, not
+# or(value) returns OR instead AND
+# not if value is an IN, returns NOT IN
+async def get_user(age):
+    user = await User.get(age=age)
+    user.name = 'Jesus Ignacio Jose Lara Gimenez'
+    user.age+=1
+    print(user)
+    await user.save()
+
+async def new_user():
+    data = {
+        "firstname": 'Román',
+        "lastname": 'Lara',
+        "name": 'Rafael David Lara'
+    }
+    u = User(**data)
+    await u.insert()
+    print(u.json())
+
+async def get_users():
+    users = await User.filter(lastname='Lara')
+    print('get all users: ')
+    for user in users:
+        print(user)
+
+"""
+async methods:
+  get
+  filter
+  -
+  fetch
+  fetchone
+  query
+"""
+asyncio.run(new_user())
+asyncio.run(get_user(age=42))
+asyncio.run(get_users())
