@@ -99,7 +99,7 @@ print(e.__dataclass_fields__, fields(e))
 print(asdict(e))
 
 
-Msg('Working with complex types, like uuid or datetime: ')
+Msg('Working with complex types, as uuid or datetime: ')
 class PyUser(Model):
     id: int = Column(default=1, required=True)
     name: str = Column(default='John Doe', required=False)
@@ -191,3 +191,61 @@ class Person(Model):
 
 ivan = Person(**person)
 print(ivan.json())
+
+
+Msg('Using Methods within Dataclass: ')
+class InventoryItem(Model):
+    """Class for keeping track of an item in inventory."""
+    name: str
+    unit_price: float
+    quantity: int = 0
+
+    def total_cost(self) -> float:
+        return self.unit_price * self.quantity
+
+
+grapes = InventoryItem(name='Grapes', unit_price=2.55)
+grapes.quantity = 8
+print(f'Total for {grapes.name} is: ', grapes.total_cost())
+
+Msg('Complex Model of Nested and Union Classes: ')
+
+
+class Foo(Model):
+    value: Union[int, List[int]]
+
+
+class Bar(Model):
+    foo: Union[Foo, List[Foo]]
+
+
+foo = Foo(value=[1, 2])
+instance = Bar(foo=foo)
+print(instance)
+assert instance.is_valid() or 'Not Valid'
+assert instance == Bar(foo=Foo(value=[1, 2]))
+
+Msg('Working with Data Models: ')
+
+def auto_now_add(*args, **kwargs):
+    return uuid.uuid4()
+
+class User(Model):
+    """
+    User Basic Structure
+    """
+    id: uuid.UUID = Column(required=True, primary_key=True, default=auto_now_add(), db_default='uuid_generate_v4()')
+    firstname: str
+    lastname: str
+    name: str = Column(required=True, default='John Doe')
+    age: int = Column(default=18, required=True)
+    signup_ts: datetime = Column(default=datetime.now(), db_default='now()')
+    class Meta:
+        name = 'users'
+        schema = 'public'
+        app_label = 'troc'
+        driver = 'pg'
+        strict = False
+
+u = User()
+print(u.schema(type='sql'))
