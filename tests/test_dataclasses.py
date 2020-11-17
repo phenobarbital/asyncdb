@@ -268,7 +268,7 @@ async def get_user(age):
     user = await User.get(age=age)
     user.name = 'Jesus Ignacio Jose Lara Gimenez'
     user.age+=1
-    print(user)
+    print('User is: ', user)
     await user.save()
     user.age = 42
     await user.save()
@@ -287,7 +287,7 @@ async def new_user():
     await u.delete()
 
 async def get_users():
-    users = await User.filter(lastname='Lara')
+    users = await User.all()
     print('get all users: ')
     for user in users:
         print(user)
