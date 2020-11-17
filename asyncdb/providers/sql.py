@@ -533,8 +533,33 @@ class SQLProvider(BaseProvider):
         condition = self._where(fields, **kwargs)
         sql = f'SELECT {columns} FROM {table} {condition}'
         try:
-            result = await self._connection.fetchrow(sql)
-            return result
+            return await self._connection.fetchrow(sql)
+        except Exception as err:
+            print(traceback.format_exc())
+            raise Exception(
+                'Error on Insert over table {}: {}'.format(
+                    model.Meta.name, err)
+                )
+
+    async def filter(self, model: Model, **kwargs):
+        if not self._connection:
+            await self.connection()
+        table = f'{model.Meta.schema}.{model.Meta.name}'
+        pk = {}
+        cols = []
+        fields = model.columns(model)
+        for name, field in fields.items():
+            column = field.name
+            datatype = field.type
+            value = Entity.toSQL(getattr(model, field.name), datatype)
+            cols.append(column)
+            if field.primary_key is True:
+                pk[column] = value
+        columns = ', '.join(cols)
+        condition = self._where(fields, **kwargs)
+        sql = f'SELECT {columns} FROM {table} {condition}'
+        try:
+            return await self._connection.fetch(sql)
         except Exception as err:
             print(traceback.format_exc())
             raise Exception('Error on Insert over table {}: {}'.format(model.Meta.name, err))
