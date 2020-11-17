@@ -307,6 +307,10 @@ class ModelMeta(type):
                 strict = new_cls.Meta.strict
             except AttributeError:
                 new_cls.Meta.strict = False
+            try:
+                test = new_cls.Meta.driver
+            except AttributeError:
+                new_cls.Meta.driver = None
         except AttributeError:
             new_cls.Meta = Meta
         if new_cls.__name__ == 'Model':
@@ -328,6 +332,9 @@ class ModelMeta(type):
         else:
             cls.__frozen__ = False
         cls.__initialised__ = True
+        if cls.Meta.driver is not None:
+            Msg('Getting Connection', 'DEBUG')
+            cls.get_connection(cls)
         super(ModelMeta, cls).__init__(*args, **kwargs)
 
 
@@ -337,7 +344,7 @@ class Meta:
     app_label: str = 'default'
     frozen: bool = False
     strict: bool = True
-    driver: str = 'pg'
+    driver: str = None
 
 
 class Model(metaclass=ModelMeta):
@@ -346,10 +353,6 @@ class Model(metaclass=ModelMeta):
     _fields = {}
     __columns__ = []
     _connection = None
-
-    def __init__(self, *args, **kwargs) -> None:
-        # create the connection object:
-        self.get_connection(self)
 
     def __post_init__(self) -> None:
         """
@@ -554,31 +557,32 @@ class Model(metaclass=ModelMeta):
             pass
 
     def get_connection(self):
-        driver = self.Meta.driver if self.Meta.driver else 'pg'
-        print('Getting data from Database: {}'.format(driver))
-        app = self.Meta.app_label if self.Meta.app_label else 'default'
-        #db = DATABASES[app]
-        db = {}
-        params = {
-            'user': '',
-            'password': '',
-            'host': 'localhost',
-            'port': '5432',
-            'database': 'navigator',
-        }
-        try:
+        driver = self.Meta.driver if self.Meta.driver else None
+        if driver:
+            print('Getting data from Database: {}'.format(driver))
+            app = self.Meta.app_label if self.Meta.app_label else 'default'
+            #db = DATABASES[app]
+            db = {}
             params = {
-                'user': db['USER'],
-                'password': db['PASSWORD'],
-                'host': db['HOST'],
-                'port': db['PORT'],
-                'database': db['NAME']
+                'user': '',
+                'password': '',
+                'host': 'localhost',
+                'port': '5432',
+                'database': 'navigator',
             }
-            if 'SCHEMA' in db:
-                params['schema'] = db['SCHEMA']
-        except KeyError:
-            pass
-        self._connection = AsyncDB(driver, params=params)
+            try:
+                params = {
+                    'user': db['USER'],
+                    'password': db['PASSWORD'],
+                    'host': db['HOST'],
+                    'port': db['PORT'],
+                    'database': db['NAME']
+                }
+                if 'SCHEMA' in db:
+                    params['schema'] = db['SCHEMA']
+            except KeyError:
+                pass
+            self._connection = AsyncDB(driver, params=params)
 
     def where(self, **where):
         """

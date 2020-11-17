@@ -1,10 +1,14 @@
 from datetime import datetime
+from dataclasses import dataclass, asdict, fields
 from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
 from asyncdb.utils.models import Model, Column
 from asyncdb.utils import Msg
 import uuid
+import asyncio
 
-from dataclasses import dataclass, asdict, fields
+
+loop = asyncio.get_event_loop()
+
 
 Msg('First: Pure-like Dataclasses ')
 #@dataclass
@@ -96,7 +100,7 @@ e = Employee(**employee)
 e.email = 'jesuslara@gmail.com'
 e.chief = u
 print(e.__dataclass_fields__, fields(e))
-print(asdict(e))
+print(e.dict())
 
 
 Msg('Working with complex types, as uuid or datetime: ')
@@ -249,3 +253,43 @@ class User(Model):
 
 u = User()
 print(u.schema(type='sql'))
+
+# #TODO: definition of Operators
+# # from models.operators import or, not
+# # or(value) returns OR instead AND
+# # not if value is an IN, returns NOT IN
+# async def get_user(id):
+#     user = await User.get(id=1)
+#     user.name = 'Jesus Ignacio Jose Lara Gimenez'
+#     user.age+=1
+#     print(user)
+#     await user.save()
+#
+# async def new_user():
+#     data = {
+#         "id": 2,
+#         "firstname": 'David',
+#         "lastname": 'Lara',
+#         "name": 'Rafael David Lara'
+#     }
+#     u = User(**data)
+#     await u.insert()
+#
+# async def get_users():
+#     users = await User.filter(lastname='Lara')
+#     print('get all users: ')
+#     for user in users:
+#         print(user)
+#
+# """
+# async methods:
+#   get
+#   filter
+#   -
+#   fetch
+#   fetchone
+#   query
+# """
+#
+# asyncio.run(get_user(1))
+# asyncio.run(get_users())
