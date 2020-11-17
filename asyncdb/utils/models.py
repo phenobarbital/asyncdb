@@ -1,3 +1,4 @@
+import os
 import asyncio
 from dataclasses import Field as ff
 from dataclasses import dataclass, is_dataclass, fields, _FIELDS, _FIELD, asdict, MISSING, InitVar
@@ -243,7 +244,7 @@ def make_dataclass(new_cls: Any, repr: bool = True, eq: bool = True, validate: b
     __class__ = dc
     setattr(dc, "__setattr__", _dc_method_setattr)
     # adding json encoder:
-    dc.__encoder__ = DefaultEncoder()
+    dc.__encoder__ = DefaultEncoder(sort_keys=False)
     return dc
 
 
@@ -560,7 +561,8 @@ class Model(metaclass=ModelMeta):
         driver = self.Meta.driver if self.Meta.driver else None
         if driver:
             print('Getting data from Database: {}'.format(driver))
-            app = self.Meta.app_label if self.Meta.app_label else 'default'
+            # working with app labels
+            app = self.Meta.app_label if self.Meta.app_label else None
             #db = DATABASES[app]
             db = {}
             params = {
