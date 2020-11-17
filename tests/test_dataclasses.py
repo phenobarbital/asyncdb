@@ -270,8 +270,11 @@ async def get_user(age):
     user.age+=1
     print(user)
     await user.save()
+    user.age = 42
+    await user.save()
 
 async def new_user():
+    Msg('Inserting and deleting a user: ', 'DEBUG')
     data = {
         "firstname": 'Román',
         "lastname": 'Lara',
@@ -280,6 +283,8 @@ async def new_user():
     u = User(**data)
     await u.insert()
     print(u.json())
+    # also, we can deleting as well
+    await u.delete()
 
 async def get_users():
     users = await User.filter(lastname='Lara')
@@ -296,6 +301,6 @@ async methods:
   fetchone
   query
 """
-#asyncio.run(new_user())
-asyncio.run(get_user(age=44))
+asyncio.run(new_user())
+asyncio.run(get_user(age=42))
 asyncio.run(get_users())

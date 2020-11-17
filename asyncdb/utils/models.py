@@ -582,7 +582,7 @@ class Model(metaclass=ModelMeta):
             values = ', '.join(source)
             sql = sql.format_map(SafeDict(set_fields=values))
             try:
-                result = await conn.get_connection().fetchrow(sql)
+                result = await conn.get_connection().execute(sql)
                 if result:
                     print(result)
             except Exception as err:
@@ -694,13 +694,44 @@ class Model(metaclass=ModelMeta):
                 return [cls(**dict(r)) for r in result]
 
     @classmethod
-    async def delete(cls, **kwargs):
+    async def remove(cls, **kwargs):
         if not cls._connection:
             cls.get_connection(cls)
         async with await cls._connection.connection() as conn:
             await conn.test_connection()
             prepared, error = await conn.prepare('SELECT * FROM walmart.stores')
             print(conn.get_columns())
+
+    async def delete(self, **kwargs):
+        """
+        Deleting a row Model based on Primary Key
+        """
+        if not self._connection:
+            self.get_connection(self)
+        async with await self._connection.connection() as conn:
+            table = f'{self.Meta.schema}.{self.Meta.name}'
+            source = []
+            pk = {}
+            cols = []
+            for name, field in self.columns():
+                column = field.name
+                datatype = field.type
+                value = Entity.toSQL(getattr(self, field.name), datatype)
+                if field.primary_key is True:
+                    pk[column] = value
+            # TODO: work in an "update, delete, insert" functions on asyncdb to abstract data-insertion
+            sql = 'DELETE FROM {table} {condition}'
+            condition = self.where(**pk)
+            sql = sql.format_map(SafeDict(table=table))
+            sql = sql.format_map(SafeDict(condition=condition))
+            try:
+                result = await conn.get_connection().execute(sql)
+                # DELETE 1
+                print(result)
+                return result
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
 
     @classmethod
     async def update(cls, conditions: dict ={}, **kwargs):
