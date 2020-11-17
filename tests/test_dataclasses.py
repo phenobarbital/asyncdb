@@ -300,6 +300,12 @@ async def get_users(**kwargs):
         await user.save()
         print(user)
 
+async def update_users(filter: list, **kwargs):
+    users = await User.update(filter, **kwargs)
+    print('Users updated:')
+    for user in users:
+        print(user)
+
 """
 async methods:
   get
@@ -312,4 +318,5 @@ async methods:
 asyncio.run(new_user())
 asyncio.run(get_user(age=42))
 asyncio.run(get_all_users())
-asyncio.run(get_users(age=18, firstname='Román'))
+asyncio.run(get_users(age=48, firstname='Román'))
+asyncio.run(update_users(filter={"age": 42, "lastname": 'Lara'}, firstname='Jesús'))
