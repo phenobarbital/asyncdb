@@ -699,13 +699,20 @@ class Model(metaclass=ModelMeta):
                 raise Exception('Error Updating Table {}: {}'.format(cls.Meta.name, err))
 
     @classmethod
-    async def create(cls, **kwargs):
+    async def create(cls, records):
         if not cls._connection:
             cls.get_connection(cls)
         async with await cls._connection.connection() as conn:
-            await conn.test_connection()
-            prepared, error = await conn.prepare('SELECT * FROM walmart.stores')
-            print(conn.get_columns())
+            try:
+                result = await cls._connection.create_rows(
+                    model=cls,
+                    rows=records
+                )
+                if result:
+                    return [cls(**dict(r)) for r in result]
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error Updating Table {}: {}'.format(cls.Meta.name, err))
 
     async def close(self):
         if self._connection:

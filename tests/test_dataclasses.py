@@ -306,6 +306,11 @@ async def update_users(filter: list, **kwargs):
     for user in users:
         print(user)
 
+async def create_users(users):
+    users = await User.create(users)
+    print('Users created:')
+    for user in users:
+        print(user)
 """
 async methods:
   get
@@ -320,3 +325,9 @@ asyncio.run(get_user(age=42))
 asyncio.run(get_all_users())
 asyncio.run(get_users(age=48, firstname='Román'))
 asyncio.run(update_users(filter={"age": 42, "lastname": 'Lara'}, firstname='Jesús'))
+users = [
+    {"firstname":"Arnoldo","lastname":"Lara Gimenez","name":"Arnoldo Lara","age": 52},
+    {"firstname":"Yolanda","lastname":"Lara Gimenez","name":"Yolanda Lara","age": 49},
+    {"firstname":"Yolanda","lastname":"Gimenez","name":"Yolanda Gimenez","age": 72}
+]
+asyncio.run(create_users(users))
