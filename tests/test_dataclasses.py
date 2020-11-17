@@ -296,6 +296,6 @@ async methods:
   fetchone
   query
 """
-asyncio.run(new_user())
-asyncio.run(get_user(age=42))
+#asyncio.run(new_user())
+asyncio.run(get_user(age=44))
 asyncio.run(get_users())

@@ -561,7 +561,33 @@ class Model(metaclass=ModelMeta):
         if not self._connection:
             self.get_connection(self)
         async with await self._connection.connection() as conn:
-            pass
+            table = f'{self.Meta.schema}.{self.Meta.name}'
+            source = []
+            pk = {}
+            cols = []
+            for name, field in self.columns():
+                column = field.name
+                datatype = field.type
+                value = Entity.toSQL(getattr(self, field.name), datatype)
+                source.append('{} = {}'.format(name, Entity.escapeLiteral(value, datatype)))
+                cols.append(column)
+                if field.primary_key is True:
+                    pk[column] = value
+            # TODO: work in an "update, delete, insert" functions on asyncdb to abstract data-insertion
+            sql = 'UPDATE {table} SET {set_fields} {condition}'
+            condition = self.where(**pk)
+            sql = sql.format_map(SafeDict(table=table))
+            sql = sql.format_map(SafeDict(condition=condition))
+            # set the columns
+            values = ', '.join(source)
+            sql = sql.format_map(SafeDict(set_fields=values))
+            try:
+                result = await conn.get_connection().fetchrow(sql)
+                if result:
+                    print(result)
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
 
     def get_connection(self):
         driver = self.Meta.driver if self.Meta.driver else None
