@@ -54,7 +54,7 @@ oauth2client==4.1.3
 oauthlib==3.1.0
 objectpath==0.6.1
 openpyxl==3.0.5
-outcome==1.0.1
+outcome==1.1.0
 pandas==1.1.3
 pathspec==0.8.0
 pbr==5.5.1
