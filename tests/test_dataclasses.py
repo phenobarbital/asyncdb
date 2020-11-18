@@ -320,11 +320,11 @@ async methods:
   fetchone
   query
 """
-asyncio.run(new_user())
-asyncio.run(get_user(age=42))
-asyncio.run(get_all_users())
-asyncio.run(get_users(age=48, firstname='Román'))
-asyncio.run(update_users(filter={"age": 42, "lastname": 'Lara'}, firstname='Jesús'))
+# asyncio.run(new_user())
+# asyncio.run(get_user(age=42))
+# asyncio.run(get_all_users())
+# asyncio.run(get_users(age=48, firstname='Román'))
+# asyncio.run(update_users(filter={"age": 42, "lastname": 'Lara'}, firstname='Jesús'))
 users = [
     {"firstname":"Arnoldo","lastname":"Lara Gimenez","name":"Arnoldo Lara","age": 52},
     {"firstname":"Yolanda","lastname":"Lara Gimenez","name":"Yolanda Lara","age": 49},
