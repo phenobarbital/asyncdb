@@ -563,7 +563,6 @@ class SQLProvider(BaseProvider):
             print(traceback.format_exc())
             raise Exception('Error on Insert over table {}: {}'.format(model.Meta.name, err))
 
-
     async def update_rows(self, model: Model, conditions: dict, **kwargs):
         """
         Updating some records and returned.
@@ -609,3 +608,32 @@ class SQLProvider(BaseProvider):
         if not self._connection:
             await self.connection()
         table = f'{model.Meta.schema}.{model.Meta.name}'
+        fields = model.columns(model)
+        pk = []
+        for name, field in fields.items():
+            if field.primary_key is True:
+                pk.append(name)
+        cols = []
+        source = []
+        for row in rows:
+            el = []
+            if not cols:
+                cols = row.keys()
+            for col in cols:
+                el.append(Entity.escapeLiteral(row[col], fields[col].type))
+            values = '({})'.format(', '.join([str(x) for x in el]))
+            source.append(values)
+        columns = ', '.join(cols)
+        insert = f'INSERT INTO {table} ({columns}) VALUES '
+        values = '{}\n'.format(','.join(source))
+        primary = 'RETURNING *'
+        insert = f'INSERT INTO {table} ({columns}) VALUES {values} {primary}'
+        try:
+            result = await self._connection.fetch(insert)
+            if result:
+                return result
+            else:
+                return None
+        except Exception as err:
+            print(traceback.format_exc())
+            raise Exception('Error on Bulk Insert on {}: {}'.format(model.Meta.name, err))
