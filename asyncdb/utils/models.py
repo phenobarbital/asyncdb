@@ -297,13 +297,13 @@ class ModelMeta(type):
                 cols.append(field)
             # set the slots of this class
             cls.__slots__ = tuple(cols)
-        new_cls = super().__new__(cls, name, bases, attrs)
         # adding a "class init method"
         try:
             print('executing model init')
-            new_cls.__modelinit__(cls, attrs, **kwargs)
+            cls.__modelinit__(cls, attrs, **kwargs)
         except AttributeError:
             pass
+        new_cls = super().__new__(cls, name, bases, attrs)
         frozen = False
         try:
             # TODO: mix values from Meta to an existing meta
