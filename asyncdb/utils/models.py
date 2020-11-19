@@ -298,6 +298,11 @@ class ModelMeta(type):
             # set the slots of this class
             cls.__slots__ = tuple(cols)
         new_cls = super().__new__(cls, name, bases, attrs)
+        # adding a "class init method"
+        try:
+            new_cls.__modelinit__(cls, attrs)
+        except AttributeError:
+            pass
         frozen = False
         try:
             # TODO: mix values from Meta to an existing meta
@@ -356,6 +361,9 @@ class Model(metaclass=ModelMeta):
     _fields = {}
     __columns__ = []
     _connection = None
+
+    def __modelinit__(self, attrs) -> None:
+        print('Running Model INIT')
 
     def __post_init__(self) -> None:
         """
