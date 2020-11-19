@@ -259,7 +259,7 @@ class ModelMeta(type):
     __valid__ = None
     __encoder__ = None
 
-    def __new__(cls, name, bases, attrs):
+    def __new__(cls, name, bases, attrs, **kwargs):
         """__new__ is a classmethod, even without @classmethod decorator
         """
         if len(bases) > 1:
@@ -300,7 +300,8 @@ class ModelMeta(type):
         new_cls = super().__new__(cls, name, bases, attrs)
         # adding a "class init method"
         try:
-            new_cls.__modelinit__(cls, attrs)
+            print('executing model init')
+            new_cls.__modelinit__(cls, attrs, **kwargs)
         except AttributeError:
             pass
         frozen = False
@@ -362,8 +363,8 @@ class Model(metaclass=ModelMeta):
     __columns__ = []
     _connection = None
 
-    def __modelinit__(self, attrs) -> None:
-        print('Running Model INIT')
+    def __modelinit__(self, attrs, **kwargs) -> None:
+        pass
 
     def __post_init__(self) -> None:
         """
