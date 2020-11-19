@@ -309,7 +309,6 @@ class ModelMeta(type):
         frozen = False
         # adding a "class init method"
         try:
-            print('Executing Model Init')
             new_cls.__model_init__(new_cls, name, attrs)
         except AttributeError:
             pass
@@ -337,7 +336,6 @@ class ModelMeta(type):
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
-        print('Running Meta Init')
         cls.modelName = cls.__name__
         if cls.Meta.strict:
             cls.__frozen__ = cls.Meta.strict
@@ -472,8 +470,11 @@ class Model(metaclass=ModelMeta):
     def dict(self):
         return asdict(self)
 
-    def json(self):
-        return self.__encoder__(asdict(self))
+    def json(self, **kwargs):
+        encoder = self.__encoder__
+        if len(kwargs) > 0:
+            encoder = DefaultEncoder(sort_keys=False, **kwargs)
+        return encoder(asdict(self))
 
     def is_valid(self):
         return bool(self.__valid__)
