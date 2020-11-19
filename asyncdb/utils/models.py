@@ -234,7 +234,15 @@ def _dc_method_setattr(self, name: str, value: Any, *args, **kwargs) -> None:
             except Exception as err:
                 print(err)
 
-def make_dataclass(new_cls: Any, repr: bool = True, eq: bool = True, validate: bool = True, frozen: bool = False) -> None:
+
+def make_dataclass(
+        new_cls: Any,
+        repr: bool = True,
+        eq: bool = True,
+        validate: bool = True,
+        frozen: bool = False,
+        init: bool = True
+    ) -> None:
     """
     make_dataclass.
        Create a Dataclass from a Class
@@ -259,7 +267,7 @@ class ModelMeta(type):
     __valid__ = None
     __encoder__ = None
 
-    def __new__(cls, name, bases, attrs, **kwargs):
+    def __new__(cls, name, bases, attrs):
         """__new__ is a classmethod, even without @classmethod decorator
         """
         if len(bases) > 1:
@@ -297,14 +305,14 @@ class ModelMeta(type):
                 cols.append(field)
             # set the slots of this class
             cls.__slots__ = tuple(cols)
-        # adding a "class init method"
-        try:
-            print('executing model init')
-            cls.__modelinit__(cls, attrs, **kwargs)
-        except AttributeError:
-            pass
         new_cls = super().__new__(cls, name, bases, attrs)
         frozen = False
+        # adding a "class init method"
+        try:
+            print('Executing Model Init')
+            new_cls.__model_init__(new_cls, name, attrs)
+        except AttributeError:
+            pass
         try:
             # TODO: mix values from Meta to an existing meta
             try:
@@ -321,19 +329,15 @@ class ModelMeta(type):
                 new_cls.Meta.driver = None
         except AttributeError:
             new_cls.Meta = Meta
-        if new_cls.__name__ == 'Model':
-            if "__init__" in new_cls.__dict__:
-                class_init = getattr(new_cls, "__init__")
-                class_init(new_cls)
-        dc = make_dataclass(new_cls, frozen=frozen)
+        dc = make_dataclass(new_cls, frozen=frozen, init=True)
         MODELS[new_cls.__name__] = dc
-        cols = dc.__dict__['__dataclass_fields__']
+        cols = {k: v for k, v in dc.__dict__['__dataclass_fields__'].items() if v._field_type == _FIELD}
         dc._columns = cols
         dc._fields = cols.keys()
-        #dc.__slots__ = tuple(cols)
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
+        print('Running Meta Init')
         cls.modelName = cls.__name__
         if cls.Meta.strict:
             cls.__frozen__ = cls.Meta.strict
@@ -363,8 +367,6 @@ class Model(metaclass=ModelMeta):
     __columns__ = []
     _connection = None
 
-    def __modelinit__(self, attrs, **kwargs) -> None:
-        pass
 
     def __post_init__(self) -> None:
         """

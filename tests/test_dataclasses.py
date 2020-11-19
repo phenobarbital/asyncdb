@@ -1,5 +1,6 @@
 from datetime import datetime
-from dataclasses import dataclass, asdict, fields
+import dataclasses
+from dataclasses import dataclass, asdict, fields, InitVar
 from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
 from asyncdb.utils.models import Model, Column
 from asyncdb.utils import Msg
@@ -18,6 +19,7 @@ class User(Model):
     firstname: str
     lastname: str
     age: int
+    directory: InitVar = ''
     class Meta:
         name = 'users'
         schema = 'public'
@@ -25,83 +27,92 @@ class User(Model):
         strict = False
         frozen = False
 
-#@dataclass
-class Employee(User):
-    associate_id: int
-    email: str
-    status: int = 0
-    chief: User = None
+    def __model_init__(cls, name, attrs) -> None:
+        print('Running Model Init')
+        print(name, attrs)
+        # can you define values before declaring a dataclass (mostly pre-initialization)
+        cls.name = 'Jesus Lara'
+
+    def __post_init__(self, directory):
+        print(directory)
+        super(User, self).__post_init__()
 
 u = {
     "id": 1,
-    "name": 'Admin',
     "firstname": 'Super',
     "lastname": 'Sayayin',
     "age": 42
 }
-u = User(**u)
+u = User(directory='hola', **u)
 print(u)
 u.name = 'Jesus Ignacio Lara Gimenez'
 print(asdict(u))
 
-employee = {
-    "id": 2,
-    "name": 'David Lara',
-    "firstname": 'David',
-    "lastname": 'Lara',
-    "age": 46,
-    "associate_id": 3,
-    "email": 'jesuslara@gmail.com'
-}
-e = Employee(**employee)
-e.chief = u
-print(asdict(e))
+# #@dataclass
+# class Employee(User):
+#     associate_id: int
+#     email: str
+#     status: int = 0
+#     chief: User = None
+#
+# employee = {
+#     "id": 2,
+#     "name": 'David Lara',
+#     "firstname": 'David',
+#     "lastname": 'Lara',
+#     "age": 46,
+#     "associate_id": 3,
+#     "email": 'jesuslara@gmail.com'
+# }
+# e = Employee(**employee)
+# e.chief = u
+# print(asdict(e))
 
-
-Msg('==== SECOND METHOD: AsyncDB Model')
-
-class User(Model):
-    id: int = Column(required=True)
-    name: str = Column(required=True)
-    firstname: str
-    lastname: str
-    age: int = Column(default=42, required=True)
-    class Meta:
-        name = 'users'
-        schema = 'public'
-        app_label = 'troc'
-        strict = False
-
-class Employee(User):
-    status: int = 0
-    associate_id: int = Column(required=True)
-    email: str = Column(required=False)
-    chief: User = Column(required=False)
-
-u = User()
-u.id = 1
-u.name = 'Admin'
-u.firstname = 'Super'
-u.lastname = 'Sayayin'
-u.ultra = 'Ultra Sayayin'
-print(fields(u))
-print(u.json())
-
-Msg('Exporting Model Schema: ')
-print(u.schema(type='sql'))
-print(u.schema(type='json'))
-
-employee = {
-    "id": 1,
-    "name": 'Jesus Lara',
-    "associate_id": 3
-}
-e = Employee(**employee)
-e.email = 'jesuslara@gmail.com'
-e.chief = u
-print(e.__dataclass_fields__, fields(e))
-print(e.dict())
-
+#
+# Msg('==== SECOND METHOD: AsyncDB Model')
+#
+# class User(Model):
+#     id: int = Column(required=True)
+#     name: str = Column(required=True)
+#     firstname: str
+#     lastname: str
+#     age: int = Column(default=42, required=True)
+#     class Meta:
+#         name = 'users'
+#         schema = 'public'
+#         app_label = 'troc'
+#         strict = False
+#
+# class Employee(User):
+#     status: int = 0
+#     associate_id: int = Column(required=True)
+#     email: str = Column(required=False)
+#     chief: User = Column(required=False)
+#
+# u = User()
+# u.id = 1
+# u.name = 'Admin'
+# u.firstname = 'Super'
+# u.lastname = 'Sayayin'
+# u.ultra = 'Ultra Sayayin'
+# print(fields(u))
+# print(u.json())
+#
+# Msg('Exporting Model Schema: ')
+# print(u.schema(type='sql'))
+# print(u.schema(type='json'))
+#
+# employee = {
+#     "id": 1,
+#     "name": 'Jesus Lara',
+#     "associate_id": 3
+# }
+# e = Employee(**employee)
+# e.email = 'jesuslara@gmail.com'
+# e.chief = u
+# print(e.__dataclass_fields__, fields(e))
+# print(e.dict())
+#
 
 # Msg('Working with complex types, as uuid or datetime: ')
 # class PyUser(Model):
