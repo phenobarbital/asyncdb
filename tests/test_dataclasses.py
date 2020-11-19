@@ -6,7 +6,7 @@ from asyncdb.utils.models import Model, Column
 from asyncdb.utils import Msg
 import uuid
 import asyncio
-
+import pprint
 
 loop = asyncio.get_event_loop()
 
@@ -15,7 +15,7 @@ Msg('First: Pure-like Dataclasses ')
 #@dataclass
 class User(Model):
     id: int
-    name: str
+    name: str = Column(required=True)
     firstname: str
     lastname: str
     age: int
@@ -24,17 +24,14 @@ class User(Model):
         name = 'users'
         schema = 'public'
         app_label = 'troc'
-        strict = False
+        strict = True
         frozen = False
 
     def __model_init__(cls, name, attrs) -> None:
-        print('Running Model Init')
-        print(name, attrs)
         # can you define values before declaring a dataclass (mostly pre-initialization)
         cls.name = 'Jesus Lara'
 
     def __post_init__(self, directory):
-        print(directory)
         super(User, self).__post_init__()
 
 u = {
@@ -44,201 +41,201 @@ u = {
     "age": 42
 }
 u = User(directory='hola', **u)
-print(u)
+print('First version of User: ', u)
 u.name = 'Jesus Ignacio Lara Gimenez'
-print(asdict(u))
+print('Compatible with asdict class of dataclass: ', asdict(u))
 
-# #@dataclass
-# class Employee(User):
-#     associate_id: int
-#     email: str
-#     status: int = 0
-#     chief: User = None
-#
-# employee = {
-#     "id": 2,
-#     "name": 'David Lara',
-#     "firstname": 'David',
-#     "lastname": 'Lara',
-#     "age": 46,
-#     "associate_id": 3,
-#     "email": 'jesuslara@gmail.com'
-# }
-# e = Employee(**employee)
-# e.chief = u
-# print(asdict(e))
+#@dataclass
+class Employee(User):
+    associate_id: int
+    email: str
+    status: int = 0
+    chief: User = None
 
-#
-# Msg('==== SECOND METHOD: AsyncDB Model')
-#
-# class User(Model):
-#     id: int = Column(required=True)
-#     name: str = Column(required=True)
-#     firstname: str
-#     lastname: str
-#     age: int = Column(default=42, required=True)
-#     class Meta:
-#         name = 'users'
-#         schema = 'public'
-#         app_label = 'troc'
-#         strict = False
-#
-# class Employee(User):
-#     status: int = 0
-#     associate_id: int = Column(required=True)
-#     email: str = Column(required=False)
-#     chief: User = Column(required=False)
-#
-# u = User()
-# u.id = 1
-# u.name = 'Admin'
-# u.firstname = 'Super'
-# u.lastname = 'Sayayin'
-# u.ultra = 'Ultra Sayayin'
-# print(fields(u))
-# print(u.json())
-#
-# Msg('Exporting Model Schema: ')
-# print(u.schema(type='sql'))
-# print(u.schema(type='json'))
-#
-# employee = {
-#     "id": 1,
-#     "name": 'Jesus Lara',
-#     "associate_id": 3
-# }
-# e = Employee(**employee)
-# e.email = 'jesuslara@gmail.com'
-# e.chief = u
-# print(e.__dataclass_fields__, fields(e))
-# print(e.dict())
-#
+employee = {
+    "id": 2,
+    "name": 'Rafael David Lara',
+    "firstname": 'David',
+    "lastname": 'Lara',
+    "age": 46,
+    "associate_id": 3,
+    "email": 'jesuslara@gmail.com'
+}
+e = Employee(**employee)
+e.chief = u
+pprint.pprint(e.json(ensure_ascii=True, indent=4))
 
-# Msg('Working with complex types, as uuid or datetime: ')
-# class PyUser(Model):
-#     id: int = Column(default=1, required=True)
-#     name: str = Column(default='John Doe', required=False)
-#     signup_ts: datetime = Column(default=datetime.now(), required=False)
-#     guid: uuid.UUID = Column(default=uuid.uuid4(), required=False)
-#
-#     class Meta:
-#         name = 'pyusers'
-#         schema = 'public'
-#         app_label = 'troc'
-#         strict = False
-#
-# a = PyUser()
-# a.name = 'Jesus Lara'
-# a.id = 2
-# print(a)
-# print(a.json())
-#
-# user = PyUser(id='42', signup_ts='2032-06-21T12:00')
-# user.perolito = True
-# print(user, user.perolito)
-#
-#
-# Msg('First version of nested Dataclasses: ')
-#
-# class NavbarButton(Model):
-#     href: str
-#
-# class Navbar(Model):
-#     button: List[NavbarButton]
-#
-# navbar = Navbar(
-#     button=[ NavbarButton(href='http://example.com'), NavbarButton(href='http://example2.com') ]
-# )
-# print(navbar)
-#
-#
-# Msg('Working with Metadata: ')
-# class Position(Model):
-#     name: str
-#     lon: float = Column(default=0.0, metadata={'unit': 'degrees'})
-#     lat: float = Column(default=0.0, metadata={'unit': 'degrees'})
-#     country: str
-#
-# pos = Position(name='Oslo', lon=10.8, lat=59.9)
-# print(pos)
-# print(f'{pos.name} is at {pos.lat}°N, {pos.lon}°E')
-# pos.country = 'Norway'
-# print(pos)
-#
-#
-# Msg('Complex Methods, nested DataClasses: ')
-#
-# person = {
-#     'name': 'Ivan',
-#     'age': 30,
-#     'contact': [
-#         {
-#             'phone': '+7-999-000-00-00',
-#             'email': 'ivan@mail.us',
-#             'address': 'Miami, 33066',
-#             'city': 'Miami',
-#             'zipcode': '33066'
-#         },
-#         {
-#             'phone': '+34-999-000-00-11',
-#             'email': 'ivan@mail.us',
-#             'address': 'Florida, 33166',
-#             'city': 'Orlando',
-#             'zipcode': '33166'
-#         }
-#     ]
-# }
-#
-#
-# class Contact(Model):
-#     phone: str
-#     email: str
-#     address: str = Column(default='')
-#     zipcode: str = Column(default='')
-#     city: str = Column(required=False)
-#
-#
-# class Person(Model):
-#     name: str = Column(default='')
-#     age: int = Column(default=18, min=0, max=99)
-#     contact: List[Contact] = Column(required=False)
-#
-#
-# ivan = Person(**person)
-# print(ivan.json())
-#
-#
-# Msg('Using Methods within Dataclass: ')
-# class InventoryItem(Model):
-#     """Class for keeping track of an item in inventory."""
-#     name: str
-#     unit_price: float
-#     quantity: int = 0
-#
-#     def total_cost(self) -> float:
-#         return self.unit_price * self.quantity
-#
-#
-# grapes = InventoryItem(name='Grapes', unit_price=2.55)
-# grapes.quantity = 8
-# print(f'Total for {grapes.name} is: ', grapes.total_cost())
-#
-# Msg('Complex Model of Nested and Union Classes: ')
-#
-#
-# class Foo(Model):
-#     value: Union[int, List[int]]
-#
-#
-# class Bar(Model):
-#     foo: Union[Foo, List[Foo]]
-#
-#
-# foo = Foo(value=[1, 2])
-# instance = Bar(foo=foo)
-# print(instance)
-# assert instance.is_valid() or 'Not Valid'
-# assert instance == Bar(foo=Foo(value=[1, 2]))
+
+Msg('==== SECOND METHOD: AsyncDB Model')
+
+class User(Model):
+    id: int = Column(required=True)
+    name: str = Column(required=True)
+    firstname: str
+    lastname: str
+    age: int = Column(default=42, required=True)
+    class Meta:
+        name = 'users'
+        schema = 'public'
+        app_label = 'troc'
+        strict = False
+
+class Employee(User):
+    status: int = 0
+    associate_id: int = Column(required=True)
+    email: str = Column(required=False)
+    chief: User = Column(required=False)
+
+u = User()
+u.id = 1
+u.name = 'Admin'
+u.firstname = 'Super'
+u.lastname = 'Sayayin'
+u.ultra = 'Ultra Sayayin'
+print(fields(u))
+print(u.json())
+
+Msg('Exporting Model Schema: ')
+print(u.schema(type='sql'))
+print(u.schema(type='json'))
+
+employee = {
+    "id": 1,
+    "name": 'Jesus Lara',
+    "associate_id": 3
+}
+e = Employee(**employee)
+e.email = 'jesuslara@gmail.com'
+e.chief = u
+print(e.__dataclass_fields__, fields(e))
+print(e.dict())
+
+
+Msg('Working with complex types, as uuid or datetime: ')
+class PyUser(Model):
+    id: int = Column(default=1, required=True)
+    name: str = Column(default='John Doe', required=False)
+    signup_ts: datetime = Column(default=datetime.now(), required=False)
+    guid: uuid.UUID = Column(default=uuid.uuid4(), required=False)
+
+    class Meta:
+        name = 'pyusers'
+        schema = 'public'
+        app_label = 'troc'
+        strict = False
+
+a = PyUser()
+a.name = 'Jesus Lara'
+a.id = 2
+print(a)
+print(a.json())
+
+user = PyUser(id='42', signup_ts='2032-06-21T12:00')
+user.perolito = True
+print(user, user.perolito)
+
+
+Msg('First version of nested Dataclasses: ')
+
+class NavbarButton(Model):
+    href: str
+
+class Navbar(Model):
+    button: List[NavbarButton]
+
+navbar = Navbar(
+    button=[ NavbarButton(href='http://example.com'), NavbarButton(href='http://example2.com') ]
+)
+print(navbar)
+
+
+Msg('Working with Metadata: ')
+class Position(Model):
+    name: str
+    lon: float = Column(default=0.0, metadata={'unit': 'degrees'})
+    lat: float = Column(default=0.0, metadata={'unit': 'degrees'})
+    country: str
+
+pos = Position(name='Oslo', lon=10.8, lat=59.9)
+print(pos)
+print(f'{pos.name} is at {pos.lat}°N, {pos.lon}°E')
+pos.country = 'Norway'
+print(pos)
+
+
+Msg('Complex Methods, nested DataClasses: ')
+
+person = {
+    'name': 'Ivan',
+    'age': 30,
+    'contact': [
+        {
+            'phone': '+7-999-000-00-00',
+            'email': 'ivan@mail.us',
+            'address': 'Miami, 33066',
+            'city': 'Miami',
+            'zipcode': '33066'
+        },
+        {
+            'phone': '+34-999-000-00-11',
+            'email': 'ivan@mail.us',
+            'address': 'Florida, 33166',
+            'city': 'Orlando',
+            'zipcode': '33166'
+        }
+    ]
+}
+
+
+class Contact(Model):
+    phone: str
+    email: str
+    address: str = Column(default='')
+    zipcode: str = Column(default='')
+    city: str = Column(required=False)
+
+
+class Person(Model):
+    name: str = Column(default='')
+    age: int = Column(default=18, min=0, max=99)
+    contact: List[Contact] = Column(required=False)
+
+
+ivan = Person(**person)
+print(ivan.json())
+
+
+Msg('Using Methods within Dataclass: ')
+class InventoryItem(Model):
+    """Class for keeping track of an item in inventory."""
+    name: str
+    unit_price: float
+    quantity: int = 0
+
+    def total_cost(self) -> float:
+        return self.unit_price * self.quantity
+
+
+grapes = InventoryItem(name='Grapes', unit_price=2.55)
+grapes.quantity = 8
+print(f'Total for {grapes.name} is: ', grapes.total_cost())
+
+Msg('Complex Model of Nested and Union Classes: ')
+
+
+class Foo(Model):
+    value: Union[int, List[int]]
+
+
+class Bar(Model):
+    foo: Union[Foo, List[Foo]]
+
+
+foo = Foo(value=[1, 2])
+instance = Bar(foo=foo)
+print(instance)
+assert instance.is_valid() or 'Not Valid'
+assert instance == Bar(foo=Foo(value=[1, 2]))
 #
 # Msg('Working with Data Models: ')
 #
