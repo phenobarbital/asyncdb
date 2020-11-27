@@ -263,7 +263,7 @@ class rethink(BaseProvider):
         finally:
             return self
 
-    async def clean(self, table):
+    async def clean(self, table, conditions: dict = {}):
         """
         clean
            Clean a Table
