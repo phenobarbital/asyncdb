@@ -719,7 +719,7 @@ class rethink(BaseProvider):
                 except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
                     raise ProviderError(err)
                     return False
-            elif type(filter) == dict and len(filter) > 0:
+            elif isinstance(filter, dict):
                 try:
                     self._result = (
                         await self._engine.table(table).filter(filter).delete(
