@@ -1,11 +1,10 @@
-import decimal
 import json
+from rapidjson import Encoder as JSONEncoder
+import decimal
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import Enum
-from rapidjson import Encoder as JSONEncoder
-
 import asyncpg
 import numpy as np
 
@@ -130,5 +129,5 @@ class BaseEncoder:
         # Filter/adapt JSON arguments to RapidJSON ones
         rjargs = ()
         rjkwargs = {}
-        encoder = DefaultEncoder(*rjargs, **rjkwargs)
+        encoder = DefaultEncoder(sort_keys=False, *rjargs, **rjkwargs)
         self.encode = encoder.__call__
