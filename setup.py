@@ -26,7 +26,7 @@ setup(
     author_email="jlara@trocglobal.com",
     packages=find_packages(exclude=["contrib", "docs", "tests"]),
     install_requires=[
-        "numpy==1.19.2",
+        "numpy==1.19.4",
         "wheel==0.36.0",
         "asyncio==3.4.3",
         "PyDrive==1.3.1",
@@ -60,6 +60,7 @@ setup(
         "hiredis==1.1.0",
         "aiomcache==0.6.0",
         "aiosqlite==0.15.0",
+        "asyncio-redis==0.16.0",
         "sqlalchemy==1.3.20",
         "sqlalchemy-aio==0.16.0",
         "redis==3.5.3",
@@ -70,7 +71,6 @@ setup(
         "python-rapidjson==0.9.3",
         "rapidjson==1.0.0",
         "typing-extensions==3.7.4.3",
-
     ],
     extra_requires=[
         'cryptography>=3.2'

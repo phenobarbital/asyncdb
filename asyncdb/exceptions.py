@@ -30,11 +30,14 @@ async def shutdown(loop, signal=None):
 
 
 def default_exception_handler(loop, context: Any):
-    logging.info("Exception Handler Caught")
+    logging.info(f'Exception Handler Caught: {context!s}')
     # first, handle with default handler
     loop.default_exception_handler(context)
     if not "exception" in context:
-        task = context.get("task", context["future"])
+        try:
+            task = context.get("task", context["future"])
+        except KeyError:
+            task = None
         msg = context.get("exception", context["message"])
         # is an error
         logging.exception(f"Exception raised by Task {task}, Error: {msg}")
