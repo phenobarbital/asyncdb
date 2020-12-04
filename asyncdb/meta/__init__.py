@@ -42,12 +42,7 @@ class asyncORM(object):
         Del: try to cleanup the database connector.
 
         """
-        if self._connection:
-            # self._loop.run_until_complete(self._connection.close(timeout=5))
-            try:
-                asyncio.ensure_future(self._connection.close(timeout=5))
-            except Exception as err:
-                pass
+        self.close()
 
     async def terminate(self):
         """
