@@ -329,7 +329,12 @@ class pg(SQLProvider):
     _transaction = None
     _initialized_on = None
     _query_raw = "SELECT {fields} FROM {table} {where_cond}"
+    _server_settings = {}
 
+    def __init__(self, dsn: str = '', loop = None, params={}, **kwargs):
+        super(pg, self).__init__(dsn, loop, params, **kwargs)
+        if "server_settings" in kwargs:
+            self._server_settings = kwargs["server_settings"]
 
     async def close(self, timeout=5):
         """
@@ -384,6 +389,14 @@ class pg(SQLProvider):
         def _decoder(value):
             return json.loads(value)
 
+        server_settings = {
+            "application_name": "AsyncDB",
+            "idle_in_transaction_session_timeout": "600",
+            "tcp_keepalives_idle": "600",
+            "max_parallel_workers": "16",
+        }
+        server_settings = {**server_settings, **self._server_settings}
+
         try:
             if self._pool:
                 self._connection = await self._pool.pool().acquire()
@@ -394,6 +407,7 @@ class pg(SQLProvider):
                     timeout=self._timeout,
                     max_cached_statement_lifetime=max_cached_statement_lifetime,
                     max_cacheable_statement_size=max_cacheable_statement_size,
+                    server_settings=server_settings
                 )
                 await self._connection.set_type_codec(
                     "json",
