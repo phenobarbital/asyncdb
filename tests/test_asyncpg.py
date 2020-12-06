@@ -27,9 +27,12 @@ loop.run_until_complete(pool.release(connection=db.get_connection()))
 pool.terminate()
 
 # running new multi-threaded async SA (using aiopg)
-pg1 = AsyncDB("postgresql", params=params)
-
-p = pg(loop=loop, params=params)
+args = {
+    "server_settings": {
+        "application_name": "Testing"
+    }
+}
+p = AsyncDB("pg", params=params, **args)
 loop.run_until_complete(p.connection())
 
 sql = "SELECT * FROM troc.query_util WHERE query_slug = '{}'".format("walmart_stores")
