@@ -41,7 +41,7 @@ DB_TYPES = {
     list: "Array",
     Decimal: "numeric",
     datetime.date: "date",
-    datetime.datetime: "timestamp with time zone",
+    datetime.datetime: "timestamp without time zone",
     datetime.time: "time",
     datetime.timedelta: "timestamp without time zone",
     uuid.UUID: "uuid"
@@ -488,6 +488,11 @@ class Model(metaclass=ModelMeta):
 
     def is_valid(self):
         return bool(self.__valid__)
+
+    def query_raw(self):
+        name = self.__class__.__name__
+        schema = self.Meta.schema if self.Meta.schema is not None else ''
+        return f'SELECT {fields} FROM {schema!s}.{name!s} {filter}'
 
     def schema(self, type: str = 'json') -> str:
         result = None
