@@ -15,6 +15,7 @@ from dataclasses import (
 import datetime
 import typing
 import uuid
+import numpy as np
 from decimal import Decimal
 from asyncdb import AsyncDB
 from asyncdb.utils import colors, SafeDict, Msg
@@ -35,6 +36,7 @@ MODELS = {}
 DB_TYPES = {
     bool: "boolean",
     int: "integer",
+    np.int64: "bigint",
     float: "float",
     str: "character varying",
     bytes: "byte",
@@ -50,6 +52,7 @@ DB_TYPES = {
 JSON_TYPES = {
     bool: "boolean",
     int: "integer",
+    np.int64: "integer",
     float: "float",
     str: "string",
     bytes: "byte",
@@ -67,7 +70,7 @@ JSON_TYPES = {
 class Entity:
     @classmethod
     def number(cls, type):
-        return type in (int, float, Decimal, bytes, bool)
+        return type in (int, np.int64, float, Decimal, bytes, bool)
 
     @classmethod
     def string(cls, type):
