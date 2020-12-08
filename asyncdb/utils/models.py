@@ -503,7 +503,7 @@ class Model(metaclass=ModelMeta):
             elif type == 'sql':
                 # TODO: using lexers to different types of SQL
                 table = self.Meta.name if self.Meta.name is not None else name
-                doc = f'CREATE TABLE {schema}.{table} (\n'
+                doc = f'CREATE TABLE IF NOT EXISTS {schema}.{table} (\n'
                 cols = []
                 pk = []
                 for name, field in self.columns().items():
