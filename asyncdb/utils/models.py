@@ -1,10 +1,21 @@
 import os
 import asyncio
 from dataclasses import Field as ff
-from dataclasses import dataclass, is_dataclass, fields, _FIELDS, _FIELD, asdict, MISSING, InitVar
+from dataclasses import (
+    dataclass,
+    is_dataclass,
+    fields,
+    _FIELDS,
+    _FIELD,
+    asdict,
+    MISSING,
+    InitVar,
+    make_dataclass
+)
 import datetime
 import typing
 import uuid
+import numpy as np
 from decimal import Decimal
 from asyncdb import AsyncDB
 from asyncdb.utils import colors, SafeDict, Msg
@@ -25,13 +36,14 @@ MODELS = {}
 DB_TYPES = {
     bool: "boolean",
     int: "integer",
+    np.int64: "bigint",
     float: "float",
     str: "character varying",
     bytes: "byte",
     list: "Array",
     Decimal: "numeric",
     datetime.date: "date",
-    datetime.datetime: "timestamp with time zone",
+    datetime.datetime: "timestamp without time zone",
     datetime.time: "time",
     datetime.timedelta: "timestamp without time zone",
     uuid.UUID: "uuid"
@@ -40,6 +52,7 @@ DB_TYPES = {
 JSON_TYPES = {
     bool: "boolean",
     int: "integer",
+    np.int64: "integer",
     float: "float",
     str: "string",
     bytes: "byte",
@@ -57,7 +70,7 @@ JSON_TYPES = {
 class Entity:
     @classmethod
     def number(cls, type):
-        return type in (int, float, Decimal, bytes, bool)
+        return type in (int, np.int64, float, Decimal, bytes, bool)
 
     @classmethod
     def string(cls, type):
@@ -235,7 +248,7 @@ def _dc_method_setattr(self, name: str, value: Any, *args, **kwargs) -> None:
                 print(err)
 
 
-def make_dataclass(
+def create_dataclass(
         new_cls: Any,
         repr: bool = True,
         eq: bool = True,
@@ -244,7 +257,7 @@ def make_dataclass(
         init: bool = True
     ) -> None:
     """
-    make_dataclass.
+    create_dataclass.
        Create a Dataclass from a Class
     """
     # TODO: can build more complex dataclasses using make dataclass function
@@ -328,7 +341,7 @@ class ModelMeta(type):
                 new_cls.Meta.driver = None
         except AttributeError:
             new_cls.Meta = Meta
-        dc = make_dataclass(new_cls, frozen=frozen, init=True)
+        dc = create_dataclass(new_cls, frozen=frozen, init=True)
         MODELS[new_cls.__name__] = dc
         cols = {k: v for k, v in dc.__dict__['__dataclass_fields__'].items() if v._field_type == _FIELD}
         dc._columns = cols
@@ -479,6 +492,11 @@ class Model(metaclass=ModelMeta):
     def is_valid(self):
         return bool(self.__valid__)
 
+    def query_raw(self):
+        name = self.__class__.__name__
+        schema = self.Meta.schema if self.Meta.schema is not None else ''
+        return f'SELECT {fields} FROM {schema!s}.{name!s} {filter}'
+
     def schema(self, type: str = 'json') -> str:
         result = None
         name = self.__class__.__name__
@@ -500,10 +518,10 @@ class Model(metaclass=ModelMeta):
                     "fields": columns
                 }
                 result = to_json.dumps(doc)
-            elif type == 'sql':
+            elif type == 'sql' or type == 'SQL':
                 # TODO: using lexers to different types of SQL
                 table = self.Meta.name if self.Meta.name is not None else name
-                doc = f'CREATE TABLE {schema}.{table} (\n'
+                doc = f'CREATE TABLE IF NOT EXISTS {schema}.{table} (\n'
                 cols = []
                 pk = []
                 for name, field in self.columns().items():
@@ -729,6 +747,72 @@ class Model(metaclass=ModelMeta):
     async def close(self):
         if self._connection:
             await self._connection.close(wait=5)
+
+    """
+    Class-method for creation.
+    """
+    @classmethod
+    def make_model(cls, name: str, schema: str = 'public', fields: list = []):
+        cls = make_dataclass(name, fields, bases=(Model,))
+        m = Meta()
+        m.name = name
+        m.schema = schema
+        m.app_label = schema
+        cls.Meta = m
+        return cls
+    #
+    # @classmethod
+    # def schema(cls, type: str = 'json') -> str:
+    #     result = None
+    #     name = cls.__name__
+    #     schema = cls.Meta.schema if cls.Meta.schema is not None else ''
+    #     columns = {}
+    #     try:
+    #         if type == 'json':
+    #             for name, field in cls.columns():
+    #                 key = field.name
+    #                 type = field.type
+    #                 columns[key] = {
+    #                     "name": key,
+    #                     "type": JSON_TYPES[type]
+    #                 }
+    #             doc = {
+    #                 "name": name,
+    #                 "description": cls.__doc__.strip('\n').strip(),
+    #                 "schema": schema,
+    #                 "fields": columns
+    #             }
+    #             result = to_json.dumps(doc)
+    #         elif type == 'sql' or type == 'SQL':
+    #             # TODO: using lexers to different types of SQL
+    #             table = cls.Meta.name if cls.Meta.name is not None else name
+    #             doc = f'CREATE TABLE IF NOT EXISTS {schema}.{table} (\n'
+    #             cols = []
+    #             pk = []
+    #             for name, field in cls.columns().items():
+    #                 print(name, field)
+    #                 key = field.name
+    #                 default = None
+    #                 try:
+    #                     default = field.metadata['db_default']
+    #                 except KeyError:
+    #                     if field.default:
+    #                         default = f'{field.default!r}'
+    #                 default = f'DEFAULT {default!s}' if isinstance(default, (str, int)) else ''
+    #                 type = DB_TYPES[field.type]
+    #                 nn = 'NOT NULL' if field.required is True else ''
+    #                 if field.primary_key is True:
+    #                     pk.append(key)
+    #                 cols.append(f' {key} {type} {nn} {default}')
+    #             doc = "{}{}".format(doc, ",\n".join(cols))
+    #             if len(pk) >= 1:
+    #                 primary = ", ".join(pk)
+    #                 cname = f'pk_{schema}_{table}_pkey'
+    #                 doc = "{},\n{}".format(doc, f'CONSTRAINT {cname} PRIMARY KEY ({primary})')
+    #             doc = doc + '\n);'
+    #             result = doc
+    #     finally:
+    #         return result
 
     """
     Meta-information
