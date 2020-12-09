@@ -268,10 +268,9 @@ class rethink(BaseProvider):
         clean
            Clean a Table
         """
-        conditions = {}
         result = []
         if self.conditions:
-            conditions = {**self.conditions}
+            conditions = {**conditions, **self.conditions}
 
         conditions.update(
             (x, None) for (x, y) in conditions.items() if y == "null"
