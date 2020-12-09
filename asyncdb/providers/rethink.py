@@ -142,6 +142,9 @@ class rethink(BaseProvider):
         logging.debug("Closing Rethink Connection")
         self._loop.run_until_complete(self.close())
 
+    async def release(self):
+        await self.close(wait=10)
+
     """
     Basic Methods
     """
