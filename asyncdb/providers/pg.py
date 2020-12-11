@@ -67,12 +67,15 @@ class pgPool(BasePool):
     init_func = None
     setup_func = None
     _max_clients = 500
+    application_name = 'Navigator'
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
         super(pgPool,
               self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
+        if 'application_name' in self._server_settings:
+            self.application_name = self._server_settings['application_name']
         if "max_clients" in kwargs:
             self._max_clients = kwargs["max_clients"]
 
@@ -121,7 +124,7 @@ class pgPool(BasePool):
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             server_settings = {
-                "application_name": "Navigator",
+                "application_name": self.application_name,
                 "idle_in_transaction_session_timeout": "600",
                 "tcp_keepalives_idle": "600",
                 "max_parallel_workers": "16",
@@ -220,7 +223,7 @@ class pgPool(BasePool):
             release = asyncio.create_task(self._pool.release(conn, timeout=10))
             #await self._pool.release(conn, timeout = timeout)
             #release = asyncio.ensure_future(release, loop=self._loop)
-            await asyncio.wait_for(release, timeout=timeout, loop=self._loop)
+            await asyncio.wait_for(release, timeout=timeout)
         except InterfaceError as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
         except InternalClientError as err:
@@ -253,7 +256,7 @@ class pgPool(BasePool):
                 if gracefully:
                     close = asyncio.create_task(self._pool.close())
                     close.add_done_callback(_handle_done_tasks)
-                    await asyncio.wait_for(close, timeout=timeout, loop=self._loop)
+                    await asyncio.wait_for(close, timeout=timeout)
                 else:
                     await self._pool.close()
             except asyncio.exceptions.TimeoutError as err:
@@ -280,11 +283,11 @@ class pgPool(BasePool):
             raise ProviderError("Release Error: {}".format(str(err)))
         try:
             await self._pool.close()
+            self._connected = False
         except Exception as err:
             print("Pool Closing Error: {}".format(str(err)))
-        finally:
-            self._pool.terminate()
-            self._connected = False
+        #finally:
+        #    self._pool.terminate()
 
     def terminate(self, gracefully=True):
         self._loop.run_until_complete(
@@ -606,11 +609,13 @@ class pg(SQLProvider):
         except InterfaceWarning as err:
             error = "Interface Warning: {}".format(str(err))
             raise ProviderError(error)
-            return [None, error]
+        except asyncpg.exceptions.DuplicateTableError as err:
+            error = err
+            raise ProviderError(error)
         except Exception as err:
             error = "Error on Execute: {}".format(str(err))
-            self._loop.call_exception_handler(err)
-            raise [None, error]
+            #self._loop.call_exception_handler(err)
+            raise ProviderError(error)
         finally:
             return [result, error]
 
@@ -621,15 +626,14 @@ class pg(SQLProvider):
         if not self._connection:
             await self.connection()
         try:
-            async with self._connection.transaction():
-                await self._connection.executemany(sentence, *args)
+            await self._connection.executemany(sentence, *args)
         except InterfaceWarning as err:
             error = "Interface Warning: {}".format(str(err))
             raise ProviderError(error)
             return False
         except Exception as err:
             error = "Error on Execute: {}".format(str(err))
-            self._loop.call_exception_handler(err)
+            #self._loop.call_exception_handler(err)
             raise Exception(error)
         finally:
             return error
@@ -764,6 +768,9 @@ class pg(SQLProvider):
         """
         if not self._connection:
             await self.connection()
+        if self._transaction:
+            # a transaction exists:
+            await self._transaction.commit()
         try:
             result = await self._connection.copy_to_table(
                 table_name=table,
@@ -800,6 +807,9 @@ class pg(SQLProvider):
         """
         if not self._connection:
             await self.connection()
+        if self._transaction:
+            # a transaction exists:
+            await self._transaction.commit()
         try:
             result = await self._connection.copy_records_to_table(
                 table_name=table,

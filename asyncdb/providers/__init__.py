@@ -96,6 +96,9 @@ class BasePool(ABC):
     def create_dsn(self, params):
         return self._dsn.format(**params)
 
+    def get_dsn(self):
+        return self._dsn
+
     """
     Context magic Methods
     """
@@ -235,6 +238,9 @@ class BaseProvider(ABC):
     def create_dsn(self, params):
         if params:
             return self._dsn.format(**params)
+
+    def get_dsn(self):
+        return self._dsn
 
     def generated_at(self):
         return self._generated
