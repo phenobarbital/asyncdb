@@ -75,6 +75,12 @@ setup(
     extra_requires=[
         'cryptography>=3.2'
     ],
+    tests_require=[
+        'pytest>=5.4.0',
+        'pytest-asyncio==0.14.0',
+        'pytest-xdist==2.1.0',
+        'pytest-assume==2.4.2'
+    ],
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/asyncdb",
         "Funding": "https://paypal.me/phenobarbital",
