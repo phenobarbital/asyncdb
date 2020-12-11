@@ -200,6 +200,6 @@ async def test_copy_to_table(conn):
             columns = [ 'store_id', 'store_name'],
             source = filepath
         )
-        pytest.assume(result)
+        pytest.assume(result == 'COPY 1470')
         result, error = await conn.execute('DROP TABLE test.stores')
         pytest.assume(result == 'DROP TABLE')
