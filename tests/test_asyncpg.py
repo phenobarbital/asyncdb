@@ -3,6 +3,7 @@ from asyncdb import AsyncDB, AsyncPool
 import asyncio
 import asyncpg
 from io import BytesIO
+from pathlib import Path
 
 @pytest.fixture
 def event_loop():
@@ -184,3 +185,21 @@ async def test_cicle(conn):
         # check if really dropped
         result, error = await conn.query('SELECT * FROM test.stores')
         pytest.assume(error)
+
+async def test_copy_to_table(conn):
+    """ test copy to table functionality """
+    async with await conn.connection() as conn:
+        result, error = await conn.execute(test_table)
+        pytest.assume(not error)
+        file = 'stores.csv'
+        filepath = Path(__file__).resolve().parent
+        filepath = filepath.joinpath(file)
+        result = await conn.copy_to_table(
+            table = 'stores',
+            schema = 'test',
+            columns = [ 'store_id', 'store_name'],
+            source = filepath
+        )
+        pytest.assume(result)
+        result, error = await conn.execute('DROP TABLE test.stores')
+        pytest.assume(result == 'DROP TABLE')

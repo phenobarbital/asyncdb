@@ -333,11 +333,14 @@ class pg(SQLProvider):
     _initialized_on = None
     _query_raw = "SELECT {fields} FROM {table} {where_cond}"
     _server_settings = {}
+    application_name: str = 'Navigator'
 
     def __init__(self, dsn: str = '', loop = None, params={}, **kwargs):
         super(pg, self).__init__(dsn, loop, params, **kwargs)
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
+        if 'application_name' in self._server_settings:
+            self.application_name = self._server_settings['application_name']
 
     async def close(self, timeout=5):
         """
@@ -393,7 +396,7 @@ class pg(SQLProvider):
             return json.loads(value)
 
         server_settings = {
-            "application_name": "AsyncDB",
+            "application_name": self.application_name,
             "idle_in_transaction_session_timeout": "600",
             "tcp_keepalives_idle": "600",
             "max_parallel_workers": "16",
