@@ -504,8 +504,9 @@ class pg(SQLProvider):
             try:
                 stmt = await asyncio.shield(self._connection.prepare(sentence))
                 try:
-                    # print(stmt.get_attributes())
-                    self._columns = [a.name for a in stmt.get_attributes()]
+                    self._attributes = stmt.get_attributes()
+                    self._columns = [a.name for a in self._attributes]
+                    #self._columns = [a.name for a in stmt.get_attributes()]
                     self._prepared = stmt
                     self._parameters = stmt.get_parameters()
                 except TypeError:
@@ -570,7 +571,8 @@ class pg(SQLProvider):
             await self.connection()
         try:
             stmt = await self._connection.prepare(sentence)
-            self._columns = [a.name for a in stmt.get_attributes()]
+            self._attributes = stmt.get_attributes()
+            self._columns = [a.name for a in self._attributes]
             self._result = await stmt.fetchrow()
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
