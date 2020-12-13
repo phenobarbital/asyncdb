@@ -96,6 +96,9 @@ class BasePool(ABC):
     def create_dsn(self, params):
         return self._dsn.format(**params)
 
+    def get_dsn(self):
+        return self._dsn
+
     """
     Context magic Methods
     """
@@ -196,6 +199,7 @@ class BaseProvider(ABC):
     _pool = None
     _params = {}
     _sta = ""
+    _attributes = None
     _test_query = None
     _timeout = 600
     _max_connections = 4
@@ -235,6 +239,9 @@ class BaseProvider(ABC):
     def create_dsn(self, params):
         if params:
             return self._dsn.format(**params)
+
+    def get_dsn(self):
+        return self._dsn
 
     def generated_at(self):
         return self._generated
@@ -280,6 +287,9 @@ class BaseProvider(ABC):
     @property
     def columns(self):
         return self._columns
+
+    def prepared_attributes(self):
+        return self._attributes
 
     @property
     def connected(self):

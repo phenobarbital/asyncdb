@@ -33,6 +33,8 @@ loop.run_until_complete(pool.connect())
 db = loop.run_until_complete(pool.acquire())
 loop.run_until_complete(pool.release(connection=db.get_connection()))
 
+print(db, type(db))
+
 result = loop.run_until_complete(pool.execute("SELECT 1"))
 print(result)
 
@@ -67,27 +69,29 @@ async def connect(c):
         stores, error = await conn.query(
             "SELECT store_id, store_name FROM walmart.stores"
         )
+        st = [(k, v) for k,v in stores]
+        print(st)
         # print(result)
         # execute a sentence
         result, error = await conn.execute("SET TIMEZONE TO 'America/New_York'")
         print(result)
         # executing many sentences
-        st = [(1, "Test 1"), (2, "Test 2"), (3, "Test 3")]
-        error = await conn.executemany(
-            "INSERT INTO test.stores (store_id, store_name) VALUES ($1, $2)", *st
-        )
-        print("DELETING ROWS")
-        await conn.execute("TRUNCATE test.stores")
-        # working with a cursor
-        async with await c.cursor("SELECT generate_series(0, 100)") as cur:
+        # st = [(1, "Test 1"), (2, "Test 2"), (3, "Test 3")]
+        # error = await conn.executemany(
+        #     "INSERT INTO test.stores (store_id, store_name) VALUES ($1, $2)", *st
+        # )
+        # print("DELETING ROWS")
+        # await conn.execute("TRUNCATE test.stores")
+        # # working with a cursor
+        async with await c.cursor("SELECT generate_series(0, 100) as serie") as cur:
             await cur.forward(10)
             print(await cur.fetchrow())
             print(await cur.fetch(5))
         # iterate a cursor:
-        async for record in await c.cursor(
-            "SELECT store_id, store_name FROM walmart.stores"
-        ):
-            print(record)
+        # async for record in await c.cursor(
+        #     "SELECT store_id, store_name FROM walmart.stores"
+        # ):
+        #     print(record)
         # working with a transaction
         async with await c.transaction() as t:
             result, error = await conn.execute("SET TIMEZONE TO 'America/New_York'")
@@ -103,16 +107,16 @@ async def connect(c):
         # TODO: repair error io.UnsupportedOperation: read
         # await c.copy_to_table(table = 'stores', schema = 'test', columns = [ 'store_id', 'store_name'], source = '/home/jesuslara/proyectos/navigator-next/stores.csv')
         # copy from asyncpg records
-        try:
-            await c.copy_into_table(
-                table="stores",
-                schema="test",
-                columns=["store_id", "store_name"],
-                source=stores,
-            )
-        except (StatementError, ProviderError) as err:
-            print(str(err))
-            return False
+        # try:
+        #     await c.copy_into_table(
+        #         table="stores",
+        #         schema="test",
+        #         columns=["store_id", "store_name"],
+        #         source=stores,
+        #     )
+        # except (StatementError, ProviderError) as err:
+        #     print(str(err))
+        #     return False
 
 
 async def prepared(p):
@@ -127,8 +131,8 @@ if __name__ == '__main__':
         a = sharing_token('67C1BEE8DDC0BB873930D04FAF16B338F8CB09490571F8901E534937D4EFA8EE33230C435BDA93B7C7CEBA67858C4F70321A0D92201947F13278F495F92DDC0BE5FDFCF0684704C78A3E7BA5133ACADBE2E238F25D568AEC4170EB7A0BE819CE8F758B890855E5445EB22BE52439FA377D00C9E4225BC6DAEDD2DAC084446E7F697BF1CEC129DFB84FA129B7B8881C66EEFD91A0869DAE5D71FD5055FCFF75')
         print(a.columns())
         # # test: first with db connected:
-        # e = AsyncDB("pg", dsn=asyncpg_url, loop=loop)
-        # loop.run_until_complete(connect(e))
+        e = AsyncDB("pg", dsn=asyncpg_url, loop=loop)
+        loop.run_until_complete(connect(e))
         # loop.run_until_complete(prepared(e))
     finally:
         pool.terminate()
