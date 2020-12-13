@@ -199,6 +199,7 @@ class BaseProvider(ABC):
     _pool = None
     _params = {}
     _sta = ""
+    _attributes = None
     _test_query = None
     _timeout = 600
     _max_connections = 4
@@ -286,6 +287,9 @@ class BaseProvider(ABC):
     @property
     def columns(self):
         return self._columns
+
+    def prepared_attributes(self):
+        return self._attributes
 
     @property
     def connected(self):

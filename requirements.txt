@@ -21,7 +21,7 @@ bumpversion==0.6.0
 cachetools==4.1.1
 certifi==2020.6.20
 cffi==1.14.3
-chardet==3.0.4
+cchardet==2.1.7
 click==7.1.2
 cryptography==3.2
 dask==2.30.0
