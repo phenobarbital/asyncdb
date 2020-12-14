@@ -64,10 +64,12 @@ jobs:
     #   make bootstrap
     #   make release
 
+    - run: |
+        sudo apt-get install unixodbc unixodbc-dev -y
+          
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
 
     - name: Python style check
       uses: bulv1ne/python-style-check@v0.3
-      run: |
-          sudo apt-get install unixodbc unixodbc-dev -y
+
