@@ -43,7 +43,7 @@ jobs:
         python-version: '3.8'
     - name: Install dependencies
       run: |
-        sudo -H apt-get install unixodbc unixodbc-dev -y
+        sudo -H apt-get install python3.8-dev build-essential libssl-dev libffi-dev unixodbc unixodbc-dev -y
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v1
