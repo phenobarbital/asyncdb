@@ -334,7 +334,12 @@ class rethink(BaseProvider):
     """
 
     async def test_connection(self):
-        return await self._engine.db_list().run(self._connection)
+        try:
+            result = await self._engine.db_list().run(self._connection)
+            if result:
+                return [result, None]
+        except Exception as err:
+            return [None, err]
 
     def execute(self):
         pass
