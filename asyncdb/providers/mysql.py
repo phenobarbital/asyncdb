@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-import logging
 import time
 from datetime import datetime
 
@@ -27,8 +26,6 @@ from asyncdb.utils import (
     SafeDict,
 )
 
-logger = logging.getLogger(__name__)
-
 
 class mysqlPool(BasePool):
     _max_queries = 300
@@ -36,7 +33,7 @@ class mysqlPool(BasePool):
     loop = asyncio.get_event_loop()
 
     def __init__(self, loop=None, params={}):
-        logger.debug("Ready")
+        self._logger.debug("Ready")
         super(mysqlPool, self).__init__(loop=loop, params=params)
 
     def get_event_loop(self):
@@ -48,8 +45,8 @@ class mysqlPool(BasePool):
 
     # Create a database connection pool
     async def connect(self):
-        logger.debug("aioMysql: Connecting to {}".format(self._params))
-        logger.debug("Start connection")
+        self._logger.debug("aioMysql: Connecting to {}".format(self._params))
+        self._logger.debug("Start connection")
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             self._pool = await aiomysql.create_pool(
@@ -82,7 +79,7 @@ class mysqlPool(BasePool):
        """
 
     async def acquire(self):
-        logger.debug("Acquire")
+        self._logger.debug("Acquire")
         db = None
         self._connection = None
         # Take a connection from the pool.
@@ -100,7 +97,7 @@ class mysqlPool(BasePool):
     """
 
     async def release(self, connection=None, timeout=10):
-        logger.debug("Release")
+        self._logger.debug("Release")
         if not connection:
             conn = self._connection
         else:
@@ -123,7 +120,7 @@ class mysqlPool(BasePool):
 
     async def wait_close(self, gracefully=True):
         if self._pool:
-            logger.debug("aioMysql: Closing Pool")
+            self._logger.debug("aioMysql: Closing Pool")
             # try to closing main connection
             try:
                 if self._connection:
@@ -204,7 +201,7 @@ class mysql(BaseProvider):
         try:
             if self._connection:
                 if not self._connection.closed:
-                    logger.debug("Closing Connection")
+                    self._logger.debug("Closing Connection")
                     try:
                         if self._pool:
                             self._pool.close()
@@ -320,7 +317,7 @@ class mysql(BaseProvider):
             return [self._prepared, error]
 
     async def query(self, sentence="", size=100000000000):
-        # logger.debug("Start Query function")
+        # self._logger.debug("Start Query function")
         error = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
@@ -431,7 +428,7 @@ class mysql(BaseProvider):
     """
 
     async def cursor(self, sentence=""):
-        logger.debug("Cursor")
+        self._logger.debug("Cursor")
         if not self._connection:
             await self.connection()
         return self._cursor

@@ -6,7 +6,6 @@ This provider implements a simple subset of funcionalities from aiomcache, this 
 """
 
 import asyncio
-import logging
 
 import pylibmc
 import time
@@ -20,8 +19,6 @@ from asyncdb.providers import (
 )
 
 from asyncdb.utils import *
-
-logger = logging.getLogger("AsyncDB")
 
 
 class mcache(BaseProvider):
@@ -60,7 +57,7 @@ class mcache(BaseProvider):
         """
         __init Memcache initialization
         """
-        logger.info("Memcache: Connecting to {}".format(self._params))
+        self._logger.info("Memcache: Connecting to {}".format(self._params))
         try:
             self._connection = pylibmc.Client(
                 self._server, binary=True, behaviors=self._behaviors

@@ -9,7 +9,6 @@ TODO:
 """
 
 import asyncio
-import logging
 
 import objectpath
 import redis
@@ -22,8 +21,6 @@ from asyncdb.providers import (
     registerProvider,
 )
 from asyncdb.utils import *
-
-logger = logging.getLogger("AsyncDB")
 
 
 class mredis(BaseProvider):
@@ -87,7 +84,7 @@ class mredis(BaseProvider):
             else:
                 self._pool = redis.ConnectionPool(**self._params)
             args = {**args, **kwargs}
-            logger.info("Redis: Connecting to {}".format(self._params))
+            self._logger.debug("Redis: Connecting to {}".format(self._params))
             self._connection = redis.Redis(connection_pool=self._pool, **args)
         except (redis.exceptions.ConnectionError) as err:
             raise ProviderError(

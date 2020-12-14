@@ -5,14 +5,6 @@ import sys
 import time
 from . import BaseProvider
 
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-# from exceptions import *
-
-# from . import *
-# BaseProvider
-logger = logging.getLogger(__name__)
-
-
 class dummy(BaseProvider):
     _provider = "dummy"
     _syntax = "sql"
@@ -22,7 +14,7 @@ class dummy(BaseProvider):
         #
         try:
             super(dummy, self).__init__(params, **kwargs)
-            logger.debug(" My params are: {}".format(params))
+            self._logger.debug(" My params are: {}".format(params))
         except Exception as err:
             raise ProviderError(str(err), errcode=500)
 
