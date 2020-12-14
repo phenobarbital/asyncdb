@@ -65,7 +65,7 @@ jobs:
     #   make release
 
     - run: |
-        sudo apt-get install unixodbc unixodbc-dev -y
+        sudo -H apt-get install unixodbc unixodbc-dev -y
           
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
