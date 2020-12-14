@@ -68,6 +68,10 @@ class BasePool(ABC):
     def get_dsn(self):
         return self._dsn
 
+    @property
+    def logger(self):
+        return self._logger
+
     """
     Context magic Methods
     """
@@ -214,6 +218,10 @@ class BaseProvider(ABC):
 
     def generated_at(self):
         return self._generated
+
+    @property
+    def logger(self):
+        return self._logger
 
     """
     Async Context magic Methods
