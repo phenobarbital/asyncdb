@@ -6,7 +6,6 @@ This provider implements a simple subset of funcionalities from aiomcache, this 
 """
 
 import asyncio
-import logging
 import time
 import aiomcache
 
@@ -17,8 +16,6 @@ from asyncdb.providers import (
     registerProvider,
 )
 from asyncdb.utils import *
-
-logger = logging.getLogger(__name__)
 
 
 class memcachePool(BasePool):
@@ -48,7 +45,7 @@ class memcachePool(BasePool):
         self._loop.run_until_complete(self.release())
 
     async def connect(self):
-        logger.info("AsyncMcache: Connecting to {}".format(self._params))
+        self._logger.debug("AsyncMcache: Connecting to {}".format(self._params))
         try:
             self._pool = aiomcache.Client(
                 pool_size=self._max_queries, loop=self._loop, **self._params
@@ -145,7 +142,7 @@ class memcache(BaseProvider):
         """
         __init async Memcache initialization
         """
-        logger.info("AsyncMcache: Connecting to {}".format(self._params))
+        self._logger.debug("AsyncMcache: Connecting to {}".format(self._params))
         try:
             self._connection = aiomcache.Client(
                 loop=self._loop, **self._params
@@ -266,6 +263,17 @@ class memcache(BaseProvider):
         except Exception as err:
             raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
 
+    async def test_connection(self, optional=1):
+        result = None
+        error = None
+        try:
+            await self.set('test_123', optional)
+            result = await self.get('test_123')
+        except Exception as err:
+            error = err
+        finally:
+            await self.delete('test_123')
+            return [result, error]
 
 """
 Registering this Provider

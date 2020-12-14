@@ -51,7 +51,7 @@ setup(
         "redis==3.5.3",
         "aioredis==1.3.1",
         "asyncpg==0.21.0",
-        "rethinkdb==2.4.7",
+        "rethinkdb==2.4.8",
         "openpyxl==3.0.5",
         "lxml==4.6.1",
         "isodate==0.6.0",
