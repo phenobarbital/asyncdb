@@ -27,8 +27,6 @@ from asyncdb.providers import (
     registerProvider,
 )
 
-logger = logging.getLogger(__name__)
-
 
 class sa(BaseProvider, Thread):
     _provider = "sqlalchemy"
@@ -79,15 +77,15 @@ class sa(BaseProvider, Thread):
     """
 
     def start(self):
-        logging.debug("Running Start")
+        self._logger.debug("Running Start")
         Thread.start(self)
 
     def join(self):
-        logging.debug("Running Join")
+        self._logger.debug("Running Join")
         Thread.join(self)
 
     def connect(self):
-        logging.debug("Running Connect")
+        self._logger.debug("Running Connect")
         try:
             self._engine = create_engine(self._dsn, strategy=ASYNCIO_STRATEGY)
         except (SQLAlchemyError, DatabaseError, OperationalError) as err:
@@ -100,7 +98,7 @@ class sa(BaseProvider, Thread):
             )
 
     def close(self):
-        logging.debug("Running Close")
+        self._logger.debug("Running Close")
         if self._loop:
             try:
                 self._loop.run_until_complete(
@@ -130,7 +128,7 @@ class sa(BaseProvider, Thread):
         """
         Get a connection
         """
-        logger.debug("SQLAlchemy: Connecting to {}".format(self._dsn))
+        self._logger.debug("SQLAlchemy: Connecting to {}".format(self._dsn))
         self._connection = None
         self._connected = False
         self.start()
@@ -178,7 +176,7 @@ class sa(BaseProvider, Thread):
         row = {}
         if self._test_query is None:
             raise NotImplementedError()
-        logger.debug("{}: Running Test".format(self._provider))
+        self._logger.debug("{}: Running Test".format(self._provider))
         try:
             result = self._loop.run_until_complete(
                 self._connection.execute(self._test_query)
@@ -187,7 +185,7 @@ class sa(BaseProvider, Thread):
             if row:
                 row = dict(row)
             if error:
-                logger.debug("Test Error: {}".format(error))
+                self._logger.debug("Test Error: {}".format(error))
         except Exception as err:
             error = str(err)
             raise ProviderError(message=str(err), code=0)
@@ -202,7 +200,7 @@ class sa(BaseProvider, Thread):
         if not self._connection:
             self.connection()
         try:
-            logger.debug("Running Query {}".format(sentence))
+            self._logger.debug("Running Query {}".format(sentence))
             result = await self._connection.execute(sentence)
             if result:
                 rows = await result.fetchall()
@@ -224,7 +222,7 @@ class sa(BaseProvider, Thread):
         if not self._connection:
             self.connection()
         try:
-            logger.debug("Running Query {}".format(sentence))
+            self._logger.debug("Running Query {}".format(sentence))
             result = await self._connection.execute(sentence)
             if result:
                 row = await result.fetchone()
@@ -247,7 +245,7 @@ class sa(BaseProvider, Thread):
         if not self._connection:
             self.connection()
         try:
-            logger.debug("Execute Sentence {}".format(sentence))
+            self._logger.debug("Execute Sentence {}".format(sentence))
             result = await self._engine.execute(sentence)
             self._result = result
         except (DatabaseError, OperationalError) as err:

@@ -6,14 +6,13 @@ This provider implements all funcionalities from asyncpg
 """
 import asyncio
 import json
-import logging
 import sys
 import threading
 import time
 from datetime import datetime
 from functools import partial
 from threading import Thread
-
+import logging
 import asyncpg
 
 from asyncpg.exceptions import (
