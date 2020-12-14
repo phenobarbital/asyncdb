@@ -263,6 +263,17 @@ class memcache(BaseProvider):
         except Exception as err:
             raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
 
+    async def test_connection(self, optional=1):
+        result = None
+        error = None
+        try:
+            await self.set('test_123', optional)
+            result = await self.get('test_123')
+        except Exception as err:
+            error = err
+        finally:
+            await self.delete('test_123')
+            return [result, error]
 
 """
 Registering this Provider
