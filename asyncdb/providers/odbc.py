@@ -77,11 +77,11 @@ class odbc(SQLProvider):
                 self._initialized_on = time.time()
         except pyodbc.Error as err:
             print('ERR ', err)
-            logging.exception(err)
+            self._logger.exception(err)
             raise ProviderError("ODBC Internal Error: {}".format(str(err)))
         except Exception as err:
             print('ERR ', err)
-            logging.exception(err)
+            self._logger.exception(err)
             raise ProviderError("ODBC Unknown Error: {}".format(str(err)))
         finally:
             return self

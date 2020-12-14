@@ -89,7 +89,7 @@ class rethink(BaseProvider):
 
 
     async def connection(self):
-        logging.debug(
+        self._logger.debug(
             "RT Connection to host {} on port {} to database {}".format(
                 self._params["host"], self._params["port"], self._params["db"]
             )
@@ -139,7 +139,7 @@ class rethink(BaseProvider):
             self._connection = None
 
     def terminate(self):
-        logging.debug("Closing Rethink Connection")
+        self._logger.debug("Closing Rethink Connection")
         self._loop.run_until_complete(self.close())
 
     async def release(self):
@@ -334,7 +334,12 @@ class rethink(BaseProvider):
     """
 
     async def test_connection(self):
-        return await self._engine.db_list().run(self._connection)
+        try:
+            result = await self._engine.db_list().run(self._connection)
+            if result:
+                return [result, None]
+        except Exception as err:
+            return [None, err]
 
     def execute(self):
         pass

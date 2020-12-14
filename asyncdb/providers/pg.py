@@ -6,7 +6,6 @@ This provider implements all funcionalities from asyncpg (cursors, transactions,
 
 import asyncio
 import json
-import logging
 import time
 from datetime import datetime
 import traceback
@@ -53,8 +52,6 @@ from asyncdb.providers.sql import (
     SQLProvider,
     baseCursor
 )
-
-logger = logging.getLogger(__name__)
 
 max_cached_statement_lifetime = 600
 max_cacheable_statement_size = 1024 * 15
@@ -120,7 +117,7 @@ class pgPool(BasePool):
 
     # Create a database connection pool
     async def connect(self):
-        logger.debug("AsyncPg (Pool): Connecting to {}".format(self._dsn))
+        self._logger.debug("AsyncPg (Pool): Connecting to {}".format(self._dsn))
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             server_settings = {
@@ -349,7 +346,7 @@ class pg(SQLProvider):
         try:
             if self._connection:
                 if not self._connection.is_closed():
-                    logger.debug(
+                    self._logger.debug(
                         "Closing Connection, id: {}".format(
                             self._connection.get_server_pid()
                         )

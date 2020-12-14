@@ -246,14 +246,12 @@ class redis(BaseProvider):
             self._connected = True
             self._initialized_on = time.time()
 
-    def release(self):
+    async def release(self):
         """
         Release a connection and return into pool
         """
         if self._pool:
-            self._loop.run_until_complete(
-                self._pool.release(connection=self._connection)
-            )
+            await self._pool.release(connection=self._connection)
 
     async def close(self):
         if self._connection:
@@ -277,6 +275,19 @@ class redis(BaseProvider):
 
     async def prepare(self):
         pass
+
+    async def test_connection(self, optional=1):
+        result = None
+        error = None
+        try:
+            await self.set('test_123', optional)
+            result = await self.get('test_123')
+        except Exception as err:
+            error = err
+        finally:
+            await self.delete('test_123')
+            return [result, error]
+
 
     async def query(self, key="", *val):
         return await self.get(key, val)

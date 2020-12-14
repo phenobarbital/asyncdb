@@ -6,14 +6,13 @@ This provider implements all funcionalities from asyncpg
 """
 import asyncio
 import json
-import logging
 import sys
 import threading
 import time
 from datetime import datetime
 from functools import partial
 from threading import Thread
-
+import logging
 import asyncpg
 
 from asyncpg.exceptions import (
@@ -574,10 +573,14 @@ class postgres(threading.Thread, SQLProvider):
     Non-Async Methods
     """
 
-    def test_connection(self):
-        self.start(target=self._test_connection)
-        self.join()
-        return [self._result, self._error]
+    async def test_connection(self):
+        result = None
+        error = None
+        try:
+            result = await self.queryrow(self._test_query)
+        except Exception as err:
+            error = err
+        return [result, error]
 
     def _test_connection(self):
         self._error = None
