@@ -17,7 +17,7 @@ from asyncdb.exceptions import (
     _handle_done_tasks,
     default_exception_handler,
 )
-from asyncdb.utils.functions import module_exists
+from asyncdb.utils.functions import module_exists, SafeDict
 
 _PROVIDERS = {}
 
@@ -30,14 +30,14 @@ class BasePool(ABC):
     _pool = None
     _timeout = 600
     _max_queries = 300
-    _connected = False
+    _connected: bool = False
     _connection = None
     _params = None
-    _DEBUG = False
+    _DEBUG: bool = False
     _logger = None
     init_func: Optional[Callable] = None
 
-    def __init__(self, dsn="", loop=None, params={}, **kwargs):
+    def __init__(self, dsn: str = '', loop=None, params={}, **kwargs):
         if loop:
             self._loop = loop
         else:
@@ -45,10 +45,10 @@ class BasePool(ABC):
             asyncio.set_event_loop(self._loop)
         self._loop.set_exception_handler(default_exception_handler)
         self._params = params
-        if not dsn:
-            self._dsn = self.create_dsn(self._params)
-        else:
+        if dsn:
             self._dsn = dsn
+        else:
+            self._dsn = self.create_dsn(self._params)
         try:
             self._DEBUG = bool(params["DEBUG"])
         except KeyError:
@@ -63,7 +63,10 @@ class BasePool(ABC):
         self._logger = logging.getLogger(__name__)
 
     def create_dsn(self, params):
-        return self._dsn.format(**params)
+        try:
+            return self._dsn.format(**params)
+        except Exception as err:
+            return None
 
     def get_dsn(self):
         return self._dsn
@@ -196,6 +199,8 @@ class BaseProvider(ABC):
             self._dsn = self.create_dsn(self._params)
         else:
             self._dsn = dsn
+        if not self._dsn and not params:
+            raise RuntimeError('Absent Credentials.')
         try:
             self._DEBUG = bool(params["DEBUG"])
         except KeyError:
@@ -210,8 +215,11 @@ class BaseProvider(ABC):
         self._logger = logging.getLogger(__name__)
 
     def create_dsn(self, params):
-        if params:
+        try:
             return self._dsn.format(**params)
+        except Exception as err:
+            return None
+
 
     def get_dsn(self):
         return self._dsn
@@ -332,28 +340,17 @@ class BaseProvider(ABC):
     async def connection(self):
         pass
 
-    """
-    Prepare an statement
-    """
-
-    @abstractmethod
     async def prepare(self):
+        """
+        Prepare an statement
+        """
         pass
-
-    """
-    Prepare an statement
-    """
-
-    @abstractmethod
-    async def prepare(self):
-        pass
-
-    """
-    Execute a sentence
-    """
 
     @abstractmethod
     async def execute(self, sentence=""):
+        """
+        Execute a sentence
+        """
         pass
 
     """

@@ -13,12 +13,12 @@ def event_loop():
     loop.close()
 
 params = {
-    "host": "localhost",
-    "port": "28015",
-    "db": "troc"
+    "host": "127.0.0.1",
+    "port": "8086",
+    "database": 'testdb'
 }
 
-DRIVER='rethink'
+DRIVER='influx'
 
 @pytest.fixture
 async def conn(event_loop):
@@ -34,7 +34,7 @@ pytestmark = pytest.mark.asyncio
 ])
 async def test_pool_by_params(driver, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
-    assert db.is_connected is False
+    assert db.is_connected() is False
 
 @pytest.mark.parametrize("driver", [
     (DRIVER)
@@ -42,7 +42,7 @@ async def test_pool_by_params(driver, event_loop):
 async def test_connect(driver, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
     await db.connection()
-    pytest.assume(db.is_connected is True)
+    pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection()
     pytest.assume(type(result) == list)
     await db.close()
@@ -50,6 +50,6 @@ async def test_connect(driver, event_loop):
 
 async def test_connection(conn):
     #await conn.connection()
-    pytest.assume(conn.is_connected is True)
+    pytest.assume(conn.is_connected() is True)
     result, error = await conn.test_connection()
     pytest.assume(type(result) == list)

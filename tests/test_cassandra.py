@@ -18,7 +18,7 @@ params = {
     "db": "troc"
 }
 
-DRIVER='rethink'
+DRIVER='cassandra'
 
 @pytest.fixture
 async def conn(event_loop):
