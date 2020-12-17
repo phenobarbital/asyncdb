@@ -31,7 +31,7 @@ from asyncdb.utils import (
 class influx(BaseProvider):
 
     _provider = "influxdb"
-    _dsn = "nfluxdb://{user}:{password}@{host}:{port}/{database}"
+    _dsn = "influxdb://{user}:{password}@{host}:{port}/{database}"
     _syntax = "sql"
     _test_query = "SELECT 1"
     _parameters = ()
@@ -93,7 +93,7 @@ class influx(BaseProvider):
             else:
                 params = {
                     "host": self._params["host"],
-                    "port": 8086,
+                    "port": self._params["port"],
                     "database": self._params['database'],
                     "timeout": self._timeout,
                     "pool_size": 10,
