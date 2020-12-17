@@ -69,6 +69,8 @@ setup(
         "aioodbc==0.3.3",
         "pyodbc==4.0.30",
         "aiocassandra==2.0.1",
+        "cassandra-driver==3.24.0",
+        "cql==1.4.0",
         "aioinflux[pandas]",
         "python-rapidjson==0.9.3",
         "rapidjson==1.0.0",

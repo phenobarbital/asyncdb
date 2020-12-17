@@ -44,7 +44,7 @@ class BasePool(ABC):
             self._loop = asyncio.get_event_loop()
             asyncio.set_event_loop(self._loop)
         self._loop.set_exception_handler(default_exception_handler)
-        self._params = params
+        self._params = params.copy()
         if dsn:
             self._dsn = dsn
         else:
