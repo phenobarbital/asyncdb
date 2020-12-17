@@ -5,8 +5,6 @@ import json
 import time
 from datetime import datetime
 
-import aiomysql
-
 from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
@@ -26,173 +24,42 @@ from asyncdb.utils import (
     SafeDict,
 )
 
+from cassandra.cluster import Cluster
+from cassandra.auth import PlainTextAuthProvider
+from cassandra.io.asyncioreactor import AsyncioConnection
+from cassandra.policies import DCAwareRoundRobinPolicy
+from cassandra.cluster import ExecutionProfile
+from cassandra.policies import WhiteListRoundRobinPolicy
 
-class mysqlPool(BasePool):
-    _max_queries = 300
-    # _dsn = 'mysql://{user}:{password}@{host}:{port}/{database}'
-    loop = asyncio.get_event_loop()
+class cassandra(BaseProvider):
 
-    def __init__(self, loop=None, params={}):
-        self._logger.debug("Ready")
-        super(mysqlPool, self).__init__(loop=loop, params=params)
-
-    def get_event_loop(self):
-        return self._loop
-
-    """
-    __init async db initialization
-    """
-
-    # Create a database connection pool
-    async def connect(self):
-        self._logger.debug("aioMysql: Connecting to {}".format(self._params))
-        self._logger.debug("Start connection")
-        try:
-            # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
-            self._pool = await aiomysql.create_pool(
-                host=self._params["host"],
-                user=self._params["user"],
-                password=self._params["password"],
-                db=self._params["database"],
-                loop=self._loop,
-            )
-        except TimeoutError as err:
-            raise ConnectionTimeout(
-                "Unable to connect to database: {}".format(str(err))
-            )
-        except ConnectionRefusedError as err:
-            raise ProviderError(
-                "Unable to connect to database, connection Refused: {}".format(
-                    str(err)
-                )
-            )
-        except Exception as err:
-            raise ProviderError("Unknown Error: {}".format(str(err)))
-            return False
-        # is connected
-        if self._pool:
-            self._connected = True
-            self._initialized_on = time.time()
-
-    """
-       Take a connection from the pool.
-       """
-
-    async def acquire(self):
-        self._logger.debug("Acquire")
-        db = None
-        self._connection = None
-        # Take a connection from the pool.
-        try:
-            self._connection = await self._pool.acquire()
-        except Exception as err:
-            raise ProviderError("Close Error: {}".format(str(err)))
-        if self._connection:
-            db = mysql(pool=self)
-            db.set_connection(self._connection)
-        return db
-
-    """
-    Release a connection from the pool
-    """
-
-    async def release(self, connection=None, timeout=10):
-        self._logger.debug("Release")
-        if not connection:
-            conn = self._connection
-        else:
-            conn = connection
-        try:
-            await self._pool.release(conn)
-            # print('r', r)
-            # release = asyncio.create_task(r)
-            # await self._pool.release(connection, timeout = timeout)
-            # release = asyncio.ensure_future(release, loop=self._loop)
-            # await asyncio.wait_for(release, timeout=timeout, loop=self._loop)
-            # await release
-        except Exception as err:
-            raise ProviderError("Release Error: {}".format(str(err)))
-
-    """
-    close
-        Close Pool Connection
-    """
-
-    async def wait_close(self, gracefully=True):
-        if self._pool:
-            self._logger.debug("aioMysql: Closing Pool")
-            # try to closing main connection
-            try:
-                if self._connection:
-                    await self._pool.release(self._connection, timeout=2)
-            except Exception as err:
-                raise ProviderError("Release Error: {}".format(str(err)))
-            # at now, try to closing pool
-            try:
-                await self._pool.close()
-                # await self._pool.terminate()
-            except Exception as err:
-                print("Pool Error: {}".format(str(err)))
-                await self._pool.terminate()
-                raise ProviderError("Pool Error: {}".format(str(err)))
-            finally:
-                self._pool = None
-
-    """
-    Close Pool
-    """
-
-    async def close(self):
-        # try:
-        #    if self._connection:
-        #        print('self._pool', self._pool)
-        #        await self._pool.release(self._connection)
-        # except Exception as err:
-        #    raise ProviderError("Release Error: {}".format(str(err)))
-        try:
-            await self._pool.close()
-        except Exception as err:
-            print("Pool Closing Error: {}".format(str(err)))
-            self._pool.terminate()
-
-    def terminate(self, gracefully=True):
-        self._loop.run_until_complete(
-            asyncio.wait_for(self.close(), timeout=5)
-        )
-
-    """
-    Execute a connection into the Pool
-    """
-
-    async def execute(self, sentence, *args):
-        if self._pool:
-            try:
-                result = await self._pool.execute(sentence, *args)
-                return result
-            except Exception as err:
-                raise ProviderError("Execute Error: {}".format(str(err)))
-
-
-class mysql(BaseProvider):
-
-    _provider = "mysql"
-    _syntax = "sql"
-    _test_query = "SELECT 1"
-    _dsn = "mysql://{user}:{password}@{host}:{port}/{database}"
-    _loop = None
-    _pool = None
-    _connection = None
-    _connected = False
-    _prepared = None
+    _provider = "cassandra"
+    _syntax = "cql"
+    _hosts: list = []
+    _test_query = "SELECT release_version FROM system.local"
+    _cluster = None
     _parameters = ()
-    _cursor = None
-    _transaction = None
     _initialized_on = None
     _query_raw = "SELECT {fields} FROM {table} {where_cond}"
+    use_cql: bool = False
+    _auth = None
 
-    def __init__(self, loop=None, pool=None, params={}):
-        super(mysql, self).__init__(loop=loop, params=params)
+    def __init__(self, loop=None, pool=None, params={}, **kwargs):
+        super(cassandra, self).__init__(loop=loop, params=params, **kwargs)
         asyncio.set_event_loop(self._loop)
+        try:
+            if 'host' in self._params:
+                self._hosts = self._params['host'].split(',')
+        except Exception as err:
+            self._hosts = ['127.0.0.1']
+        print('HOSTS ', self._hosts)
+        try:
+            self._auth = {
+                "username": self._params["username"],
+                "password": self._params["password"]
+            }
+        except KeyError:
+            pass
 
     async def close(self):
         """
@@ -200,15 +67,11 @@ class mysql(BaseProvider):
         """
         try:
             if self._connection:
-                if not self._connection.closed:
                     self._logger.debug("Closing Connection")
                     try:
-                        if self._pool:
-                            self._pool.close()
-                        else:
-                            self._connection.close()
+                        self._connection.shutdown()
                     except Exception as err:
-                        self._pool.terminate()
+                        self._cluster.shutdown()
                         self._connection = None
                         raise ProviderError(
                             "Connection Error, Terminated: {}".format(
@@ -221,31 +84,48 @@ class mysql(BaseProvider):
             self._connection = None
             self._connected = False
 
-    def terminate(self):
-        self._loop.run_until_complete(self.close())
-
-    async def connection(self):
+    async def connection(self, keyspace=None):
         """
         Get a connection
         """
         self._connection = None
         self._connected = False
-        self._cursor = None
+        self._cluster = None
         try:
-            if not self._pool:
-                self._pool = await aiomysql.create_pool(
-                    host=self._params["host"],
-                    user=self._params["user"],
-                    password=self._params["password"],
-                    db=self._params["database"],
-                    loop=self._loop,
+            nodeprofile = ExecutionProfile(
+                load_balancing_policy=DCAwareRoundRobinPolicy()
+            )
+            profiles = {
+                "node1": nodeprofile
+            }
+            params = {
+                "port": self._params["port"],
+                "compression": True,
+                #"connection_class": AsyncioConnection,
+            }
+            print(params)
+            auth_provider = None
+            if self._auth:
+                auth_provider = PlainTextAuthProvider(
+                    **self._auth
                 )
-            self._connection = await self._pool.acquire()
-            self._cursor = await self._connection.cursor()
+            print(self._auth, auth_provider)
+            self._cluster = Cluster(
+                self._hosts,
+                auth_provider=auth_provider,
+                execution_profiles=profiles,
+                **params
+            )
+            print(self._cluster)
+            if self._cluster:
+                self._connection = self._cluster.connect(
+                    keyspace=keyspace
+                )
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
         except Exception as err:
+            print(err)
             self._connection = None
             self._cursor = None
             raise ProviderError(
@@ -254,37 +134,19 @@ class mysql(BaseProvider):
         finally:
             return self._connection
 
-    """
-    Release a Connection
-    """
-
-    async def release(self):
+    async def test_connection(self):
+        result = None
+        error = None
         try:
-            if not await self._connection.closed:
-                if self._pool:
-                    release = asyncio.create_task(
-                        self._pool.release(self._connection, timeout=10)
-                    )
-                    asyncio.ensure_future(release, loop=self._loop)
-                    return await release
-                else:
-                    await self._connection.close(timeout=5)
+            response = self._connection.execute(self._test_query)
+            result = [row for row in response]
         except Exception as err:
-            raise ProviderError("Release Interface Error: {}".format(str(err)))
-            return False
+            error = err
         finally:
-            self._connected = False
-            self._connection = None
+            return [result, error]
 
     def prepared_statement(self):
         return self._prepared
-
-    @property
-    def connected(self):
-        if self._pool:
-            return not self._pool._closed
-        elif self._connection:
-            return not self._connection.closed
 
     """
     Preparing a sentence
@@ -382,184 +244,6 @@ class mysql(BaseProvider):
             raise [None, error]
         finally:
             return [result, error]
-
-    async def executemany(self, sentence="", args=[]):
-        error = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
-        try:
-            await self.begin()
-            await self._cursor.executemany(sentence, args)
-            await self.commit()
-            return False
-        except Exception as err:
-            await self.rollback()
-            error = "Error on Execute: {}".format(str(err))
-            raise Exception(error)
-        finally:
-            return error
-
-    """
-    Transaction Context
-    """
-
-    async def begin(self):
-        if not self._connection:
-            await self.connection()
-        await self._connection.begin()
-        return self
-
-    async def commit(self):
-        if not self._connection:
-            await self.connection()
-        await self._connection.commit()
-        return self
-
-    async def rollback(self):
-        if not self._connection:
-            await self.connection()
-        await self._connection.rollback()
-        return self
-
-    """
-    Cursor Context
-    """
-
-    async def cursor(self, sentence=""):
-        self._logger.debug("Cursor")
-        if not self._connection:
-            await self.connection()
-        return self._cursor
-
-    async def forward(self, number):
-        try:
-            return await self._cursor.scroll(number)
-        except Exception as err:
-            error = "Error forward Cursor: {}".format(str(err))
-            raise Exception(error)
-
-    async def fetchall(self):
-        try:
-            return await self._cursor.fetchall()
-        except Exception as err:
-            error = "Error FetchAll Cursor: {}".format(str(err))
-            raise Exception(error)
-
-    async def fetchmany(self, size=None):
-        try:
-            return await self._cursor.fetchmany(size)
-        except Exception as err:
-            error = "Error FetchMany Cursor: {}".format(str(err))
-            raise Exception(error)
-
-    async def fetchone(self):
-        try:
-            return await self._cursor.fetchone()
-        except Exception as err:
-            error = "Error FetchOne Cursor: {}".format(str(err))
-            raise Exception(error)
-
-    """
-    Cursor Iterator Context
-    """
-
-    def __aiter__(self):
-        return self
-
-    async def __anext__(self):
-        data = await self._cursor.fetchrow()
-        if data is not None:
-            return data
-        else:
-            raise StopAsyncIteration
-
-    """
-    COPY Functions
-    type: [ text, csv, binary ]
-    """
-
-    async def copy_from_table(
-        self,
-        table="",
-        schema="public",
-        output=None,
-        type="csv",
-        columns=None
-    ):
-        """table_copy
-        get a copy of table data into a file, file-like object or a coroutine passed on "output"
-        returns: num of rows copied.
-        example: COPY 1470
-        """
-        if not self._connection:
-            await self.connection()
-        try:
-            result = await self._connection.copy_from_table(
-                table_name=table,
-                schema_name=schema,
-                columns=columns,
-                format=type,
-                output=output,
-            )
-            print(result)
-            return result
-        except Exception as err:
-            error = "Error on Table Copy: {}".format(str(err))
-            raise Exception(error)
-
-    async def copy_to_table(
-        self,
-        table="",
-        schema="public",
-        source=None,
-        type="csv",
-        columns=None
-    ):
-        """copy_to_table
-        get data from a file, file-like object or a coroutine passed on "source" and copy into table
-        returns: num of rows copied.
-        example: COPY 1470
-        """
-        if not self._connection:
-            await self.connection()
-        try:
-            result = await self._connection.copy_to_table(
-                table_name=table,
-                schema_name=schema,
-                columns=columns,
-                format=type,
-                source=source,
-            )
-            print(result)
-            return result
-        except Exception as err:
-            error = "Error on Table Copy: {}".format(str(err))
-            raise Exception(error)
-
-    async def copy_into_table(
-        self, table="", schema="public", source=None, columns=None
-    ):
-        """copy_into_table
-        get data from records (any iterable object) and save into table
-        returns: num of rows copied.
-        example: COPY 1470
-        """
-        if not self._connection:
-            await self.connection()
-        try:
-            result = await self._connection.copy_records_to_table(
-                table_name=table,
-                schema_name=schema,
-                columns=columns,
-                records=source
-            )
-            print(result)
-            return result
-        except Exception as err:
-            error = "Error on Table Copy: {}".format(str(err))
-            raise Exception(error)
 
     """
     Meta-Operations
@@ -749,4 +433,4 @@ class mysql(BaseProvider):
 Registering this Provider
 """
 
-registerProvider(mysql)
+registerProvider(cassandra)
