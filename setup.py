@@ -68,6 +68,8 @@ setup(
         "attrs==20.2.0",
         "aioodbc==0.3.3",
         "pyodbc==4.0.30",
+        "aiocassandra==2.0.1",
+        "aioinflux[pandas]",
         "python-rapidjson==0.9.3",
         "rapidjson==1.0.0",
         "typing-extensions==3.7.4.3",
