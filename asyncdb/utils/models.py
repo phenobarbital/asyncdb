@@ -594,6 +594,7 @@ class Model(metaclass=ModelMeta):
                 self._connection = AsyncDB(driver, dsn=dsn)
             return self._connection
 
+
     # def fields(self, fields: Any =[]):
     #     """
     #     fields
