@@ -388,7 +388,8 @@ class Model(metaclass=ModelMeta):
         self._validation()
         # set the connection
         db = getattr(self.Meta, 'db', None)
-        self._connection = db
+        if db:
+            setattr(self, '_connection', db)
 
     def _validation(self) -> None:
         """
