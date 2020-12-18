@@ -386,10 +386,6 @@ class Model(metaclass=ModelMeta):
         Start validation of fields
         """
         self._validation()
-        # set the connection
-        db = getattr(self.Meta, 'db', None)
-        if db:
-            setattr(self, '_connection', db)
 
     def _validation(self) -> None:
         """
@@ -596,6 +592,8 @@ class Model(metaclass=ModelMeta):
                 self._connection = AsyncDB(driver, params=params)
             elif dsn is not None:
                 self._connection = AsyncDB(driver, dsn=dsn)
+            return self._connection
+
 
     # def fields(self, fields: Any =[]):
     #     """
