@@ -13,7 +13,8 @@ def event_loop():
     loop.close()
 
 asyncpg_url = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator_dev"
-params = {
+
+PARAMS = {
     "host": '127.0.0.1',
     "port": '5432',
     "user": 'troc_pgdata',
@@ -43,7 +44,7 @@ async def test_pool_by_dsn(event_loop):
     assert pool.application_name == 'Navigator'
 
 async def test_pool_by_params(event_loop):
-    pool = AsyncPool("pg", params=params, loop=event_loop)
+    pool = AsyncPool("pg", params=PARAMS, loop=event_loop)
     assert pool.get_dsn() == asyncpg_url
 
 async def test_changing_app(event_loop):
@@ -53,11 +54,11 @@ async def test_changing_app(event_loop):
             "application_name": "Testing"
         }
     }
-    p = AsyncPool("pg", params=params, loop=event_loop, **args)
+    p = AsyncPool("pg", params=PARAMS, loop=event_loop, **args)
     assert p.application_name == 'Testing'
 
 async def test_pool_connect(event_loop):
-    pool = AsyncPool("pg", params=params, loop=event_loop)
+    pool = AsyncPool("pg", params=PARAMS, loop=event_loop)
     pytest.assume(pool.application_name == 'Navigator')
     await pool.connect()
     pytest.assume(pool.is_connected() == True)
