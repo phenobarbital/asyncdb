@@ -558,7 +558,10 @@ class Model(metaclass=ModelMeta):
         """
         Manually Set the connection of the Dataclass.
         """
-        self._connection = connection
+        try:
+            setattr(self, '_connection', connection)
+        except Exception as err:
+            raise Exception(err)
 
     def get_connection(self):
         """
