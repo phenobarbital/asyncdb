@@ -17,4 +17,4 @@ f = [
 
 act = Model.make_model(name='activity_data', schema='att', fields=f)
 m = act()
-print(m.schema(type='sql'))
+print(m.schema(type='json'))
