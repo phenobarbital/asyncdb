@@ -66,7 +66,7 @@ async def new_user():
     await u.insert()
     print(u.json())
     # also, we can deleting as well
-    #await u.delete()
+    await u.delete()
 
 async def get_all_users():
     users = await User.all()
