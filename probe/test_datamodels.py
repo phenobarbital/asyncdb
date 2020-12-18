@@ -26,6 +26,10 @@ Msg('Working with Data Models: ')
 def auto_now_add(*args, **kwargs):
     return uuid.uuid4()
 
+class Contact(Model):
+    account: str = ''
+    value: str = ''
+
 class User(Model):
     """
     User Basic Structure
@@ -36,6 +40,8 @@ class User(Model):
     name: str = Column(required=True, default='John Doe')
     age: int = Column(default=18, required=True)
     signup_ts: datetime = Column(default=datetime.now(), db_default='now()')
+    contacts: Contact = Column(required=True)
+
     class Meta:
         name = 'users'
         schema = 'public'
@@ -72,7 +78,8 @@ async def new_user():
         "firstname": 'Román',
         "lastname": 'Lara',
         "name": 'Román Antonio Lara',
-        "age": 48
+        "age": 48,
+        "contacts": Contact(**{"account": "email", "value": "jlara@gmail"})
     }
     u = User(**data)
     await u.insert()
@@ -114,11 +121,11 @@ async methods:
   fetchone
   query
 """
-users = [
-    {"firstname":"Arnoldo","lastname":"Lara Gimenez","name":"Arnoldo Lara","age": 52},
-    {"firstname":"Yolanda","lastname":"Lara Gimenez","name":"Yolanda Lara","age": 48},
-    {"firstname":"Yolanda","lastname":"Gimenez","name":"Yolanda Gimenez","age": 72}
-]
+# users = [
+#     {"firstname":"Arnoldo","lastname":"Lara Gimenez","name":"Arnoldo Lara","age": 52},
+#     {"firstname":"Yolanda","lastname":"Lara Gimenez","name":"Yolanda Lara","age": 48},
+#     {"firstname":"Yolanda","lastname":"Gimenez","name":"Yolanda Gimenez","age": 72}
+# ]
 # asyncio.run(create_users(users))
 # asyncio.run(new_user())
 # asyncio.run(get_user(age=48))
@@ -126,9 +133,9 @@ users = [
 # asyncio.run(get_users(age=48, firstname='Román'))
 # asyncio.run(update_users(filter={"age": 72, "lastname": 'Gimenez'}, firstname='Yolanda Ramona'))
 
-loop.run_until_complete(create_users(users))
+#loop.run_until_complete(create_users(users))
 loop.run_until_complete(new_user())
 loop.run_until_complete(get_user(age=48))
 loop.run_until_complete(get_all_users())
-loop.run_until_complete(get_users(age=48, firstname='Román'))
-loop.run_until_complete(update_users(filter={"age": 72, "lastname": 'Gimenez'}, firstname='Yolanda Ramona'))
+# loop.run_until_complete(get_users(age=48, firstname='Román'))
+# loop.run_until_complete(update_users(filter={"age": 72, "lastname": 'Gimenez'}, firstname='Yolanda Ramona'))

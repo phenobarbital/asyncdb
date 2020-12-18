@@ -1,8 +1,11 @@
+import json
+import traceback
 import importlib
 from asyncdb.providers import BaseProvider
 from asyncdb.utils import colors, SafeDict, Msg
 from asyncdb.utils.models import Entity, Model
-import traceback
+from asyncdb.utils.encoders import BaseEncoder
+from dataclasses import is_dataclass, asdict
 
 from typing import (
     Any,
@@ -442,7 +445,11 @@ class SQLProvider(BaseProvider):
         for name, field in fields.items():
             column = field.name
             datatype = field.type
-            value = Entity.toSQL(getattr(model, field.name), datatype)
+            val = getattr(model, field.name)
+            if is_dataclass(datatype):
+                value = json.dumps(asdict(val), cls=BaseEncoder)
+            else:
+                value = Entity.toSQL(val, datatype)
             source.append(value)
             cols.append(column)
             if field.primary_key is True:
@@ -475,7 +482,18 @@ class SQLProvider(BaseProvider):
         for name, field in fields.items():
             column = field.name
             datatype = field.type
-            value = Entity.toSQL(getattr(model, field.name), datatype)
+            val = getattr(model, field.name)
+            if is_dataclass(datatype):
+                #cls = field.type
+                if val:
+                    if isinstance(val, dict):
+                        val = datatype(**val)
+                    value = json.dumps(asdict(val), cls=BaseEncoder)
+                else:
+                    value = '{}'
+            else:
+                value = Entity.toSQL(val, datatype)
+            #value = Entity.toSQL(getattr(model, field.name), datatype)
             source.append('{} = {}'.format(name, Entity.escapeLiteral(value, datatype)))
             cols.append(column)
             if field.primary_key is True:
