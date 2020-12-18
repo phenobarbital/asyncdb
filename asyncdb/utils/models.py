@@ -19,9 +19,8 @@ import numpy as np
 from decimal import Decimal
 from asyncdb import AsyncDB
 from asyncdb.utils import colors, SafeDict, Msg
-from asyncdb.utils.encoders import DefaultEncoder
+from asyncdb.utils.encoders import DefaultEncoder, BaseEncoder
 from asyncdb.exceptions import NoDataFound
-from asyncdb.providers import BaseProvider
 #from navigator.conf import DATABASES
 from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
 from abc import ABC, abstractmethod
@@ -47,7 +46,8 @@ DB_TYPES = {
     datetime.datetime: "timestamp without time zone",
     datetime.time: "time",
     datetime.timedelta: "timestamp without time zone",
-    uuid.UUID: "uuid"
+    uuid.UUID: "uuid",
+    dict: 'jsonb'
 }
 
 JSON_TYPES = {
@@ -93,8 +93,9 @@ class Entity:
         return v
 
     @classmethod
-    def toSQL(cls, value, type):
+    def toSQL(c, value, type):
         v = 'NULL' if value == 'None' or value is None or value == 'null' or value == 'NULL' else value
+        v = json.dumps(value, cls=BaseEncoder) if type == dict else value
         v = value if Entity.number(type) else value
         v = str(value) if isinstance(value, uuid.UUID) else value
         v = f'{value!s}' if Entity.string(type) else value
@@ -351,14 +352,24 @@ class ModelMeta(type):
 
     def __init__(cls, *args, **kwargs) -> None:
         cls.modelName = cls.__name__
+        ls = cls.Meta.__dict__
+        if 'dsn' not in ls:
+            cls.Meta.dsn = None
+        if 'connection' not in ls:
+            cls.Meta.connection = None
         if cls.Meta.strict:
             cls.__frozen__ = cls.Meta.strict
         else:
             cls.__frozen__ = False
         cls.__initialised__ = True
-        if cls.Meta.driver is not None:
-            Msg('Getting Connection', 'DEBUG')
-            cls.get_connection(cls)
+        if 'driver' in ls:
+            if cls.Meta.connection is None:
+                if cls.Meta.driver is not None:
+                    Msg('Getting Connection', 'DEBUG')
+                    if cls.Meta.dsn is not None:
+                        cls.get_connection(cls, dsn=cls.Meta.dsn)
+                    else:
+                        cls.get_connection(cls)
         super(ModelMeta, cls).__init__(*args, **kwargs)
 
 
@@ -370,7 +381,8 @@ class Meta:
     strict: bool = True
     driver: str = None
     credentials: dict = {}
-    connection: BaseProvider = None
+    dsn: str = ''
+    connection = None
 
 
 class Model(metaclass=ModelMeta):
@@ -586,10 +598,11 @@ class Model(metaclass=ModelMeta):
                         params['schema'] = db['SCHEMA']
                 except KeyError:
                     pass
-            elif self.Meta.credentials:
+            elif hasattr(self.Meta, 'credentials'):
                 params = self.Meta.credentials
                 self.Meta.connection = AsyncDB(driver, params=params)
             elif dsn is not None:
+                print('HERE ', dsn)
                 self.Meta.connection = AsyncDB(driver, dsn=dsn)
             return self.Meta.connection
 
