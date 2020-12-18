@@ -370,7 +370,7 @@ class Meta:
     strict: bool = True
     driver: str = None
     credentials: dict = {}
-    db: BaseProvider = None
+    connection: BaseProvider = None
 
 
 class Model(metaclass=ModelMeta):
@@ -378,7 +378,6 @@ class Model(metaclass=ModelMeta):
     _columns = []
     _fields = {}
     __columns__ = []
-    _connection = None
 
 
     def __post_init__(self) -> None:
@@ -555,7 +554,7 @@ class Model(metaclass=ModelMeta):
         Manually Set the connection of the Dataclass.
         """
         try:
-            setattr(self, '_connection', connection)
+            self.Meta.connection = connection
         except Exception as err:
             raise Exception(err)
 
@@ -589,11 +588,10 @@ class Model(metaclass=ModelMeta):
                     pass
             elif self.Meta.credentials:
                 params = self.Meta.credentials
-                self._connection = AsyncDB(driver, params=params)
+                self.Meta.connection = AsyncDB(driver, params=params)
             elif dsn is not None:
-                self._connection = AsyncDB(driver, dsn=dsn)
-            return self._connection
-
+                self.Meta.connection = AsyncDB(driver, dsn=dsn)
+            return self.Meta.connection
 
     # def fields(self, fields: Any =[]):
     #     """
@@ -607,12 +605,12 @@ class Model(metaclass=ModelMeta):
     #     return self
 
     async def insert(self):
-        if not self._connection:
+        if not self.Meta.connection:
             self.get_connection(self)
         result = None
-        async with await self._connection.connection() as conn:
+        async with await self.Meta.connection.connection() as conn:
             try:
-                result = await self._connection.insert(
+                result = await self.Meta.connection.insert(
                     model=self,
                     fields=self.columns()
                 )
@@ -622,11 +620,11 @@ class Model(metaclass=ModelMeta):
                 raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
 
     async def save(self, **kwargs):
-        if not self._connection:
+        if not self.Meta.connection:
             self.get_connection(self)
-        async with await self._connection.connection() as conn:
+        async with await self.Meta.connection.connection() as conn:
             try:
-                result = await self._connection.save(
+                result = await self.Meta.connection.save(
                     model=self,
                     fields=self.columns()
                 )
@@ -639,12 +637,12 @@ class Model(metaclass=ModelMeta):
         """
         Deleting a row Model based on Primary Key
         """
-        if not self._connection:
+        if not self.Meta.connection:
             self.get_connection(self)
         result = None
-        async with await self._connection.connection() as conn:
+        async with await self.Meta.connection.connection() as conn:
             try:
-                result = await self._connection.delete(
+                result = await self.Meta.connection.delete(
                     model=self,
                     fields=self.columns()
                 )
@@ -660,11 +658,11 @@ class Model(metaclass=ModelMeta):
     # get all data
     @classmethod
     async def all(cls, **kwargs):
-        if not cls._connection:
+        if not cls.Meta.connection:
             cls.get_connection(cls)
-        async with await cls._connection.connection() as conn:
+        async with await cls.Meta.connection.connection() as conn:
             try:
-                result = await cls._connection.get_all(
+                result = await cls.Meta.connection.get_all(
                     model=cls,
                     **kwargs
                 )
@@ -679,18 +677,18 @@ class Model(metaclass=ModelMeta):
         """
         Return a new single record based on filter criteria
         """
-        if not cls._connection:
+        if not cls.Meta.connection:
             cls.get_connection(cls)
-        async with await cls._connection.connection() as conn:
+        async with await cls.Meta.connection.connection() as conn:
             try:
-                result = await cls._connection.get_one(
+                result = await cls.Meta.connection.get_one(
                     model=cls,
                     **kwargs
                 )
                 if result:
                     return cls(**dict(result))
                 else:
-                    raise NoDataFound('{} object with condition {} Not Found!'.format(table, condition))
+                    raise NoDataFound('{} object with condition {} Not Found!'.format(cls.Meta.name, kwargs))
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception('Error on get {}: {}'.format(cls.Meta.name, err))
@@ -700,11 +698,11 @@ class Model(metaclass=ModelMeta):
         """
         Need to return a ***collection*** of nested DataClasses
         """
-        if not cls._connection:
+        if not cls.Meta.connection:
             cls.get_connection(cls)
-        async with await cls._connection.connection() as conn:
+        async with await cls.Meta.connection.connection() as conn:
             try:
-                result = await cls._connection.filter(
+                result = await cls.Meta.connection.filter(
                     model=cls,
                     **kwargs
                 )
@@ -719,20 +717,20 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def remove(cls, **kwargs):
-        if not cls._connection:
+        if not cls.Meta.connection:
             cls.get_connection(cls)
-        async with await cls._connection.connection() as conn:
+        async with await cls.Meta.connection.connection() as conn:
             await conn.test_connection()
             prepared, error = await conn.prepare('SELECT * FROM walmart.stores')
             print(conn.get_columns())
 
     @classmethod
     async def update(cls, conditions: dict = {}, **kwargs):
-        if not cls._connection:
+        if not cls.Meta.connection:
             cls.get_connection(cls)
-        async with await cls._connection.connection() as conn:
+        async with await cls.Meta.connection.connection() as conn:
             try:
-                result = await cls._connection.update_rows(
+                result = await cls.Meta.connection.update_rows(
                     model=cls,
                     conditions=conditions,
                     **kwargs
@@ -745,11 +743,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def create(cls, records):
-        if not cls._connection:
+        if not cls.Meta.connection:
             cls.get_connection(cls)
-        async with await cls._connection.connection() as conn:
+        async with await cls.Meta.connection.connection() as conn:
             try:
-                result = await cls._connection.create_rows(
+                result = await cls.Meta.connection.create_rows(
                     model=cls,
                     rows=records
                 )
@@ -760,8 +758,8 @@ class Model(metaclass=ModelMeta):
                 raise Exception('Error Updating Table {}: {}'.format(cls.Meta.name, err))
 
     async def close(self):
-        if self._connection:
-            await self._connection.close(wait=5)
+        if self.Meta.connection:
+            await self.Meta.connection.close(wait=5)
 
     """
     Class-method for creation.
