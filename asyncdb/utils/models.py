@@ -387,8 +387,8 @@ class Model(metaclass=ModelMeta):
         """
         self._validation()
         # set the connection
-        if hasattr(self.Meta, 'db') and self.Meta.db is not None:
-            self._connection = db
+        db = getattr(self.Meta, 'db', None)
+        self._connection = db
 
     def _validation(self) -> None:
         """
