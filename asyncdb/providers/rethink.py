@@ -121,10 +121,6 @@ class rethink(BaseProvider):
                 self._connected = True
         return self
 
-    @property
-    def is_connected(self):
-        return self._connected
-
     def engine(self):
         return self._engine
 
@@ -334,12 +330,16 @@ class rethink(BaseProvider):
     """
 
     async def test_connection(self):
+        result = None
+        error = None
         try:
             result = await self._engine.db_list().run(self._connection)
             if result:
-                return [result, None]
+                return [result, error]
         except Exception as err:
             return [None, err]
+        finally:
+            return [result, error]
 
     def execute(self):
         pass

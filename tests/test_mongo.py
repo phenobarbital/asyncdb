@@ -12,17 +12,19 @@ def event_loop():
     yield loop
     loop.close()
 
-params = {
-    "host": "localhost",
-    "port": "28015",
-    "db": "troc"
+
+PARAMS = {
+    "host": "127.0.0.1",
+    "port": "27017",
+    "username": 'troc_pgdata',
+    "password": '12345678'
 }
 
-DRIVER='rethink'
+DRIVER='mongo'
 
 @pytest.fixture
 async def conn(event_loop):
-    db = AsyncDB(DRIVER, params=params, loop=event_loop)
+    db = AsyncDB(DRIVER, params=PARAMS, loop=event_loop)
     await db.connection()
     yield db
     await db.close()
@@ -33,23 +35,25 @@ pytestmark = pytest.mark.asyncio
     (DRIVER)
 ])
 async def test_pool_by_params(driver, event_loop):
-    db = AsyncDB(driver, params=params, loop=event_loop)
+    db = AsyncDB(driver, params=PARAMS, loop=event_loop)
     assert db.is_connected() is False
 
 @pytest.mark.parametrize("driver", [
     (DRIVER)
 ])
 async def test_connect(driver, event_loop):
-    db = AsyncDB(driver, params=params, loop=event_loop)
+    db = AsyncDB(driver, params=PARAMS, loop=event_loop)
     await db.connection()
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection()
-    pytest.assume(type(result) == list)
+    pytest.assume(type(result) == dict)
+    pytest.assume(result['version'] == '4.4.2')
     await db.close()
+    pytest.assume(db.is_connected() is False)
 
 
 async def test_connection(conn):
     #await conn.connection()
     pytest.assume(conn.is_connected() is True)
     result, error = await conn.test_connection()
-    pytest.assume(type(result) == list)
+    pytest.assume(type(result) == dict)

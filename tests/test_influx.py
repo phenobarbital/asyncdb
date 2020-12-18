@@ -13,12 +13,12 @@ def event_loop():
     loop.close()
 
 params = {
-    "host": "localhost",
-    "port": "28015",
-    "db": "troc"
+    "host": "127.0.0.1",
+    "port": "8086",
+    "database": 'testdb'
 }
 
-DRIVER='rethink'
+DRIVER='influx'
 
 @pytest.fixture
 async def conn(event_loop):

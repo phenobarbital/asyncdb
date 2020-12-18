@@ -21,6 +21,7 @@ from asyncdb import AsyncDB
 from asyncdb.utils import colors, SafeDict, Msg
 from asyncdb.utils.encoders import DefaultEncoder
 from asyncdb.exceptions import NoDataFound
+from asyncdb.providers import BaseProvider
 #from navigator.conf import DATABASES
 from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
 from abc import ABC, abstractmethod
@@ -369,6 +370,7 @@ class Meta:
     strict: bool = True
     driver: str = None
     credentials: dict = {}
+    db: BaseProvider = None
 
 
 class Model(metaclass=ModelMeta):
@@ -384,6 +386,9 @@ class Model(metaclass=ModelMeta):
         Start validation of fields
         """
         self._validation()
+        # set the connection
+        if self.Meta.db is not None:
+            self._connection = db
 
     def _validation(self) -> None:
         """
@@ -547,6 +552,12 @@ class Model(metaclass=ModelMeta):
                 result = doc
         finally:
             return result
+
+    def set_connection(self, connection):
+        """
+        Manually Set the connection of the Dataclass.
+        """
+        self._connection = connection
 
     def get_connection(self):
         """
