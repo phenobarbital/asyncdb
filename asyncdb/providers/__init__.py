@@ -199,8 +199,8 @@ class BaseProvider(ABC):
             self._dsn = self.create_dsn(self._params)
         else:
             self._dsn = dsn
-        if not self._dsn and not params:
-            raise RuntimeError('Absent Credentials.')
+        # if not self._dsn and not params:
+        #     raise RuntimeError('Absent Credentials.')
         try:
             self._DEBUG = bool(params["DEBUG"])
         except KeyError:
