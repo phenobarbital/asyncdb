@@ -553,6 +553,12 @@ class Model(metaclass=ModelMeta):
         finally:
             return result
 
+    def set_connection(self, connection):
+        """
+        Manually Set the connection of the Dataclass.
+        """
+        self._connection = connection
+
     def get_connection(self):
         """
         Getting the database connection and driver based on parameters
