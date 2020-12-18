@@ -563,11 +563,11 @@ class Model(metaclass=ModelMeta):
         except Exception as err:
             raise Exception(err)
 
-    def get_connection(self):
+    def get_connection(self, dsn: str = None):
         """
         Getting the database connection and driver based on parameters
         """
-        driver = self.Meta.driver if self.Meta.driver else None
+        driver = self.Meta.driver if self.Meta.driver else 'pg'
         if driver:
             print('Getting data from Database: {}'.format(driver))
             # working with app labels
@@ -593,7 +593,9 @@ class Model(metaclass=ModelMeta):
                     pass
             elif self.Meta.credentials:
                 params = self.Meta.credentials
-            self._connection = AsyncDB(driver, params=params)
+                self._connection = AsyncDB(driver, params=params)
+            elif dsn is not None:
+                self._connection = AsyncDB(driver, dsn=dsn)
 
     # def fields(self, fields: Any =[]):
     #     """
