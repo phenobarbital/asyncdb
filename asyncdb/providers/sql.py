@@ -446,8 +446,11 @@ class SQLProvider(BaseProvider):
             column = field.name
             datatype = field.type
             val = getattr(model, field.name)
+            #print(column, datatype, val)
             if is_dataclass(datatype):
                 value = json.dumps(asdict(val), cls=BaseEncoder)
+            elif isinstance(val, dict):
+                value = json.dumps(val, cls=BaseEncoder)
             else:
                 value = Entity.toSQL(val, datatype)
             source.append(value)
@@ -460,6 +463,7 @@ class SQLProvider(BaseProvider):
             values = ','.join(map(str, [Entity.escapeLiteral(v, type(v)) for v in source]))
             insert = f'INSERT INTO {table} ({columns}) VALUES({values}) {primary}'
             result = await self._connection.fetchrow(insert)
+            #print(insert)
             if result:
                 # setting the values dynamically from returning
                 for f in pk:
@@ -491,6 +495,8 @@ class SQLProvider(BaseProvider):
                     value = json.dumps(asdict(val), cls=BaseEncoder)
                 else:
                     value = '{}'
+            elif isinstance(val, dict):
+                value = json.dumps(val, cls=BaseEncoder)
             else:
                 value = Entity.toSQL(val, datatype)
             #value = Entity.toSQL(getattr(model, field.name), datatype)
