@@ -495,6 +495,8 @@ class SQLProvider(BaseProvider):
                     value = json.dumps(asdict(val), cls=BaseEncoder)
                 else:
                     value = '{}'
+            elif isinstance(val, dict):
+                value = json.dumps(val, cls=BaseEncoder)
             else:
                 value = Entity.toSQL(val, datatype)
             #value = Entity.toSQL(getattr(model, field.name), datatype)
