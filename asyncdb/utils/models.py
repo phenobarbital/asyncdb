@@ -538,6 +538,7 @@ class Model(metaclass=ModelMeta):
                 cols = []
                 pk = []
                 for name, field in self.columns().items():
+                    #print(name, field)
                     key = field.name
                     default = None
                     try:
@@ -546,11 +547,15 @@ class Model(metaclass=ModelMeta):
                         if field.default:
                             default = f'{field.default!r}'
                     default = f'DEFAULT {default!s}' if isinstance(default, (str, int)) else ''
-                    type = DB_TYPES[field.type]
-                    nn = 'NOT NULL' if field.required is True else ''
-                    if field.primary_key is True:
+                    if is_dataclass(field.type):
+                        tp = 'jsonb'
+                        nn = ''
+                    else:
+                        tp = DB_TYPES[field.type]
+                        nn = 'NOT NULL' if field.required is True else ''
+                    if hasattr(field, 'primary_key') and field.primary_key is True:
                         pk.append(key)
-                    cols.append(f' {key} {type} {nn} {default}')
+                    cols.append(f' {key} {tp} {nn} {default}')
                 doc = "{}{}".format(doc, ",\n".join(cols))
                 if len(pk) >= 1:
                     primary = ", ".join(pk)
@@ -679,7 +684,7 @@ class Model(metaclass=ModelMeta):
                     model=cls,
                     **kwargs
                 )
-                return result
+                return [cls(**dict(row)) for row in result]
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception('Error on query_all over table {}: {}'.format(cls.Meta.name, err))
