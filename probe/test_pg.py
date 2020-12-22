@@ -47,6 +47,10 @@ async def pooler(p):
         if not error:
             for row in result:
                 print(row)
+        result, error = await conn.query('SELECT * FROM troc.dashboards')
+        if not error:
+            for row in result:
+                print(row)
 
 if __name__ == "__main__":
     loop.run_until_complete(connect(db))
