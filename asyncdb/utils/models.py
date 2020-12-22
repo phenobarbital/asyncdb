@@ -388,6 +388,7 @@ class Meta:
     dsn: str = ''
     connection = None
 
+    @classmethod
     def set_connection(conn: Callable):
         self.connection = conn
 
