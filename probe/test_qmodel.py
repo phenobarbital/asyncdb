@@ -40,7 +40,6 @@ class QueryUtil(Model):
         app_label = 'troc'
         strict = True
         frozen = False
-        connection = None
 
 
 loop = asyncio.new_event_loop()
@@ -62,12 +61,13 @@ db = loop.run_until_complete(pool.acquire())
 print('Pool Connected: ', pool.is_connected())
 db = loop.run_until_complete(pool.acquire())
 print('Is Connected: ', db.is_connected())
+loop.run_until_complete(db.test_connection())
+
 
 try:
+    print('CREATION of MODEL::')
     mdl = QueryUtil(**{"query_slug": "walmart_stores"})
-    print(type(mdl.Meta), type(mdl.Meta()))
-    loop.run_until_complete(db.test_connection())
-    #mdl.Meta().set_connection(db)
+    mdl.Meta.set_connection(db)
 finally:
     print("COMPLETED! ========")
     loop.run_until_complete(pool.release(db))
