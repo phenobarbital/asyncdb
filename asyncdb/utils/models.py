@@ -388,10 +388,6 @@ class Meta:
     dsn: str = ''
     connection = None
 
-    @classmethod
-    def set_connection(conn: Callable):
-        self.connection = conn
-
 
 class Model(metaclass=ModelMeta):
     __frozen__ = False
@@ -856,7 +852,10 @@ class Model(metaclass=ModelMeta):
     """
     Meta-information
     """
-    Meta = Meta
+    class Meta(Meta):
+        @classmethod
+        def set_connection(self, conn: Callable):
+            self.connection = conn
 
 
 def Column(
