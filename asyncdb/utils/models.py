@@ -773,7 +773,13 @@ class Model(metaclass=ModelMeta):
                 if result:
                     return [cls(**dict(r)) for r in result]
                 else:
-                    raise NoDataFound('No data on table {} with condition {} was Found!'.format(cls.Meta.name, kwargs))
+                    raise NoDataFound(
+                        'No Data on {} with condition {}'.format(
+                            cls.Meta.name, kwargs
+                        )
+                    )
+            except NoDataFound as err:
+                raise NoDataFound(err)
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception('Error on filter {}: {}'.format(cls.Meta.name, err))
