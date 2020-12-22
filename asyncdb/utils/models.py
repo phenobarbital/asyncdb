@@ -1,5 +1,6 @@
 import os
 import asyncio
+import logging
 from dataclasses import Field as ff
 from dataclasses import (
     dataclass,
@@ -26,7 +27,7 @@ from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Unio
 from abc import ABC, abstractmethod
 import json
 import rapidjson as to_json
-
+import types
 import collections
 import numpy as np
 import traceback
@@ -102,11 +103,25 @@ class Entity:
         return v
 
 
-"""
-Class for Error validation
-"""
+class Meta:
+    name: str = ''
+    schema: str = ''
+    app_label: str = ''
+    frozen: bool = False
+    strict: bool = True
+    driver: str = None
+    credentials: dict = {}
+    dsn: str = ''
+    connection = None
+
+def set_connection(cls, conn: Callable):
+    cls.connection = conn
+
 @dataclass
 class ValidationError:
+    """
+    Class for Error validation
+    """
     field: str
     value: str
     error: str
@@ -171,7 +186,7 @@ class Field(ff):
             range['min'] = min
         if max is not None:
             range['max'] = max
-        if required == True or primary_key == True:
+        if required is True or primary_key is True:
             args['init'] = True
         else:
             if 'init' in kwargs:
@@ -286,7 +301,7 @@ class ModelMeta(type):
     __valid__ = None
     __encoder__ = None
 
-    def __new__(cls, name, bases, attrs):
+    def __new__(cls, name, bases, attrs, **kwargs):
         """__new__ is a classmethod, even without @classmethod decorator
         """
         if len(bases) > 1:
@@ -324,7 +339,11 @@ class ModelMeta(type):
                 cols.append(field)
             # set the slots of this class
             cls.__slots__ = tuple(cols)
-        new_cls = super().__new__(cls, name, bases, attrs)
+        attr_meta = attrs.pop('Meta', None)
+        new_cls = super().__new__(cls, name, bases, attrs, **kwargs)
+        new_cls.Meta = attr_meta or getattr(new_cls, 'Meta', Meta)
+        new_cls.Meta.set_connection = types.MethodType(set_connection, new_cls.Meta)
+
         frozen = False
         # adding a "class init method"
         try:
@@ -375,21 +394,6 @@ class ModelMeta(type):
                     else:
                         cls.get_connection(cls)
         super(ModelMeta, cls).__init__(*args, **kwargs)
-
-
-class MetaInfo(object):
-    name: str = ''
-    schema: str = ''
-    app_label: str = ''
-    frozen: bool = False
-    strict: bool = True
-    driver: str = None
-    credentials: dict = {}
-    dsn: str = ''
-    connection = None
-
-    def set_connection(cls, conn: Callable):
-        cls.connection = conn
 
 
 class Model(metaclass=ModelMeta):
@@ -588,7 +592,7 @@ class Model(metaclass=ModelMeta):
         """
         driver = self.Meta.driver if self.Meta.driver else 'pg'
         if driver:
-            print('Getting data from Database: {}'.format(driver))
+            logging.debug('Getting data from Database: {}'.format(driver))
             # working with app labels
             try:
                 app = self.Meta.app_label if self.Meta.app_label else None
@@ -852,12 +856,7 @@ class Model(metaclass=ModelMeta):
     #     finally:
     #         return result
 
-    """
-    Meta-information
-    """
-    class Meta(MetaInfo):
-        pass
-
+    Meta = Meta
 
 def Column(
         *,

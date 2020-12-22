@@ -304,7 +304,7 @@ class pgPool(BasePool):
                             loop=self._loop
                         )
                     except asyncio.exceptions.TimeoutError as err:
-                        print(traceback.format_exc())
+                        #print(traceback.format_exc())
                         pass
                 # # until end, close the pool correctly:
                 self._pool.terminate()
