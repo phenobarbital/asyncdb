@@ -364,7 +364,6 @@ class ModelMeta(type):
         new_cls = super().__new__(cls, name, bases, attrs, **kwargs)
         new_cls.Meta = attr_meta or getattr(new_cls, 'Meta', Meta)
         new_cls.Meta.set_connection = types.MethodType(set_connection, new_cls.Meta)
-
         frozen = False
         # adding a "class init method"
         try:
@@ -397,6 +396,7 @@ class ModelMeta(type):
         cols = {k: v for k, v in dc.__dict__['__dataclass_fields__'].items() if v._field_type == _FIELD}
         dc._columns = cols
         dc._fields = cols.keys()
+        print(dc._fields)
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
@@ -527,8 +527,12 @@ class Model(metaclass=ModelMeta):
     def columns(self):
         return self._columns
 
-    def fields(self):
+    def get_fields(self):
+        print('enter here ...')
         return self._fields
+
+    def column(self, name):
+        return self._columns[name]
 
     def dict(self):
         return asdict(self)
