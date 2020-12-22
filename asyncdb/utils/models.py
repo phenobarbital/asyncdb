@@ -749,6 +749,10 @@ class Model(metaclass=ModelMeta):
                     return cls(**dict(result))
                 else:
                     raise NoDataFound('{} object with condition {} Not Found!'.format(cls.Meta.name, kwargs))
+            except NoDataFound as err:
+                raise NoDataFound(err)
+            except AttributeError:
+                raise Exception('Error on get {}: {}'.format(cls.Meta.name, err))
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception('Error on get {}: {}'.format(cls.Meta.name, err))
