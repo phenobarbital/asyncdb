@@ -377,7 +377,7 @@ class ModelMeta(type):
         super(ModelMeta, cls).__init__(*args, **kwargs)
 
 
-class Meta:
+class MetaInfo(type):
     name: str = ''
     schema: str = ''
     app_label: str = ''
@@ -852,8 +852,8 @@ class Model(metaclass=ModelMeta):
     """
     Meta-information
     """
-    class Meta(Meta):
-        @classmethod
+    class Meta(metaclass=MetaInfo):
+
         def set_connection(self, conn: Callable):
             self.connection = conn
 
