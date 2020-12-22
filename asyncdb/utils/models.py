@@ -374,6 +374,11 @@ class ModelMeta(type):
         try:
             # TODO: mix values from Meta to an existing meta
             try:
+                if not new_cls.Meta.schema:
+                    new_cls.Meta.schema = 'public'
+            except AttributeError:
+                new_cls.Meta.schema = 'public'
+            try:
                 frozen = new_cls.Meta.frozen
             except AttributeError:
                 new_cls.Meta.frozen = False
