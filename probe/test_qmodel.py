@@ -73,6 +73,9 @@ try:
     mdl = QueryUtil(**{"query_slug": "walmart_stores"})
     mdl.Meta.set_connection(db)
     print(mdl.schema(type='SQL'))
+    for key in mdl.get_fields():
+        field = mdl.column(key)
+        print(key, field)
 finally:
     print("COMPLETED! ========")
     loop.run_until_complete(pool.release(db))
