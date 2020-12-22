@@ -131,6 +131,7 @@ class Field(ff):
     _default: Any = None
     _default_factory: Callable = MISSING
     _required: bool = False
+    _dbtype: str = None
     _pk: bool = False
 
     def __init__(
@@ -143,7 +144,8 @@ class Field(ff):
         factory: Callable = MISSING,
         min: Union[int, float, Decimal] = None,
         max: Union[int, float, Decimal] = None,
-        validation: Callable = None,
+        validator: Callable = None,
+        db_type: str = None,
         **kwargs
     ):
         args = {
@@ -162,6 +164,8 @@ class Field(ff):
         }
         self._required = required
         self._pk = primary_key
+        if db_type is not None:
+            self._dbtype = db_type
         range = {}
         if min is not None:
             range['min'] = min
@@ -175,8 +179,8 @@ class Field(ff):
                 del kwargs['init']
             # else:
             #     args['init'] = False
-        if validation is not None:
-            meta['validation'] = validation
+        if validator is not None:
+            meta['validation'] = validator
         if 'metadata' in kwargs:
             meta = {**meta, **kwargs['metadata']}
             del kwargs['metadata']
@@ -189,8 +193,8 @@ class Field(ff):
             self._default = default
             self._default_factory = MISSING
         else:
-            if notnull == True:
-                # add a default not-null value
+            if notnull is True:
+                # TODO: add a default not-null value
                 args['default'] = ''
             else:
                 if not factory:
@@ -383,6 +387,9 @@ class Meta:
     credentials: dict = {}
     dsn: str = ''
     connection = None
+
+    def set_connection(conn: Callable):
+        self.connection = conn
 
 
 class Model(metaclass=ModelMeta):
@@ -851,19 +858,22 @@ class Model(metaclass=ModelMeta):
     Meta = Meta
 
 
-def Column(*,
-    default: Any = None,
-    init: bool = True,
-    primary_key: bool = False,
-    notnull: bool = False,
-    required: bool = False,
-    factory: Callable = MISSING,
-    min: Union[int, float, Decimal] = None,
-    max: Union[int, float, Decimal] = None,
-    validation: Callable = None,
-    **kwargs
-):
-    """
+def Column(
+        *,
+        default: Any = None,
+        init: bool = True,
+        primary_key: bool = False,
+        notnull: bool = False,
+        required: bool = False,
+        factory: Callable = MISSING,
+        min: Union[int, float, Decimal] = None,
+        max: Union[int, float, Decimal] = None,
+        validator: Callable = None,
+        db_type: str = None,
+        **kwargs
+    ):
+    """Column.
+
     Column Function that returns a Field() object
     """
     if default is not None and factory is not MISSING:
@@ -875,8 +885,9 @@ def Column(*,
         notnull=notnull,
         required=required,
         factory=factory,
+        db_type=db_type,
         min=min,
         max=max,
-        validation=validation,
+        validator=validator,
         **kwargs
     )
