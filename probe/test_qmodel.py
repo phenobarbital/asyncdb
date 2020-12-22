@@ -13,7 +13,7 @@ from asyncdb import AsyncDB, AsyncPool
 class QueryUtil(Model):
     query_slug: str = Column(required=True, primary_key=True)
     source: str = Column(required=False)
-    params: Union[Dict, List] = Column(required=False, db_type='jsonb')
+    params: Dict = Column(required=False, db_type='jsonb')
     where_cond: str = Column(required=False)
     conditions: Dict = Column(required=False, db_type='hstore')
     cond_definition: Dict = Column(required=False, db_type='hstore')
@@ -21,14 +21,18 @@ class QueryUtil(Model):
     ordering: str = Column(required=False, db_type='array')
     query_raw: str = Column(required=False)
     grouping: str = Column(required=False, db_type='array')
-    created_at: datetime = Column(required=False, default=datetime.now())
+    created_at: datetime = Column(
+        required=False,
+        default=datetime.now(),
+        db_default='now()'
+    )
     cache_timeout: int = Column(required=False, default=3600)
     cache_refresh: int = Column(required=False, default=0)
     program_id: int = Column(required=False, default=1)
     program_slug: str = Column(required=True, default='troc')
     is_cached: bool = Column(required=False, default=True)
     row_based: bool = Column(required=False, default=False)
-    provider: bool = Column(required=False, default='db')
+    provider: str = Column(required=False, default='db')
     raw_query: bool = Column(required=False, default=False)
     dwh: bool = Column(required=False, default=False)
     dwh_info: Dict = Column(required=False, db_type='jsonb')
@@ -36,7 +40,7 @@ class QueryUtil(Model):
     class Meta:
         driver = 'pg'
         name = 'query_util'
-        schema: 'troc'
+        schema = 'troc'
         app_label = 'troc'
         strict = True
         frozen = False
@@ -68,6 +72,7 @@ try:
     print('CREATION of MODEL::')
     mdl = QueryUtil(**{"query_slug": "walmart_stores"})
     mdl.Meta.set_connection(db)
+    print(mdl.schema(type='SQL'))
 finally:
     print("COMPLETED! ========")
     loop.run_until_complete(pool.release(db))
