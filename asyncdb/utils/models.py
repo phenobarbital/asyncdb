@@ -1,5 +1,6 @@
 import os
 import asyncio
+import logging
 from dataclasses import Field as ff
 from dataclasses import (
     dataclass,
@@ -22,11 +23,20 @@ from asyncdb.utils import colors, SafeDict, Msg
 from asyncdb.utils.encoders import DefaultEncoder, BaseEncoder
 from asyncdb.exceptions import NoDataFound
 #from navigator.conf import DATABASES
-from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
+from typing import (
+    Any,
+    List,
+    Dict,
+    Optional,
+    get_type_hints,
+    Callable,
+    ClassVar,
+    Union
+)
 from abc import ABC, abstractmethod
 import json
 import rapidjson as to_json
-
+import types
 import collections
 import numpy as np
 import traceback
@@ -47,7 +57,9 @@ DB_TYPES = {
     datetime.time: "time",
     datetime.timedelta: "timestamp without time zone",
     uuid.UUID: "uuid",
-    dict: 'jsonb'
+    dict: 'jsonb',
+    Dict: 'jsonb',
+    List: 'jsonb'
 }
 
 JSON_TYPES = {
@@ -102,11 +114,25 @@ class Entity:
         return v
 
 
-"""
-Class for Error validation
-"""
+class Meta:
+    name: str = ''
+    schema: str = ''
+    app_label: str = ''
+    frozen: bool = False
+    strict: bool = True
+    driver: str = None
+    credentials: dict = {}
+    dsn: str = ''
+    connection = None
+
+def set_connection(cls, conn: Callable):
+    cls.connection = conn
+
 @dataclass
 class ValidationError:
+    """
+    Class for Error validation
+    """
     field: str
     value: str
     error: str
@@ -131,6 +157,7 @@ class Field(ff):
     _default: Any = None
     _default_factory: Callable = MISSING
     _required: bool = False
+    _dbtype: str = None
     _pk: bool = False
 
     def __init__(
@@ -143,7 +170,8 @@ class Field(ff):
         factory: Callable = MISSING,
         min: Union[int, float, Decimal] = None,
         max: Union[int, float, Decimal] = None,
-        validation: Callable = None,
+        validator: Callable = None,
+        db_type: str = None,
         **kwargs
     ):
         args = {
@@ -162,12 +190,14 @@ class Field(ff):
         }
         self._required = required
         self._pk = primary_key
+        if db_type is not None:
+            self._dbtype = db_type
         range = {}
         if min is not None:
             range['min'] = min
         if max is not None:
             range['max'] = max
-        if required == True or primary_key == True:
+        if required is True or primary_key is True:
             args['init'] = True
         else:
             if 'init' in kwargs:
@@ -175,8 +205,8 @@ class Field(ff):
                 del kwargs['init']
             # else:
             #     args['init'] = False
-        if validation is not None:
-            meta['validation'] = validation
+        if validator is not None:
+            meta['validation'] = validator
         if 'metadata' in kwargs:
             meta = {**meta, **kwargs['metadata']}
             del kwargs['metadata']
@@ -189,8 +219,8 @@ class Field(ff):
             self._default = default
             self._default_factory = MISSING
         else:
-            if notnull == True:
-                # add a default not-null value
+            if notnull is True:
+                # TODO: add a default not-null value
                 args['default'] = ''
             else:
                 if not factory:
@@ -215,6 +245,16 @@ class Field(ff):
     @property
     def required(self):
         return self._required
+
+    def db_type(self):
+        if self._dbtype is not None:
+            if self._dbtype == 'array':
+                t = DB_TYPES[self.type]
+                return f'{t}[]'
+            else:
+                return self._dbtype
+        else:
+            return DB_TYPES[self.type]
 
     @property
     def primary_key(self):
@@ -282,7 +322,7 @@ class ModelMeta(type):
     __valid__ = None
     __encoder__ = None
 
-    def __new__(cls, name, bases, attrs):
+    def __new__(cls, name, bases, attrs, **kwargs):
         """__new__ is a classmethod, even without @classmethod decorator
         """
         if len(bases) > 1:
@@ -320,7 +360,11 @@ class ModelMeta(type):
                 cols.append(field)
             # set the slots of this class
             cls.__slots__ = tuple(cols)
-        new_cls = super().__new__(cls, name, bases, attrs)
+        attr_meta = attrs.pop('Meta', None)
+        new_cls = super().__new__(cls, name, bases, attrs, **kwargs)
+        new_cls.Meta = attr_meta or getattr(new_cls, 'Meta', Meta)
+        new_cls.Meta.set_connection = types.MethodType(set_connection, new_cls.Meta)
+
         frozen = False
         # adding a "class init method"
         try:
@@ -329,6 +373,11 @@ class ModelMeta(type):
             pass
         try:
             # TODO: mix values from Meta to an existing meta
+            try:
+                if not new_cls.Meta.schema:
+                    new_cls.Meta.schema = 'public'
+            except AttributeError:
+                new_cls.Meta.schema = 'public'
             try:
                 frozen = new_cls.Meta.frozen
             except AttributeError:
@@ -371,18 +420,6 @@ class ModelMeta(type):
                     else:
                         cls.get_connection(cls)
         super(ModelMeta, cls).__init__(*args, **kwargs)
-
-
-class Meta:
-    name: str = ''
-    schema: str = ''
-    app_label: str = ''
-    frozen: bool = False
-    strict: bool = True
-    driver: str = None
-    credentials: dict = {}
-    dsn: str = ''
-    connection = None
 
 
 class Model(metaclass=ModelMeta):
@@ -544,17 +581,22 @@ class Model(metaclass=ModelMeta):
                     try:
                         default = field.metadata['db_default']
                     except KeyError:
-                        if field.default:
+                        if field.default is not None:
                             default = f'{field.default!r}'
                     default = f'DEFAULT {default!s}' if isinstance(default, (str, int)) else ''
                     if is_dataclass(field.type):
                         tp = 'jsonb'
                         nn = ''
                     else:
-                        tp = DB_TYPES[field.type]
+                        try:
+                            tp = field.db_type()
+                        except Exception as err:
+                            print(err)
+                            tp = 'varchar'
                         nn = 'NOT NULL' if field.required is True else ''
-                    if hasattr(field, 'primary_key') and field.primary_key is True:
+                    if field.primary_key is True:
                         pk.append(key)
+                    #print(key, tp, nn, default)
                     cols.append(f' {key} {tp} {nn} {default}')
                 doc = "{}{}".format(doc, ",\n".join(cols))
                 if len(pk) >= 1:
@@ -581,7 +623,7 @@ class Model(metaclass=ModelMeta):
         """
         driver = self.Meta.driver if self.Meta.driver else 'pg'
         if driver:
-            print('Getting data from Database: {}'.format(driver))
+            logging.debug('Getting data from Database: {}'.format(driver))
             # working with app labels
             try:
                 app = self.Meta.app_label if self.Meta.app_label else None
@@ -845,25 +887,24 @@ class Model(metaclass=ModelMeta):
     #     finally:
     #         return result
 
-    """
-    Meta-information
-    """
     Meta = Meta
 
+def Column(
+        *,
+        default: Any = None,
+        init: bool = True,
+        primary_key: bool = False,
+        notnull: bool = False,
+        required: bool = False,
+        factory: Callable = MISSING,
+        min: Union[int, float, Decimal] = None,
+        max: Union[int, float, Decimal] = None,
+        validator: Callable = None,
+        db_type: str = None,
+        **kwargs
+    ):
+    """Column.
 
-def Column(*,
-    default: Any = None,
-    init: bool = True,
-    primary_key: bool = False,
-    notnull: bool = False,
-    required: bool = False,
-    factory: Callable = MISSING,
-    min: Union[int, float, Decimal] = None,
-    max: Union[int, float, Decimal] = None,
-    validation: Callable = None,
-    **kwargs
-):
-    """
     Column Function that returns a Field() object
     """
     if default is not None and factory is not MISSING:
@@ -875,8 +916,9 @@ def Column(*,
         notnull=notnull,
         required=required,
         factory=factory,
+        db_type=db_type,
         min=min,
         max=max,
-        validation=validation,
+        validator=validator,
         **kwargs
     )

@@ -11,6 +11,10 @@ from datetime import datetime
 import traceback
 
 import asyncpg
+from asyncpg.pgproto import pgproto
+from dateutil.relativedelta import relativedelta
+from typing import Tuple
+
 from asyncpg.exceptions import (
     ConnectionDoesNotExistError,
     FatalPostgresError,
@@ -96,13 +100,53 @@ class pgPool(BasePool):
             return json.loads(value)
 
         await connection.set_type_codec(
-            "json", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
+            "json",
+            encoder=_encoder,
+            decoder=_decoder,
+            schema="pg_catalog"
         )
         await connection.set_type_codec(
-            "jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
+            "jsonb",
+            encoder=_encoder,
+            decoder=_decoder,
+            schema="pg_catalog"
         )
         await connection.set_builtin_type_codec(
             "hstore", codec_name="pg_contrib.hstore"
+        )
+
+        def timedelta_decoder(delta: Tuple) -> relativedelta:
+            return relativedelta(months=delta[0], days=delta[1], microseconds=delta[2])
+
+        def timedelta_encoder(delta: relativedelta):
+            ndelta = delta.normalized()
+            return (
+                ndelta.years * 12 + ndelta.months, ndelta.days,
+                (ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds)
+                * 1_000_000 + ndelta.microseconds
+            )
+
+        await connection.set_type_codec(
+            'interval',
+            schema='pg_catalog',
+            encoder=timedelta_encoder,
+            decoder=timedelta_decoder,
+            format='tuple'
+        )
+
+        def _uuid_encoder(value):
+            if value:
+                val = uuid.UUID(value).bytes
+            else:
+                val = b''
+            return val
+
+        await connection.set_type_codec(
+            "uuid",
+            encoder=_uuid_encoder,
+            decoder=lambda u: pgproto.UUID(u),
+            schema='pg_catalog',
+            format='binary'
         )
         if self.init_func:
             try:
@@ -132,8 +176,8 @@ class pgPool(BasePool):
                 max_queries=self._max_queries,
                 min_size=10,
                 max_size=self._max_clients,
-                max_inactive_connection_lifetime=10,
-                timeout=self._timeout,
+                max_inactive_connection_lifetime=100,
+                timeout=5,
                 command_timeout=self._timeout,
                 init=self.init_connection,
                 setup=self.setup_connection,
@@ -209,7 +253,7 @@ class pgPool(BasePool):
     Release a connection from the pool
     """
 
-    async def release(self, connection=None, timeout=10):
+    async def release(self, connection=None, timeout=5):
         if not connection:
             conn = self._connection
         else:
@@ -217,10 +261,8 @@ class pgPool(BasePool):
         if isinstance(connection, pg):
             conn = connection.engine()
         try:
-            release = asyncio.create_task(self._pool.release(conn, timeout=10))
-            #await self._pool.release(conn, timeout = timeout)
-            #release = asyncio.ensure_future(release, loop=self._loop)
-            await asyncio.wait_for(release, timeout=timeout)
+            await self._pool.release(conn, timeout=timeout)
+            return True
         except InterfaceError as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
         except InternalClientError as err:
@@ -243,6 +285,7 @@ class pgPool(BasePool):
             try:
                 if self._connection:
                     await self._pool.release(self._connection, timeout=2)
+                    self._connection = None
             except (InternalClientError, InterfaceError) as err:
                 raise ProviderError(
                     "Release Interface Error: {}".format(str(err))
@@ -251,19 +294,25 @@ class pgPool(BasePool):
                 raise ProviderError("Release Error: {}".format(str(err)))
             try:
                 if gracefully:
+                    await self._pool.expire_connections()
                     close = asyncio.create_task(self._pool.close())
-                    close.add_done_callback(_handle_done_tasks)
-                    await asyncio.wait_for(close, timeout=timeout)
-                else:
-                    await self._pool.close()
-            except asyncio.exceptions.TimeoutError as err:
-                print(traceback.format_exc())
+                    #close.add_done_callback(_handle_done_tasks)
+                    try:
+                        await asyncio.wait_for(
+                            close,
+                            timeout=timeout,
+                            loop=self._loop
+                        )
+                    except asyncio.exceptions.TimeoutError as err:
+                        #print(traceback.format_exc())
+                        pass
+                # # until end, close the pool correctly:
+                self._pool.terminate()
             except Exception as err:
                 error = f'Pool Exception: {err.__class__.__name__}: {err}'
                 print("Pool Error: {}".format(error))
                 raise ProviderError("Pool Error: {}".format(error))
             finally:
-                self._pool.terminate()
                 self._connected = False
 
     """
@@ -274,21 +323,32 @@ class pgPool(BasePool):
         try:
             if self._connection:
                 await self._pool.release(self._connection, timeout=2)
+                self._connection = None
         except InterfaceError as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Release Error: {}".format(str(err)))
         try:
-            await self._pool.close()
-            self._connected = False
+            await self._pool.expire_connections()
+            close = asyncio.create_task(self._pool.close())
+            #close.add_done_callback(_handle_done_tasks)
+            try:
+                await asyncio.wait_for(
+                    close,
+                    timeout=timeout,
+                    loop=self._loop
+                )
+            except asyncio.exceptions.TimeoutError as err:
+                pass
         except Exception as err:
             print("Pool Closing Error: {}".format(str(err)))
-        #finally:
-        #    self._pool.terminate()
+        finally:
+            self._pool.terminate()
+            self._connected = False
 
     def terminate(self, gracefully=True):
         self._loop.run_until_complete(
-            asyncio.wait_for(self.close(), timeout=5)
+            self.wait_close(gracefully=gracefully, timeout=10)
         )
 
     """
