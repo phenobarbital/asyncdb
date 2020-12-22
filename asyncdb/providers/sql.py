@@ -540,8 +540,8 @@ class SQLProvider(BaseProvider):
                 )
 
     async def get_one(self, model: Model, **kwargs):
-        if not self._connection:
-            await self.connection()
+        # if not self._connection:
+        #     await self.connection()
         table = f'{model.Meta.schema}.{model.Meta.name}'
         pk = {}
         cols = []
@@ -561,7 +561,7 @@ class SQLProvider(BaseProvider):
         except Exception as err:
             print(traceback.format_exc())
             raise Exception(
-                'Error on Insert over table {}: {}'.format(
+                'Error on Get One over table {}: {}'.format(
                     model.Meta.name, err)
                 )
 

@@ -28,6 +28,7 @@ setup(
     install_requires=[
         "numpy==1.19.4",
         "wheel==0.36.0",
+        "Cython==0.29.21",
         "asyncio==3.4.3",
         "PyDrive==1.3.1",
         "uvloop==0.14.0",
