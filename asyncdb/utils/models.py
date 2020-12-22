@@ -23,7 +23,16 @@ from asyncdb.utils import colors, SafeDict, Msg
 from asyncdb.utils.encoders import DefaultEncoder, BaseEncoder
 from asyncdb.exceptions import NoDataFound
 #from navigator.conf import DATABASES
-from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
+from typing import (
+    Any,
+    List,
+    Dict,
+    Optional,
+    get_type_hints,
+    Callable,
+    ClassVar,
+    Union
+)
 from abc import ABC, abstractmethod
 import json
 import rapidjson as to_json
@@ -48,7 +57,9 @@ DB_TYPES = {
     datetime.time: "time",
     datetime.timedelta: "timestamp without time zone",
     uuid.UUID: "uuid",
-    dict: 'jsonb'
+    dict: 'jsonb',
+    Dict: 'jsonb',
+    List: 'jsonb'
 }
 
 JSON_TYPES = {
@@ -234,6 +245,16 @@ class Field(ff):
     @property
     def required(self):
         return self._required
+
+    def db_type(self):
+        if self._dbtype is not None:
+            if self._dbtype == 'array':
+                t = DB_TYPES[self.type]
+                return f'{t}[]'
+            else:
+                return self._dbtype
+        else:
+            return DB_TYPES[self.type]
 
     @property
     def primary_key(self):
@@ -555,17 +576,22 @@ class Model(metaclass=ModelMeta):
                     try:
                         default = field.metadata['db_default']
                     except KeyError:
-                        if field.default:
+                        if field.default is not None:
                             default = f'{field.default!r}'
                     default = f'DEFAULT {default!s}' if isinstance(default, (str, int)) else ''
                     if is_dataclass(field.type):
                         tp = 'jsonb'
                         nn = ''
                     else:
-                        tp = DB_TYPES[field.type]
+                        try:
+                            tp = field.db_type()
+                        except Exception as err:
+                            print(err)
+                            tp = 'varchar'
                         nn = 'NOT NULL' if field.required is True else ''
-                    if hasattr(field, 'primary_key') and field.primary_key is True:
+                    if field.primary_key is True:
                         pk.append(key)
+                    #print(key, tp, nn, default)
                     cols.append(f' {key} {tp} {nn} {default}')
                 doc = "{}{}".format(doc, ",\n".join(cols))
                 if len(pk) >= 1:
