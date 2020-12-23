@@ -23,6 +23,7 @@ from asyncdb.utils import colors, SafeDict, Msg
 from asyncdb.utils.encoders import DefaultEncoder, BaseEncoder
 from asyncdb.exceptions import NoDataFound
 #from navigator.conf import DATABASES
+import typing
 from typing import (
     Any,
     List,
@@ -94,23 +95,34 @@ class Entity:
         return type in (datetime.datetime, datetime.time, datetime.timedelta)
 
     @classmethod
-    def is_array(cls, type):
-        return isinstance(type, (list, List, collections.Sequence, np.ndarray))
+    def is_array(cls, t):
+        return isinstance(t, (list, List, Dict, dict, collections.Sequence, np.ndarray))
 
     @classmethod
-    def escapeLiteral(cls, value, type):
+    def escapeLiteral(cls, value, ftype, dbtype: str = None):
+        #print(value, ftype, dbtype)
         v = value if value != 'None' or value is not None else ""
-        v = f'{value!r}' if Entity.string(type) else v
-        v = value if Entity.number(type) else f'{value!r}'
+        v = f'{value!r}' if Entity.string(ftype) else v
+        v = value if Entity.number(ftype) else f'{value!r}'
+        v = f'array{value!s}' if dbtype == 'array' else v
+        v = f'{value!r}' if dbtype == 'hstore' else v
+        v = value if (value in ['None', 'null', 'NULL']) else v
         return v
 
     @classmethod
-    def toSQL(c, value, type):
-        v = 'NULL' if value == 'None' or value is None or value == 'null' or value == 'NULL' else value
-        v = json.dumps(value, cls=BaseEncoder) if type == dict else value
-        v = value if Entity.number(type) else value
-        v = str(value) if isinstance(value, uuid.UUID) else value
-        v = f'{value!s}' if Entity.string(type) else value
+    def toSQL(cls, value, ftype, dbtype: str = None):
+        v = f'{value!r}' if Entity.is_date(ftype) else value
+        v = f'{value!s}' if Entity.string(ftype) and value is not None else v
+        v = value if Entity.number(ftype) else v
+        v = str(value) if isinstance(value, uuid.UUID) else v
+        v = json.dumps(value, cls=BaseEncoder) if ftype in [dict, Dict] else v
+        v = f'{value!s}' if dbtype == 'array' and value is not None else v
+        # formatting htstore column
+        v = ",".join(
+            {"{}=>{}".format(k, v) for k, v in value.items()}
+            ) if isinstance(value, dict) and dbtype == 'hstore' else v
+        v = "NULL" if (value in ['None', 'null']) else v
+        v = "NULL" if value is None else v
         return v
 
 
@@ -245,6 +257,9 @@ class Field(ff):
     @property
     def required(self):
         return self._required
+
+    def get_dbtype(self):
+        return self._dbtype
 
     def db_type(self):
         if self._dbtype is not None:
@@ -528,7 +543,6 @@ class Model(metaclass=ModelMeta):
         return self._columns
 
     def get_fields(self):
-        print('enter here ...')
         return self._fields
 
     def column(self, name):
