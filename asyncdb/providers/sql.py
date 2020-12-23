@@ -436,6 +436,7 @@ class SQLProvider(BaseProvider):
         """
         Inserting new object onto database.
         """
+        # TODO: option for returning more fields than PK in returning
         if not self._connection:
             await self.connection()
         table = '{schema}.{table}'.format(table=model.Meta.name, schema=model.Meta.schema)
@@ -446,22 +447,25 @@ class SQLProvider(BaseProvider):
             column = field.name
             datatype = field.type
             val = getattr(model, field.name)
-            #print(column, datatype, val)
             if is_dataclass(datatype):
                 value = json.dumps(asdict(val), cls=BaseEncoder)
             elif isinstance(val, dict):
                 value = json.dumps(val, cls=BaseEncoder)
             else:
                 value = Entity.toSQL(val, datatype)
+            if field.required is False and value is None or value == 'None':
+                continue
             source.append(value)
             cols.append(column)
             if field.primary_key is True:
                 pk.append(column)
+        print(cols)
         try:
             primary = 'RETURNING {}'.format(','.join(pk)) if pk else ''
             columns = ','.join(cols)
             values = ','.join(map(str, [Entity.escapeLiteral(v, type(v)) for v in source]))
             insert = f'INSERT INTO {table} ({columns}) VALUES({values}) {primary}'
+            logging.debug(insert)
             result = await self._connection.fetchrow(insert)
             #print(insert)
             if result:
@@ -486,7 +490,9 @@ class SQLProvider(BaseProvider):
         for name, field in fields.items():
             column = field.name
             datatype = field.type
+            dbtype = field.get_dbtype()
             val = getattr(model, field.name)
+            #print(column, datatype, val, dbtype)
             if is_dataclass(datatype):
                 #cls = field.type
                 if val:
@@ -495,12 +501,15 @@ class SQLProvider(BaseProvider):
                     value = json.dumps(asdict(val), cls=BaseEncoder)
                 else:
                     value = '{}'
-            elif isinstance(val, dict):
-                value = json.dumps(val, cls=BaseEncoder)
+            #elif isinstance(val, dict):
+            #    value = json.dumps(val, cls=BaseEncoder)
             else:
-                value = Entity.toSQL(val, datatype)
+                value = Entity.toSQL(val, datatype, dbtype)
             #value = Entity.toSQL(getattr(model, field.name), datatype)
-            source.append('{} = {}'.format(name, Entity.escapeLiteral(value, datatype)))
+            source.append('{} = {}'.format(
+                name,
+                Entity.escapeLiteral(value, datatype, dbtype))
+            )
             cols.append(column)
             if field.primary_key is True:
                 pk[column] = value
@@ -512,6 +521,7 @@ class SQLProvider(BaseProvider):
         # set the columns
         values = ', '.join(source)
         sql = sql.format_map(SafeDict(set_fields=values))
+        print(sql)
         try:
             result = await self._connection.fetchrow(sql)
             return result
