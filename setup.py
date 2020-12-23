@@ -72,6 +72,8 @@ setup(
         "cassandra-driver==3.24.0",
         "aioinflux[pandas]",
         "motor==2.3.0",
+        "aiocouch==2.0.1",
+        "elasticsearch[async]",
         "python-rapidjson==0.9.3",
         "rapidjson==1.0.0",
         "typing-extensions==3.7.4.3",
