@@ -396,7 +396,7 @@ class ModelMeta(type):
         cols = {k: v for k, v in dc.__dict__['__dataclass_fields__'].items() if v._field_type == _FIELD}
         dc._columns = cols
         dc._fields = cols.keys()
-        print(dc._fields)
+        #print(dc._fields)
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
