@@ -1,6 +1,7 @@
 import json
 import traceback
 import importlib
+import logging
 from asyncdb.providers import BaseProvider
 from asyncdb.utils import colors, SafeDict, Msg
 from asyncdb.utils.models import Entity, Model
