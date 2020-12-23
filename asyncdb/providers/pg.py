@@ -260,6 +260,8 @@ class pgPool(BasePool):
             conn = connection
         if isinstance(connection, pg):
             conn = connection.engine()
+        if not conn:
+            return True
         try:
             await self._pool.release(conn, timeout=timeout)
             return True
