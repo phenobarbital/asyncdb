@@ -447,20 +447,20 @@ class SQLProvider(BaseProvider):
         for name, field in fields.items():
             column = field.name
             datatype = field.type
+            dbtype = field.get_dbtype()
             val = getattr(model, field.name)
             if is_dataclass(datatype):
                 value = json.dumps(asdict(val), cls=BaseEncoder)
             elif isinstance(val, dict):
                 value = json.dumps(val, cls=BaseEncoder)
             else:
-                value = Entity.toSQL(val, datatype)
+                value = Entity.toSQL(val, datatype, dbtype)
             if field.required is False and value is None or value == 'None':
                 continue
             source.append(value)
             cols.append(column)
             if field.primary_key is True:
                 pk.append(column)
-        print(cols)
         try:
             primary = 'RETURNING {}'.format(','.join(pk)) if pk else ''
             columns = ','.join(cols)
