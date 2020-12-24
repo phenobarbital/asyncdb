@@ -74,6 +74,12 @@ try:
     mdl.Meta.set_connection(db)
     result = loop.run_until_complete(mdl.fetch(raw_query=False))
     print('RESULT IS: ', result)
+
+    mdl = QueryUtil(**{"program_slug": "walmart", "provider": "db"})
+    mdl.Meta.set_connection(loop.run_until_complete(pool.acquire()))
+    result = loop.run_until_complete(mdl.select())
+    for row in result:
+        print(row)
     #print(mdl.schema(type='SQL'))
     # for key in mdl.get_fields():
     #     field = mdl.column(key)
