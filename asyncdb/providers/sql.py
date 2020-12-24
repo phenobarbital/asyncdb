@@ -603,6 +603,35 @@ class SQLProvider(BaseProvider):
                     model.Meta.name, err)
                 )
 
+    async def select(self, model: Model, fields:list = [], **kwargs):
+        if not self._connection:
+            await self.connection()
+        pk = {}
+        cols = []
+        source = {}
+        print('HERE: ', model.__dict__)
+        table = f'{model.Meta.schema}.{model.Meta.name}'
+        for name, field in fields.items():
+            column = field.name
+            datatype = field.type
+            value = getattr(model, field.name)
+            cols.append(column)
+            if value is not None:
+                source[column] = Entity.toSQL(value, datatype)
+            # if field.primary_key is True:
+            #     pk[column] = value
+        columns = ', '.join(cols)
+        arguments = {**source, **kwargs}
+        print(arguments)
+        condition = self._where(fields=fields, **arguments)
+        sql = f'SELECT {columns} FROM {table} {condition}'
+        print(sql)
+        try:
+            return await self._connection.fetch(sql)
+        except Exception as err:
+            print(traceback.format_exc())
+            raise Exception('Error on Insert over table {}: {}'.format(model.Meta.name, err))
+
     async def filter(self, model: Model, **kwargs):
         if not self._connection:
             await self.connection()

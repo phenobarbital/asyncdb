@@ -755,6 +755,33 @@ class Model(metaclass=ModelMeta):
                 print(traceback.format_exc())
                 raise Exception('Error on get {}: {}'.format(self.Meta.name, err))
 
+    async def select(self, **kwargs):
+        """
+        Need to return a ***collection*** of nested DataClasses
+        """
+        if not self.Meta.connection:
+            self.get_connection(self)
+        async with await self.Meta.connection.connection() as conn:
+            try:
+                result = await self.Meta.connection.select(
+                    model=self,
+                    fields=self.columns(),
+                    **kwargs
+                )
+                if result:
+                    return [self.__class__(**dict(r)) for r in result]
+                else:
+                    raise NoDataFound(
+                        'No Data on {} with condition {}'.format(
+                            self.Meta.name, kwargs
+                        )
+                    )
+            except NoDataFound as err:
+                raise NoDataFound(err)
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error on filter {}: {}'.format(self.Meta.name, err))
+
     """
     Class-Methods for interacting with Data
     """
