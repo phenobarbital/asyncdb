@@ -26,13 +26,13 @@ class QueryUtil(Model):
     #     default=datetime.now(),
     #     db_default='now()'
     # )
-    cache_timeout: int = Column(required=False, default=3600)
-    cache_refresh: int = Column(required=False, default=0)
-    program_id: int = Column(required=False, default=1)
-    program_slug: str = Column(required=True, default='troc')
+    cache_timeout: int = Column(required=False,)
+    cache_refresh: int = Column(required=False)
+    program_id: int = Column(required=False)
+    program_slug: str = Column(required=True)
     is_cached: bool = Column(required=False, default=True)
     row_based: bool = Column(required=False, default=False)
-    provider: str = Column(required=False, default='db')
+    provider: str = Column(required=False)
     raw_query: bool = Column(required=False, default=False)
     dwh: bool = Column(required=False, default=False)
     dwh_info: Dict = Column(required=False, db_type='jsonb')
