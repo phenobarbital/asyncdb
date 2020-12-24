@@ -730,6 +730,31 @@ class Model(metaclass=ModelMeta):
                 raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
 
 
+    async def fetch(self, **kwargs):
+        """
+        Return a new single record based on filter criteria
+        """
+        if not self.Meta.connection:
+            self.get_connection(self)
+        async with await self.Meta.connection.connection() as conn:
+            try:
+                result = await self.Meta.connection.fetch_one(
+                    model=self,
+                    fields=self.columns(),
+                    **kwargs
+                )
+                if result:
+                    return self.__class__(**dict(result))
+                else:
+                    raise NoDataFound('{} object with condition {} Not Found!'.format(self.Meta.name, kwargs))
+            except NoDataFound as err:
+                raise NoDataFound(err)
+            except AttributeError:
+                raise Exception('Error on get {}: {}'.format(self.Meta.name, err))
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error on get {}: {}'.format(self.Meta.name, err))
+
     """
     Class-Methods for interacting with Data
     """

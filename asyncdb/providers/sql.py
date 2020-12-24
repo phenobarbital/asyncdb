@@ -500,20 +500,6 @@ class SQLProvider(BaseProvider):
             datatype = field.type
             dbtype = field.get_dbtype()
             value = getattr(model, field.name)
-            #print(column, datatype, val, dbtype)
-            # if is_dataclass(datatype):
-            #     #cls = field.type
-            #     if val:
-            #         if isinstance(val, dict):
-            #             val = datatype(**val)
-            #         value = json.dumps(asdict(val), cls=BaseEncoder)
-            #     else:
-            #         value = '{}'
-            # #elif isinstance(val, dict):
-            # #    value = json.dumps(val, cls=BaseEncoder)
-            # else:
-            #     value = Entity.toSQL(val, datatype, dbtype)
-            #value = Entity.toSQL(getattr(model, field.name), datatype)
             source.append('{} = {}'.format(
                 name,
                 '${}'.format(n))
@@ -567,16 +553,46 @@ class SQLProvider(BaseProvider):
         table = f'{model.Meta.schema}.{model.Meta.name}'
         pk = {}
         cols = []
+        source = []
         fields = model.columns(model)
         for name, field in fields.items():
+            val = getattr(model, field.name)
+            print(name, field, val)
             column = field.name
             datatype = field.type
-            value = Entity.toSQL(getattr(model, field.name), datatype)
+            value = Entity.toSQL(val, datatype)
             cols.append(column)
             if field.primary_key is True:
                 pk[column] = value
         columns = ', '.join(cols)
         condition = self._where(fields, **kwargs)
+        sql = f'SELECT {columns} FROM {table} {condition}'
+        try:
+            return await self._connection.fetchrow(sql)
+        except Exception as err:
+            print(traceback.format_exc())
+            raise Exception(
+                'Error on Get One over table {}: {}'.format(
+                    model.Meta.name, err)
+                )
+
+    async def fetch_one(self, model: Model, fields: list = [], **kwargs):
+        # if not self._connection:
+        #     await self.connection()
+        table = f'{model.Meta.schema}.{model.Meta.name}'
+        pk = {}
+        cols = []
+        source = {}
+        for name, field in fields.items():
+            value = getattr(model, field.name)
+            column = field.name
+            cols.append(column)
+            if field.primary_key is True:
+                pk[column] = value
+        columns = ', '.join(cols)
+        arguments = {**pk, **kwargs}
+        condition = self._where(fields=fields, **arguments)
+        # migration of where to prepared statement
         sql = f'SELECT {columns} FROM {table} {condition}'
         try:
             return await self._connection.fetchrow(sql)
