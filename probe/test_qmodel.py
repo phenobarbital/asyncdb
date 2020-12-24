@@ -20,12 +20,12 @@ class QueryUtil(Model):
     fields: str = Column(required=False, db_type='array')
     ordering: str = Column(required=False, db_type='array')
     query_raw: str = Column(required=False)
-    grouping: str = Column(required=False, db_type='array')
-    created_at: datetime = Column(
-        required=False,
-        default=datetime.now(),
-        db_default='now()'
-    )
+    #grouping: str = Column(required=False, db_type='array')
+    # created_at: datetime = Column(
+    #     required=False,
+    #     default=datetime.now(),
+    #     db_default='now()'
+    # )
     cache_timeout: int = Column(required=False, default=3600)
     cache_refresh: int = Column(required=False, default=0)
     program_id: int = Column(required=False, default=1)
@@ -80,7 +80,7 @@ try:
     data = {
         "query_slug": "test_query",
         "cache_refresh": 3600,
-        "cache_timeout": 1800,
+        "cache_timeout": 3600,
         "params": {
             "driver": "pg",
             "user": "troc_pgdata",
@@ -94,7 +94,7 @@ try:
             "firstdate": "CURRENT_DATE",
             "lastdate": "CURRENT_DATE"
         },
-        "ordering": ["test1", "test2"]
+        "ordering": ["test1", "test2", "test3"]
     }
     mdl = QueryUtil(**data)
     print(mdl)
