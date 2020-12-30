@@ -457,7 +457,11 @@ class SQLProvider(BaseProvider):
             else:
                 value = val
             if field.required is False and value is None or value == 'None':
-                continue
+                default = field.default
+                if callable(default):
+                    value = default()
+                else:
+                    continue
             source.append(value)
             cols.append(column)
             n += 1
@@ -486,6 +490,7 @@ class SQLProvider(BaseProvider):
     async def save(self, model: Model, fields: list = [], **kwargs):
         """
         Updating a Model object based on primary Key or conditions
+        TODO: check if row doesnt exists, then, insert
         """
         if not self._connection:
             await self.connection()
@@ -536,7 +541,6 @@ class SQLProvider(BaseProvider):
         sql = f'SELECT * FROM {table}'
         try:
             prepared, error = await self.prepare(sql)
-            #print(prepared, self.get_columns())
             result = await self._connection.fetch(sql)
             return result
         except Exception as err:
