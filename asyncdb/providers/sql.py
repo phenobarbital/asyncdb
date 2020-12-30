@@ -466,10 +466,9 @@ class SQLProvider(BaseProvider):
         try:
             primary = 'RETURNING {}'.format(','.join(pk)) if pk else ''
             columns = ','.join(cols)
-            #values = ','.join(map(str, [Entity.escapeLiteral(v, type(v)) for v in source]))
             values = ','.join(['${}'.format(a) for a in range(1,n)])
             insert = f'INSERT INTO {table} ({columns}) VALUES({values}) {primary}'
-            logging.debug(insert)
+            logging.debug(f'INSERT: {insert}')
             stmt = await self._connection.prepare(insert)
             result = await stmt.fetchrow(*source, timeout=2)
             logging.debug(stmt.get_statusmsg())
@@ -700,31 +699,54 @@ class SQLProvider(BaseProvider):
             await self.connection()
         table = f'{model.Meta.schema}.{model.Meta.name}'
         fields = model.columns(model)
-        pk = []
-        for name, field in fields.items():
-            if field.primary_key is True:
-                pk.append(name)
-        cols = []
-        source = []
-        for row in rows:
-            el = []
-            if not cols:
-                cols = row.keys()
-            for col in cols:
-                el.append(Entity.escapeLiteral(row[col], fields[col].type))
-            values = '({})'.format(', '.join([str(x) for x in el]))
-            source.append(values)
-        columns = ', '.join(cols)
-        insert = f'INSERT INTO {table} ({columns}) VALUES '
-        values = '{}\n'.format(','.join(source))
+        n = len(fields)
+        columns = ', '.join(fields.keys())
+        values = ','.join(['${}'.format(a) for a in range(1, n+1)])
         primary = 'RETURNING *'
-        insert = f'INSERT INTO {table} ({columns}) VALUES {values} {primary}'
+        insert = f'INSERT INTO {table} ({columns}) VALUES ({values}) {primary}'
+        print(insert)
+        logging.debug(f'INSERT: {insert}')
         try:
-            result = await self._connection.fetch(insert)
-            if result:
-                return result
-            else:
-                return None
+            stmt = await self._connection.prepare(insert)
         except Exception as err:
             print(traceback.format_exc())
-            raise Exception('Error on Bulk Insert on {}: {}'.format(model.Meta.name, err))
+            raise Exception(
+                'Exception creating Prepared Sentence {}: {}'.format(
+                    model.Meta.name, err)
+                )
+        results = []
+        for row in rows:
+            source = []
+            pk = []
+            for col, field in fields.items():
+                if col not in row:
+                    # field doesnt exists
+                    default = field.default
+                    if default:
+                        if callable(default):
+                            source.append(default())
+                        else:
+                            source.append(default)
+                    else:
+                        if field.required is True or field.primary_key is True:
+                            raise StatementError(
+                                f'Missing Required Field: {col}'
+                            )
+                        else:
+                            source.append(None)
+                else:
+                    source.append(row[col])
+                if field.primary_key is True:
+                    pk.append(col)
+            try:
+                result = await stmt.fetchrow(*source, timeout=2)
+                logging.debug(stmt.get_statusmsg())
+                if result:
+                    results.append(result)
+            except asyncpg.exceptions.UniqueViolationError as err:
+                raise StatementError('Constraint Error: {}'.format(err))
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error Bulk Insert {}: {}'.format(table, err))
+        else:
+            return results
