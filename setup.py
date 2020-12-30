@@ -25,10 +25,17 @@ setup(
     author="Jesus Lara",
     author_email="jlara@trocglobal.com",
     packages=find_packages(exclude=["contrib", "docs", "tests"]),
-    install_requires=[
-        "numpy==1.19.4",
+    setup_requires=[
         "wheel==0.36.0",
         "Cython==0.29.21",
+        "numpy==1.19.4",
+        "asyncio==3.4.3"
+    ],
+    install_requires=[
+        "wheel==0.36.0",
+        "Cython==0.29.21",
+        "numpy==1.19.4",
+        "asyncpg==0.21.0",
         "asyncio==3.4.3",
         "PyDrive==1.3.1",
         "uvloop==0.14.0",
@@ -51,7 +58,6 @@ setup(
         "pylibmc==1.6.1",
         "redis==3.5.3",
         "aioredis==1.3.1",
-        "asyncpg==0.21.0",
         "rethinkdb==2.4.8",
         "openpyxl==3.0.5",
         "lxml==4.6.1",
@@ -73,6 +79,8 @@ setup(
         "cassandra-driver==3.24.0",
         "aioinflux[pandas]",
         "motor==2.3.0",
+        "aiocouch==2.0.1",
+        "elasticsearch[async]",
         "python-rapidjson==0.9.3",
         "rapidjson==1.0.0",
         "typing-extensions==3.7.4.3",

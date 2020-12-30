@@ -20,19 +20,19 @@ class QueryUtil(Model):
     fields: str = Column(required=False, db_type='array')
     ordering: str = Column(required=False, db_type='array')
     query_raw: str = Column(required=False)
-    grouping: str = Column(required=False, db_type='array')
-    created_at: datetime = Column(
-        required=False,
-        default=datetime.now(),
-        db_default='now()'
-    )
-    cache_timeout: int = Column(required=False, default=3600)
-    cache_refresh: int = Column(required=False, default=0)
-    program_id: int = Column(required=False, default=1)
-    program_slug: str = Column(required=True, default='troc')
+    #grouping: str = Column(required=False, db_type='array')
+    # created_at: datetime = Column(
+    #     required=False,
+    #     default=datetime.now(),
+    #     db_default='now()'
+    # )
+    cache_timeout: int = Column(required=False,)
+    cache_refresh: int = Column(required=False)
+    program_id: int = Column(required=False)
+    program_slug: str = Column(required=True)
     is_cached: bool = Column(required=False, default=True)
     row_based: bool = Column(required=False, default=False)
-    provider: str = Column(required=False, default='db')
+    provider: str = Column(required=False)
     raw_query: bool = Column(required=False, default=False)
     dwh: bool = Column(required=False, default=False)
     dwh_info: Dict = Column(required=False, db_type='jsonb')
@@ -72,33 +72,41 @@ try:
     print('CREATION of MODEL::')
     mdl = QueryUtil(**{"query_slug": "walmart_stores"})
     mdl.Meta.set_connection(db)
+    result = loop.run_until_complete(mdl.fetch(raw_query=False))
+    print('RESULT IS: ', result)
+
+    mdl = QueryUtil(**{"program_slug": "walmart", "provider": "db"})
+    mdl.Meta.set_connection(loop.run_until_complete(pool.acquire()))
+    result = loop.run_until_complete(mdl.select())
+    for row in result:
+        print(row)
     #print(mdl.schema(type='SQL'))
-    for key in mdl.get_fields():
-        field = mdl.column(key)
-        #print(key, field)
-    # try to insert:
-    data = {
-        "query_slug": "test_query",
-        "cache_refresh": 3600,
-        "cache_timeout": 1800,
-        "params": {
-            "driver": "pg",
-            "user": "troc_pgdata",
-            "password": "12345678",
-            "host": "127.0.0.1",
-            "port": "5432",
-            "database": "navigator_dev",
-            "DEBUG": True
-        },
-        "cond_definition": {
-            "firstdate": "CURRENT_DATE",
-            "lastdate": "CURRENT_DATE"
-        },
-        "ordering": ["test1", "test2"]
-    }
-    mdl = QueryUtil(**data)
-    print(mdl)
-    loop.run_until_complete(mdl.save())
+    # for key in mdl.get_fields():
+    #     field = mdl.column(key)
+    #     #print(key, field)
+    # # try to insert:
+    # data = {
+    #     "query_slug": "test_query",
+    #     "cache_refresh": 3600,
+    #     "cache_timeout": 3600,
+    #     "params": {
+    #         "driver": "pg",
+    #         "user": "troc_pgdata",
+    #         "password": "12345678",
+    #         "host": "127.0.0.1",
+    #         "port": "5432",
+    #         "database": "navigator_dev",
+    #         "DEBUG": True
+    #     },
+    #     "cond_definition": {
+    #         "firstdate": "CURRENT_DATE",
+    #         "lastdate": "CURRENT_DATE"
+    #     },
+    #     "ordering": ["test1", "test2", "test3"]
+    # }
+    # mdl = QueryUtil(**data)
+    # print(mdl)
+    # loop.run_until_complete(mdl.save())
 finally:
     print("COMPLETED! ========")
     loop.run_until_complete(pool.release(db))

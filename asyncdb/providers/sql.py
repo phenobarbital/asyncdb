@@ -6,7 +6,9 @@ from asyncdb.providers import BaseProvider
 from asyncdb.utils import colors, SafeDict, Msg
 from asyncdb.utils.models import Entity, Model
 from asyncdb.utils.encoders import BaseEncoder
+from asyncdb.exceptions import StatementError
 from dataclasses import is_dataclass, asdict
+import asyncpg
 
 from typing import (
     Any,
@@ -444,36 +446,43 @@ class SQLProvider(BaseProvider):
         cols = []
         source = []
         pk = []
+        n = 1
         for name, field in fields.items():
             column = field.name
             datatype = field.type
             dbtype = field.get_dbtype()
             val = getattr(model, field.name)
             if is_dataclass(datatype):
-                value = json.dumps(asdict(val), cls=BaseEncoder)
-            elif isinstance(val, dict):
-                value = json.dumps(val, cls=BaseEncoder)
+                value = json.loads(json.dumps(asdict(val), cls=BaseEncoder))
             else:
-                value = Entity.toSQL(val, datatype, dbtype)
+                value = val
             if field.required is False and value is None or value == 'None':
-                continue
+                default = field.default
+                if callable(default):
+                    value = default()
+                else:
+                    continue
             source.append(value)
             cols.append(column)
+            n += 1
             if field.primary_key is True:
                 pk.append(column)
         try:
             primary = 'RETURNING {}'.format(','.join(pk)) if pk else ''
             columns = ','.join(cols)
-            values = ','.join(map(str, [Entity.escapeLiteral(v, type(v)) for v in source]))
+            values = ','.join(['${}'.format(a) for a in range(1,n)])
             insert = f'INSERT INTO {table} ({columns}) VALUES({values}) {primary}'
-            logging.debug(insert)
-            result = await self._connection.fetchrow(insert)
-            #print(insert)
+            logging.debug(f'INSERT: {insert}')
+            stmt = await self._connection.prepare(insert)
+            result = await stmt.fetchrow(*source, timeout=2)
+            logging.debug(stmt.get_statusmsg())
             if result:
                 # setting the values dynamically from returning
                 for f in pk:
                     setattr(model, f, result[f])
                 return result
+        except asyncpg.exceptions.UniqueViolationError as err:
+            raise StatementError('Constraint Error: {}'.format(err))
         except Exception as err:
             print(traceback.format_exc())
             raise Exception('Error on Insert over table {}: {}'.format(model.Meta.name, err))
@@ -481,37 +490,26 @@ class SQLProvider(BaseProvider):
     async def save(self, model: Model, fields: list = [], **kwargs):
         """
         Updating a Model object based on primary Key or conditions
+        TODO: check if row doesnt exists, then, insert
         """
         if not self._connection:
             await self.connection()
         table = f'{model.Meta.schema}.{model.Meta.name}'
         source = []
         pk = {}
-        cols = []
+        values = []
+        n = 1
         for name, field in fields.items():
             column = field.name
             datatype = field.type
             dbtype = field.get_dbtype()
-            val = getattr(model, field.name)
-            #print(column, datatype, val, dbtype)
-            if is_dataclass(datatype):
-                #cls = field.type
-                if val:
-                    if isinstance(val, dict):
-                        val = datatype(**val)
-                    value = json.dumps(asdict(val), cls=BaseEncoder)
-                else:
-                    value = '{}'
-            #elif isinstance(val, dict):
-            #    value = json.dumps(val, cls=BaseEncoder)
-            else:
-                value = Entity.toSQL(val, datatype, dbtype)
-            #value = Entity.toSQL(getattr(model, field.name), datatype)
+            value = getattr(model, field.name)
             source.append('{} = {}'.format(
                 name,
-                Entity.escapeLiteral(value, datatype, dbtype))
+                '${}'.format(n))
             )
-            cols.append(column)
+            values.append(value)
+            n+=1
             if field.primary_key is True:
                 pk[column] = value
         # TODO: work in an "update, delete, insert" functions on asyncdb to abstract data-insertion
@@ -520,11 +518,14 @@ class SQLProvider(BaseProvider):
         sql = sql.format_map(SafeDict(table=table))
         sql = sql.format_map(SafeDict(condition=condition))
         # set the columns
-        values = ', '.join(source)
-        sql = sql.format_map(SafeDict(set_fields=values))
+        sql = sql.format_map(SafeDict(set_fields=', '.join(source)))
         print(sql)
         try:
-            result = await self._connection.fetchrow(sql)
+            logging.debug(sql)
+            stmt = await self._connection.prepare(sql)
+            result = await stmt.fetchrow(*values, timeout=2)
+            logging.debug(stmt.get_statusmsg())
+            #result = await self._connection.fetchrow(sql)
             return result
         except Exception as err:
             print(traceback.format_exc())
@@ -540,7 +541,6 @@ class SQLProvider(BaseProvider):
         sql = f'SELECT * FROM {table}'
         try:
             prepared, error = await self.prepare(sql)
-            #print(prepared, self.get_columns())
             result = await self._connection.fetch(sql)
             return result
         except Exception as err:
@@ -556,11 +556,14 @@ class SQLProvider(BaseProvider):
         table = f'{model.Meta.schema}.{model.Meta.name}'
         pk = {}
         cols = []
+        source = []
         fields = model.columns(model)
         for name, field in fields.items():
+            val = getattr(model, field.name)
+            print(name, field, val)
             column = field.name
             datatype = field.type
-            value = Entity.toSQL(getattr(model, field.name), datatype)
+            value = Entity.toSQL(val, datatype)
             cols.append(column)
             if field.primary_key is True:
                 pk[column] = value
@@ -575,6 +578,62 @@ class SQLProvider(BaseProvider):
                 'Error on Get One over table {}: {}'.format(
                     model.Meta.name, err)
                 )
+
+    async def fetch_one(self, model: Model, fields: list = [], **kwargs):
+        # if not self._connection:
+        #     await self.connection()
+        table = f'{model.Meta.schema}.{model.Meta.name}'
+        pk = {}
+        cols = []
+        source = {}
+        for name, field in fields.items():
+            value = getattr(model, field.name)
+            column = field.name
+            cols.append(column)
+            if field.primary_key is True:
+                pk[column] = value
+        columns = ', '.join(cols)
+        arguments = {**pk, **kwargs}
+        condition = self._where(fields=fields, **arguments)
+        # migration of where to prepared statement
+        sql = f'SELECT {columns} FROM {table} {condition}'
+        try:
+            return await self._connection.fetchrow(sql)
+        except Exception as err:
+            print(traceback.format_exc())
+            raise Exception(
+                'Error on Get One over table {}: {}'.format(
+                    model.Meta.name, err)
+                )
+
+    async def select(self, model: Model, fields:list = [], **kwargs):
+        if not self._connection:
+            await self.connection()
+        pk = {}
+        cols = []
+        source = {}
+        print('HERE: ', model.__dict__)
+        table = f'{model.Meta.schema}.{model.Meta.name}'
+        for name, field in fields.items():
+            column = field.name
+            datatype = field.type
+            value = getattr(model, field.name)
+            cols.append(column)
+            if value is not None:
+                source[column] = Entity.toSQL(value, datatype)
+            # if field.primary_key is True:
+            #     pk[column] = value
+        columns = ', '.join(cols)
+        arguments = {**source, **kwargs}
+        print(arguments)
+        condition = self._where(fields=fields, **arguments)
+        sql = f'SELECT {columns} FROM {table} {condition}'
+        print(sql)
+        try:
+            return await self._connection.fetch(sql)
+        except Exception as err:
+            print(traceback.format_exc())
+            raise Exception('Error on Insert over table {}: {}'.format(model.Meta.name, err))
 
     async def filter(self, model: Model, **kwargs):
         if not self._connection:
@@ -644,31 +703,54 @@ class SQLProvider(BaseProvider):
             await self.connection()
         table = f'{model.Meta.schema}.{model.Meta.name}'
         fields = model.columns(model)
-        pk = []
-        for name, field in fields.items():
-            if field.primary_key is True:
-                pk.append(name)
-        cols = []
-        source = []
-        for row in rows:
-            el = []
-            if not cols:
-                cols = row.keys()
-            for col in cols:
-                el.append(Entity.escapeLiteral(row[col], fields[col].type))
-            values = '({})'.format(', '.join([str(x) for x in el]))
-            source.append(values)
-        columns = ', '.join(cols)
-        insert = f'INSERT INTO {table} ({columns}) VALUES '
-        values = '{}\n'.format(','.join(source))
+        n = len(fields)
+        columns = ', '.join(fields.keys())
+        values = ','.join(['${}'.format(a) for a in range(1, n+1)])
         primary = 'RETURNING *'
-        insert = f'INSERT INTO {table} ({columns}) VALUES {values} {primary}'
+        insert = f'INSERT INTO {table} ({columns}) VALUES ({values}) {primary}'
+        print(insert)
+        logging.debug(f'INSERT: {insert}')
         try:
-            result = await self._connection.fetch(insert)
-            if result:
-                return result
-            else:
-                return None
+            stmt = await self._connection.prepare(insert)
         except Exception as err:
             print(traceback.format_exc())
-            raise Exception('Error on Bulk Insert on {}: {}'.format(model.Meta.name, err))
+            raise Exception(
+                'Exception creating Prepared Sentence {}: {}'.format(
+                    model.Meta.name, err)
+                )
+        results = []
+        for row in rows:
+            source = []
+            pk = []
+            for col, field in fields.items():
+                if col not in row:
+                    # field doesnt exists
+                    default = field.default
+                    if default:
+                        if callable(default):
+                            source.append(default())
+                        else:
+                            source.append(default)
+                    else:
+                        if field.required is True or field.primary_key is True:
+                            raise StatementError(
+                                f'Missing Required Field: {col}'
+                            )
+                        else:
+                            source.append(None)
+                else:
+                    source.append(row[col])
+                if field.primary_key is True:
+                    pk.append(col)
+            try:
+                result = await stmt.fetchrow(*source, timeout=2)
+                logging.debug(stmt.get_statusmsg())
+                if result:
+                    results.append(result)
+            except asyncpg.exceptions.UniqueViolationError as err:
+                raise StatementError('Constraint Error: {}'.format(err))
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error Bulk Insert {}: {}'.format(table, err))
+        else:
+            return results
