@@ -34,13 +34,13 @@ class User(Model):
     """
     User Basic Structure
     """
-    id: uuid.UUID = Column(required=True, primary_key=True, default=auto_now_add(), db_default='uuid_generate_v4()')
+    id: uuid.UUID = Column(required=True, primary_key=True, default=auto_now_add, db_default='uuid_generate_v4()')
     firstname: str
     lastname: str
     name: str = Column(required=True, default='John Doe')
     age: int = Column(default=18, required=True)
     signup_ts: datetime = Column(default=datetime.now(), db_default='now()')
-    contacts: Contact = Column(required=True)
+    contacts: Contact = Column(required=False)
 
     class Meta:
         name = 'users'
@@ -121,11 +121,11 @@ async methods:
   fetchone
   query
 """
-# users = [
-#     {"firstname":"Arnoldo","lastname":"Lara Gimenez","name":"Arnoldo Lara","age": 52},
-#     {"firstname":"Yolanda","lastname":"Lara Gimenez","name":"Yolanda Lara","age": 48},
-#     {"firstname":"Yolanda","lastname":"Gimenez","name":"Yolanda Gimenez","age": 72}
-# ]
+users = [
+    {"firstname":"Arnoldo","lastname":"Lara Gimenez","name":"Arnoldo Lara","age": 52},
+    {"firstname":"Yolanda","lastname":"Lara Gimenez","name":"Yolanda Lara","age": 48},
+    {"firstname":"Yolanda","lastname":"Gimenez","name":"Yolanda Gimenez","age": 72}
+]
 # asyncio.run(create_users(users))
 # asyncio.run(new_user())
 # asyncio.run(get_user(age=48))
@@ -133,9 +133,9 @@ async methods:
 # asyncio.run(get_users(age=48, firstname='Román'))
 # asyncio.run(update_users(filter={"age": 72, "lastname": 'Gimenez'}, firstname='Yolanda Ramona'))
 
-#loop.run_until_complete(create_users(users))
-loop.run_until_complete(new_user())
-loop.run_until_complete(get_user(age=48))
-loop.run_until_complete(get_all_users())
+loop.run_until_complete(create_users(users))
+#loop.run_until_complete(new_user())
+#loop.run_until_complete(get_user(age=48))
+#loop.run_until_complete(get_all_users())
 # loop.run_until_complete(get_users(age=48, firstname='Román'))
-# loop.run_until_complete(update_users(filter={"age": 72, "lastname": 'Gimenez'}, firstname='Yolanda Ramona'))
+loop.run_until_complete(update_users(filter={"age": 72, "lastname": 'Gimenez'}, firstname='Yolanda Ramona'))
