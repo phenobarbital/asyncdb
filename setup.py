@@ -26,13 +26,13 @@ setup(
     author_email="jlara@trocglobal.com",
     packages=find_packages(exclude=["contrib", "docs", "tests"]),
     setup_requires=[
-        "wheel==0.36.0",
+        "wheel==0.36.2",
         "Cython==0.29.21",
         "numpy==1.19.4",
         "asyncio==3.4.3"
     ],
     install_requires=[
-        "wheel==0.36.0",
+        "wheel==0.36.2",
         "Cython==0.29.21",
         "numpy==1.19.4",
         "asyncpg==0.21.0",
