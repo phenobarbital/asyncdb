@@ -62,12 +62,13 @@ max_cacheable_statement_size = 1024 * 15
 
 
 class pgPool(BasePool):
-    _max_queries = 300
+    _max_queries = 100
     _dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
     _server_settings = {}
     init_func = None
     setup_func = None
-    _max_clients = 500
+    _max_clients = 1500
+    _min_size = 5
     application_name = 'Navigator'
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
@@ -79,6 +80,8 @@ class pgPool(BasePool):
             self.application_name = self._server_settings['application_name']
         if "max_clients" in kwargs:
             self._max_clients = kwargs["max_clients"]
+        if "min_size" in kwargs:
+            self._min_size = kwargs["min_size"]
 
     def get_event_loop(self):
         return self._loop
@@ -174,7 +177,7 @@ class pgPool(BasePool):
             self._pool = await asyncpg.create_pool(
                 dsn=self._dsn,
                 max_queries=self._max_queries,
-                min_size=10,
+                min_size=self._min_size,
                 max_size=self._max_clients,
                 max_inactive_connection_lifetime=100,
                 timeout=5,
