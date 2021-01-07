@@ -340,7 +340,7 @@ class pgPool(BasePool):
             try:
                 await asyncio.wait_for(
                     close,
-                    timeout=timeout,
+                    timeout=2,
                     loop=self._loop
                 )
             except asyncio.exceptions.TimeoutError as err:
