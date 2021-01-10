@@ -324,7 +324,9 @@ class redis(BaseProvider):
             raise Exception
             return False
 
-    def exists(self, key, *keys):
+    async def exists(self, key, *keys):
+        if not self._connection:
+            await self.connection()
         try:
             return self._connection.exists(key, *keys)
         except (aioredis.RedisError, aioredis.ProtocolError) as err:
