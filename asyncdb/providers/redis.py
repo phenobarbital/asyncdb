@@ -30,7 +30,7 @@ class redisPool(BasePool):
     _connection = None
     _encoding = "utf-8"
 
-    def __init__(self, dsn="", loop=None, params={}):
+    def __init__(self, dsn="", loop=None, params={}, **kwargs):
         super(redisPool, self).__init__(dsn=dsn, loop=loop, params=params)
         self._pool = None
         try:
@@ -38,6 +38,8 @@ class redisPool(BasePool):
                 self._encoding = params["encoding"]
         except KeyError:
             pass
+        if 'max_queries' in kwargs:
+            self._max_queries = kwargs["max_queries"]
 
     def get_event_loop(self):
         return self._loop
@@ -60,7 +62,7 @@ class redisPool(BasePool):
         """
         __init async db initialization
         """
-        # logger.info("AsyncRedis: Connecting to {}".format(self._dsn))
+        self.logger.debug("Redis Pool: Connecting to {}".format(self._dsn))
         try:
             self._pool = await aioredis.create_pool(
                 self._dsn,
