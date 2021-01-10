@@ -60,7 +60,7 @@ setup(
         "aioredis==1.3.1",
         "rethinkdb==2.4.8",
         "openpyxl==3.0.5",
-        "lxml==4.6.1",
+        "lxml>=4.6.2",
         "isodate==0.6.0",
         "dask==2.30.0",
         "pandas==1.1.4",
