@@ -67,7 +67,7 @@ class redisPool(BasePool):
         """
         self.logger.debug("Redis Pool: Connecting to {}".format(self._dsn))
         try:
-            self._pool = await aioredis.create_redis_pool(
+            self._pool = await aioredis.create_pool(
                 self._dsn,
                 minsize=5,
                 maxsize=self._max_queries,
