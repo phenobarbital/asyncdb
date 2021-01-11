@@ -36,6 +36,7 @@ async def test_pool_by_dsn(event_loop):
     await pool.connect()
     pytest.assume(pool.is_connected() is True)
     await pool.close()
+    assert pool.is_closed() is True
 
 async def test_pool_by_params(event_loop):
     pool = AsyncPool(DRIVER, params=params, loop=event_loop)

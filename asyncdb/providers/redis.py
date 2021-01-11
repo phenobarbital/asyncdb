@@ -47,6 +47,9 @@ class redisPool(BasePool):
     def get_connection(self):
         return self._connection
 
+    def is_closed(self):
+        return self._pool.closed
+
     """
     Context magic Methods
     """
@@ -58,18 +61,20 @@ class redisPool(BasePool):
         self._loop.run_until_complete(self.release())
 
     # Create a redis connection pool
-    async def connect(self):
+    async def connect(self, **kwargs):
         """
         __init async db initialization
         """
         self.logger.debug("Redis Pool: Connecting to {}".format(self._dsn))
         try:
-            self._pool = await aioredis.create_pool(
+            self._pool = await aioredis.create_redis_pool(
                 self._dsn,
-                minsize=3,
+                minsize=5,
                 maxsize=self._max_queries,
                 loop=self._loop,
                 encoding=self._encoding,
+                #create_connection_timeout=self._timeout,
+                **kwargs
             )
         except (aioredis.ProtocolError) as err:
             raise ConnectionTimeout(
@@ -129,20 +134,32 @@ class redisPool(BasePool):
         except Exception as err:
             raise ProviderError("Release Error: {}".format(str(err)))
 
-    async def close(self, timeout=10):
+    async def close(self, timeout=5):
         """
         Close Pool
         """
         try:
-            if self._pool:
+            if self._connection:
+                self._pool.release(self._connection)
+            if self._pool and self._pool.closed is False:
                 self._pool.close()
-                await self._pool.wait_closed()
+                # also clear:
+                await self.clear()
+                await asyncio.sleep(1)
+                close = asyncio.create_task(self._pool.wait_closed())
+                try:
+                    await asyncio.wait_for(
+                        close,
+                        timeout=timeout
+                    )
+                except asyncio.exceptions.TimeoutError as err:
+                    pass
         except (
             aioredis.errors.PoolClosedError, aioredis.ConnectionClosedError
         ) as err:
             raise ProviderError("Connection close Error: {}".format(str(err)))
         except Exception as err:
-            print("Pool Closing Error: {}".format(str(err)))
+            logging.exception("Pool Closing Error: {}".format(str(err)))
             return False
 
     async def execute(self, sentence, *args, **kwargs):
