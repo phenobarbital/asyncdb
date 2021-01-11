@@ -104,8 +104,8 @@ class BasePool(ABC):
         return self._connection
 
     def is_closed(self):
-        self._logger.debug("Connection closed: %s" % self._pool._closed)
-        return self._pool._closed
+        self._logger.debug("Connection closed: %s" % self._pool.closed)
+        return self._pool.closed
 
     """
     __init async db initialization
