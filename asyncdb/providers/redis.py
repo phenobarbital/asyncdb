@@ -145,7 +145,7 @@ class redisPool(BasePool):
                 self._pool.close()
                 # also clear:
                 await self._pool.clear()
-                await asyncio.sleep(1)
+                #await asyncio.sleep(1)
                 close = asyncio.create_task(self._pool.wait_closed())
                 try:
                     await asyncio.wait_for(
