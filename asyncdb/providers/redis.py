@@ -261,8 +261,6 @@ class redis(BaseProvider):
                 **kwargs
             )
             self._connection = aioredis.Redis(connection)
-            print(self._connection)
-            print(type(self._connection))
         except (aioredis.ProtocolError, aioredis.AuthError) as err:
             raise ProviderError(
                 "Unable to connect to Redis, connection Refused: {}".format(
