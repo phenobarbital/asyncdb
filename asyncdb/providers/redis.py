@@ -73,7 +73,7 @@ class redisPool(BasePool):
                 maxsize=self._max_queries,
                 loop=self._loop,
                 encoding=self._encoding,
-                create_connection_timeout=self._timeout,
+                create_connection_timeout=300,
                 **kwargs
             )
         except (aioredis.ProtocolError) as err:
@@ -287,7 +287,10 @@ class redis(BaseProvider):
             await self._pool.release(
                 connection=self._connection.connection
             )
-        await self._connection.quit()
+        try:
+            await self._connection.quit()
+        except aioredis.errors.ConnectionClosedError as e:
+            self._logger.error(f'Error releasing the Connection {e!s}')
 
     def is_closed(self):
         if not self._connection:
@@ -305,7 +308,6 @@ class redis(BaseProvider):
         finally:
             self._connection = None
             self._connected = False
-            logging.debug('STATUS ', self._connection)
 
     async def execute(self, sentence, *args):
         if self._connection:
@@ -315,7 +317,7 @@ class redis(BaseProvider):
                 return result
             except (
                 aioredis.errors.PoolClosedError,
-                aioredis.ConnectionClosedError,
+                aioredis.errors.ConnectionClosedError,
             ) as err:
                 raise ProviderError("Connection Error: {}".format(str(err)))
 
