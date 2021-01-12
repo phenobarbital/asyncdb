@@ -233,20 +233,22 @@ class pgPool(BasePool):
         try:
             self._connection = await self._pool.acquire()
         except TooManyConnectionsError as err:
-            print("Too Many Connections Error: {}".format(str(err)))
+            logging.error("Too Many Connections Error: {}".format(str(err)))
             return False
         except ConnectionDoesNotExistError as err:
-            print("Connection Error: {}".format(str(err)))
+            logging.error("Connection Error: {}".format(str(err)))
             return False
         except InternalClientError as err:
-            print("Internal Error: {}".format(str(err)))
+            logging.error("Internal Error: {}".format(str(err)))
             return False
         except InterfaceError as err:
-            print("Interface Error: {}".format(str(err)))
+            logging.error("Interface Error: {}".format(str(err)))
             return False
         except InterfaceWarning as err:
-            print("Interface Warning: {}".format(str(err)))
+            logging.error("Interface Warning: {}".format(str(err)))
             return False
+        except Exception as err:
+            logging.error('Unknown Error on Acquire: {}'.format(str(err)))
         if self._connection:
             db = pg(pool=self)
             db.set_connection(self._connection)
