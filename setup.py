@@ -67,7 +67,7 @@ setup(
         "hiredis==1.1.0",
         "aiomcache==0.6.0",
         "aiosqlite==0.15.0",
-        "asyncio-redis==0.16.0",
+        "asyncio_redis==0.16.0",
         "sqlalchemy==1.3.20",
         "sqlalchemy-aio==0.16.0",
         "redis==3.5.3",

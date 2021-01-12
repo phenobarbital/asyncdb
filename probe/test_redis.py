@@ -26,7 +26,7 @@ loop.run_until_complete(rd.connect())
 async def test_redis(conn):
     await conn.execute("set", "Test1", "UltraTest")
     await conn.set("Test2", "No More Test")
-    if conn.exists("Test1", "Test2"):
+    if await conn.exists("Test1", "Test2"):
         value = await conn.get("Test1")
         print(value)
     await conn.setex("Test3", "Expiration Data", 10)
@@ -40,10 +40,16 @@ async def test_redis(conn):
         "Location": "RCP",
     }
     await conn.set_hash("user", user)
-    if conn.exists("user"):
+    if await conn.exists("user"):
         print(await conn.get_hash("user"))
         await conn.delete("user")
-
+    for lp in range(10000):
+        print(f'Test number {lp}')
+        async with await rd.acquire() as conn:
+            await conn.ping()
+            await conn.execute("set", "Test1", "UltraTest")
+            await conn.delete("Test1")
+    print('Ending ...')
 
 try:
     print("Connected: {}".format(rd.is_connected()))
