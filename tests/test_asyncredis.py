@@ -99,7 +99,7 @@ async def test_many(event_loop):
         async with await pool.acquire() as cnt:
             await cnt.ping()
             await cnt.execute("set", "Test1", "UltraTest")
-            result = cnt.get('Test1')
+            result = await cnt.get('Test1')
             pytest.assume(result == "UltraTest")
             await cnt.delete("Test1")
     print('Ending ...')
