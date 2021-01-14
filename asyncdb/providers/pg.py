@@ -184,6 +184,7 @@ class pgPool(BasePool):
                 command_timeout=self._timeout,
                 init=self.init_connection,
                 setup=self.setup_connection,
+                loop=self._loop,
                 max_cached_statement_lifetime=max_cached_statement_lifetime,
                 max_cacheable_statement_size=max_cacheable_statement_size,
                 server_settings=server_settings,
@@ -233,22 +234,22 @@ class pgPool(BasePool):
         try:
             self._connection = await self._pool.acquire()
         except TooManyConnectionsError as err:
-            logging.error("Too Many Connections Error: {}".format(str(err)))
+            self._logger.error("Too Many Connections Error: {}".format(str(err)))
             return False
         except ConnectionDoesNotExistError as err:
-            logging.error("Connection Error: {}".format(str(err)))
+            self._logger.error("Connection Error: {}".format(str(err)))
             return False
         except InternalClientError as err:
-            logging.error("Internal Error: {}".format(str(err)))
+            self._logger.error("Internal Error: {}".format(str(err)))
             return False
         except InterfaceError as err:
-            logging.error("Interface Error: {}".format(str(err)))
+            self._logger.error("Interface Error: {}".format(str(err)))
             return False
         except InterfaceWarning as err:
-            logging.error("Interface Warning: {}".format(str(err)))
+            self._logger.error("Interface Warning: {}".format(str(err)))
             return False
         except Exception as err:
-            logging.error('Unknown Error on Acquire: {}'.format(str(err)))
+            self._logger.error('Unknown Error on Acquire: {}'.format(str(err)))
         if self._connection:
             db = pg(pool=self)
             db.set_connection(self._connection)
@@ -273,7 +274,7 @@ class pgPool(BasePool):
         except InterfaceError as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
         except InternalClientError as err:
-            logging.debug(
+            self._logger.debug(
                 "Connection already released, PoolConnectionHolder.release() called on a free connection holder"
             )
             # print("PoolConnectionHolder.release() called on a free connection holder")
