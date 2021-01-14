@@ -65,6 +65,7 @@ class asyncredisPool(BasePool):
                 connect_timeout=self._timeout,
                 decode_responses=True,
                 retry_on_timeout=True,
+                loop=self._loop,
                 **kwargs
             )
         except (
