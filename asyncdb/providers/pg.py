@@ -5,6 +5,8 @@ This provider implements all funcionalities from asyncpg (cursors, transactions,
 """
 
 import asyncio
+import uvloop
+
 import json
 import time
 from datetime import datetime
@@ -59,7 +61,7 @@ from asyncdb.providers.sql import (
 
 max_cached_statement_lifetime = 600
 max_cacheable_statement_size = 1024 * 15
-
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 class pgPool(BasePool):
     _max_queries = 100
