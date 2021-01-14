@@ -9,7 +9,6 @@ TODO:
 """
 
 import asyncio
-import uvloop
 import aredis
 import objectpath
 import time
@@ -22,8 +21,6 @@ from asyncdb.providers import (
     registerProvider,
 )
 from asyncdb.utils import *
-
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class asyncredisPool(BasePool):
