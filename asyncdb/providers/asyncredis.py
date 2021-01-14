@@ -13,6 +13,7 @@ import uvloop
 import aredis
 import objectpath
 import time
+from typing import Callable
 
 from asyncdb.exceptions import *
 from asyncdb.providers import (
@@ -26,11 +27,13 @@ asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class asyncredisPool(BasePool):
-    _dsn = "redis://{host}:{port}/{db}"
-    _max_queries = 10
+    _dsn: str = "redis://{host}:{port}/{db}"
+    _client: Callable = None
+    _max_queries = 300
     _pool = None
     _connection = None
-    _encoding = "utf-8"
+    _encoding: str = "utf-8"
+    properties: dict = {}
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
         super(asyncredisPool, self).__init__(dsn=dsn, loop=loop, params=params)
@@ -42,6 +45,9 @@ class asyncredisPool(BasePool):
             pass
         if 'max_queries' in kwargs:
             self._max_queries = kwargs["max_queries"]
+
+    def get_loop(self):
+        return self._loop
 
     # Create a redis connection pool
     async def connect(self, **kwargs):
@@ -56,6 +62,9 @@ class asyncredisPool(BasePool):
                 self._dsn,
                 connection_class=aredis.Connection,
                 max_connections=self._max_queries,
+                connect_timeout=self._timeout,
+                decode_responses=True,
+                retry_on_timeout=True,
                 **kwargs
             )
         except (
@@ -69,9 +78,18 @@ class asyncredisPool(BasePool):
             raise ProviderError(
                 "Unable to connect to Redis: {}".format(str(err))
             )
-            return False
         # is connected
         if self._pool:
+            try:
+                # create the connection and get the properties:
+                self._connection = aredis.StrictRedis(
+                    connection_pool=self._pool
+                )
+                self.properties = await self._connection.info()
+            except Exception as err:
+                raise ProviderError(
+                    "Unable to connect to Redis: {}".format(str(err))
+                )
             self._connected = True
             self._initialized_on = time.time()
 
@@ -85,7 +103,9 @@ class asyncredisPool(BasePool):
         try:
             if not self._pool:
                 await self._pool.connect()
-            self._connection = self._pool.get_connection()
+            self._connection = aredis.StrictRedis(
+                connection_pool=self._pool
+            )
         except (
             aredis.exceptions.ConnectionError,
             aredis.exceptions.RedisError
@@ -98,9 +118,9 @@ class asyncredisPool(BasePool):
             return False
         if self._connection:
             db = asyncredis(
-                    connection=self._connection,
-                    pool=self
-                )
+                connection=self._connection,
+                pool=self
+            )
         return db
 
     async def release(self, connection=None):
@@ -112,13 +132,14 @@ class asyncredisPool(BasePool):
         else:
             if isinstance(connection, asyncredis):
                 conn = connection.engine()
+            if isinstance(connection, aredis.connection.Connection):
+                conn = connection
+            else:
+                return True
+        try:
             if not conn:
                 return True
-            else:
-                conn = connection
-        try:
-            if conn:
-                self._pool.release(conn)
+            self._pool.release(conn)
         except Exception as err:
             raise ProviderError("Release Error: {}".format(str(err)))
 
@@ -128,9 +149,10 @@ class asyncredisPool(BasePool):
         """
         try:
             if self._connection:
-                self._pool.release(self._connection)
+                await self.release(self._connection)
             if self._pool:
                 self._pool.disconnect()
+            self._connected = False
         except (
             aredis.exceptions.ConnectionError,
             aredis.exceptions.RedisError
@@ -142,13 +164,21 @@ class asyncredisPool(BasePool):
             logging.exception("Pool Closing Error: {}".format(str(err)))
             return False
 
+    def is_closed(self):
+        self._logger.debug("Connection closed: %s" % (not self._connected))
+        return (not self._connected)
+
     async def execute(self, sentence, *args, **kwargs):
         """
         Execute a connection into the Pool
         """
         if self._pool:
             try:
-                result = await self._pool.execute(sentence, *args, **kwargs)
+                result = await self._connection.execute_command(
+                    sentence,
+                    *args,
+                    **kwargs
+                )
                 return result
             except TypeError as err:
                 raise ProviderError("Execute Error: {}".format(str(err)))
@@ -162,6 +192,17 @@ class asyncredisPool(BasePool):
             except Exception as err:
                 raise ProviderError("Redis Execute Error: {}".format(str(err)))
 
+    async def test_connection(self, key: str = 'TEST_123', optional: str = ''):
+        result = None
+        error = None
+        try:
+            await self.execute('set', key, optional)
+            result = await self.execute('get', key)
+        except Exception as err:
+            error = err
+        finally:
+            await self.execute('DEL', key)
+            return [result, error]
 
 class asyncredis(BaseProvider):
     _provider = "redis"
@@ -216,22 +257,30 @@ class asyncredis(BaseProvider):
     def redis(self):
         return self._connection
 
+    def engine(self):
+        return self._connection.connection_pool._available_connections[0]
+
     # Create a redis pool
-    async def connection(self):
+    async def connection(self, **kwargs):
         """
         __init async redis initialization
         """
         self.logger.info("AsyncRedis: Connecting to {}".format(self._dsn))
         try:
-            self._connection = aredis.StrictRedis.from_url(
-                self._dsn,
-                loop=self._loop,
-                encoding=self._encoding,
-                max_idle_time=0.2,
-                idle_check_interval=0.1,
-                connect_timeout=self._timeout
-            )
-            #await self._connection.connect()
+            if self._pool:
+                self._connection = aredis.StrictRedis(
+                    connection_pool=self._pool
+                )
+            else:
+                self._connection = aredis.StrictRedis.from_url(
+                    self._dsn,
+                    loop=self._loop,
+                    encoding=self._encoding,
+                    connect_timeout=self._timeout,
+                    decode_responses=True,
+                    retry_on_timeout=True,
+                    **kwargs
+                )
         except (
             aredis.exceptions.ConnectionError,
             aredis.exceptions.RedisError
@@ -265,26 +314,56 @@ class asyncredis(BaseProvider):
             except Exception as err:
                 logging.exception('Error closing Redis Connection')
             finally:
-                self._connection = None
+                del self._connection
+                self._connected = False
 
-    async def execute(self, sentence, *args):
-        pass
+    async def execute(self, sentence, *args, **kwargs):
+        """execute.
+        Execute a command
+        """
+        try:
+            result = await self._connection.execute_command(
+                sentence,
+                *args,
+                **kwargs
+            )
+            return result
+        except TypeError as err:
+            raise ProviderError("Execute Error: {}".format(str(err)))
+        except (
+            aredis.exceptions.ConnectionError,
+            aredis.exceptions.RedisError
+        ) as err:
+            raise ProviderError(
+                "Connection close Error: {}".format(str(err))
+            )
+        except Exception as err:
+            raise ProviderError("Redis Execute Error: {}".format(str(err)))
 
     async def prepare(self):
         pass
 
-    async def test_connection(self, optional=1):
+    async def test_connection(self, key:str = 'TEST_123', optional: str =''):
         result = None
         error = None
         try:
-            await self.set('test_123', optional)
-            result = await self.get('test_123')
+            await self.set(key, optional)
+            result = await self.get(key)
         except Exception as err:
             error = err
         finally:
-            await self.delete('test_123')
+            await self.delete(key)
             return [result, error]
 
+    def is_closed(self):
+        self._logger.debug("Connection closed: %s" % (not self._connected))
+        return bool(not self._connected)
+
+    async def ping(self, msg: str = ''):
+        if msg:
+            await self._connection.echo(msg)
+        else:
+            await self._connection.ping()
 
     async def query(self, key="", *val):
         return await self.get(key, val)
@@ -328,11 +407,26 @@ class asyncredis(BaseProvider):
             self._logger.error(f"Error cleaning DB: {e!s}")
             raise Exception(f"Error cleaning DB: {e!s}")
 
-    async def exists(self, key, *keys):
+    async def exists(self, key) -> bool:
         if not self._connection:
             await self.connection()
         try:
-            return self._connection.exists(key, *keys)
+            return bool(await self._connection.exists(key))
+        except (aredis.exceptions.RedisError) as err:
+            print(err)
+            raise ProviderError("Redis Exists Error: {}".format(str(err)))
+        except Exception as err:
+            print(err)
+            raise ProviderError(
+                "Redis Exists Unknown Error: {}".format(str(err))
+            )
+
+    async def m_exists(self, *keys):
+        """ Existence of multiples Keys """
+        if not self._connection:
+            await self.connection()
+        try:
+            return await self._connection.execute_command('EXISTS', *keys)
         except (aredis.exceptions.RedisError) as err:
             raise ProviderError("Redis Exists Error: {}".format(str(err)))
         except Exception as err:
@@ -424,12 +518,25 @@ class asyncredis(BaseProvider):
      Hash functions
     """
 
-    async def hmset(self, key, *args, **kwargs):
+    async def hmget(self, key, keys, *args):
         """
         set the value of a key in field (redis dict)
         """
         try:
-            await self._connection.hmset_dict(key, *args, **kwargs)
+            return await self._connection.hmget(key, keys, *args)
+        except (aredis.exceptions.RedisError) as err:
+            raise ProviderError("Redis Hmget Error: {}".format(str(err)))
+        except Exception as err:
+            raise ProviderError(
+                "Redis Hmget Unknown Error: {}".format(str(err))
+            )
+
+    async def hmset(self, key, mapping):
+        """
+        set the value of a key in field (redis dict)
+        """
+        try:
+            await self._connection.hmset(key, mapping)
         except (aredis.exceptions.RedisError) as err:
             raise ProviderError("Redis Hmset Error: {}".format(str(err)))
         except Exception as err:
@@ -441,6 +548,7 @@ class asyncredis(BaseProvider):
         """
         Get all the fields and values in a hash (redis dict)
         """
+        print(key, await self._connection.hgetall(key))
         try:
             return await self._connection.hgetall(key)
         except (aredis.exceptions.RedisError) as err:
@@ -450,11 +558,24 @@ class asyncredis(BaseProvider):
                 "Redis Hmset Unknown Error: {}".format(str(err))
             )
 
-    async def set_hash(self, key, *args, **kwargs):
-        await self.hmset(key, *args, **kwargs)
+    async def hget(self, key, name):
+        """
+        set the value of a key in field (redis dict)
+        """
+        try:
+            await self._connection.hget(key, name)
+        except (aredis.exceptions.RedisError) as err:
+            raise ProviderError("Redis Hget Error: {}".format(str(err)))
+        except Exception as err:
+            raise ProviderError(
+                "Redis Hget Unknown Error: {}".format(str(err))
+            )
 
-    async def get_hash(self, key):
-        return await self.hgetall(key)
+    async def set_hash(self, key, mapping):
+        await self.hmset(key, mapping)
+
+    async def get_hash(self, key, *args):
+        return await self.hgetall(key, *args)
 
     async def hkeys(self, key):
         """
