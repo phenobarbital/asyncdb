@@ -72,8 +72,12 @@ class pgPool(BasePool):
     application_name = 'Navigator'
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
-        super(pgPool,
-              self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        super(pgPool, self).__init__(
+            dsn=dsn,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if 'application_name' in self._server_settings:
@@ -400,8 +404,11 @@ class pg(SQLProvider):
     _server_settings = {}
     application_name: str = 'Navigator'
 
-    def __init__(self, dsn: str = '', loop = None, params={}, **kwargs):
+    def __init__(self, dsn='', loop=None, params={}, pool=None, **kwargs):
         super(pg, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        if pool:
+            self._pool = pool
+            self._loop = self._pool.get_event_loop()
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if 'application_name' in self._server_settings:
