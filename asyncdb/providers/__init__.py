@@ -257,6 +257,9 @@ class BaseProvider(ABC):
     def is_connected(self):
         return self._connected
 
+    def is_closed(self):
+        return not self._connected
+
     @classmethod
     def driver(self):
         return self.__name__
