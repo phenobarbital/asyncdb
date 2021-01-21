@@ -22,6 +22,7 @@ from asyncdb import AsyncDB
 from asyncdb.utils import colors, SafeDict, Msg
 from asyncdb.utils.encoders import DefaultEncoder, BaseEncoder
 from asyncdb.exceptions import NoDataFound
+from asyncdb.providers import BaseProvider
 #from navigator.conf import DATABASES
 import typing
 from typing import (
@@ -231,10 +232,7 @@ class Field(ff):
             self._default = default
             self._default_factory = MISSING
         else:
-            if notnull is True:
-                # TODO: add a default not-null value
-                args['default'] = ''
-            else:
+            if notnull is False:
                 if not factory:
                     factory = MISSING
                 # get the annotation of field
@@ -303,6 +301,41 @@ def _dc_method_setattr(self, name: str, value: Any, *args, **kwargs) -> None:
                     setattr(self, name, value)
             except Exception as err:
                 print(err)
+
+
+def Column(
+        *,
+        default: Any = None,
+        init: bool = True,
+        primary_key: bool = False,
+        notnull: bool = False,
+        required: bool = False,
+        factory: Callable = MISSING,
+        min: Union[int, float, Decimal] = None,
+        max: Union[int, float, Decimal] = None,
+        validator: Callable = None,
+        db_type: str = None,
+        **kwargs
+    ):
+    """Column.
+
+    Column Function that returns a Field() object
+    """
+    if default is not None and factory is not MISSING:
+        raise ValueError('Cannot specify both default and default_factory')
+    return Field(
+        default=default,
+        init=init,
+        primary_key=primary_key,
+        notnull=notnull,
+        required=required,
+        factory=factory,
+        db_type=db_type,
+        min=min,
+        max=max,
+        validator=validator,
+        **kwargs
+    )
 
 
 def create_dataclass(
@@ -913,6 +946,30 @@ class Model(metaclass=ModelMeta):
         m.app_label = schema
         cls.Meta = m
         return cls
+
+    @classmethod
+    async def makeModel(cls, name: str, schema: str = '', db: BaseProvider = None):
+        tablename = '{}.{}'.format(schema, name)
+        colinfo = await db.column_info(tablename)
+        cols = []
+        m = Meta()
+        m.name = name
+        m.schema = schema
+        m.app_label = schema
+        cls.Meta = m
+        for column in colinfo:
+            col = Column(
+                column=column['column_name'],
+                primary_key=column['is_primary'],
+                notnull=column['notnull'],
+                required=(not column['notnull']),
+                db_type=column['data_type']
+            )
+            col.column=column['column_name']
+            print(col)
+            cols.append((column['column_name'], col))
+        print(cols)
+        return cls
     #
     # @classmethod
     # def schema(cls, type: str = 'json') -> str:
@@ -968,37 +1025,3 @@ class Model(metaclass=ModelMeta):
     #         return result
 
     Meta = Meta
-
-def Column(
-        *,
-        default: Any = None,
-        init: bool = True,
-        primary_key: bool = False,
-        notnull: bool = False,
-        required: bool = False,
-        factory: Callable = MISSING,
-        min: Union[int, float, Decimal] = None,
-        max: Union[int, float, Decimal] = None,
-        validator: Callable = None,
-        db_type: str = None,
-        **kwargs
-    ):
-    """Column.
-
-    Column Function that returns a Field() object
-    """
-    if default is not None and factory is not MISSING:
-        raise ValueError('Cannot specify both default and default_factory')
-    return Field(
-        default=default,
-        init=init,
-        primary_key=primary_key,
-        notnull=notnull,
-        required=required,
-        factory=factory,
-        db_type=db_type,
-        min=min,
-        max=max,
-        validator=validator,
-        **kwargs
-    )
