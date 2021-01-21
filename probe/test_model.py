@@ -42,7 +42,8 @@ p = AsyncDB("pg", params=params, **args)
 # print(m.schema(type='json'))
 async def create_model():
     query = await Model.makeModel(name='query_util', schema='troc', db=p)
-    print(query)
+    q = await query.filter(query_slug='walmart_stores')
+    print(q, q[0].query_raw)
 
 if __name__ == '__main__':
     loop.run_until_complete(create_model())

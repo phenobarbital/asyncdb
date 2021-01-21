@@ -948,27 +948,38 @@ class Model(metaclass=ModelMeta):
         return cls
 
     @classmethod
-    async def makeModel(cls, name: str, schema: str = '', db: BaseProvider = None):
+    async def makeModel(
+            cls,
+            name: str,
+            schema: str = 'public',
+            fields: list = [],
+            db: BaseProvider = None
+        ):
+        """
+        Make Model.
+
+        Making a model from field tuples, a JSON schema or a Table.
+        """
         tablename = '{}.{}'.format(schema, name)
-        colinfo = await db.column_info(tablename)
-        cols = []
+        if not fields: # we need to look in to it.
+            colinfo = await db.column_info(tablename)
+            fields = []
+            for column in colinfo:
+                col = Field(
+                    primary_key=column['is_primary'],
+                    notnull=column['notnull'],
+                    db_type=column['data_type']
+                )
+                fields.append((column['column_name'], str, col))
+        cls = make_dataclass(name, fields, bases=(Model,))
         m = Meta()
         m.name = name
         m.schema = schema
         m.app_label = schema
+        if db:
+            m.connection = db
+        m.frozen = False
         cls.Meta = m
-        for column in colinfo:
-            col = Column(
-                column=column['column_name'],
-                primary_key=column['is_primary'],
-                notnull=column['notnull'],
-                required=(not column['notnull']),
-                db_type=column['data_type']
-            )
-            col.column=column['column_name']
-            print(col)
-            cols.append((column['column_name'], col))
-        print(cols)
         return cls
     #
     # @classmethod
