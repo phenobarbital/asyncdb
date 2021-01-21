@@ -1,20 +1,48 @@
 from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
 from asyncdb.utils.models import Model, Column
+from asyncdb import AsyncDB
 from decimal import Decimal
 import datetime
 import numpy as np
+import asyncio
 
-f = [
-    ('sara_order_no', str),
-    ('dealer_name', str),
-    ('dealer_code', str),
-    ('retailer', str),
-    ('store_no', int),
-    ('account_number', np.int64),
-    ('lead_rep_name', Decimal),
-    ('activity_date', datetime.datetime)
-]
+loop = asyncio.get_event_loop()
+asyncio.set_event_loop(loop)
 
-act = Model.make_model(name='activity_data', schema='att', fields=f)
-m = act()
-print(m.schema(type='json'))
+params = {
+    "user": "troc_pgdata",
+    "password": "12345678",
+    "host": "127.0.0.1",
+    "port": "5432",
+    "database": "navigator_dev",
+    "DEBUG": True,
+}
+
+# running new multi-threaded async SA (using aiopg)
+args = {
+    "server_settings": {
+        "application_name": "Testing"
+    }
+}
+p = AsyncDB("pg", params=params, **args)
+
+# f = [
+#     ('sara_order_no', str),
+#     ('dealer_name', str),
+#     ('dealer_code', str),
+#     ('retailer', str),
+#     ('store_no', int),
+#     ('account_number', np.int64),
+#     ('lead_rep_name', Decimal),
+#     ('activity_date', datetime.datetime)
+# ]
+#
+# act = Model.make_model(name='activity_data', schema='att', fields=f)
+# m = act()
+# print(m.schema(type='json'))
+async def create_model():
+    query = await Model.makeModel(name='query_util', schema='troc', db=p)
+    print(query)
+
+if __name__ == '__main__':
+    loop.run_until_complete(create_model())

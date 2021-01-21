@@ -915,6 +915,31 @@ class pg(SQLProvider):
             error = "Error on Table Copy: {}".format(str(err))
             raise Exception(error)
 
+    """
+    Model Logic:
+    """
+    async def column_info(self, tablename):
+        """Column Info.
+
+        Get Meta information about a table (column name, data type and PK).
+        Useful to build a DataModel from Querying database.
+        Parameters:
+        @tablename: str The name of the table (including schema).
+        """
+        sql = f"SELECT a.attname AS column_name, a.atttypid::regtype AS data_type, \
+        format_type(a.atttypid, a.atttypmod) as format_type, a.attnotnull::boolean as notnull, \
+        coalesce((SELECT true FROM pg_index i WHERE i.indrelid = a.attrelid \
+        AND i.indrelid = a.attrelid AND a.attnum = any(i.indkey) \
+        AND i.indisprimary), false) as is_primary \
+        FROM pg_attribute a WHERE a.attrelid = '{tablename!s}'::regclass \
+        AND a.attnum > 0 AND NOT a.attisdropped ORDER BY a.attnum"
+        if not self._connection:
+            await self.connection()
+        try:
+            colinfo = await self._connection.fetch(sql)
+            return colinfo
+        except Exception as err:
+            self._logger.exception(f'Wrong Table information {tablename!s}')
 
 """
 Registering this Provider
