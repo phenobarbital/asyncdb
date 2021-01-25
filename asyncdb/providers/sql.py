@@ -560,7 +560,7 @@ class SQLProvider(BaseProvider):
         fields = model.columns(model)
         for name, field in fields.items():
             val = getattr(model, field.name)
-            print(name, field, val)
+            # print(name, field, val)
             column = field.name
             datatype = field.type
             value = Entity.toSQL(val, datatype)
