@@ -722,6 +722,7 @@ class SQLProvider(BaseProvider):
         for row in rows:
             source = []
             pk = []
+            print(row)
             for col, field in fields.items():
                 if col not in row:
                     # field doesnt exists
@@ -732,18 +733,22 @@ class SQLProvider(BaseProvider):
                         else:
                             source.append(default)
                     else:
-                        val = getattr(model, col)
-                        if val is not None:
-                            source.append(val)
+                        # val = getattr(model, col)
+                        # if val is not None:
+                        #     source.append(val)
                         # elif field.required is True or field.primary_key is True:
-                        elif field.required is True:
+                        if field.required is True:
                             raise StatementError(
                                 f'Missing Required Field: {col}'
                             )
                         else:
                             source.append(None)
                 else:
-                    source.append(row[col])
+                    try:
+                        val = row[col]
+                        source.append(val)
+                    except (KeyError, TypeError):
+                        continue
                 if field.primary_key is True:
                     pk.append(col)
             try:
