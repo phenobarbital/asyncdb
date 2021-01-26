@@ -703,35 +703,22 @@ class SQLProvider(BaseProvider):
             await self.connection()
         table = f'{model.Meta.schema}.{model.Meta.name}'
         fields = model.columns(model)
-        n = len(fields)
-        columns = ', '.join(fields.keys())
-        values = ','.join(['${}'.format(a) for a in range(1, n+1)])
-        primary = 'RETURNING *'
-        insert = f'INSERT INTO {table} ({columns}) VALUES ({values}) {primary}'
-        print(insert)
-        logging.debug(f'INSERT: {insert}')
-        try:
-            stmt = await self._connection.prepare(insert)
-        except Exception as err:
-            print(traceback.format_exc())
-            raise Exception(
-                'Exception creating Prepared Sentence {}: {}'.format(
-                    model.Meta.name, err)
-                )
         results = []
+        stmt = None
         for row in rows:
             source = []
             pk = []
-            print(row)
+            cols = []
             for col, field in fields.items():
                 if col not in row:
                     # field doesnt exists
                     default = field.default
-                    if default:
+                    if default is not None:
                         if callable(default):
                             source.append(default())
                         else:
                             source.append(default)
+                        cols.append(col)
                     else:
                         # val = getattr(model, col)
                         # if val is not None:
@@ -741,16 +728,31 @@ class SQLProvider(BaseProvider):
                             raise StatementError(
                                 f'Missing Required Field: {col}'
                             )
-                        else:
-                            source.append(None)
                 else:
                     try:
                         val = row[col]
                         source.append(val)
+                        cols.append(col)
                     except (KeyError, TypeError):
                         continue
                 if field.primary_key is True:
                     pk.append(col)
+            if not stmt:
+                columns = ', '.join(cols)
+                n = len(cols)
+                values = ','.join(['${}'.format(a) for a in range(1, n+1)])
+                primary = 'RETURNING *'
+                insert = f'INSERT INTO {table} ({columns}) VALUES ({values}) {primary}'
+                print(insert)
+                logging.debug(f'INSERT: {insert}')
+                try:
+                    stmt = await self._connection.prepare(insert)
+                except Exception as err:
+                    print(traceback.format_exc())
+                    raise Exception(
+                        'Exception creating Prepared Sentence {}: {}'.format(
+                            model.Meta.name, err)
+                        )
             try:
                 result = await stmt.fetchrow(*source, timeout=2)
                 logging.debug(stmt.get_statusmsg())
