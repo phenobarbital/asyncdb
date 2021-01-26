@@ -9,7 +9,7 @@ import json
 import time
 from datetime import datetime
 import traceback
-
+import uuid
 import asyncpg
 from asyncpg.pgproto import pgproto
 from dateutil.relativedelta import relativedelta
