@@ -560,7 +560,7 @@ class SQLProvider(BaseProvider):
         fields = model.columns(model)
         for name, field in fields.items():
             val = getattr(model, field.name)
-            print(name, field, val)
+            # print(name, field, val)
             column = field.name
             datatype = field.type
             value = Entity.toSQL(val, datatype)
@@ -732,7 +732,11 @@ class SQLProvider(BaseProvider):
                         else:
                             source.append(default)
                     else:
-                        if field.required is True or field.primary_key is True:
+                        val = getattr(model, col)
+                        if val is not None:
+                            source.append(val)
+                        # elif field.required is True or field.primary_key is True:
+                        elif field.required is True:
                             raise StatementError(
                                 f'Missing Required Field: {col}'
                             )
