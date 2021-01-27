@@ -920,9 +920,17 @@ class Model(metaclass=ModelMeta):
         if not cls.Meta.connection:
             cls.get_connection(cls)
         async with await cls.Meta.connection.connection() as conn:
-            await conn.test_connection()
-            prepared, error = await conn.prepare('SELECT * FROM walmart.stores')
-            print(conn.get_columns())
+            try:
+                result = await cls.Meta.connection.delete_rows(
+                    model=cls,
+                    conditions=conditions,
+                    **kwargs
+                )
+                if result:
+                    return [cls(**dict(r)) for r in result]
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception('Error Deleting Table {}: {}'.format(cls.Meta.name, err))
 
     @classmethod
     async def update(cls, conditions: dict = {}, **kwargs):

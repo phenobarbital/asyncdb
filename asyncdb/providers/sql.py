@@ -695,6 +695,44 @@ class SQLProvider(BaseProvider):
             print(traceback.format_exc())
             raise Exception('Error on Insert over table {}: {}'.format(model.Meta.name, err))
 
+    async def delete_rows(self, model: Model, conditions: dict, **kwargs):
+        """
+        Deleting some records and returned.
+        """
+        if not self._connection:
+            await self.connection()
+        table = f'{model.Meta.schema}.{model.Meta.name}'
+        source = []
+        pk = {}
+        cols = []
+        fields = model.columns(model)
+        for name, field in fields.items():
+            column = field.name
+            datatype = field.type
+            cols.append(column)
+            if column in kwargs:
+                value = Entity.toSQL(kwargs[column], datatype)
+                source.append('{} = {}'.format(
+                    column,
+                    Entity.escapeLiteral(
+                        value, datatype
+                        )
+                    )
+                )
+        set_fields = ', '.join(source)
+        condition = self._where(fields, **conditions)
+        columns = ', '.join(cols)
+        sql = f'DELETE FROM {table} WHERE {condition}'
+        print(sql)
+        try:
+            result = await self._connection.execute(sql)
+            if result:
+                sql = f'SELECT {columns} FROM {table} {condition}'
+                return await self._connection.fetch(sql)
+        except Exception as err:
+            print(traceback.format_exc())
+            raise Exception('Error on Deleting table {}: {}'.format(model.Meta.name, err))
+
     async def create_rows(self, model: Model, rows: list):
         """
         Create all records based on rows and returned
