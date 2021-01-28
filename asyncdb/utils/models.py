@@ -916,7 +916,7 @@ class Model(metaclass=ModelMeta):
 
 
     @classmethod
-    async def remove(cls, **kwargs):
+    async def remove(cls, conditions: dict = {}, **kwargs):
         if not cls.Meta.connection:
             cls.get_connection(cls)
         async with await cls.Meta.connection.connection() as conn:
