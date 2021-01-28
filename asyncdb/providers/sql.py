@@ -722,7 +722,7 @@ class SQLProvider(BaseProvider):
         set_fields = ', '.join(source)
         condition = self._where(fields, **conditions)
         columns = ', '.join(cols)
-        sql = f'DELETE FROM {table} WHERE {condition}'
+        sql = f'DELETE FROM {table} {condition}'
         print(sql)
         try:
             result = await self._connection.execute(sql)
