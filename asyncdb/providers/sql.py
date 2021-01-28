@@ -690,6 +690,7 @@ class SQLProvider(BaseProvider):
             result = await self._connection.execute(sql)
             if result:
                 sql = f'SELECT {columns} FROM {table} {condition}'
+                print('UPDATE ', sql)
                 return await self._connection.fetch(sql)
         except Exception as err:
             print(traceback.format_exc())
