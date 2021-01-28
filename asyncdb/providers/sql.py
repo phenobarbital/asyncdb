@@ -727,8 +727,7 @@ class SQLProvider(BaseProvider):
         try:
             result = await self._connection.execute(sql)
             if result:
-                sql = f'SELECT {columns} FROM {table} {condition}'
-                return await self._connection.fetch(sql)
+                return result
         except Exception as err:
             print(traceback.format_exc())
             raise Exception('Error on Deleting table {}: {}'.format(model.Meta.name, err))
