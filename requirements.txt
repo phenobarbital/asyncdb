@@ -23,7 +23,7 @@ certifi==2020.6.20
 cffi==1.14.3
 cchardet==2.1.7
 click==7.1.2
-cryptography==3.2
+cryptography==3.3.2
 dask==2.30.0
 dateparser==0.7.6
 decorator==4.4.2
