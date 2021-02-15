@@ -489,7 +489,7 @@ class ModelMeta(type):
         if 'driver' in ls:
             if cls.Meta.connection is None:
                 if cls.Meta.driver is not None:
-                    Msg('Getting Connection', 'DEBUG')
+                    # Msg('Getting Connection', 'DEBUG')
                     if cls.Meta.dsn is not None:
                         cls.get_connection(cls, dsn=cls.Meta.dsn)
                     else:
@@ -727,7 +727,7 @@ class Model(metaclass=ModelMeta):
                 params = self.Meta.credentials
                 self.Meta.connection = AsyncDB(driver, params=params)
             elif dsn is not None:
-                print('HERE ', dsn)
+                # print('HERE ', dsn)
                 self.Meta.connection = AsyncDB(driver, dsn=dsn)
             return self.Meta.connection
 
