@@ -90,7 +90,7 @@ setup(
         "aredis==1.1.8",
     ],
     extra_requires=[
-        'cryptography>=3.2'
+        'cryptography==3.4.6'
     ],
     tests_require=[
         'pytest>=5.4.0',
