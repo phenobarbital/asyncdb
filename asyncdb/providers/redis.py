@@ -568,6 +568,18 @@ class redis(BaseProvider):
                 "Redis Hset Unknown Error: {}".format(str(err))
             )
 
+    async def lrange(self, key, start: int = 0, stop: int = 100):
+        """
+        Delete one or more hash fields
+        """
+        try:
+            await self._connection.lrange(key, start, stop)
+        except (aioredis.RedisError, aioredis.ProtocolError) as err:
+            raise ProviderError("Redis lrange Error: {}".format(str(err)))
+        except Exception as err:
+            raise ProviderError(
+                "Redis lrange Unknown Error: {}".format(str(err))
+            )
 
 """
 Registering this Provider
