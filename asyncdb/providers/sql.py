@@ -651,6 +651,7 @@ class SQLProvider(BaseProvider):
         columns = ', '.join(cols)
         condition = self._where(fields, **kwargs)
         sql = f'SELECT {columns} FROM {table} {condition}'
+        logging.debug(sql)
         try:
             return await self._connection.fetch(sql)
         except Exception as err:
@@ -685,7 +686,7 @@ class SQLProvider(BaseProvider):
         condition = self._where(fields, **conditions)
         columns = ', '.join(cols)
         sql = f'UPDATE {table} SET {set_fields} {condition}'
-        print(sql)
+        logging.debug(sql)
         try:
             result = await self._connection.execute(sql)
             if result:
@@ -724,7 +725,7 @@ class SQLProvider(BaseProvider):
         condition = self._where(fields, **conditions)
         columns = ', '.join(cols)
         sql = f'DELETE FROM {table} {condition}'
-        print(sql)
+        logging.debug(sql)
         try:
             result = await self._connection.execute(sql)
             if result:
@@ -781,7 +782,6 @@ class SQLProvider(BaseProvider):
                 values = ','.join(['${}'.format(a) for a in range(1, n+1)])
                 primary = 'RETURNING *'
                 insert = f'INSERT INTO {table} ({columns}) VALUES ({values}) {primary}'
-                print(insert)
                 logging.debug(f'INSERT: {insert}')
                 try:
                     stmt = await self._connection.prepare(insert)
