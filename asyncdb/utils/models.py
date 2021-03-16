@@ -701,7 +701,7 @@ class Model(metaclass=ModelMeta):
         """
         driver = self.Meta.driver if self.Meta.driver else 'pg'
         if driver:
-            logging.debug('Getting data from Database: {}'.format(driver))
+            # logging.debug('Getting data from Database: {}'.format(driver))
             # working with app labels
             try:
                 app = self.Meta.app_label if self.Meta.app_label else None
