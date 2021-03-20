@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python' ]
+        language: [ 'python', 'nim', 'rust', 'cpp' ]
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python' ]
         # Learn more...
         # https://docs.github.com/en/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#overriding-automatic-language-detection
@@ -53,7 +53,7 @@ jobs:
         # By default, queries listed here will override any specified in a config file.
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
-        setup-python-dependencies: false
+        setup-python-dependencies: true
 
     # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
     # If this step fails, then you should remove it and run the build manually (see below)
@@ -75,5 +75,7 @@ jobs:
       uses: github/codeql-action/analyze@v1
 
     - name: Python style check
+      run: |
+        sudo -H apt-get install python3.8-dev build-essential libssl-dev libffi-dev unixodbc unixodbc-dev -y
       uses: bulv1ne/python-style-check@v0.3
 
