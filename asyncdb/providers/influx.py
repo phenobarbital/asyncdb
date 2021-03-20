@@ -40,10 +40,6 @@ class influx(BaseProvider):
     _timeout: int = 5
     _version: str = None
 
-    def __init__(self, loop=None, pool=None, params={}, **kwargs):
-        super(influx, self).__init__(loop=loop, params=params, **kwargs)
-        asyncio.set_event_loop(self._loop)
-
     async def close(self):
         """
         Closing a Connection
@@ -77,6 +73,9 @@ class influx(BaseProvider):
                 error = err
             finally:
                 return [result, error]
+
+    async def ping(self):
+        return self._connection.get_list_database()
 
     async def connection(self):
         """
@@ -125,6 +124,55 @@ class influx(BaseProvider):
             raise ProviderError('Error creating Database {}'.format(err))
         if use is True:
             self._connection.switch_database(database)
+
+    async def use(self, database:str):
+        self._connection.switch_database(database)
+        return self
+
+    async def write(self, data: dict, protocol:str = 'json', **kwargs):
+        try:
+            fn = partial(
+                self._connection.write,
+                data,
+                protocol=protocol,
+                params=kwargs
+            )
+            result = await self._loop.run_in_executor(
+                None,
+                fn
+            )
+            return result
+        except RuntimeError as err:
+            error = "Runtime Error: {}".format(str(err))
+            raise ProviderError(error)
+        except Exception as err:
+            error = "Error on Write: {}".format(str(err))
+            raise Exception(error)
+
+    async def save(self, data: list, protocol:str = 'json', batch_size: int = None):
+        try:
+            fn = partial(
+                self._connection.write_points,
+                data,
+                time_precision='ms',
+                protocol=protocol,
+                batch_size=batch_size,
+                consistency='any'
+            )
+            result = await self._loop.run_in_executor(
+                None,
+                fn
+            )
+            return result
+        except RuntimeError as err:
+            error = "Runtime Error: {}".format(str(err))
+            raise ProviderError(error)
+        except Exception as err:
+            error = "Error on Write: {}".format(str(err))
+            raise Exception(error)
+
+    # alias of save function
+    write_points = save
 
     async def query(self, sentence="", **kwargs):
         # self._logger.debug("Start Query function")
