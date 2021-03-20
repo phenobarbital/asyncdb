@@ -85,6 +85,7 @@ class influx(BaseProvider):
         self._connected = False
         try:
             if self._dsn:
+                print('DSN ', self._dsn)
                 self._connection = InfluxDBClient.from_dsn(
                     self._dsn,
                     timeout=self._timeout
