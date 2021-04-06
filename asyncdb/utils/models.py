@@ -1022,58 +1022,5 @@ class Model(metaclass=ModelMeta):
         m.frozen = False
         cls.Meta = m
         return cls
-    #
-    # @classmethod
-    # def schema(cls, type: str = 'json') -> str:
-    #     result = None
-    #     name = cls.__name__
-    #     schema = cls.Meta.schema if cls.Meta.schema is not None else ''
-    #     columns = {}
-    #     try:
-    #         if type == 'json':
-    #             for name, field in cls.columns():
-    #                 key = field.name
-    #                 type = field.type
-    #                 columns[key] = {
-    #                     "name": key,
-    #                     "type": JSON_TYPES[type]
-    #                 }
-    #             doc = {
-    #                 "name": name,
-    #                 "description": cls.__doc__.strip('\n').strip(),
-    #                 "schema": schema,
-    #                 "fields": columns
-    #             }
-    #             result = to_json.dumps(doc)
-    #         elif type == 'sql' or type == 'SQL':
-    #             # TODO: using lexers to different types of SQL
-    #             table = cls.Meta.name if cls.Meta.name is not None else name
-    #             doc = f'CREATE TABLE IF NOT EXISTS {schema}.{table} (\n'
-    #             cols = []
-    #             pk = []
-    #             for name, field in cls.columns().items():
-    #                 print(name, field)
-    #                 key = field.name
-    #                 default = None
-    #                 try:
-    #                     default = field.metadata['db_default']
-    #                 except KeyError:
-    #                     if field.default:
-    #                         default = f'{field.default!r}'
-    #                 default = f'DEFAULT {default!s}' if isinstance(default, (str, int)) else ''
-    #                 type = DB_TYPES[field.type]
-    #                 nn = 'NOT NULL' if field.required is True else ''
-    #                 if field.primary_key is True:
-    #                     pk.append(key)
-    #                 cols.append(f' {key} {type} {nn} {default}')
-    #             doc = "{}{}".format(doc, ",\n".join(cols))
-    #             if len(pk) >= 1:
-    #                 primary = ", ".join(pk)
-    #                 cname = f'pk_{schema}_{table}_pkey'
-    #                 doc = "{},\n{}".format(doc, f'CONSTRAINT {cname} PRIMARY KEY ({primary})')
-    #             doc = doc + '\n);'
-    #             result = doc
-    #     finally:
-    #         return result
 
     Meta = Meta

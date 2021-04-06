@@ -1,0 +1,55 @@
+{
+    "name": "products",
+    "schema": "loreal",
+    "fields": {
+        "material": {
+            "type": "string",
+            "required": true
+        },
+        "ean": {
+            "type": "string",
+            "required": true
+        },
+        "material_description": {
+            "type": "string"
+        },
+        "material_group": {
+            "type": "string"
+        },
+        "axe": {
+            "type": "string"
+        },
+        "sub_axe": {
+            "type": "string"
+        },
+        "sales_status": {
+            "type": "integer"
+        },
+        "mpg1": {
+            "type": "integer"
+        },
+        "mpg1_description": {
+            "type": "string"
+        },
+        "rate": {
+            "type": "number"
+        },
+        "abc_indicator": {
+            "type": "string"
+        },
+        "country_of_orgin": {
+            "type": "string"
+        },
+        "ean_tester": {
+            "type": "string"
+        },
+        "tester_code": {
+            "type": "string"
+        },
+        "launch_date": {
+            "type": "date",
+            "mask": "%Y-%m-%d"
+        }
+    },
+    "required": ["material", "ean"]
+}
