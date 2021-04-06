@@ -75,7 +75,7 @@ class rethink(BaseProvider):
     distinct = None
 
     def __init__(self, loop=None, params={}, **kwargs):
-        super(rethink, self).__init__(loop=loop, params=params)
+        super(rethink, self).__init__(loop=loop, params=params, **kwargs)
         if loop:
             self._loop = loop
         else:
@@ -94,6 +94,7 @@ class rethink(BaseProvider):
                 self._params["host"], self._params["port"], self._params["db"]
             )
         )
+        self._params['timeout'] = self._timeout
         try:
             self._connection = await self._engine.connect(**self._params)
             if self._params["db"]:
