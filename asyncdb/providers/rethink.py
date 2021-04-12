@@ -75,7 +75,7 @@ class rethink(BaseProvider):
     distinct = None
 
     def __init__(self, loop=None, params={}, **kwargs):
-        super(rethink, self).__init__(loop=loop, params=params)
+        super(rethink, self).__init__(loop=loop, params=params, **kwargs)
         if loop:
             self._loop = loop
         else:
@@ -94,6 +94,7 @@ class rethink(BaseProvider):
                 self._params["host"], self._params["port"], self._params["db"]
             )
         )
+        self._params['timeout'] = self._timeout
         try:
             self._connection = await self._engine.connect(**self._params)
             if self._params["db"]:
@@ -282,7 +283,7 @@ class rethink(BaseProvider):
         except (KeyError, ValueError):
             conditions["filterdate"] = today(mask="%Y-%m-%d")
         result = await self.delete(table, filter=conditions, changes=False)
-        print(result)
+        # print(result)
         if result:
             return result
         else:
@@ -1111,7 +1112,7 @@ class rethink(BaseProvider):
         ### build FILTER based on rethink logic
         for key, value in conditions.items():
             if type(value) is list:
-                print(value)
+                # print(value)
                 search = search.filter(
                     (
                         lambda exp: self._engine.expr(value).
@@ -1139,8 +1140,8 @@ class rethink(BaseProvider):
         if self.qry_options:
             result = self.query_options(result, conditions)
 
-        print("RESULT IS")
-        print(result)
+        # print("RESULT IS")
+        # print(result)
 
         # add search criteria
         search = search.filter(result)
