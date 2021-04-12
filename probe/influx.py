@@ -8,7 +8,9 @@ asyncio.set_event_loop(loop)
 params = {
     "host": "127.0.0.1",
     "port": "8086",
-    "database": 'testdb'
+    "database": 'testdb',
+    "user": "influxdata",
+    "password": "12345678"
 }
 
 DRIVER='influx'
@@ -16,7 +18,8 @@ DRIVER='influx'
 async def test_connect(driver, params, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
     await db.connection()
-    print(db.is_connected() is True)
+    print('IS CONNECTED> ', db.is_connected() is True)
+    await db.create_database('testdb')
     result, error = await db.test_connection()
     print(result, error)
     print(type(result) == list)
