@@ -42,10 +42,14 @@ class SafeDict(dict):
         """Missing method for SafeDict."""
         return "{" + key + "}"
 
-
 def _escapeString(value):
-    v = value if value != "None" else ""
+    v = value if value != 'None' else ""
     v = str(v).replace("'", "''")
+    v = "'{}'".format(v) if type(v) == str else v
+    return v
+
+def _quoteString(value):
+    v = value if value != 'None' else ""
     v = "'{}'".format(v) if type(v) == str else v
     return v
 

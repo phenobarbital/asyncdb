@@ -3,7 +3,8 @@ import traceback
 import importlib
 import logging
 from asyncdb.providers import BaseProvider
-from asyncdb.utils import colors, SafeDict, Msg
+from asyncdb.utils import colors, SafeDict, Msg,
+from asyncdb.utils import _escapeString, _quoteString
 from asyncdb.utils.models import Entity, Model
 from asyncdb.utils.encoders import BaseEncoder
 from asyncdb.exceptions import StatementError
