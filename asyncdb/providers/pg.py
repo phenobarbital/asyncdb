@@ -646,12 +646,12 @@ class pg(SQLProvider):
             self._columns = [a.name for a in self._attributes]
             self._result = await stmt.fetchrow()
         except RuntimeError as err:
-            error = "Runtime on Query Row Error: {}".format(str(err))
+            error = "Query Row Runtime Error: {}".format(str(err))
             raise ProviderError(error)
         except (
             PostgresSyntaxError, UndefinedColumnError, PostgresError
         ) as err:
-            error = "Sentence on Query Row Error: {}".format(str(err))
+            error = "Statement Error: {}".format(str(err))
             raise StatementError(error)
         except (
             asyncpg.exceptions.InvalidSQLStatementNameError,
@@ -661,7 +661,7 @@ class pg(SQLProvider):
             self._loop.call_exception_handler(err)
             raise StatementError(error)
         except Exception as err:
-            error = "Error on Query Row: {}".format(str(err))
+            error = "Query Row Error: {}".format(str(err))
             self._loop.call_exception_handler(err)
             raise Exception(error)
         # finally:
