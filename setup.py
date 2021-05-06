@@ -40,6 +40,7 @@ setup(
         "asyncio==3.4.3",
         "PyDrive==1.3.1",
         "uvloop==0.15.2",
+        "cryptography==3.4.7",
         "objectpath==0.6.1",
         "MarkupSafe==1.1.1",
         "jinja2==2.11.3",
