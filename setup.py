@@ -30,8 +30,7 @@ setup(
         "Cython==0.29.21",
         "numpy==1.19.4",
         "asyncio==3.4.3",
-        "cchardet==2.1.7",
-        "setuptools==56.0.0"
+        "cchardet==2.1.7"
     ],
     install_requires=[
         "wheel==0.36.2",
