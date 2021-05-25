@@ -25,6 +25,7 @@ from asyncdb.exceptions import NoDataFound
 from asyncdb.providers import BaseProvider
 #from navigator.conf import DATABASES
 import typing
+
 from typing import (
     Any,
     List,
@@ -471,7 +472,7 @@ class ModelMeta(type):
         cols = {k: v for k, v in dc.__dict__['__dataclass_fields__'].items() if v._field_type == _FIELD}
         dc._columns = cols
         dc._fields = cols.keys()
-        #print(dc._fields)
+        # print(dc._columns)
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
@@ -878,10 +879,14 @@ class Model(metaclass=ModelMeta):
                 if result:
                     return cls(**dict(result))
                 else:
-                    raise NoDataFound('{} object with condition {} Not Found!'.format(cls.Meta.name, kwargs))
-            except NoDataFound as err:
-                raise NoDataFound(err)
-            except AttributeError:
+                    raise NoDataFound(
+                        message=f"Data not found over {cls.Meta.name!s}"
+                    )
+            except NoDataFound:
+                raise NoDataFound(
+                    message=f"Data not found over {cls.Meta.name!s}"
+                )
+            except AttributeError as err:
                 raise Exception('Error on get {}: {}'.format(cls.Meta.name, err))
             except Exception as err:
                 print(traceback.format_exc())

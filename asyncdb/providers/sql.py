@@ -503,16 +503,22 @@ class SQLProvider(BaseProvider):
         for name, field in fields.items():
             column = field.name
             datatype = field.type
-            dbtype = field.get_dbtype()
+            # try:
+            #     dbtype = field.get_dbtype()
+            # except AttributeError:
+            #     dbtype = ''
             value = getattr(model, field.name)
             source.append('{} = {}'.format(
                 name,
                 '${}'.format(n))
             )
             values.append(value)
-            n+=1
-            if field.primary_key is True:
-                pk[column] = value
+            n += 1
+            try:
+                if field.primary_key is True:
+                    pk[column] = value
+            except AttributeError:
+                pass
         # TODO: work in an "update, delete, insert" functions on asyncdb to abstract data-insertion
         sql = 'UPDATE {table} SET {set_fields} {condition}'
         condition = self._where(fields, **pk)
@@ -559,6 +565,7 @@ class SQLProvider(BaseProvider):
         cols = []
         source = []
         fields = model.columns(model)
+        # print(fields)
         for name, field in fields.items():
             val = getattr(model, field.name)
             # print(name, field, val)
@@ -566,8 +573,11 @@ class SQLProvider(BaseProvider):
             datatype = field.type
             value = Entity.toSQL(val, datatype)
             cols.append(column)
-            if field.primary_key is True:
-                pk[column] = value
+            try:
+                if field.primary_key is True:
+                    pk[column] = value
+            except AttributeError:
+                pass
         columns = ', '.join(cols)
         condition = self._where(fields, **kwargs)
         sql = f'SELECT {columns} FROM {table} {condition}'
@@ -591,8 +601,11 @@ class SQLProvider(BaseProvider):
             value = getattr(model, field.name)
             column = field.name
             cols.append(column)
-            if field.primary_key is True:
-                pk[column] = value
+            try:
+                if field.primary_key is True:
+                    pk[column] = value
+            except AttributeError:
+                pass
         columns = ', '.join(cols)
         arguments = {**pk, **kwargs}
         condition = self._where(fields=fields, **arguments)
@@ -613,7 +626,7 @@ class SQLProvider(BaseProvider):
         pk = {}
         cols = []
         source = {}
-        print('HERE: ', model.__dict__)
+        # print('HERE: ', model.__dict__)
         table = f'{model.Meta.schema}.{model.Meta.name}'
         for name, field in fields.items():
             column = field.name
@@ -626,7 +639,7 @@ class SQLProvider(BaseProvider):
             #     pk[column] = value
         columns = ', '.join(cols)
         arguments = {**source, **kwargs}
-        print(arguments)
+        # print(arguments)
         condition = self._where(fields=fields, **arguments)
         sql = f'SELECT {columns} FROM {table} {condition}'
         print(sql)
@@ -647,8 +660,11 @@ class SQLProvider(BaseProvider):
             column = field.name
             datatype = field.type
             cols.append(column)
-            if field.primary_key is True:
-                pk[column] = Entity.toSQL(getattr(model, field.name), datatype)
+            try:
+                if field.primary_key is True:
+                    pk[column] = Entity.toSQL(getattr(model, field.name), datatype)
+            except AttributeError:
+                pass
         columns = ', '.join(cols)
         condition = self._where(fields, **kwargs)
         sql = f'SELECT {columns} FROM {table} {condition}'
@@ -750,6 +766,7 @@ class SQLProvider(BaseProvider):
             pk = []
             cols = []
             for col, field in fields.items():
+                print('HERE ', col, field)
                 if col not in row:
                     # field doesnt exists
                     default = field.default
@@ -775,8 +792,11 @@ class SQLProvider(BaseProvider):
                         cols.append(col)
                     except (KeyError, TypeError):
                         continue
-                if field.primary_key is True:
-                    pk.append(col)
+                try:
+                    if field.primary_key is True:
+                        pk.append(col)
+                except AttributeError:
+                    pass
             if not stmt:
                 columns = ', '.join(cols)
                 n = len(cols)
