@@ -13,7 +13,7 @@ def event_loop():
     loop.close()
 
 params = {
-    "host": "127.0.0.1",
+    "host": "localhost",
     "port": "1433",
     "database": 'AdventureWorks2019',
     "user": 'SA',
@@ -46,7 +46,7 @@ async def test_connect(driver, event_loop):
     await db.connection()
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection()
-    pytest.assume(type(result) == list)
+    pytest.assume(type(result) == dict)
     await db.close()
 
 
@@ -54,4 +54,4 @@ async def test_connection(conn):
     #await conn.connection()
     pytest.assume(conn.is_connected() is True)
     result, error = await conn.test_connection()
-    pytest.assume(type(result) == list)
+    pytest.assume(type(result) == dict)
