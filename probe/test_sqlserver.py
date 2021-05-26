@@ -14,21 +14,23 @@ params = {
     "password": 'P4ssW0rd1.'
 }
 
-DRIVER = 'sqlserver'
+DRIVER = 'mssql'
 
 async def connect(db):
     async with await db.connection() as conn:
         print('Getting Driver: ', conn)
         pprint(await conn.test_connection())
         pprint(conn.is_connected())
+        conn.use('AdventureWorks2019')
         # await conn.execute("create table tests(id integer, name text)")
-        # many = "INSERT INTO tests VALUES(?, ?)"
+        # many = "INSERT INTO dbo.tests VALUES(%d, %s)"
         # examples = [(2, "def"), (3, "ghi"), (4, "jkl")]
         # print(": Executing Insert of many entries: ")
-        # await conn.executemany(many, examples)
-        # result, error = await conn.query("SELECT * FROM tests")
-        # for row in result:
-        #     print(row)
+        # result, error = await conn.executemany(many, examples)
+        # print(result, error)
+        result, error = await conn.query("SELECT * FROM dbo.tests")
+        for row in result:
+            print(row)
         # table = """
         #     CREATE TABLE airports (
         #     iata text PRIMARY KEY,

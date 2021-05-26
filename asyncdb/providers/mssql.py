@@ -25,7 +25,25 @@ from asyncdb.utils import (
     SafeDict,
 )
 
-class mssql(BaseProvider):
+from asyncdb.providers.sql import (
+    SQLProvider,
+    baseCursor
+)
+
+
+class mssqlCursor(baseCursor):
+    _connection = None
+
+    async def __aenter__(self) -> "mssqlCursor":
+        if not self._connection:
+            await self.connection()
+        self._cursor = await self._connection.cursor(
+            self._sentence, self._params
+        )
+        return self
+
+
+class mssql(SQLProvider):
     """mssql.
 
     Microsoft SQL Server using low-level _mssql Protocol
@@ -93,7 +111,7 @@ class mssql(BaseProvider):
         self._connected = False
         try:
             self._params['appname'] = self.application_name
-            self._params['charset'] = self._charset
+            self._params['charset'] = self._charset.upper()
             self._params['tds_version'] = '7.3'
             if self._server_settings:
                 self._params['conn_properties'] = self._server_settings
@@ -146,28 +164,77 @@ class mssql(BaseProvider):
         except Exception as err:
             raise ProviderError(message=str(err), code=0)
 
-    async def execute(self, sentence=""):
+    async def execute(self, sentence="", params: list = []):
         """
         Execute a sentence
         """
-        pass
+        error = None
+        if not sentence:
+            raise EmptyStatement("Error: Empty Sentence")
+        if not self._connection:
+            await self.connection()
+        try:
+            self._result = self._connection.execute_non_query(sentence, params)
+        except (_mssql.MSSQLDatabaseException) as err:
+            error = "Database Error: {}".format(str(err))
+            raise ProviderError(error)
+        except pymssql.Warning as warn:
+            logging.warning(f'SQL Server Warning: {warn!s}')
+            error = warn
+        except(pymssql.StandardError, pymssql.Error) as err:
+            error = "SQL Server Error: {}".format(str(err))
+            raise ProviderError(error)
+        except RuntimeError as err:
+            error = "Runtime Error: {}".format(str(err))
+            raise ProviderError(error)
+        except Exception as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
+        finally:
+            return [self._result, error]
 
-    async def executemany(self, sentence=""):
+    async def executemany(self, sentence="", params: list = []):
         """
-        Execute a sentence
+        Execute multiple sentences
         """
-        pass
+        return await self.execute(sentence, params)
 
-    async def query(self, sentence=""):
+    async def query(self, sentence="", params: list = []):
         """
         Making a Query and return result
         """
-        pass
+        error = None
+        if not sentence:
+            raise EmptyStatement("Error: Empty Sentence")
+        if not self._connection:
+            await self.connection()
+        try:
+            self._connection.execute_query(sentence, params)
+            self._result = self._connection
+        except (_mssql.MSSQLDatabaseException) as err:
+            print(err)
+            error = "Database Error: {}".format(str(err))
+            raise ProviderError(error)
+        except pymssql.Warning as warn:
+            logging.warning(f'SQL Server Warning: {warn!s}')
+            error = warn
+        except(pymssql.StandardError, pymssql.Error) as err:
+            error = "SQL Server Error: {}".format(str(err))
+            raise ProviderError(error)
+        except RuntimeError as err:
+            error = "Runtime Error: {}".format(str(err))
+            raise ProviderError(error)
+        except Exception as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
+        finally:
+            print(error)
+            return [self._result, error]
 
-    async def queryrow(self, sentence=""):
-        pass
+    async def queryrow(self, sentence="", params: list = []):
+        return await self.fetchone(sentence, params)
 
-    async def fetchone(self, sentence=""):
+    async def fetchone(self, sentence="", params: list = []):
         error = None
         if not sentence:
             raise EmptyStatement("Error: Empty Sentence")
@@ -175,11 +242,13 @@ class mssql(BaseProvider):
             await self.connection()
         try:
             startTime = datetime.now()
-            self._result = self._connection.execute_row(sentence)
-            print(self._result)
+            self._result = self._connection.execute_row(sentence, params)
             if not self._result:
                 raise NoDataFound("SQL Server: No Data was Found")
                 return [None, "SQL Server: No Data was Found"]
+        except _mssql.MSSQLDatabaseException as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
             raise ProviderError(error)
@@ -190,8 +259,8 @@ class mssql(BaseProvider):
             self._generated = datetime.now() - startTime
             return [self._result, error]
 
-    async def fetchall(self, sentence=""):
-        pass
+    async def fetchall(self, sentence="", params: list = []):
+        return await self.query(sentence, params)
 
 
 """

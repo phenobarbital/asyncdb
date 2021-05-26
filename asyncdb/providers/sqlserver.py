@@ -27,6 +27,24 @@ from asyncdb.utils import (
     SafeDict,
 )
 
+from asyncdb.providers.sql import (
+    SQLProvider,
+    baseCursor
+)
+
+
+class sqlserverCursor(baseCursor):
+    _connection = None
+
+    async def __aenter__(self) -> "sqlserverCursor":
+        if not self._connection:
+            await self.connection()
+        self._cursor = await self._connection.cursor(
+            self._sentence, self._params
+        )
+        return self
+
+
 class sqlserver(mssql):
     """sqlserver.
 
@@ -44,7 +62,7 @@ class sqlserver(mssql):
             self._params['appname'] = self.application_name
             self._params['as_dict'] = True
             self._params['timeout'] = self._timeout
-            # self._params['charset'] = self._charset
+            self._params['charset'] = self._charset.upper()
             self._params['tds_version'] = '7.3'
             self._connection = pymssql.connect(
                 **self._params
@@ -62,29 +80,83 @@ class sqlserver(mssql):
         finally:
             return self
 
-    async def execute(self, sentence=""):
+    def use(self, dbname: str = ''):
+        try:
+            self._cursor = self._connection.cursor()
+            self._cursor.execute(f'USE {dbname!s}')
+        except pymssql.Warning as warn:
+            logging.warning(f'SQL Server Warning: {warn!s}')
+            error = warn
+        except(pymssql.StandardError, pymssql.Error) as err:
+            error = "SQL Server Error: {}".format(str(err))
+            raise ProviderError(error)
+        return self
+
+    async def execute(self, sentence="", params: dict = {}):
         """
         Execute a sentence
         """
-        pass
+        error = None
+        if not sentence:
+            raise EmptyStatement("Error: Empty Sentence")
+        if not self._connection:
+            await self.connection()
+        # getting a cursor
+        try:
+            self._cursor = self._connection.cursor()
+            self._result = self._cursor.execute(sentence, *params)
+            # self._connection.commit()
+        except pymssql.Warning as warn:
+            logging.warning(f'SQL Server Warning: {warn!s}')
+            error = warn
+        except(pymssql.StandardError, pymssql.Error) as err:
+            error = "SQL Server Error: {}".format(str(err))
+            raise ProviderError(error)
+        except RuntimeError as err:
+            error = "Runtime Error: {}".format(str(err))
+            raise ProviderError(error)
+        except Exception as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
+        finally:
+            return [self._result, error]
 
-    async def executemany(self, sentence=""):
+    async def executemany(self, sentence="", params: list = []):
         """
         Execute multiple sentences
         """
-        pass
+        """
+        Execute a sentence
+        """
+        error = None
+        if not sentence:
+            raise EmptyStatement("Error: Empty Sentence")
+        if not self._connection:
+            await self.connection()
+        # getting a cursor
+        try:
+            self._cursor = self._connection.cursor()
+            self._result = self._cursor.executemany(sentence, params)
+            # self._connection.commit()
+        except pymssql.Warning as warn:
+            logging.warning(f'SQL Server Warning: {warn!s}')
+            error = warn
+        except(pymssql.StandardError, pymssql.Error) as err:
+            error = "SQL Server Error: {}".format(str(err))
+            raise ProviderError(error)
+        except RuntimeError as err:
+            error = "Runtime Error: {}".format(str(err))
+            raise ProviderError(error)
+        except Exception as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
+        finally:
+            return [self._result, error]
 
-    async def query(self, sentence=""):
+    async def query(self, sentence="", params: list = None):
         """
         Making a Query and return result
         """
-        pass
-
-    async def queryrow(self, sentence=""):
-        cursor.execute('SELECT * FROM persons WHERE salesrep=%s', 'John Doe')
-        row = cursor.fetchone()
-
-    async def fetchone(self, sentence=""):
         error = None
         if not sentence:
             raise EmptyStatement("Error: Empty Sentence")
@@ -93,7 +165,38 @@ class sqlserver(mssql):
         try:
             startTime = datetime.now()
             self._cursor = self._connection.cursor()
-            self._cursor.execute(sentence)
+            self._cursor.execute(sentence, params)
+            self._result = self._cursor.fetchall()
+            if not self._result:
+                raise NoDataFound("SQL Server: No Data was Found")
+                return [None, "SQL Server: No Data was Found"]
+        except(pymssql.StandardError, pymssql.Error) as err:
+            error = "SQL Server Error: {}".format(str(err))
+            raise ProviderError(error)
+        except RuntimeError as err:
+            error = "Runtime Error: {}".format(str(err))
+            raise ProviderError(error)
+        except Exception as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
+        finally:
+            self._generated = datetime.now() - startTime
+            return [self._result, error]
+
+    async def queryrow(self, sentence=""):
+        cursor.execute('SELECT * FROM persons WHERE salesrep=%s', 'John Doe')
+        row = cursor.fetchone()
+
+    async def fetchone(self, sentence="", params: list = []):
+        error = None
+        if not sentence:
+            raise EmptyStatement("Error: Empty Sentence")
+        if not self._connection:
+            await self.connection()
+        try:
+            startTime = datetime.now()
+            self._cursor = self._connection.cursor()
+            self._cursor.execute(sentence, *params)
             self._result = self._cursor.fetchone()
             if not self._result:
                 raise NoDataFound("SQL Server: No Data was Found")
