@@ -262,6 +262,31 @@ class mssql(SQLProvider):
     async def fetchall(self, sentence="", params: list = []):
         return await self.query(sentence, params)
 
+    async def fetch_scalar(self, sentence="", params: list = []):
+        error = None
+        if not sentence:
+            raise EmptyStatement("Error: Empty Sentence")
+        if not self._connection:
+            await self.connection()
+        try:
+            startTime = datetime.now()
+            self._result = self._connection.execute_scalar(sentence, params)
+            if not self._result:
+                raise NoDataFound("SQL Server: No Data was Found")
+                return [None, "SQL Server: No Data was Found"]
+        except _mssql.MSSQLDatabaseException as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
+        except RuntimeError as err:
+            error = "Runtime Error: {}".format(str(err))
+            raise ProviderError(error)
+        except Exception as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
+        finally:
+            self._generated = datetime.now() - startTime
+            return [self._result, error]
+
 
 """
 Registering this Provider
