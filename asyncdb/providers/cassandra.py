@@ -24,12 +24,17 @@ from asyncdb.utils import (
     SafeDict,
 )
 
-from cassandra.cluster import Cluster
+from cassandra.cluster import Cluster, EXEC_PROFILE_DEFAULT, ExecutionProfile
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.io.asyncioreactor import AsyncioConnection
 from cassandra.policies import DCAwareRoundRobinPolicy
-from cassandra.cluster import ExecutionProfile
 from cassandra.policies import WhiteListRoundRobinPolicy
+from cassandra.query import (
+    dict_factory,
+    named_tuple_factory,
+    tuple_factory,
+    ConsistencyLevel
+)
 
 class cassandra(BaseProvider):
 
@@ -43,6 +48,7 @@ class cassandra(BaseProvider):
     _query_raw = "SELECT {fields} FROM {table} {where_cond}"
     use_cql: bool = False
     _auth = None
+    _timeout = 15
 
     def __init__(self, loop=None, pool=None, params={}, **kwargs):
         super(cassandra, self).__init__(loop=loop, params=params, **kwargs)
@@ -67,17 +73,17 @@ class cassandra(BaseProvider):
         """
         try:
             if self._connection:
-                    self._logger.debug("Closing Connection")
-                    try:
-                        self._connection.shutdown()
-                    except Exception as err:
-                        self._cluster.shutdown()
-                        self._connection = None
-                        raise ProviderError(
-                            "Connection Error, Terminated: {}".format(
-                                str(err)
-                            )
+                self._logger.debug("Closing Connection")
+                try:
+                    self._connection.shutdown()
+                except Exception as err:
+                    self._cluster.shutdown()
+                    self._connection = None
+                    raise ProviderError(
+                        "Connection Error, Terminated: {}".format(
+                            str(err)
                         )
+                    )
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
         finally:
@@ -93,15 +99,20 @@ class cassandra(BaseProvider):
         self._cluster = None
         try:
             nodeprofile = ExecutionProfile(
-                load_balancing_policy=DCAwareRoundRobinPolicy()
+                load_balancing_policy=DCAwareRoundRobinPolicy(),
+                request_timeout=self._timeout,
+                row_factory=named_tuple_factory,
+                consistency_level=ConsistencyLevel.LOCAL_QUORUM,
+                serial_consistency_level=ConsistencyLevel.LOCAL_SERIAL,
             )
             profiles = {
-                "node1": nodeprofile
+                EXEC_PROFILE_DEFAULT: nodeprofile
             }
             params = {
                 "port": self._params["port"],
                 "compression": True,
-                #"connection_class": AsyncioConnection,
+                "connection_class": AsyncioConnection,
+                "protocol_version": 3
             }
             print(params)
             auth_provider = None
@@ -138,15 +149,16 @@ class cassandra(BaseProvider):
         result = None
         error = None
         try:
-            response = self._connection.execute(self._test_query)
+            response = self._connection.execute(self._test_query).one()
             result = [row for row in response]
         except Exception as err:
             error = err
         finally:
             return [result, error]
 
-    def prepared_statement(self):
-        return self._prepared
+    def use(self, dbname: str):
+        self._connection.execute(f'USE {dbname!s}')
+        return self
 
     """
     Preparing a sentence

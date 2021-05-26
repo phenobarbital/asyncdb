@@ -16,6 +16,7 @@ params = {
 
 DRIVER = 'sqlserver'
 
+
 async def connect(db):
     async with await db.connection() as conn:
         print('Getting Driver: ', conn)
