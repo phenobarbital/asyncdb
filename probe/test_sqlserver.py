@@ -14,7 +14,7 @@ params = {
     "password": 'P4ssW0rd1.'
 }
 
-DRIVER = 'mssql'
+DRIVER = 'sqlserver'
 
 async def connect(db):
     async with await db.connection() as conn:
@@ -22,52 +22,50 @@ async def connect(db):
         pprint(await conn.test_connection())
         pprint(conn.is_connected())
         conn.use('AdventureWorks2019')
-        # await conn.execute("create table tests(id integer, name text)")
-        # many = "INSERT INTO dbo.tests VALUES(%d, %s)"
-        # examples = [(2, "def"), (3, "ghi"), (4, "jkl")]
-        # print(": Executing Insert of many entries: ")
-        # result, error = await conn.executemany(many, examples)
-        # print(result, error)
+        await conn.execute("create table tests(id integer, name text)")
+        many = "INSERT INTO dbo.tests VALUES(%d, %s)"
+        examples = [(2, "def"), (3, "ghi"), (4, "jkl")]
+        print(": Executing Insert of many entries: ")
+        result, error = await conn.executemany(many, examples)
+        print(result, error)
         result, error = await conn.query("SELECT * FROM dbo.tests")
         for row in result:
             print(row)
-        # table = """
-        #     CREATE TABLE airports (
-        #     iata text PRIMARY KEY,
-        #     city text,
-        #     country text
-        #     )
-        # """
-        # await conn.execute(table)
-        # data = [
-        #     ("ORD", "Chicago", "United States"),
-        #     ("JFK", "New York City", "United States"),
-        #     ("CDG", "Paris", "France"),
-        #     ("LHR", "London", "United Kingdom"),
-        #     ("DME", "Moscow", "Russia"),
-        #     ("SVO", "Moscow", "Russia"),
-        # ]
-        # airports = "INSERT INTO airports VALUES(?, ?, ?)"
-        # await conn.executemany(airports, data)
-        # a_country = "United States"
-        # a_city = "Moscow"
-        # query = "SELECT * FROM airports WHERE country=? OR city=?"
-        # async with await conn.fetch(query, (a_country, a_city)) as result:
-        #     async for row in result:
-        #         print(row)
-        # # using Cursor Objects
-        # print('Using Cursor Objects: ')
-        # b_country = 'France'
-        # b_city = 'London'
-        # async with conn.cursor(query, (b_country, b_city)) as cursor:
-        #     print("using iterator: ")
-        #     async for row in cursor:
-        #         print(row)
-        #     # its an iterable
-        #     print("Using Context Manager: ")
-        #     async with cursor:
-        #         print(await cursor.fetchall())
-        #     # this returns a cursor based object
+        table = """
+            DROP TABLE IF EXISTS dbo.airports;
+            CREATE TABLE dbo.airports (
+             iata varchar(3),
+             city varchar(250),
+             country varchar(250)
+            );
+        """
+        print(": Creating Table Airport: ")
+        result, error = await conn.execute(table)
+        print(error)
+        data = [
+            ("ORD", "Chicago", "United States"),
+            ("JFK", "New York City", "United States"),
+            ("CDG", "Paris", "France"),
+            ("LHR", "London", "United Kingdom"),
+            ("DME", "Moscow", "Russia"),
+            ("SVO", "Moscow", "Russia"),
+        ]
+        airports = "INSERT INTO dbo.airports VALUES(%s, %s, %s)"
+        await conn.executemany(airports, data)
+        query = "SELECT * FROM dbo.airports WHERE country=%s OR city=%s"
+        # using Cursor Objects
+        print('Using Cursor Objects: ')
+        b_country = 'France'
+        b_city = 'London'
+        async with conn.cursor(query, (b_country, b_city)) as cursor:
+            print("using iterator: ", cursor)
+            async for row in cursor:
+                print(row)
+            # its an iterable
+            print("Using Context Manager: ")
+            async with cursor:
+                print(await cursor.fetchall())
+            # this returns a cursor based object
 
 
 if __name__ == "__main__":
