@@ -190,8 +190,6 @@ class BaseProvider(ABC):
             self._loop = loop
         else:
             self._loop = asyncio.get_event_loop()
-            #asyncio.set_event_loop(self._loop)
-        #self._loop.set_exception_handler(default_exception_handler)
         # get params
         if params:
             self._params = params
@@ -220,7 +218,6 @@ class BaseProvider(ABC):
         except Exception as err:
             return None
 
-
     def get_dsn(self):
         return self._dsn
 
@@ -234,7 +231,6 @@ class BaseProvider(ABC):
     """
     Async Context magic Methods
     """
-
     async def __aenter__(self):
         if not self._connection:
             await self.connection()
@@ -271,7 +267,6 @@ class BaseProvider(ABC):
     """
     Properties
     """
-
     @property
     def columns(self):
         return self._columns
@@ -303,14 +298,12 @@ class BaseProvider(ABC):
     """
     Get Columns
     """
-
     def get_columns(self):
         return self._columns
 
     """
     Test Connnection
     """
-
     async def test_connection(self):
         if self._test_query is None:
             raise NotImplementedError()
@@ -323,7 +316,6 @@ class BaseProvider(ABC):
     """
     Terminate a connection
     """
-
     def terminate(self):
         try:
             self._loop.run_until_complete(self.close())
@@ -338,7 +330,6 @@ class BaseProvider(ABC):
     """
     Get a connection from the pool
     """
-
     @abstractmethod
     async def connection(self):
         pass
@@ -359,7 +350,6 @@ class BaseProvider(ABC):
     """
     Making a Query and return result
     """
-
     @abstractmethod
     async def query(self, sentence=""):
         pass
