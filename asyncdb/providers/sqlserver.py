@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 
 import asyncio
@@ -5,7 +6,7 @@ import json
 import time
 from datetime import datetime
 
-from pymssql import _mssql
+import pymssql
 
 from asyncdb.exceptions import (
     ConnectionTimeout,
@@ -25,12 +26,12 @@ from asyncdb.utils import (
     SafeDict,
 )
 
-class mssql(BaseProvider):
+class sqlserver(BaseProvider):
     """mssql.
 
-    Microsoft SQL Server using low-level _mssql
+    Microsoft SQL Server using DB-API connection
     """
-    _provider = "sqlserver"
+    _provider = "mssql"
     _dsn = ""
     _syntax = "sql"
     _test_query = "SELECT 1"
@@ -41,7 +42,7 @@ class mssql(BaseProvider):
     _version: str = None
 
     def __init__(self, loop=None, pool=None, params={}, **kwargs):
-        super(mssql, self).__init__(loop=loop, params=params, **kwargs)
+        super(sqlserver, self).__init__(loop=loop, params=params, **kwargs)
         asyncio.set_event_loop(self._loop)
         try:
             if 'host' in self._params:
@@ -61,4 +62,4 @@ class mssql(BaseProvider):
 Registering this Provider
 """
 
-registerProvider(mssql)
+registerProvider(sqlserver)
