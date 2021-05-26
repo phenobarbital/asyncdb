@@ -4,7 +4,7 @@ import asyncio
 import json
 import time
 from datetime import datetime
-
+import logging
 from pymssql import _mssql
 
 from asyncdb.exceptions import (
