@@ -134,13 +134,15 @@ class cassandra(BaseProvider):
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
+            if 'database' in self._params:
+                self.use(self._params["database"])
         except Exception as err:
             print(err)
             self._connection = None
             self._cursor = None
             raise ProviderError("connection Error, Terminated: {}".format(str(err)))
         finally:
-            return self._connection
+            return self
 
     async def test_connection(self):
         result = None

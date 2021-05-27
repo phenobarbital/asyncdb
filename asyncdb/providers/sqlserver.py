@@ -92,6 +92,8 @@ class sqlserver(mssql):
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
+            if 'database' in self._params:
+                self.use(self._params["database"])
         except Exception as err:
             print(err)
             self._connection = None
