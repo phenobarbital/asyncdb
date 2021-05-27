@@ -51,9 +51,7 @@ class memcachePool(BasePool):
                 pool_size=self._max_queries, loop=self._loop, **self._params
             )
         except aiomcache.exceptions.ClientException as err:
-            raise ProviderError(
-                "Unable to connect to Memcache: {}".format(str(err))
-            )
+            raise ProviderError("Unable to connect to Memcache: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Unknown Error: {}".format(str(err)))
             return False
@@ -72,9 +70,7 @@ class memcachePool(BasePool):
             # self._connection = await self._pool.acquire()
             self._connection = self._pool
         except aiomcache.exceptions.ClientException as err:
-            raise ProviderError(
-                "Unable to connect to Memcache: {}".format(str(err))
-            )
+            raise ProviderError("Unable to connect to Memcache: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Unknown Error: {}".format(str(err)))
             return False
@@ -144,13 +140,9 @@ class memcache(BaseProvider):
         """
         self._logger.debug("AsyncMcache: Connecting to {}".format(self._params))
         try:
-            self._connection = aiomcache.Client(
-                loop=self._loop, **self._params
-            )
+            self._connection = aiomcache.Client(loop=self._loop, **self._params)
         except (aiomcache.exceptions.ValidationException) as err:
-            raise ProviderError(
-                "Invalid Connection Parameters: {}".format(str(err))
-            )
+            raise ProviderError("Invalid Connection Parameters: {}".format(str(err)))
         except (aiomcache.exceptions.ClientException) as err:
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
@@ -182,9 +174,7 @@ class memcache(BaseProvider):
             except (aiomcache.exceptions.ClientException) as err:
                 raise ProviderError("Close Error: {}".format(str(err)))
             except Exception as err:
-                raise ProviderError(
-                    "Unknown Memcache Error: {}".format(str(err))
-                )
+                raise ProviderError("Unknown Memcache Error: {}".format(str(err)))
                 return False
 
     async def flush(self):
@@ -216,9 +206,7 @@ class memcache(BaseProvider):
         try:
             if timeout:
                 return await self._connection.set(
-                    bytes(key, "utf-8"),
-                    bytes(value, "utf-8"),
-                    exptime=timeout
+                    bytes(key, "utf-8"), bytes(value, "utf-8"), exptime=timeout
                 )
             else:
                 return await self._connection.set(
@@ -247,9 +235,7 @@ class memcache(BaseProvider):
         except (aiomcache.exceptions.ClientException) as err:
             raise ProviderError("Memcache Exists Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError(
-                "Memcache Exists Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Memcache Exists Unknown Error: {}".format(str(err)))
 
     async def multiget(self, *kwargs):
         try:
@@ -267,13 +253,14 @@ class memcache(BaseProvider):
         result = None
         error = None
         try:
-            await self.set('test_123', optional)
-            result = await self.get('test_123')
+            await self.set("test_123", optional)
+            result = await self.get("test_123")
         except Exception as err:
             error = err
         finally:
-            await self.delete('test_123')
+            await self.delete("test_123")
             return [result, error]
+
 
 """
 Registering this Provider

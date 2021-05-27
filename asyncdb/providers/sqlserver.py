@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 
 import asyncio
@@ -29,10 +28,7 @@ from asyncdb.utils import (
     SafeDict,
 )
 
-from asyncdb.providers.sql import (
-    SQLProvider,
-    baseCursor
-)
+from asyncdb.providers.sql import SQLProvider, baseCursor
 
 
 class sqlserverCursor(baseCursor):
@@ -43,10 +39,8 @@ class sqlserverCursor(baseCursor):
             await self.connection()
         self._cursor = self._connection.cursor()
         try:
-            self._cursor.execute(
-                self._sentence, self._params
-            )
-        except(pymssql.StandardError, pymssql.Error) as err:
+            self._cursor.execute(self._sentence, self._params)
+        except (pymssql.StandardError, pymssql.Error) as err:
             print(err)
             error = "SQL Server Error: {}".format(str(err))
             raise ProviderError(error)
@@ -73,11 +67,13 @@ class sqlserverCursor(baseCursor):
     async def fetchall(self) -> Iterable[List]:
         return self._cursor.fetchall()
 
+
 class sqlserver(mssql):
     """sqlserver.
 
     Microsoft SQL Server using DB-API connection
     """
+
     _provider = "sqlserver"
 
     async def connection(self):
@@ -87,14 +83,12 @@ class sqlserver(mssql):
         self._connection = None
         self._connected = False
         try:
-            self._params['appname'] = self.application_name
-            self._params['as_dict'] = True
-            self._params['timeout'] = self._timeout
-            self._params['charset'] = self._charset.upper()
-            self._params['tds_version'] = '7.3'
-            self._connection = pymssql.connect(
-                **self._params
-            )
+            self._params["appname"] = self.application_name
+            self._params["as_dict"] = True
+            self._params["timeout"] = self._timeout
+            self._params["charset"] = self._charset.upper()
+            self._params["tds_version"] = "7.3"
+            self._connection = pymssql.connect(**self._params)
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
@@ -102,20 +96,18 @@ class sqlserver(mssql):
             print(err)
             self._connection = None
             self._cursor = None
-            raise ProviderError(
-                "connection Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("connection Error, Terminated: {}".format(str(err)))
         finally:
             return self
 
-    def use(self, dbname: str = ''):
+    def use(self, dbname: str = ""):
         try:
             self._cursor = self._connection.cursor()
-            self._cursor.execute(f'USE {dbname!s}')
+            self._cursor.execute(f"USE {dbname!s}")
         except pymssql.Warning as warn:
-            logging.warning(f'SQL Server Warning: {warn!s}')
+            logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except(pymssql.StandardError, pymssql.Error) as err:
+        except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
             raise ProviderError(error)
         return self
@@ -136,9 +128,9 @@ class sqlserver(mssql):
             self._result = self._cursor.execute(sentence, *params)
             # self._connection.commit()
         except pymssql.Warning as warn:
-            logging.warning(f'SQL Server Warning: {warn!s}')
+            logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except(pymssql.StandardError, pymssql.Error) as err:
+        except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
             raise ProviderError(error)
         except RuntimeError as err:
@@ -170,9 +162,9 @@ class sqlserver(mssql):
             self._result = self._cursor.executemany(sentence, params)
             # self._connection.commit()
         except pymssql.Warning as warn:
-            logging.warning(f'SQL Server Warning: {warn!s}')
+            logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except(pymssql.StandardError, pymssql.Error) as err:
+        except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
             raise ProviderError(error)
         except RuntimeError as err:
@@ -204,7 +196,7 @@ class sqlserver(mssql):
             if not self._result:
                 raise NoDataFound("SQL Server: No Data was Found")
                 return [None, "SQL Server: No Data was Found"]
-        except(pymssql.StandardError, pymssql.Error) as err:
+        except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
             raise ProviderError(error)
         except RuntimeError as err:
@@ -218,7 +210,7 @@ class sqlserver(mssql):
             return [self._result, error]
 
     async def queryrow(self, sentence=""):
-        cursor.execute('SELECT * FROM persons WHERE salesrep=%s', 'John Doe')
+        cursor.execute("SELECT * FROM persons WHERE salesrep=%s", "John Doe")
         row = cursor.fetchone()
 
     async def fetchone(self, sentence="", params: list = []):

@@ -1,4 +1,3 @@
-import sys
 import asyncio
 import logging
 from typing import Any
@@ -14,7 +13,8 @@ async def shutdown(loop, signal=None):
     logging.info("Closing all connections")
     try:
         tasks = [
-            task.cancel() for task in asyncio.all_tasks()
+            task.cancel()
+            for task in asyncio.all_tasks()
             if task is not asyncio.current_task() and not task.done()
         ]
         # [task.cancel() for task in tasks]
@@ -26,17 +26,15 @@ async def shutdown(loop, signal=None):
         print("Asyncio Generic Error", err)
     finally:
         loop.stop()
-        #loop.close()
+        # loop.close()
 
 
 def default_exception_handler(loop, context: Any):
-    logging.info(f'Exception Handler Caught: {context!s}')
+    logging.info(f"Exception Handler Caught: {context!s}")
     # first, handle with default handler
     if isinstance(context, Exception):
         # is a basic exception
-        logging.exception(
-            f"Exception {context!s}"
-        )
+        logging.exception(f"Exception {context!s}")
         raise type(context)
     else:
         loop.default_exception_handler(context)
@@ -54,9 +52,7 @@ def default_exception_handler(loop, context: Any):
             msg = context.get("exception", context["message"])
             exception = type(task.exception())
             try:
-                logging.exception(
-                    f"{exception.__name__!s}*{msg}* over task {task}"
-                )
+                logging.exception(f"{exception.__name__!s}*{msg}* over task {task}")
                 raise exception(msg)
             finally:
                 loop.stop()
@@ -75,10 +71,11 @@ def _handle_done_tasks(task: asyncio.Task) -> Any:
 
 class asyncDBException(Exception):
     """Base class for other exceptions"""
-    code: int = None
+
+    code: int = 0
 
     def __init__(self, message: str, *args, code: int = None, **kwargs):
-        super(asyncDBException, self).__init__(*args, **kwargs)
+        super(asyncDBException, self).__init__()
         self.args = (
             message,
             code,
@@ -99,6 +96,7 @@ class asyncDBException(Exception):
 
 class ProviderError(asyncDBException):
     """Database Provider Error"""
+
     def __init__(self, message: str, *args, code: int = None, **kwargs):
         asyncDBException.__init__(self, message, code, *args, **kwargs)
 

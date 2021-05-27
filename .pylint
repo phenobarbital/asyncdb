@@ -189,7 +189,7 @@ never-returning-functions=optparse.Values,sys.exit
 # function parameter format
 logging-modules=logging
 
-logging-format-style=fstr
+logging-format-style=new
 
 [SPELLING]
 

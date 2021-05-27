@@ -25,10 +25,7 @@ from asyncdb.utils import (
     SafeDict,
 )
 
-from asyncdb.providers.sql import (
-    SQLProvider,
-    baseCursor
-)
+from asyncdb.providers.sql import SQLProvider, baseCursor
 
 
 class mssqlCursor(baseCursor):
@@ -37,9 +34,7 @@ class mssqlCursor(baseCursor):
     async def __aenter__(self) -> "mssqlCursor":
         if not self._connection:
             await self.connection()
-        self._cursor = await self._connection.cursor(
-            self._sentence, self._params
-        )
+        self._cursor = await self._connection.cursor(self._sentence, self._params)
         return self
 
 
@@ -48,6 +43,7 @@ class mssql(SQLProvider):
 
     Microsoft SQL Server using low-level _mssql Protocol
     """
+
     _provider = "sqlserver"
     _dsn = ""
     _syntax = "sql"
@@ -57,26 +53,26 @@ class mssql(SQLProvider):
     _query_raw = "SELECT {fields} FROM {table} {where_cond}"
     _timeout: int = 30
     _version: str = None
-    application_name = 'Navigator'
-    _charset: str = 'UTF8'
+    application_name = "Navigator"
+    _charset: str = "UTF8"
     _server_settings: dict = []
 
     def __init__(self, loop=None, pool=None, params={}, **kwargs):
         super(mssql, self).__init__(loop=loop, params=params, **kwargs)
         asyncio.set_event_loop(self._loop)
         try:
-            if 'host' in self._params:
-                self._params['server'] = "{}:{}".format(
-                    self._params['host'], self._params['port']
+            if "host" in self._params:
+                self._params["server"] = "{}:{}".format(
+                    self._params["host"], self._params["port"]
                 )
-                del self._params['host']
+                del self._params["host"]
         except Exception as err:
             pass
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
-        if 'application_name' in self._server_settings:
-            self.application_name = self._server_settings['application_name']
-            del self._server_settings['application_name']
+        if "application_name" in self._server_settings:
+            self.application_name = self._server_settings["application_name"]
+            del self._server_settings["application_name"]
 
     def create_dsn(self, params):
         pass
@@ -87,16 +83,14 @@ class mssql(SQLProvider):
         """
         try:
             if self._connection:
-                    self._logger.debug("SQL Server: Closing Connection")
-                    try:
-                        self._connection.close()
-                    except Exception as err:
-                        self._connection = None
-                        raise ProviderError(
-                            "Connection Error, Terminated: {}".format(
-                                str(err)
-                            )
-                        )
+                self._logger.debug("SQL Server: Closing Connection")
+                try:
+                    self._connection.close()
+                except Exception as err:
+                    self._connection = None
+                    raise ProviderError(
+                        "Connection Error, Terminated: {}".format(str(err))
+                    )
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
         finally:
@@ -110,14 +104,12 @@ class mssql(SQLProvider):
         self._connection = None
         self._connected = False
         try:
-            self._params['appname'] = self.application_name
-            self._params['charset'] = self._charset.upper()
-            self._params['tds_version'] = '7.3'
+            self._params["appname"] = self.application_name
+            self._params["charset"] = self._charset.upper()
+            self._params["tds_version"] = "7.3"
             if self._server_settings:
-                self._params['conn_properties'] = self._server_settings
-            self._connection = _mssql.connect(
-                **self._params
-            )
+                self._params["conn_properties"] = self._server_settings
+            self._connection = _mssql.connect(**self._params)
             if self._connection.connected:
                 self._connected = True
                 self._initialized_on = time.time()
@@ -125,18 +117,17 @@ class mssql(SQLProvider):
             print(err)
             self._connection = None
             self._cursor = None
-            raise ProviderError(
-                "connection Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("connection Error, Terminated: {}".format(str(err)))
         finally:
             return self
 
-    def use(self, dbname: str = ''):
+    def use(self, dbname: str = ""):
         self._connection.select_db(dbname)
 
     """
     Async Context magic Methods
     """
+
     async def __aenter__(self):
         if not self._connection:
             await self.connection()
@@ -179,9 +170,9 @@ class mssql(SQLProvider):
             error = "Database Error: {}".format(str(err))
             raise ProviderError(error)
         except pymssql.Warning as warn:
-            logging.warning(f'SQL Server Warning: {warn!s}')
+            logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except(pymssql.StandardError, pymssql.Error) as err:
+        except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
             raise ProviderError(error)
         except RuntimeError as err:
@@ -216,9 +207,9 @@ class mssql(SQLProvider):
             error = "Database Error: {}".format(str(err))
             raise ProviderError(error)
         except pymssql.Warning as warn:
-            logging.warning(f'SQL Server Warning: {warn!s}')
+            logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except(pymssql.StandardError, pymssql.Error) as err:
+        except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
             raise ProviderError(error)
         except RuntimeError as err:

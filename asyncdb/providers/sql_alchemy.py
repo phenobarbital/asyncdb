@@ -47,9 +47,7 @@ class sql_alchemy(BaseProvider):
     _initialized_on = None
     _engine = None
     _engine_options = {
-        "connect_args": {
-            "connect_timeout": 360
-        },
+        "connect_args": {"connect_timeout": 360},
         "isolation_level": "AUTOCOMMIT",
         "echo": False,
         "encoding": "utf8",
@@ -82,9 +80,7 @@ class sql_alchemy(BaseProvider):
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._connection = None
-            raise ProviderError(
-                "Engine Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
         finally:
             return self
 
@@ -109,9 +105,7 @@ class sql_alchemy(BaseProvider):
                     self._connection.close()
             except Exception as err:
                 self._connection = None
-                raise ProviderError(
-                    "Engine Error, Terminated: {}".format(str(err))
-                )
+                raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
             finally:
                 self._connection = None
                 return True
@@ -134,9 +128,7 @@ class sql_alchemy(BaseProvider):
         except Exception as err:
             print(err)
             self._connection = None
-            raise ProviderError(
-                "Engine Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
         finally:
             return self
 

@@ -93,9 +93,7 @@ class sa(BaseProvider, Thread):
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._engine = None
-            raise ProviderError(
-                "Engine Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
 
     def close(self):
         self._logger.debug("Running Close")
@@ -134,17 +132,13 @@ class sa(BaseProvider, Thread):
         self.start()
         try:
             if self._engine:
-                self._connection = self._loop.run_until_complete(
-                    self._engine.connect()
-                )
+                self._connection = self._loop.run_until_complete(self._engine.connect())
         except (SQLAlchemyError, DatabaseError, OperationalError) as err:
             self._connection = None
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._connection = None
-            raise ProviderError(
-                "Engine Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
         finally:
             return self
 
@@ -155,9 +149,7 @@ class sa(BaseProvider, Thread):
         try:
             await self._connection.close()
         except Exception as err:
-            raise ProviderError(
-                "Release Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("Release Error, Terminated: {}".format(str(err)))
         finally:
             self._connection = None
 
