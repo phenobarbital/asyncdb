@@ -11,7 +11,7 @@ from dataclasses import (
     asdict,
     MISSING,
     InitVar,
-    make_dataclass
+    make_dataclass,
 )
 import datetime
 import typing
@@ -23,19 +23,11 @@ from asyncdb.utils import colors, SafeDict, Msg
 from asyncdb.utils.encoders import DefaultEncoder, BaseEncoder
 from asyncdb.exceptions import NoDataFound
 from asyncdb.providers import BaseProvider
-#from navigator.conf import DATABASES
+
+# from navigator.conf import DATABASES
 import typing
 
-from typing import (
-    Any,
-    List,
-    Dict,
-    Optional,
-    get_type_hints,
-    Callable,
-    ClassVar,
-    Union
-)
+from typing import Any, List, Dict, Optional, get_type_hints, Callable, ClassVar, Union
 from abc import ABC, abstractmethod
 import json
 import rapidjson as to_json
@@ -60,36 +52,36 @@ DB_TYPES = {
     datetime.time: "time",
     datetime.timedelta: "timestamp without time zone",
     uuid.UUID: "uuid",
-    dict: 'jsonb',
-    Dict: 'jsonb',
-    List: 'jsonb'
+    dict: "jsonb",
+    Dict: "jsonb",
+    List: "jsonb",
 }
 
 MODEL_TYPES = {
- "boolean": bool,
- "integer": int,
- "bigint": np.int64,
- "float": float,
- "character varying": str,
- "string": str,
- "varchar": str,
- "byte": bytes,
- "bytea": bytes,
- "Array": list,
- "hstore": dict,
- "character varying[]": list,
- "numeric": Decimal,
- "date": datetime.date,
- "timestamp with time zone": datetime.datetime,
- "time": datetime.time,
- "timestamp without time zone": datetime.timedelta,
- "uuid": uuid.UUID,
- "json": dict,
- "jsonb": dict,
- "text": str,
- "serial": int,
- "bigserial": int,
- "inet": str
+    "boolean": bool,
+    "integer": int,
+    "bigint": np.int64,
+    "float": float,
+    "character varying": str,
+    "string": str,
+    "varchar": str,
+    "byte": bytes,
+    "bytea": bytes,
+    "Array": list,
+    "hstore": dict,
+    "character varying[]": list,
+    "numeric": Decimal,
+    "date": datetime.date,
+    "timestamp with time zone": datetime.datetime,
+    "time": datetime.time,
+    "timestamp without time zone": datetime.timedelta,
+    "uuid": uuid.UUID,
+    "json": dict,
+    "jsonb": dict,
+    "text": str,
+    "serial": int,
+    "bigserial": int,
+    "inet": str,
 }
 
 JSON_TYPES = {
@@ -106,7 +98,7 @@ JSON_TYPES = {
     datetime.datetime: "datetime",
     datetime.time: "time",
     datetime.timedelta: "timedelta",
-    uuid.UUID: "uuid"
+    uuid.UUID: "uuid",
 }
 
 
@@ -117,7 +109,13 @@ class Entity:
 
     @classmethod
     def string(cls, type):
-        return type in (str, datetime.datetime, datetime.time, datetime.timedelta, uuid.UUID)
+        return type in (
+            str,
+            datetime.datetime,
+            datetime.time,
+            datetime.timedelta,
+            uuid.UUID,
+        )
 
     @classmethod
     def is_date(cls, type):
@@ -129,51 +127,56 @@ class Entity:
 
     @classmethod
     def escapeLiteral(cls, value, ftype, dbtype: str = None):
-        #print(value, ftype, dbtype)
-        v = value if value != 'None' or value is not None else ""
-        v = f'{value!r}' if Entity.string(ftype) else v
-        v = value if Entity.number(ftype) else f'{value!r}'
-        v = f'array{value!s}' if dbtype == 'array' else v
-        v = f'{value!r}' if dbtype == 'hstore' else v
-        v = value if (value in ['None', 'null', 'NULL']) else v
+        # print(value, ftype, dbtype)
+        v = value if value != "None" or value is not None else ""
+        v = f"{value!r}" if Entity.string(ftype) else v
+        v = value if Entity.number(ftype) else f"{value!r}"
+        v = f"array{value!s}" if dbtype == "array" else v
+        v = f"{value!r}" if dbtype == "hstore" else v
+        v = value if (value in ["None", "null", "NULL"]) else v
         return v
 
     @classmethod
     def toSQL(cls, value, ftype, dbtype: str = None):
-        v = f'{value!r}' if Entity.is_date(ftype) else value
-        v = f'{value!s}' if Entity.string(ftype) and value is not None else v
+        v = f"{value!r}" if Entity.is_date(ftype) else value
+        v = f"{value!s}" if Entity.string(ftype) and value is not None else v
         v = value if Entity.number(ftype) else v
         v = str(value) if isinstance(value, uuid.UUID) else v
         v = json.dumps(value, cls=BaseEncoder) if ftype in [dict, Dict] else v
-        v = f'{value!s}' if dbtype == 'array' and value is not None else v
+        v = f"{value!s}" if dbtype == "array" and value is not None else v
         # formatting htstore column
-        v = ",".join(
-            {"{}=>{}".format(k, v) for k, v in value.items()}
-            ) if isinstance(value, dict) and dbtype == 'hstore' else v
-        v = "NULL" if (value in ['None', 'null']) else v
+        v = (
+            ",".join({"{}=>{}".format(k, v) for k, v in value.items()})
+            if isinstance(value, dict) and dbtype == "hstore"
+            else v
+        )
+        v = "NULL" if (value in ["None", "null"]) else v
         v = "NULL" if value is None else v
         return v
 
 
 class Meta:
-    name: str = ''
-    schema: str = ''
-    app_label: str = ''
+    name: str = ""
+    schema: str = ""
+    app_label: str = ""
     frozen: bool = False
     strict: bool = True
     driver: str = None
     credentials: dict = {}
-    dsn: str = ''
+    dsn: str = ""
     connection = None
+
 
 def set_connection(cls, conn: Callable):
     cls.connection = conn
+
 
 @dataclass
 class ValidationError:
     """
     Class for Error validation
     """
+
     field: str
     value: str
     error: str
@@ -195,6 +198,7 @@ class Field(ff):
     Field.
        Extending Column definition from Dataclass Field
     """
+
     _default: Any = None
     _default_factory: Callable = MISSING
     _required: bool = False
@@ -213,49 +217,42 @@ class Field(ff):
         max: Union[int, float, Decimal] = None,
         validator: Callable = None,
         db_type: str = None,
-        **kwargs
+        **kwargs,
     ):
         args = {
             "init": True,
             "repr": True,
             "hash": True,
             "compare": True,
-            "metadata": None
+            "metadata": None,
         }
-        if 'compare' in kwargs:
-            args['compare'] = kwargs['compare']
-            del kwargs['compare']
-        meta = {
-            "required": required,
-            "primary_key": primary_key
-        }
+        if "compare" in kwargs:
+            args["compare"] = kwargs["compare"]
+            del kwargs["compare"]
+        meta = {"required": required, "primary_key": primary_key}
         self._required = required
         self._pk = primary_key
         if db_type is not None:
             self._dbtype = db_type
         range = {}
         if min is not None:
-            range['min'] = min
+            range["min"] = min
         if max is not None:
-            range['max'] = max
+            range["max"] = max
         if required is True or primary_key is True:
-            args['init'] = True
+            args["init"] = True
         else:
-            if 'init' in kwargs:
-                args['init'] = kwargs['init']
-                del kwargs['init']
+            if "init" in kwargs:
+                args["init"] = kwargs["init"]
+                del kwargs["init"]
             # else:
             #     args['init'] = False
         if validator is not None:
-            meta['validation'] = validator
-        if 'metadata' in kwargs:
-            meta = {**meta, **kwargs['metadata']}
-            del kwargs['metadata']
-        args['metadata'] = {
-            **meta,
-            **range,
-            **kwargs
-        }
+            meta["validation"] = validator
+        if "metadata" in kwargs:
+            meta = {**meta, **kwargs["metadata"]}
+            del kwargs["metadata"]
+        args["metadata"] = {**meta, **range, **kwargs}
         if default is not None:
             self._default = default
             self._default_factory = MISSING
@@ -266,19 +263,17 @@ class Field(ff):
                 # get the annotation of field
                 self._default_factory = factory
         super().__init__(
-            default = self._default,
-            default_factory = self._default_factory,
-            **args
+            default=self._default, default_factory=self._default_factory, **args
         )
-        #self._field_type = _FIELD
+        # self._field_type = _FIELD
 
     def __repr__(self):
         return (
-            'Field('
-            f'column={self.name!r},'
-            f'type={self.type!r},'
-            f'default={self.default!r})'
-            )
+            "Field("
+            f"column={self.name!r},"
+            f"type={self.type!r},"
+            f"default={self.default!r})"
+        )
 
     @property
     def required(self):
@@ -289,9 +284,9 @@ class Field(ff):
 
     def db_type(self):
         if self._dbtype is not None:
-            if self._dbtype == 'array':
+            if self._dbtype == "array":
                 t = DB_TYPES[self.type]
-                return f'{t}[]'
+                return f"{t}[]"
             else:
                 return self._dbtype
         else:
@@ -301,28 +296,28 @@ class Field(ff):
     def primary_key(self):
         return self._pk
 
+
 def _dc_method_setattr(self, name: str, value: Any, *args, **kwargs) -> None:
     """
     method for overwrite setattr in Dataclasses
     """
     if self.Meta.frozen is True and name not in self._columns:
-        raise TypeError(f"Cannot Modify attribute {name} of {self.modelName}, This DataClass is frozen (read-only class)")
+        raise TypeError(
+            f"Cannot Modify attribute {name} of {self.modelName}, This DataClass is frozen (read-only class)"
+        )
     else:
         object.__setattr__(self, name, value)
         if name not in self._columns.keys():
             try:
                 if self.Meta.strict == True:
                     Msg(
-                        'Warning: Field **{}** doesn\'t exists on Model {}'.format(
-                            name,
-                            self.modelName
-                            ), 'WARN'
+                        "Warning: Field **{}** doesn't exists on Model {}".format(
+                            name, self.modelName
+                        ),
+                        "WARN",
                     )
                 else:
-                    f = Field(
-                       required=False,
-                       default=value
-                    )
+                    f = Field(required=False, default=value)
                     f.name = name
                     f.type = type(value)
                     self._columns[name] = f
@@ -332,25 +327,25 @@ def _dc_method_setattr(self, name: str, value: Any, *args, **kwargs) -> None:
 
 
 def Column(
-        *,
-        default: Any = None,
-        init: bool = True,
-        primary_key: bool = False,
-        notnull: bool = False,
-        required: bool = False,
-        factory: Callable = MISSING,
-        min: Union[int, float, Decimal] = None,
-        max: Union[int, float, Decimal] = None,
-        validator: Callable = None,
-        db_type: str = None,
-        **kwargs
-    ):
+    *,
+    default: Any = None,
+    init: bool = True,
+    primary_key: bool = False,
+    notnull: bool = False,
+    required: bool = False,
+    factory: Callable = MISSING,
+    min: Union[int, float, Decimal] = None,
+    max: Union[int, float, Decimal] = None,
+    validator: Callable = None,
+    db_type: str = None,
+    **kwargs,
+):
     """Column.
 
     Column Function that returns a Field() object
     """
     if default is not None and factory is not MISSING:
-        raise ValueError('Cannot specify both default and default_factory')
+        raise ValueError("Cannot specify both default and default_factory")
     return Field(
         default=default,
         init=init,
@@ -362,18 +357,18 @@ def Column(
         min=min,
         max=max,
         validator=validator,
-        **kwargs
+        **kwargs,
     )
 
 
 def create_dataclass(
-        new_cls: Any,
-        repr: bool = True,
-        eq: bool = True,
-        validate: bool = True,
-        frozen: bool = False,
-        init: bool = True
-    ) -> None:
+    new_cls: Any,
+    repr: bool = True,
+    eq: bool = True,
+    validate: bool = True,
+    frozen: bool = False,
+    init: bool = True,
+) -> None:
     """
     create_dataclass.
        Create a Dataclass from a Class
@@ -394,51 +389,42 @@ class ModelMeta(type):
 
     MetaClass object to create dataclasses for modeling Data Models.
     """
+
     __slots__ = ()
     __valid__ = None
     __encoder__ = None
 
     def __new__(cls, name, bases, attrs, **kwargs):
-        """__new__ is a classmethod, even without @classmethod decorator
-        """
+        """__new__ is a classmethod, even without @classmethod decorator"""
         if len(bases) > 1:
-            raise TypeError(
-                "Multiple inheritance of Nav data Models are forbidden"
-                )
+            raise TypeError("Multiple inheritance of Nav data Models are forbidden")
         # TODO: avoid ValueError: 'associate_id' in __slots__
         # conflicts with class variable
-        if '__annotations__' in attrs:
-            annotations = attrs['__annotations__']
+        if "__annotations__" in attrs:
+            annotations = attrs["__annotations__"]
             cols = []
             for field, type in annotations.items():
-                #print(field, type)
+                # print(field, type)
                 if field in attrs:
                     df = attrs[field]
                     if isinstance(df, Field):
                         setattr(cls, field, df)
                     else:
-                        f = Field(
-                           factory=type,
-                           required=False,
-                           default=df
-                        )
+                        f = Field(factory=type, required=False, default=df)
                         f.name = field
                         f.type = type
                         setattr(cls, field, f)
                 else:
-                    f = Field(
-                       factory=type,
-                       required=False
-                    )
+                    f = Field(factory=type, required=False)
                     f.name = field
                     f.type = type
                     setattr(cls, field, f)
                 cols.append(field)
             # set the slots of this class
             cls.__slots__ = tuple(cols)
-        attr_meta = attrs.pop('Meta', None)
+        attr_meta = attrs.pop("Meta", None)
         new_cls = super().__new__(cls, name, bases, attrs, **kwargs)
-        new_cls.Meta = attr_meta or getattr(new_cls, 'Meta', Meta)
+        new_cls.Meta = attr_meta or getattr(new_cls, "Meta", Meta)
         new_cls.Meta.set_connection = types.MethodType(set_connection, new_cls.Meta)
         frozen = False
         # adding a "class init method"
@@ -450,9 +436,9 @@ class ModelMeta(type):
             # TODO: mix values from Meta to an existing meta
             try:
                 if not new_cls.Meta.schema:
-                    new_cls.Meta.schema = 'public'
+                    new_cls.Meta.schema = "public"
             except AttributeError:
-                new_cls.Meta.schema = 'public'
+                new_cls.Meta.schema = "public"
             try:
                 frozen = new_cls.Meta.frozen
             except AttributeError:
@@ -469,7 +455,11 @@ class ModelMeta(type):
             new_cls.Meta = Meta
         dc = create_dataclass(new_cls, frozen=frozen, init=True)
         MODELS[new_cls.__name__] = dc
-        cols = {k: v for k, v in dc.__dict__['__dataclass_fields__'].items() if v._field_type == _FIELD}
+        cols = {
+            k: v
+            for k, v in dc.__dict__["__dataclass_fields__"].items()
+            if v._field_type == _FIELD
+        }
         dc._columns = cols
         dc._fields = cols.keys()
         # print(dc._columns)
@@ -478,16 +468,16 @@ class ModelMeta(type):
     def __init__(cls, *args, **kwargs) -> None:
         cls.modelName = cls.__name__
         ls = cls.Meta.__dict__
-        if 'dsn' not in ls:
+        if "dsn" not in ls:
             cls.Meta.dsn = None
-        if 'connection' not in ls:
+        if "connection" not in ls:
             cls.Meta.connection = None
         if cls.Meta.strict:
             cls.__frozen__ = cls.Meta.strict
         else:
             cls.__frozen__ = False
         cls.__initialised__ = True
-        if 'driver' in ls:
+        if "driver" in ls:
             if cls.Meta.connection is None:
                 if cls.Meta.driver is not None:
                     # Msg('Getting Connection', 'DEBUG')
@@ -504,7 +494,6 @@ class Model(metaclass=ModelMeta):
     _fields = {}
     __columns__ = []
 
-
     def __post_init__(self) -> None:
         """
         Start validation of fields
@@ -518,7 +507,7 @@ class Model(metaclass=ModelMeta):
         """
         errors = {}
         for name, field in self.columns().items():
-            #print(name, field)
+            # print(name, field)
             key = field.name
             # print({
             #     "name": key,
@@ -532,27 +521,27 @@ class Model(metaclass=ModelMeta):
             val = self.__dict__[key]
             val_type = type(val)
             annotated_type = field.type
-            if val_type == 'type' or val == annotated_type or val is None:
+            if val_type == "type" or val == annotated_type or val is None:
                 # data not provided
                 try:
-                    if field.metadata['required'] == True and self.Meta.strict == True:
+                    if field.metadata["required"] == True and self.Meta.strict == True:
                         errors[key] = ValidationError(
-                                field=key,
-                                value=None,
-                                value_type=None,
-                                error="Field Required",
-                                annotation=annotated_type,
-                                exception=None
-                            )
+                            field=key,
+                            value=None,
+                            value_type=None,
+                            error="Field Required",
+                            annotation=annotated_type,
+                            exception=None,
+                        )
                 except KeyError:
                     continue
                 continue
             else:
-                #print(key, val, annotated_type)
+                # print(key, val, annotated_type)
                 try:
                     instance = self._is_instanceof(val, annotated_type)
                     # first: check primitives
-                    if instance['result']:
+                    if instance["result"]:
                         # is valid
                         continue
                     else:
@@ -569,22 +558,22 @@ class Model(metaclass=ModelMeta):
                         # )
                 except Exception as err:
                     errors[key] = ValidationError(
-                            field=key,
-                            value=val,
-                            error="Validation Exception",
-                            value_type=val_type,
-                            annotation=annotated_type,
-                            exception=err
+                        field=key,
+                        value=val,
+                        error="Validation Exception",
+                        value_type=val_type,
+                        annotation=annotated_type,
+                        exception=err,
                     )
             # second check: length,
             # third validation: formats and patterns
             # fourth validation: function-based validators
         if errors:
-            print('=== ERRORS ===')
+            print("=== ERRORS ===")
             print(errors)
-            object.__setattr__(self, '__valid__', False)
+            object.__setattr__(self, "__valid__", False)
         else:
-            object.__setattr__(self, '__valid__', True)
+            object.__setattr__(self, "__valid__", True)
 
     def _is_instanceof(self, value: Any, annotated_type: type) -> bool:
         result = False
@@ -595,7 +584,7 @@ class Model(metaclass=ModelMeta):
             exception = err
             result = False
         finally:
-            return {"result": result, "exception": exception }
+            return {"result": result, "exception": exception}
 
     def __unicode__(self):
         return str(__class__)
@@ -623,66 +612,69 @@ class Model(metaclass=ModelMeta):
 
     def query_raw(self):
         name = self.__class__.__name__
-        schema = self.Meta.schema if self.Meta.schema is not None else ''
-        return f'SELECT {fields} FROM {schema!s}.{name!s} {filter}'
+        schema = self.Meta.schema if self.Meta.schema is not None else ""
+        return f"SELECT {fields} FROM {schema!s}.{name!s} {filter}"
 
-    def schema(self, type: str = 'json') -> str:
+    def schema(self, type: str = "json") -> str:
         result = None
         name = self.__class__.__name__
-        schema = self.Meta.schema if self.Meta.schema is not None else ''
+        schema = self.Meta.schema if self.Meta.schema is not None else ""
         columns = {}
         try:
-            if type == 'json':
+            if type == "json":
                 for name, field in self.columns():
                     key = field.name
                     type = field.type
-                    columns[key] = {
-                        "name": key,
-                        "type": JSON_TYPES[type]
-                    }
+                    columns[key] = {"name": key, "type": JSON_TYPES[type]}
                 doc = {
                     "name": name,
-                    "description": self.__doc__.strip('\n').strip(),
+                    "description": self.__doc__.strip("\n").strip(),
                     "schema": schema,
-                    "fields": columns
+                    "fields": columns,
                 }
                 result = to_json.dumps(doc)
-            elif type == 'sql' or type == 'SQL':
+            elif type == "sql" or type == "SQL":
                 # TODO: using lexers to different types of SQL
                 table = self.Meta.name if self.Meta.name is not None else name
-                doc = f'CREATE TABLE IF NOT EXISTS {schema}.{table} (\n'
+                doc = f"CREATE TABLE IF NOT EXISTS {schema}.{table} (\n"
                 cols = []
                 pk = []
                 for name, field in self.columns().items():
-                    #print(name, field)
+                    # print(name, field)
                     key = field.name
                     default = None
                     try:
-                        default = field.metadata['db_default']
+                        default = field.metadata["db_default"]
                     except KeyError:
                         if field.default is not None:
-                            default = f'{field.default!r}'
-                    default = f'DEFAULT {default!s}' if isinstance(default, (str, int)) else ''
+                            default = f"{field.default!r}"
+                    default = (
+                        f"DEFAULT {default!s}"
+                        if isinstance(default, (str, int))
+                        else ""
+                    )
                     if is_dataclass(field.type):
-                        tp = 'jsonb'
-                        nn = ''
+                        tp = "jsonb"
+                        nn = ""
                     else:
                         try:
                             tp = field.db_type()
                         except Exception as err:
                             print(err)
-                            tp = 'varchar'
-                        nn = 'NOT NULL' if field.required is True else ''
+                            tp = "varchar"
+                        nn = "NOT NULL" if field.required is True else ""
                     if field.primary_key is True:
                         pk.append(key)
-                    #print(key, tp, nn, default)
-                    cols.append(f' {key} {tp} {nn} {default}')
+                    # print(key, tp, nn, default)
+                    cols.append(f" {key} {tp} {nn} {default}")
                 doc = "{}{}".format(doc, ",\n".join(cols))
                 if len(pk) >= 1:
                     primary = ", ".join(pk)
-                    cname = f'pk_{schema}_{table}_pkey'
-                    doc = "{},\n{}".format(doc, f'CONSTRAINT {cname} PRIMARY KEY ({primary})')
-                doc = doc + '\n);'
+                    cname = f"pk_{schema}_{table}_pkey"
+                    doc = "{},\n{}".format(
+                        doc, f"CONSTRAINT {cname} PRIMARY KEY ({primary})"
+                    )
+                doc = doc + "\n);"
                 result = doc
         finally:
             return result
@@ -700,7 +692,7 @@ class Model(metaclass=ModelMeta):
         """
         Getting the database connection and driver based on parameters
         """
-        driver = self.Meta.driver if self.Meta.driver else 'pg'
+        driver = self.Meta.driver if self.Meta.driver else "pg"
         if driver:
             # logging.debug('Getting data from Database: {}'.format(driver))
             # working with app labels
@@ -714,17 +706,17 @@ class Model(metaclass=ModelMeta):
                 db = {}
                 try:
                     params = {
-                        'user': db['USER'],
-                        'password': db['PASSWORD'],
-                        'host': db['HOST'],
-                        'port': db['PORT'],
-                        'database': db['NAME']
+                        "user": db["USER"],
+                        "password": db["PASSWORD"],
+                        "host": db["HOST"],
+                        "port": db["PORT"],
+                        "database": db["NAME"],
                     }
-                    if 'SCHEMA' in db:
-                        params['schema'] = db['SCHEMA']
+                    if "SCHEMA" in db:
+                        params["schema"] = db["SCHEMA"]
                 except KeyError:
                     pass
-            elif hasattr(self.Meta, 'credentials'):
+            elif hasattr(self.Meta, "credentials"):
                 params = self.Meta.credentials
                 self.Meta.connection = AsyncDB(driver, params=params)
             elif dsn is not None:
@@ -750,13 +742,14 @@ class Model(metaclass=ModelMeta):
         async with await self.Meta.connection.connection() as conn:
             try:
                 result = await self.Meta.connection.insert(
-                    model=self,
-                    fields=self.columns()
+                    model=self, fields=self.columns()
                 )
                 return result
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
+                raise Exception(
+                    "Error on Insert over table {}: {}".format(self.Meta.name, err)
+                )
 
     async def save(self, **kwargs):
         if not self.Meta.connection:
@@ -764,13 +757,14 @@ class Model(metaclass=ModelMeta):
         async with await self.Meta.connection.connection() as conn:
             try:
                 result = await self.Meta.connection.save(
-                    model=self,
-                    fields=self.columns()
+                    model=self, fields=self.columns()
                 )
                 return result
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
+                raise Exception(
+                    "Error on Insert over table {}: {}".format(self.Meta.name, err)
+                )
 
     async def delete(self, **kwargs):
         """
@@ -782,14 +776,14 @@ class Model(metaclass=ModelMeta):
         async with await self.Meta.connection.connection() as conn:
             try:
                 result = await self.Meta.connection.delete(
-                    model=self,
-                    fields=self.columns()
+                    model=self, fields=self.columns()
                 )
                 return result
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception('Error on Insert over table {}: {}'.format(self.Meta.name, err))
-
+                raise Exception(
+                    "Error on Insert over table {}: {}".format(self.Meta.name, err)
+                )
 
     async def fetch(self, **kwargs):
         """
@@ -800,21 +794,23 @@ class Model(metaclass=ModelMeta):
         async with await self.Meta.connection.connection() as conn:
             try:
                 result = await self.Meta.connection.fetch_one(
-                    model=self,
-                    fields=self.columns(),
-                    **kwargs
+                    model=self, fields=self.columns(), **kwargs
                 )
                 if result:
                     return self.__class__(**dict(result))
                 else:
-                    raise NoDataFound('{} object with condition {} Not Found!'.format(self.Meta.name, kwargs))
+                    raise NoDataFound(
+                        "{} object with condition {} Not Found!".format(
+                            self.Meta.name, kwargs
+                        )
+                    )
             except NoDataFound as err:
                 raise NoDataFound(err)
             except AttributeError:
-                raise Exception('Error on get {}: {}'.format(self.Meta.name, err))
+                raise Exception("Error on get {}: {}".format(self.Meta.name, err))
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception('Error on get {}: {}'.format(self.Meta.name, err))
+                raise Exception("Error on get {}: {}".format(self.Meta.name, err))
 
     async def select(self, **kwargs):
         """
@@ -825,23 +821,19 @@ class Model(metaclass=ModelMeta):
         async with await self.Meta.connection.connection() as conn:
             try:
                 result = await self.Meta.connection.select(
-                    model=self,
-                    fields=self.columns(),
-                    **kwargs
+                    model=self, fields=self.columns(), **kwargs
                 )
                 if result:
                     return [self.__class__(**dict(r)) for r in result]
                 else:
                     raise NoDataFound(
-                        'No Data on {} with condition {}'.format(
-                            self.Meta.name, kwargs
-                        )
+                        "No Data on {} with condition {}".format(self.Meta.name, kwargs)
                     )
             except NoDataFound as err:
                 raise NoDataFound(err)
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception('Error on filter {}: {}'.format(self.Meta.name, err))
+                raise Exception("Error on filter {}: {}".format(self.Meta.name, err))
 
     """
     Class-Methods for interacting with Data
@@ -853,14 +845,13 @@ class Model(metaclass=ModelMeta):
             cls.get_connection(cls)
         async with await cls.Meta.connection.connection() as conn:
             try:
-                result = await cls.Meta.connection.get_all(
-                    model=cls,
-                    **kwargs
-                )
+                result = await cls.Meta.connection.get_all(model=cls, **kwargs)
                 return [cls(**dict(row)) for row in result]
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception('Error on query_all over table {}: {}'.format(cls.Meta.name, err))
+                raise Exception(
+                    "Error on query_all over table {}: {}".format(cls.Meta.name, err)
+                )
 
     # classmethods for Data
     @classmethod
@@ -872,25 +863,18 @@ class Model(metaclass=ModelMeta):
             cls.get_connection(cls)
         async with await cls.Meta.connection.connection() as conn:
             try:
-                result = await cls.Meta.connection.get_one(
-                    model=cls,
-                    **kwargs
-                )
+                result = await cls.Meta.connection.get_one(model=cls, **kwargs)
                 if result:
                     return cls(**dict(result))
                 else:
-                    raise NoDataFound(
-                        message=f"Data not found over {cls.Meta.name!s}"
-                    )
+                    raise NoDataFound(message=f"Data not found over {cls.Meta.name!s}")
             except NoDataFound:
-                raise NoDataFound(
-                    message=f"Data not found over {cls.Meta.name!s}"
-                )
+                raise NoDataFound(message=f"Data not found over {cls.Meta.name!s}")
             except AttributeError as err:
-                raise Exception('Error on get {}: {}'.format(cls.Meta.name, err))
+                raise Exception("Error on get {}: {}".format(cls.Meta.name, err))
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception('Error on get {}: {}'.format(cls.Meta.name, err))
+                raise Exception("Error on get {}: {}".format(cls.Meta.name, err))
 
     @classmethod
     async def filter(cls, **kwargs):
@@ -901,24 +885,18 @@ class Model(metaclass=ModelMeta):
             cls.get_connection(cls)
         async with await cls.Meta.connection.connection() as conn:
             try:
-                result = await cls.Meta.connection.filter(
-                    model=cls,
-                    **kwargs
-                )
+                result = await cls.Meta.connection.filter(model=cls, **kwargs)
                 if result:
                     return [cls(**dict(r)) for r in result]
                 else:
                     raise NoDataFound(
-                        'No Data on {} with condition {}'.format(
-                            cls.Meta.name, kwargs
-                        )
+                        "No Data on {} with condition {}".format(cls.Meta.name, kwargs)
                     )
             except NoDataFound as err:
                 raise NoDataFound(err)
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception('Error on filter {}: {}'.format(cls.Meta.name, err))
-
+                raise Exception("Error on filter {}: {}".format(cls.Meta.name, err))
 
     @classmethod
     async def remove(cls, conditions: dict = {}, **kwargs):
@@ -928,14 +906,14 @@ class Model(metaclass=ModelMeta):
             result = None
             try:
                 result = await cls.Meta.connection.delete_rows(
-                    model=cls,
-                    conditions=conditions,
-                    **kwargs
+                    model=cls, conditions=conditions, **kwargs
                 )
                 return result
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception('Error Deleting Table {}: {}'.format(cls.Meta.name, err))
+                raise Exception(
+                    "Error Deleting Table {}: {}".format(cls.Meta.name, err)
+                )
 
     @classmethod
     async def update(cls, conditions: dict = {}, **kwargs):
@@ -944,15 +922,15 @@ class Model(metaclass=ModelMeta):
         async with await cls.Meta.connection.connection() as conn:
             try:
                 result = await cls.Meta.connection.update_rows(
-                    model=cls,
-                    conditions=conditions,
-                    **kwargs
+                    model=cls, conditions=conditions, **kwargs
                 )
                 if result:
                     return [cls(**dict(r)) for r in result]
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception('Error Updating Table {}: {}'.format(cls.Meta.name, err))
+                raise Exception(
+                    "Error Updating Table {}: {}".format(cls.Meta.name, err)
+                )
 
     @classmethod
     async def create(cls, records):
@@ -960,15 +938,14 @@ class Model(metaclass=ModelMeta):
             cls.get_connection(cls)
         async with await cls.Meta.connection.connection() as conn:
             try:
-                result = await cls.Meta.connection.create_rows(
-                    model=cls,
-                    rows=records
-                )
+                result = await cls.Meta.connection.create_rows(model=cls, rows=records)
                 if result:
                     return [cls(**dict(r)) for r in result]
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception('Error Updating Table {}: {}'.format(cls.Meta.name, err))
+                raise Exception(
+                    "Error Updating Table {}: {}".format(cls.Meta.name, err)
+                )
 
     async def close(self):
         if self.Meta.connection:
@@ -977,8 +954,9 @@ class Model(metaclass=ModelMeta):
     """
     Class-method for creation.
     """
+
     @classmethod
-    def make_model(cls, name: str, schema: str = 'public', fields: list = []):
+    def make_model(cls, name: str, schema: str = "public", fields: list = []):
         cls = make_dataclass(name, fields, bases=(Model,))
         m = Meta()
         m.name = name
@@ -989,34 +967,34 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def makeModel(
-            cls,
-            name: str,
-            schema: str = 'public',
-            fields: list = [],
-            db: BaseProvider = None
-        ):
+        cls,
+        name: str,
+        schema: str = "public",
+        fields: list = [],
+        db: BaseProvider = None,
+    ):
         """
         Make Model.
 
         Making a model from field tuples, a JSON schema or a Table.
         """
-        tablename = '{}.{}'.format(schema, name)
-        if not fields: # we need to look in to it.
+        tablename = "{}.{}".format(schema, name)
+        if not fields:  # we need to look in to it.
             colinfo = await db.column_info(tablename)
             fields = []
             for column in colinfo:
-                tp = column['data_type']
+                tp = column["data_type"]
                 col = Field(
-                    primary_key=column['is_primary'],
-                    notnull=column['notnull'],
-                    db_type=column['format_type']
+                    primary_key=column["is_primary"],
+                    notnull=column["notnull"],
+                    db_type=column["format_type"],
                 )
                 # get dtype from database type:
                 try:
                     dtype = MODEL_TYPES[tp]
                 except KeyError:
                     dtype = str
-                fields.append((column['column_name'], dtype, col))
+                fields.append((column["column_name"], dtype, col))
         cls = make_dataclass(name, fields, bases=(Model,))
         m = Meta()
         m.name = name

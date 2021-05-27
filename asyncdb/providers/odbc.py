@@ -28,20 +28,14 @@ from asyncdb.providers import (
     registerProvider,
 )
 
-from asyncdb.providers.sql import (
-    SQLProvider,
-    baseCursor
-)
+from asyncdb.providers.sql import SQLProvider, baseCursor
 
 
 class odbcCursor(baseCursor):
-
     async def __aenter__(self) -> "odbcCursor":
         "Redefining __aenter__ based on requirements of ODBC Cursors"
         self._cursor = await self._connection.cursor()
-        await self._cursor.execute(
-            self._sentence, self._params
-        )
+        await self._cursor.execute(self._sentence, self._params)
         return self
 
 
@@ -50,7 +44,7 @@ class odbc(SQLProvider):
     _dsn = "Driver={driver};Database={database}"
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
-        if 'host' in params:
+        if "host" in params:
             self._dsn = "DRIVER={driver};Database={database};server={host};uid={user};pwd={password}"
         super(odbc, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
@@ -64,9 +58,7 @@ class odbc(SQLProvider):
         self._connection = None
         self._connected = False
         try:
-            self._connection = await aioodbc.connect(
-                dsn=self._dsn
-            )
+            self._connection = await aioodbc.connect(dsn=self._dsn)
             if self._connection:
                 if callable(self.init_func):
                     try:
@@ -76,11 +68,11 @@ class odbc(SQLProvider):
                 self._connected = True
                 self._initialized_on = time.time()
         except pyodbc.Error as err:
-            print('ERR ', err)
+            print("ERR ", err)
             self._logger.exception(err)
             raise ProviderError("ODBC Internal Error: {}".format(str(err)))
         except Exception as err:
-            print('ERR ', err)
+            print("ERR ", err)
             self._logger.exception(err)
             raise ProviderError("ODBC Unknown Error: {}".format(str(err)))
         finally:
@@ -90,7 +82,7 @@ class odbc(SQLProvider):
         """
         Getting a Query from Database
         """
-        #TODO: getting aiosql structures or sql-like function structures or query functions
+        # TODO: getting aiosql structures or sql-like function structures or query functions
         error = None
         await self.valid_operation(sentence)
         try:
@@ -154,7 +146,7 @@ class odbc(SQLProvider):
         """
         Getting a Query from Database
         """
-        #TODO: getting aiosql structures or sql-like function structures or query functions
+        # TODO: getting aiosql structures or sql-like function structures or query functions
         error = None
         await self.valid_operation(sentence)
         try:
@@ -223,9 +215,7 @@ class odbc(SQLProvider):
             await self._cursor.close()
             return [result, error]
 
-    async def fetch(
-        self, sentence: str, parameters: Iterable[Any] = None
-    ) -> Iterable:
+    async def fetch(self, sentence: str, parameters: Iterable[Any] = None) -> Iterable:
         """Helper to create a cursor and execute the given query, returns a Native Cursor"""
         if parameters is None:
             parameters = []

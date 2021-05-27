@@ -54,10 +54,8 @@ from asyncdb.utils.encoders import (
     BaseEncoder,
 )
 
-from asyncdb.providers.sql import (
-    SQLProvider,
-    baseCursor
-)
+from asyncdb.providers.sql import SQLProvider, baseCursor
+
 
 class postgres(threading.Thread, SQLProvider):
     _provider = "postgresql"
@@ -158,17 +156,14 @@ class postgres(threading.Thread, SQLProvider):
                 ndelta.years * 12 + ndelta.months,
                 ndelta.days,
                 (
-                    (
-                        ndelta.hours * 3600 + ndelta.minutes * 60 +
-                        ndelta.seconds
-                    ) * 1000000 + ndelta.microseconds
+                    (ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds)
+                    * 1000000
+                    + ndelta.microseconds
                 ),
             )
 
         def interval_decoder(tup):
-            return relativedelta(
-                months=tup[0], days=tup[1], microseconds=tup[2]
-            )
+            return relativedelta(months=tup[0], days=tup[1], microseconds=tup[2])
 
         await connection.set_type_codec(
             "json", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
@@ -244,9 +239,7 @@ class postgres(threading.Thread, SQLProvider):
                 self._initialized_on = time.time()
         except TooManyConnectionsError as err:
             print(err)
-            raise TooManyConnections(
-                "Too Many Connections Error: {}".format(str(err))
-            )
+            raise TooManyConnections("Too Many Connections Error: {}".format(str(err)))
         except ConnectionDoesNotExistError as err:
             print(err)
             print("Connection Error: {}".format(str(err)))
@@ -286,9 +279,7 @@ class postgres(threading.Thread, SQLProvider):
                         await self._connection.terminate()
                         self._connection = None
                         raise ProviderError(
-                            "Connection Error, Terminated: {}".format(
-                                str(err)
-                            )
+                            "Connection Error, Terminated: {}".format(str(err))
                         )
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
@@ -308,9 +299,7 @@ class postgres(threading.Thread, SQLProvider):
                         self._connection.close(timeout=wait_close)
                     )
             except (InterfaceError, RuntimeError) as err:
-                raise ProviderError(
-                    "Release Interface Error: {}".format(str(err))
-                )
+                raise ProviderError("Release Interface Error: {}".format(str(err)))
                 return False
             finally:
                 self._connected = False
@@ -337,9 +326,7 @@ class postgres(threading.Thread, SQLProvider):
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
             raise ProviderError(error)
-        except (
-            PostgresSyntaxError, UndefinedColumnError, PostgresError
-        ) as err:
+        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
             raise StatementError(error)
         except (
@@ -364,9 +351,7 @@ class postgres(threading.Thread, SQLProvider):
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
             raise ProviderError(error)
-        except (
-            PostgresSyntaxError, UndefinedColumnError, PostgresError
-        ) as err:
+        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
             raise StatementError(error)
         except (
@@ -396,9 +381,7 @@ class postgres(threading.Thread, SQLProvider):
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
             raise ProviderError(error)
-        except (
-            PostgresSyntaxError, UndefinedColumnError, PostgresError
-        ) as err:
+        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence Error: {}".format(str(err))
             raise StatementError(error)
         except (
@@ -433,9 +416,7 @@ class postgres(threading.Thread, SQLProvider):
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
             raise ProviderError(error)
-        except (
-            PostgresSyntaxError, UndefinedColumnError, PostgresError
-        ) as err:
+        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
             raise StatementError(error)
         except (
@@ -489,9 +470,7 @@ class postgres(threading.Thread, SQLProvider):
             await self.connection()
         try:
             async with self._connection.transaction():
-                await self._connection.executemany(
-                    sentence, timeout=timeout, *args
-                )
+                await self._connection.executemany(sentence, timeout=timeout, *args)
             return [True, None]
         except InterfaceWarning as err:
             self._error = "Interface Warning: {}".format(str(err))
@@ -599,7 +578,7 @@ class postgres(threading.Thread, SQLProvider):
             return [self._result, self._error]
 
     def perform(self, sentence):
-        self.start(target=self._execute, args=(sentence, ))
+        self.start(target=self._execute, args=(sentence,))
         if self.is_alive():
             self.join(timeout=self._timeout)
             return [self._result, self._error]
@@ -610,7 +589,7 @@ class postgres(threading.Thread, SQLProvider):
         return self._loop.run_until_complete(self.execute(sentence))
 
     def fetchall(self, sentence):
-        self.start(target=self._fetchall, args=(sentence, ))
+        self.start(target=self._fetchall, args=(sentence,))
         if self.is_alive():
             self.join(timeout=self._timeout)
             return [self._result, self._error]
@@ -622,15 +601,11 @@ class postgres(threading.Thread, SQLProvider):
             stmt, error = self._loop.run_until_complete(self.prepare(sentence))
             if stmt:
                 result = self._loop.run_until_complete(stmt.fetch())
-                self._result = asyncResult(
-                    result=result, columns=self._columns
-                )
+                self._result = asyncResult(result=result, columns=self._columns)
         except RuntimeError as err:
             self._error = "Runtime Error: {}".format(str(err))
             raise ProviderError(error)
-        except (
-            PostgresSyntaxError, UndefinedColumnError, PostgresError
-        ) as err:
+        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             self._error = "Sentence Error: {}".format(str(err))
             raise StatementError(error)
         except (
@@ -646,7 +621,7 @@ class postgres(threading.Thread, SQLProvider):
             return [self._result, self._error]
 
     def fetchone(self, sentence):
-        self.start(target=self._fetchone, args=(sentence, ))
+        self.start(target=self._fetchone, args=(sentence,))
         self.join(timeout=self._timeout)
         return [self._result, self._error]
 
@@ -654,9 +629,7 @@ class postgres(threading.Thread, SQLProvider):
         self._error = None
         self._result = None
         try:
-            row = self._loop.run_until_complete(
-                self._connection.fetchrow(sentence)
-            )
+            row = self._loop.run_until_complete(self._connection.fetchrow(sentence))
             if row:
                 self._result = asyncRecord(dict(row))
         except Exception as err:

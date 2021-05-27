@@ -46,16 +46,14 @@ class influx(BaseProvider):
         """
         try:
             if self._connection:
-                    self._logger.debug("Closing Connection")
-                    try:
-                        self._connection.close()
-                    except Exception as err:
-                        self._connection = None
-                        raise ProviderError(
-                            "Connection Error, Terminated: {}".format(
-                                str(err)
-                            )
-                        )
+                self._logger.debug("Closing Connection")
+                try:
+                    self._connection.close()
+                except Exception as err:
+                    self._connection = None
+                    raise ProviderError(
+                        "Connection Error, Terminated: {}".format(str(err))
+                    )
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
         finally:
@@ -66,9 +64,9 @@ class influx(BaseProvider):
         error = None
         result = None
         if self._connection:
-            print('TEST')
+            print("TEST")
             try:
-                result = await self.query('SHOW databases')
+                result = await self.query("SHOW databases")
             except Exception as err:
                 error = err
             finally:
@@ -85,24 +83,23 @@ class influx(BaseProvider):
         self._connected = False
         try:
             if self._dsn:
-                print('DSN ', self._dsn)
+                print("DSN ", self._dsn)
                 self._connection = InfluxDBClient.from_dsn(
-                    self._dsn,
-                    timeout=self._timeout
+                    self._dsn, timeout=self._timeout
                 )
             else:
                 params = {
                     "host": self._params["host"],
                     "port": self._params["port"],
-                    "database": self._params['database'],
+                    "database": self._params["database"],
                     "timeout": self._timeout,
                     "pool_size": 10,
-                    "gzip": True
+                    "gzip": True,
                 }
                 print(params)
-                if 'user' in self._params:
-                    params['username'] = self._params["user"]
-                    params['password'] = self._params["password"]
+                if "user" in self._params:
+                    params["username"] = self._params["user"]
+                    params["password"] = self._params["password"]
                 self._connection = InfluxDBClient(**params)
             self._version = self._connection.ping()
             if self._version:
@@ -112,36 +109,26 @@ class influx(BaseProvider):
             self._connection = None
             self._cursor = None
             print(err)
-            raise ProviderError(
-                "connection Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("connection Error, Terminated: {}".format(str(err)))
         finally:
             return self
 
-    async def create_database(self, database: str = '', use: bool = False):
+    async def create_database(self, database: str = "", use: bool = False):
         try:
             self._connection.create_database(database)
         except Exception as err:
-            raise ProviderError('Error creating Database {}'.format(err))
+            raise ProviderError("Error creating Database {}".format(err))
         if use is True:
             self._connection.switch_database(database)
 
-    async def use(self, database:str):
+    async def use(self, database: str):
         self._connection.switch_database(database)
         return self
 
-    async def write(self, data: dict, protocol:str = 'json', **kwargs):
+    async def write(self, data: dict, protocol: str = "json", **kwargs):
         try:
-            fn = partial(
-                self._connection.write,
-                data,
-                protocol=protocol,
-                params=kwargs
-            )
-            result = await self._loop.run_in_executor(
-                None,
-                fn
-            )
+            fn = partial(self._connection.write, data, protocol=protocol, params=kwargs)
+            result = await self._loop.run_in_executor(None, fn)
             return result
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
@@ -150,20 +137,17 @@ class influx(BaseProvider):
             error = "Error on Write: {}".format(str(err))
             raise Exception(error)
 
-    async def save(self, data: list, protocol:str = 'json', batch_size: int = None):
+    async def save(self, data: list, protocol: str = "json", batch_size: int = None):
         try:
             fn = partial(
                 self._connection.write_points,
                 data,
-                time_precision='ms',
+                time_precision="ms",
                 protocol=protocol,
                 batch_size=batch_size,
-                consistency='any'
+                consistency="any",
             )
-            result = await self._loop.run_in_executor(
-                None,
-                fn
-            )
+            result = await self._loop.run_in_executor(None, fn)
             return result
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
@@ -186,10 +170,7 @@ class influx(BaseProvider):
             startTime = datetime.now()
             print(startTime)
             fn = partial(self._connection.query, sentence, **kwargs)
-            self._result = await asyncio.get_running_loop().run_in_executor(
-                None,
-                fn
-            )
+            self._result = await asyncio.get_running_loop().run_in_executor(None, fn)
             if not self._result:
                 raise NoDataFound("InfluxDB: No Data was Found")
                 return [None, "InfluxDB: No Data was Found"]
@@ -212,15 +193,9 @@ class influx(BaseProvider):
         try:
             startTime = datetime.now()
             print(startTime)
-            params = {
-                "chunked": True,
-                "chunk_size": 1
-            }
+            params = {"chunked": True, "chunk_size": 1}
             fn = partial(self._connection.query, sentence, **params, **kwargs)
-            self._result = await asyncio.get_running_loop().run_in_executor(
-                None,
-                fn
-            )
+            self._result = await asyncio.get_running_loop().run_in_executor(None, fn)
             if not self._result:
                 raise NoDataFound("InfluxDB: No Data was Found")
                 return [None, "InfluxDB: No Data was Found"]
@@ -233,7 +208,7 @@ class influx(BaseProvider):
         finally:
             return [self._result, error]
 
-    async def execute(self, sentence="", method: str = 'GET', **kwargs):
+    async def execute(self, sentence="", method: str = "GET", **kwargs):
         """Execute a transaction
 
         returns: results of the execution
@@ -245,17 +220,12 @@ class influx(BaseProvider):
         if not self._connection:
             await self.connection()
         try:
-            result = self._connection.request(
-                sentence,
-                method,
-                **kwargs
-            )
+            result = self._connection.request(sentence, method, **kwargs)
         except Exception as err:
             error = "Error on Execute: {}".format(str(err))
             raise [None, error]
         finally:
             return [result, error]
-
 
     """
     Meta-Operations
@@ -302,16 +272,13 @@ class influx(BaseProvider):
                             where_cond.append("%s != %s" % (key[:-1], value))
                         else:
                             if (
-                                type(value) == str and value.startswith("'")
+                                type(value) == str
+                                and value.startswith("'")
                                 and value.endswith("'")
                             ):
-                                where_cond.append(
-                                    "%s = %s" % (key, "{}".format(value))
-                                )
+                                where_cond.append("%s = %s" % (key, "{}".format(value)))
                             elif type(value) == int:
-                                where_cond.append(
-                                    "%s = %s" % (key, "{}".format(value))
-                                )
+                                where_cond.append("%s = %s" % (key, "{}".format(value)))
                             else:
                                 where_cond.append(
                                     "%s = %s" % (key, "'{}'".format(value))
@@ -322,9 +289,7 @@ class influx(BaseProvider):
                     else:
                         val = ",".join(map(str, value))
                         if type(val) == str and "'" not in val:
-                            where_cond.append(
-                                "%s IN (%s)" % (key, "'{}'".format(val))
-                            )
+                            where_cond.append("%s IN (%s)" % (key, "'{}'".format(val)))
                         else:
                             where_cond.append("%s IN (%s)" % (key, val))
                 # if 'WHERE ' in sentence:
@@ -362,9 +327,7 @@ class influx(BaseProvider):
         """
         if sentence:
             if type(ordering) == str:
-                return "{q} ORDER BY {ordering}".format(
-                    q=sentence, ordering=ordering
-                )
+                return "{q} ORDER BY {ordering}".format(q=sentence, ordering=ordering)
             elif type(ordering) == list:
                 return "{q} ORDER BY {ordering}".format(
                     q=sentence, ordering=", ".join(ordering)
@@ -427,9 +390,7 @@ class influx(BaseProvider):
         values = ",".join(str(v) for v in data.values())
         sql = sql.format_map(SafeDict(values=values))
         try:
-            result = self._loop.run_until_complete(
-                self._connection.execute(sql)
-            )
+            result = self._loop.run_until_complete(self._connection.execute(sql))
             if not result:
                 print(result)
                 return False

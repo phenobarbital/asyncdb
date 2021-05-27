@@ -38,10 +38,10 @@ class mongo(BaseProvider):
     _databases: list = []
 
     def __init__(self, loop=None, pool=None, params={}, **kwargs):
-        if 'username' in params:
-            self._dsn = 'mongodb://{username}:{password}@{host}:{port}'
-        if 'database' in params:
-            self._dsn = self._dsn + '/{database}'
+        if "username" in params:
+            self._dsn = "mongodb://{username}:{password}@{host}:{port}"
+        if "database" in params:
+            self._dsn = self._dsn + "/{database}"
         super(mongo, self).__init__(loop=loop, params=params, **kwargs)
         asyncio.set_event_loop(self._loop)
 
@@ -53,20 +53,13 @@ class mongo(BaseProvider):
         self._connected = False
         try:
             if self._dsn:
-                self._connection = motor.motor_asyncio.AsyncIOMotorClient(
-                    self._dsn
-                )
+                self._connection = motor.motor_asyncio.AsyncIOMotorClient(self._dsn)
             else:
-                params = {
-                    "host": self._params["host"],
-                    "port": self._params["port"]
-                }
+                params = {"host": self._params["host"], "port": self._params["port"]}
                 if self._params["username"]:
-                    params['username'] = self._params["username"]
-                    params['password'] = self._params["password"]
-                self._connection = motor.motor_asyncio.AsyncIOMotorClient(
-                    **params
-                )
+                    params["username"] = self._params["username"]
+                    params["password"] = self._params["password"]
+                self._connection = motor.motor_asyncio.AsyncIOMotorClient(**params)
             try:
                 self._databases = await self._connection.list_database_names()
             except Exception as err:
@@ -78,9 +71,7 @@ class mongo(BaseProvider):
             self._connection = None
             self._cursor = None
             print(err)
-            raise ProviderError(
-                "connection Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("connection Error, Terminated: {}".format(str(err)))
         finally:
             return self
 
@@ -90,16 +81,14 @@ class mongo(BaseProvider):
         """
         try:
             if self._connection:
-                    self._logger.debug("Closing Connection")
-                    try:
-                        self._connection.close()
-                    except Exception as err:
-                        self._connection = None
-                        raise ProviderError(
-                            "Connection Error, Terminated: {}".format(
-                                str(err)
-                            )
-                        )
+                self._logger.debug("Closing Connection")
+                try:
+                    self._connection.close()
+                except Exception as err:
+                    self._connection = None
+                    raise ProviderError(
+                        "Connection Error, Terminated: {}".format(str(err))
+                    )
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
         finally:
@@ -113,7 +102,7 @@ class mongo(BaseProvider):
         error = None
         result = None
         if self._connection:
-            print('TEST')
+            print("TEST")
             try:
                 result = await self._connection.server_info()
             except Exception as err:

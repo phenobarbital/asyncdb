@@ -14,6 +14,7 @@ class DateEncoder(json.JSONEncoder):
     DateEncoder.
        Date and Time encoder
     """
+
     def default(self, obj):
         if isinstance(obj, datetime):
             return str(obj)
@@ -30,6 +31,7 @@ class NpEncoder(json.JSONEncoder):
 
        Numpy number encoder for json
     """
+
     def default(self, obj):
         if isinstance(obj, np.integer):
             return int(obj)
@@ -91,12 +93,13 @@ class DefaultEncoder(JSONEncoder):
     """
     Basic Encoder using rapidjson
     """
+
     def default(self, obj):
         if isinstance(obj, datetime):
             return str(obj)
         elif isinstance(obj, timedelta):
             return obj.__str__()
-        elif hasattr(obj, 'hex'):
+        elif hasattr(obj, "hex"):
             return obj.hex
         elif isinstance(obj, Enum):
             if not obj.value:
@@ -109,22 +112,23 @@ class DefaultEncoder(JSONEncoder):
             except Exception as e:
                 return obj.hex
         elif isinstance(obj, decimal.Decimal):
-             return float(obj)
+            return float(obj)
         elif isinstance(obj, Decimal):
             return str(obj)
-        elif hasattr(obj, 'isoformat'):
+        elif hasattr(obj, "isoformat"):
             return obj.isoformat()
         elif isinstance(obj, asyncpg.Range):
             return [obj.lower, obj.upper]
         else:
-            #return str(obj)
-            raise TypeError('%r is not JSON serializable' % obj)
+            # return str(obj)
+            raise TypeError("%r is not JSON serializable" % obj)
 
 
 class BaseEncoder:
     """
     Encoder replacement for json.dumps using rapidjson
     """
+
     def __init__(self, *args, **kwargs):
         # Filter/adapt JSON arguments to RapidJSON ones
         rjargs = ()

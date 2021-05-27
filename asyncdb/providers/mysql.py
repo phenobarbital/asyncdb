@@ -62,9 +62,7 @@ class mysqlPool(BasePool):
             )
         except ConnectionRefusedError as err:
             raise ProviderError(
-                "Unable to connect to database, connection Refused: {}".format(
-                    str(err)
-                )
+                "Unable to connect to database, connection Refused: {}".format(str(err))
             )
         except Exception as err:
             raise ProviderError("Unknown Error: {}".format(str(err)))
@@ -156,9 +154,7 @@ class mysqlPool(BasePool):
             self._pool.terminate()
 
     def terminate(self, gracefully=True):
-        self._loop.run_until_complete(
-            asyncio.wait_for(self.close(), timeout=5)
-        )
+        self._loop.run_until_complete(asyncio.wait_for(self.close(), timeout=5))
 
     """
     Execute a connection into the Pool
@@ -211,9 +207,7 @@ class mysql(BaseProvider):
                         self._pool.terminate()
                         self._connection = None
                         raise ProviderError(
-                            "Connection Error, Terminated: {}".format(
-                                str(err)
-                            )
+                            "Connection Error, Terminated: {}".format(str(err))
                         )
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
@@ -248,9 +242,7 @@ class mysql(BaseProvider):
         except Exception as err:
             self._connection = None
             self._cursor = None
-            raise ProviderError(
-                "connection Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("connection Error, Terminated: {}".format(str(err)))
         finally:
             return self._connection
 
@@ -481,12 +473,7 @@ class mysql(BaseProvider):
     """
 
     async def copy_from_table(
-        self,
-        table="",
-        schema="public",
-        output=None,
-        type="csv",
-        columns=None
+        self, table="", schema="public", output=None, type="csv", columns=None
     ):
         """table_copy
         get a copy of table data into a file, file-like object or a coroutine passed on "output"
@@ -510,12 +497,7 @@ class mysql(BaseProvider):
             raise Exception(error)
 
     async def copy_to_table(
-        self,
-        table="",
-        schema="public",
-        source=None,
-        type="csv",
-        columns=None
+        self, table="", schema="public", source=None, type="csv", columns=None
     ):
         """copy_to_table
         get data from a file, file-like object or a coroutine passed on "source" and copy into table
@@ -550,10 +532,7 @@ class mysql(BaseProvider):
             await self.connection()
         try:
             result = await self._connection.copy_records_to_table(
-                table_name=table,
-                schema_name=schema,
-                columns=columns,
-                records=source
+                table_name=table, schema_name=schema, columns=columns, records=source
             )
             print(result)
             return result
@@ -606,16 +585,13 @@ class mysql(BaseProvider):
                             where_cond.append("%s != %s" % (key[:-1], value))
                         else:
                             if (
-                                type(value) == str and value.startswith("'")
+                                type(value) == str
+                                and value.startswith("'")
                                 and value.endswith("'")
                             ):
-                                where_cond.append(
-                                    "%s = %s" % (key, "{}".format(value))
-                                )
+                                where_cond.append("%s = %s" % (key, "{}".format(value)))
                             elif type(value) == int:
-                                where_cond.append(
-                                    "%s = %s" % (key, "{}".format(value))
-                                )
+                                where_cond.append("%s = %s" % (key, "{}".format(value)))
                             else:
                                 where_cond.append(
                                     "%s = %s" % (key, "'{}'".format(value))
@@ -626,9 +602,7 @@ class mysql(BaseProvider):
                     else:
                         val = ",".join(map(str, value))
                         if type(val) == str and "'" not in val:
-                            where_cond.append(
-                                "%s IN (%s)" % (key, "'{}'".format(val))
-                            )
+                            where_cond.append("%s IN (%s)" % (key, "'{}'".format(val)))
                         else:
                             where_cond.append("%s IN (%s)" % (key, val))
                 # if 'WHERE ' in sentence:
@@ -666,9 +640,7 @@ class mysql(BaseProvider):
         """
         if sentence:
             if type(ordering) == str:
-                return "{q} ORDER BY {ordering}".format(
-                    q=sentence, ordering=ordering
-                )
+                return "{q} ORDER BY {ordering}".format(q=sentence, ordering=ordering)
             elif type(ordering) == list:
                 return "{q} ORDER BY {ordering}".format(
                     q=sentence, ordering=", ".join(ordering)
@@ -731,9 +703,7 @@ class mysql(BaseProvider):
         values = ",".join(str(v) for v in data.values())
         sql = sql.format_map(SafeDict(values=values))
         try:
-            result = self._loop.run_until_complete(
-                self._connection.execute(sql)
-            )
+            result = self._loop.run_until_complete(self._connection.execute(sql))
             if not result:
                 print(result)
                 return False
