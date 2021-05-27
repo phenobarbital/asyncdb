@@ -5,6 +5,7 @@ import sys
 import time
 from . import BaseProvider
 
+
 class dummy(BaseProvider):
     _provider = "dummy"
     _syntax = "sql"

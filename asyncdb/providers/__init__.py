@@ -24,6 +24,7 @@ _PROVIDERS = {}
 # logging system
 import logging
 
+
 class BasePool(ABC):
     _dsn = ""
     _loop = None
@@ -37,7 +38,7 @@ class BasePool(ABC):
     _logger = None
     init_func: Optional[Callable] = None
 
-    def __init__(self, dsn: str = '', loop=None, params={}, **kwargs):
+    def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
         if loop:
             self._loop = loop
         else:
@@ -78,6 +79,7 @@ class BasePool(ABC):
     """
     Context magic Methods
     """
+
     async def __aenter__(self) -> "BasePool":
         if not self._pool:
             await self.connect()
@@ -190,8 +192,6 @@ class BaseProvider(ABC):
             self._loop = loop
         else:
             self._loop = asyncio.get_event_loop()
-            #asyncio.set_event_loop(self._loop)
-        #self._loop.set_exception_handler(default_exception_handler)
         # get params
         if params:
             self._params = params
@@ -219,7 +219,6 @@ class BaseProvider(ABC):
             return self._dsn.format(**params)
         except Exception as err:
             return None
-
 
     def get_dsn(self):
         return self._dsn
@@ -400,7 +399,7 @@ class BaseProvider(ABC):
 def registerProvider(provider):
     global _PROVIDERS
     name = provider.driver()
-    classpath = f'asyncdb.providers.{name}'
+    classpath = f"asyncdb.providers.{name}"
     try:
         cls = module_exists(name, classpath)
         _PROVIDERS[name] = cls

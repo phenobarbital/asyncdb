@@ -12,20 +12,19 @@ def event_loop():
     yield loop
     loop.close()
 
-
-PARAMS = {
-    "host": "127.0.0.1",
-    "port": "9042",
-    "username": 'cassandra',
-    "password": 'cassandra',
-    "database": 'library'
+params = {
+    "host": "localhost",
+    "port": "1433",
+    "database": 'AdventureWorks2019',
+    "user": 'SA',
+    "password": 'P4ssW0rd1.'
 }
 
-DRIVER='cassandra'
+DRIVER='mssql'
 
 @pytest.fixture
 async def conn(event_loop):
-    db = AsyncDB(DRIVER, params=PARAMS, loop=event_loop)
+    db = AsyncDB(DRIVER, params=params, loop=event_loop)
     await db.connection()
     yield db
     await db.close()
@@ -36,26 +35,23 @@ pytestmark = pytest.mark.asyncio
     (DRIVER)
 ])
 async def test_pool_by_params(driver, event_loop):
-    db = AsyncDB(driver, params=PARAMS, loop=event_loop)
+    db = AsyncDB(driver, params=params, loop=event_loop)
     assert db.is_connected() is False
 
 @pytest.mark.parametrize("driver", [
     (DRIVER)
 ])
 async def test_connect(driver, event_loop):
-    db = AsyncDB(driver, params=PARAMS, loop=event_loop)
+    db = AsyncDB(driver, params=params, loop=event_loop)
     await db.connection()
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection()
-    pytest.assume(type(result) == list)
-    row = result[0]
-    pytest.assume(row['release_version'] == '3.11.8')
+    pytest.assume(type(result) == dict)
     await db.close()
-    pytest.assume(db.is_connected() is False)
 
 
 async def test_connection(conn):
     #await conn.connection()
     pytest.assume(conn.is_connected() is True)
     result, error = await conn.test_connection()
-    pytest.assume(type(result) == list)
+    pytest.assume(type(result) == dict)

@@ -83,6 +83,7 @@ setup(
         "aiocassandra==2.0.1",
         "cassandra-driver==3.24.0",
         "aioinflux[pandas]",
+        "pymssql==2.2.1",
         "motor==2.3.0",
         "aiocouch==2.0.1",
         "elasticsearch[async]",
