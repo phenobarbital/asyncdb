@@ -78,9 +78,7 @@ class mredis(BaseProvider):
                 "decode_responses": True,
             }
             if self._dsn:
-                self._pool = redis.ConnectionPool.from_url(
-                    url=self._dsn, **args
-                )
+                self._pool = redis.ConnectionPool.from_url(url=self._dsn, **args)
             else:
                 self._pool = redis.ConnectionPool(**self._params)
             args = {**args, **kwargs}
@@ -88,16 +86,10 @@ class mredis(BaseProvider):
             self._connection = redis.Redis(connection_pool=self._pool, **args)
         except (redis.exceptions.ConnectionError) as err:
             raise ProviderError(
-                "Unable to connect to Redis, connection Refused: {}".format(
-                    str(err)
-                )
+                "Unable to connect to Redis, connection Refused: {}".format(str(err))
             )
-        except (
-            redis.exceptions.RedisError, redis.exceptions.TimeoutError
-        ) as err:
-            raise ConnectionTimeout(
-                "Unable to connect to Redis: {}".format(str(err))
-            )
+        except (redis.exceptions.RedisError, redis.exceptions.TimeoutError) as err:
+            raise ConnectionTimeout("Unable to connect to Redis: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Unknown Redis Error: {}".format(str(err)))
             return False
@@ -152,9 +144,7 @@ class mredis(BaseProvider):
     def get(self, key):
         try:
             return self._connection.get(key)
-        except (
-            redis.exceptions.RedisError, redis.exceptions.ResponseError
-        ) as err:
+        except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis Error: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Redis Unknown Error: {}".format(str(err)))
@@ -173,14 +163,10 @@ class mredis(BaseProvider):
     def exists(self, key, *keys):
         try:
             return self._connection.exists(key, *keys)
-        except (
-            redis.exceptions.RedisError, redis.exceptions.ResponseError
-        ) as err:
+        except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis Exists Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError(
-                "Redis Exists Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis Exists Unknown Error: {}".format(str(err)))
 
     def delete(self, key, *keys):
         try:
@@ -190,14 +176,10 @@ class mredis(BaseProvider):
                 return self._connection.delete(key, *keys)
         except (redis.exceptions.ReadOnlyError) as err:
             raise ProviderError("Redis is Read Only: {}".format(str(err)))
-        except (
-            redis.exceptions.RedisError, redis.exceptions.ResponseError
-        ) as err:
+        except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis Exists Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError(
-                "Redis Exists Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis Exists Unknown Error: {}".format(str(err)))
 
     def expire_at(self, key, timestamp):
         try:
@@ -209,9 +191,7 @@ class mredis(BaseProvider):
                 "Redis: wrong Expiration timestamp: {}".format(str(timestamp))
             )
         except Exception as err:
-            raise ProviderError(
-                "Redis Expiration Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis Expiration Unknown Error: {}".format(str(err)))
 
     def setex(self, key, value, timeout):
         """
@@ -234,14 +214,10 @@ class mredis(BaseProvider):
             raise ProviderError(
                 "Redis: wrong Expiration timestamp: {}".format(str(timestamp))
             )
-        except (
-            redis.exceptions.RedisError, redis.exceptions.ResponseError
-        ) as err:
+        except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis SetEx Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError(
-                "Redis SetEx Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis SetEx Unknown Error: {}".format(str(err)))
 
     def persist(self, key):
         """
@@ -251,9 +227,7 @@ class mredis(BaseProvider):
         try:
             return self._connection.persist(key)
         except Exception as err:
-            raise ProviderError(
-                "Redis Expiration Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis Expiration Unknown Error: {}".format(str(err)))
 
     def set_key(self, key, value):
         self.set(key, value)
@@ -273,14 +247,10 @@ class mredis(BaseProvider):
             self._connection.hmset(key, **kwargs)
         except (redis.exceptions.ReadOnlyError) as err:
             raise ProviderError("Redis is Read Only: {}".format(str(err)))
-        except (
-            redis.exceptions.RedisError, redis.exceptions.ResponseError
-        ) as err:
+        except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis Hmset Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError(
-                "Redis Hmset Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis Hmset Unknown Error: {}".format(str(err)))
 
     def hgetall(self, key):
         """
@@ -288,14 +258,10 @@ class mredis(BaseProvider):
         """
         try:
             return self._connection.hgetall(key)
-        except (
-            redis.exceptions.RedisError, redis.exceptions.ResponseError
-        ) as err:
+        except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis Hmset Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError(
-                "Redis Hmset Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis Hmset Unknown Error: {}".format(str(err)))
 
     def set_hash(self, key, *args, **kwargs):
         self.hmset(key, *args, **kwargs)
@@ -309,14 +275,10 @@ class mredis(BaseProvider):
         """
         try:
             return self._connection.hkeys(key)
-        except (
-            redis.exceptions.RedisError, redis.exceptions.ResponseError
-        ) as err:
+        except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis hkeys Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError(
-                "Redis hkeys Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis hkeys Unknown Error: {}".format(str(err)))
 
     def hvals(self, key):
         """
@@ -324,14 +286,10 @@ class mredis(BaseProvider):
         """
         try:
             return self._connection.hvals(key)
-        except (
-            redis.exceptions.RedisError, redis.exceptions.ResponseError
-        ) as err:
+        except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis hvals Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError(
-                "Redis hvals Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis hvals Unknown Error: {}".format(str(err)))
 
     def keys(self, key):
         return self.hkeys(key)
@@ -347,14 +305,10 @@ class mredis(BaseProvider):
             return self._connection.hset(key, field, value)
         except (redis.exceptions.ReadOnlyError) as err:
             raise ProviderError("Redis is Read Only: {}".format(str(err)))
-        except (
-            redis.exceptions.RedisError, redis.exceptions.ResponseError
-        ) as err:
+        except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis Hset Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError(
-                "Redis Hset Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis Hset Unknown Error: {}".format(str(err)))
 
     def hget(self, key, field):
         """
@@ -362,14 +316,10 @@ class mredis(BaseProvider):
         """
         try:
             return self._connection.hget(key, field)
-        except (
-            redis.exceptions.RedisError, redis.exceptions.ResponseError
-        ) as err:
+        except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis Hget Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError(
-                "Redis Hget Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis Hget Unknown Error: {}".format(str(err)))
 
     def hexists(self, key, field, value):
         """
@@ -377,14 +327,10 @@ class mredis(BaseProvider):
         """
         try:
             return self._connection.hexists(key, field)
-        except (
-            redis.exceptions.RedisError, redis.exceptions.ResponseError
-        ) as err:
+        except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis hash exists Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError(
-                "Redis hash exists Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis hash exists Unknown Error: {}".format(str(err)))
 
     def hdel(self, key, field, *fields):
         """
@@ -397,14 +343,10 @@ class mredis(BaseProvider):
                 return self._connection.hdel(key, field)
         except (redis.exceptions.ReadOnlyError) as err:
             raise ProviderError("Redis is Read Only: {}".format(str(err)))
-        except (
-            redis.exceptions.RedisError, redis.exceptions.ResponseError
-        ) as err:
+        except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis Hset Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError(
-                "Redis Hset Unknown Error: {}".format(str(err))
-            )
+            raise ProviderError("Redis Hset Unknown Error: {}".format(str(err)))
 
 
 """

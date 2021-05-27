@@ -27,19 +27,16 @@ from asyncdb.providers import (
     registerProvider,
 )
 
-from asyncdb.providers.sql import (
-    SQLProvider,
-    baseCursor
-)
+from asyncdb.providers.sql import SQLProvider, baseCursor
+
 
 class sqliteCursor(baseCursor):
     _connection: aiosqlite.Connection = None
 
     async def __aenter__(self) -> "sqliteCursor":
-        self._cursor = await self._connection.execute(
-            self._sentence, self._params
-        )
+        self._cursor = await self._connection.execute(self._sentence, self._params)
         return self
+
 
 class sqlite(SQLProvider):
     _provider = "sqlite"
@@ -57,9 +54,7 @@ class sqlite(SQLProvider):
             if self._connection:
                 if self._cursor:
                     await self._cursor.close()
-                await asyncio.wait_for(
-                    self._connection.close(), timeout=timeout
-                )
+                await asyncio.wait_for(self._connection.close(), timeout=timeout)
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
         finally:
@@ -74,7 +69,7 @@ class sqlite(SQLProvider):
         self._connection = None
         self._connected = False
         try:
-            print('Running Connect')
+            print("Running Connect")
             self._connection = aiosqlite.connect(
                 database=self._dsn, loop=self._loop, **kwargs
             )
@@ -82,14 +77,10 @@ class sqlite(SQLProvider):
                 self._connected = True
                 self._initialized_on = time.time()
         except aiosqlite.OperationalError:
-            raise ProviderError(
-                "Unable to Open Database File: {}".format(self._dsn)
-            )
+            raise ProviderError("Unable to Open Database File: {}".format(self._dsn))
         except aiosqlite.DatabaseError as err:
             print("Connection Error: {}".format(str(err)))
-            raise ProviderError(
-                "Database Connection Error: {}".format(str(err))
-            )
+            raise ProviderError("Database Connection Error: {}".format(str(err)))
         except aiosqlite.Error as err:
             raise ProviderError("Internal Error: {}".format(str(err)))
         except Exception as err:
@@ -116,14 +107,10 @@ class sqlite(SQLProvider):
                 self._connected = True
                 self._initialized_on = time.time()
         except aiosqlite.OperationalError:
-            raise ProviderError(
-                "Unable to Open Database File: {}".format(self._dsn)
-            )
+            raise ProviderError("Unable to Open Database File: {}".format(self._dsn))
         except aiosqlite.DatabaseError as err:
             print("Connection Error: {}".format(str(err)))
-            raise ProviderError(
-                "Database Connection Error: {}".format(str(err))
-            )
+            raise ProviderError("Database Connection Error: {}".format(str(err)))
         except aiosqlite.Error as err:
             raise ProviderError("Internal Error: {}".format(str(err)))
         except Exception as err:
@@ -135,7 +122,7 @@ class sqlite(SQLProvider):
         """
         Getting a Query from Database
         """
-        #TODO: getting aiosql structures or sql-like function structures or query functions
+        # TODO: getting aiosql structures or sql-like function structures or query functions
         error = None
         await self.valid_operation(sentence)
         try:
@@ -188,7 +175,7 @@ class sqlite(SQLProvider):
         """
         Getting a Query from Database
         """
-        #TODO: getting aiosql structures or sql-like function structures or query functions
+        # TODO: getting aiosql structures or sql-like function structures or query functions
         error = None
         await self.valid_operation(sentence)
         try:
@@ -253,9 +240,7 @@ class sqlite(SQLProvider):
             await self._cursor.close()
             return [result, error]
 
-    async def fetch(
-        self, sentence: str, parameters: Iterable[Any] = None
-    ) -> Iterable:
+    async def fetch(self, sentence: str, parameters: Iterable[Any] = None) -> Iterable:
         """Helper to create a cursor and execute the given query."""
         await self.valid_operation(sentence)
         if parameters is None:

@@ -29,20 +29,17 @@ from ..exceptions import (
 )
 from . import *
 
-from asyncdb.providers.sql import (
-    SQLProvider,
-    baseCursor
-)
+from asyncdb.providers.sql import SQLProvider, baseCursor
+
 
 class postgresqlCursor(baseCursor):
     _connection: aiopg.Connection = None
 
     async def __aenter__(self) -> "postgresqlCursor":
-        #self._cursor = await self._connection.cursor(cursor_factory=NamedTupleCursor)
-        self._cursor = await self._connection.execute(
-            self._sentence, self._params
-        )
+        # self._cursor = await self._connection.cursor(cursor_factory=NamedTupleCursor)
+        self._cursor = await self._connection.execute(self._sentence, self._params)
         return self
+
 
 class postgresql(SQLProvider, Thread):
     _provider = "postgresql"
@@ -145,9 +142,7 @@ class postgresql(SQLProvider, Thread):
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._engine = None
-            raise ProviderError(
-                "Engine Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
 
     def connection(self):
         """
@@ -159,17 +154,13 @@ class postgresql(SQLProvider, Thread):
         self.start()
         try:
             if self._engine:
-                self._connection = self._loop.run_until_complete(
-                    self._engine.acquire()
-                )
+                self._connection = self._loop.run_until_complete(self._engine.acquire())
         except (SQLAlchemyError, DatabaseError, OperationalError) as err:
             self._connection = None
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._connection = None
-            raise ProviderError(
-                "Engine Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
         finally:
             return self
 
@@ -184,9 +175,7 @@ class postgresql(SQLProvider, Thread):
                 else:
                     self._connection.close()
         except Exception as err:
-            raise ProviderError(
-                "Release Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("Release Error, Terminated: {}".format(str(err)))
         finally:
             self._connection = None
 

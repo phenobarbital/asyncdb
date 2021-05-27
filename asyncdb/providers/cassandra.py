@@ -38,7 +38,7 @@ from cassandra.query import (
     tuple_factory,
     ConsistencyLevel,
     PreparedStatement,
-    SimpleStatement
+    SimpleStatement,
 )
 
 
@@ -61,15 +61,15 @@ class cassandra(BaseProvider):
         super(cassandra, self).__init__(loop=loop, params=params, **kwargs)
         asyncio.set_event_loop(self._loop)
         try:
-            if 'host' in self._params:
-                self._hosts = self._params['host'].split(',')
+            if "host" in self._params:
+                self._hosts = self._params["host"].split(",")
         except Exception as err:
-            self._hosts = ['127.0.0.1']
+            self._hosts = ["127.0.0.1"]
         # print('HOSTS ', self._hosts)
         try:
             self._auth = {
                 "username": self._params["username"],
-                "password": self._params["password"]
+                "password": self._params["password"],
             }
         except KeyError:
             pass
@@ -87,9 +87,7 @@ class cassandra(BaseProvider):
                     self._cluster.shutdown()
                     self._connection = None
                     raise ProviderError(
-                        "Connection Error, Terminated: {}".format(
-                            str(err)
-                        )
+                        "Connection Error, Terminated: {}".format(str(err))
                     )
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
@@ -112,33 +110,27 @@ class cassandra(BaseProvider):
                 consistency_level=ConsistencyLevel.LOCAL_QUORUM,
                 serial_consistency_level=ConsistencyLevel.LOCAL_SERIAL,
             )
-            profiles = {
-                EXEC_PROFILE_DEFAULT: nodeprofile
-            }
+            profiles = {EXEC_PROFILE_DEFAULT: nodeprofile}
             params = {
                 "port": self._params["port"],
                 "compression": True,
                 # "connection_class": AsyncioConnection,
-                "protocol_version": 3
+                "protocol_version": 3,
             }
             # print(params)
             auth_provider = None
             if self._auth:
-                auth_provider = PlainTextAuthProvider(
-                    **self._auth
-                )
+                auth_provider = PlainTextAuthProvider(**self._auth)
             # print(self._auth, auth_provider)
             self._cluster = Cluster(
                 self._hosts,
                 auth_provider=auth_provider,
                 execution_profiles=profiles,
-                **params
+                **params,
             )
             # print(self._cluster)
             if self._cluster:
-                self._connection = self._cluster.connect(
-                    keyspace=keyspace
-                )
+                self._connection = self._cluster.connect(keyspace=keyspace)
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
@@ -146,9 +138,7 @@ class cassandra(BaseProvider):
             print(err)
             self._connection = None
             self._cursor = None
-            raise ProviderError(
-                "connection Error, Terminated: {}".format(str(err))
-            )
+            raise ProviderError("connection Error, Terminated: {}".format(str(err)))
         finally:
             return self._connection
 
@@ -165,7 +155,7 @@ class cassandra(BaseProvider):
 
     def use(self, dbname: str):
         try:
-            self._connection.execute(f'USE {dbname!s}')
+            self._connection.execute(f"USE {dbname!s}")
         except Exception as err:
             print(err)
             logging.error(err)
@@ -175,6 +165,7 @@ class cassandra(BaseProvider):
     """
     Preparing a sentence
     """
+
     def prepared_statement(self):
         return self._prepared
 
@@ -201,15 +192,12 @@ class cassandra(BaseProvider):
             return [self._prepared, error]
 
     def create_query(self, sentence: str):
-        return SimpleStatement(
-            sentence,
-            consistency_level=ConsistencyLevel.QUORUM
-        )
+        return SimpleStatement(sentence, consistency_level=ConsistencyLevel.QUORUM)
 
     async def query(
-            self,
-            sentence: Union[str, SimpleStatement, PreparedStatement],
-            params: list = []
+        self,
+        sentence: Union[str, SimpleStatement, PreparedStatement],
+        params: list = [],
     ):
         error = None
         self._result = None
@@ -237,9 +225,9 @@ class cassandra(BaseProvider):
         return self.query(sentence, params)
 
     async def queryrow(
-            self,
-            sentence: Union[str, SimpleStatement, PreparedStatement],
-            params: list = []
+        self,
+        sentence: Union[str, SimpleStatement, PreparedStatement],
+        params: list = [],
     ):
         error = None
         if not sentence:

@@ -24,6 +24,7 @@ _PROVIDERS = {}
 # logging system
 import logging
 
+
 class BasePool(ABC):
     _dsn = ""
     _loop = None
@@ -37,7 +38,7 @@ class BasePool(ABC):
     _logger = None
     init_func: Optional[Callable] = None
 
-    def __init__(self, dsn: str = '', loop=None, params={}, **kwargs):
+    def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
         if loop:
             self._loop = loop
         else:
@@ -78,6 +79,7 @@ class BasePool(ABC):
     """
     Context magic Methods
     """
+
     async def __aenter__(self) -> "BasePool":
         if not self._pool:
             await self.connect()
@@ -231,6 +233,7 @@ class BaseProvider(ABC):
     """
     Async Context magic Methods
     """
+
     async def __aenter__(self):
         if not self._connection:
             await self.connection()
@@ -267,6 +270,7 @@ class BaseProvider(ABC):
     """
     Properties
     """
+
     @property
     def columns(self):
         return self._columns
@@ -298,12 +302,14 @@ class BaseProvider(ABC):
     """
     Get Columns
     """
+
     def get_columns(self):
         return self._columns
 
     """
     Test Connnection
     """
+
     async def test_connection(self):
         if self._test_query is None:
             raise NotImplementedError()
@@ -316,6 +322,7 @@ class BaseProvider(ABC):
     """
     Terminate a connection
     """
+
     def terminate(self):
         try:
             self._loop.run_until_complete(self.close())
@@ -330,6 +337,7 @@ class BaseProvider(ABC):
     """
     Get a connection from the pool
     """
+
     @abstractmethod
     async def connection(self):
         pass
@@ -350,6 +358,7 @@ class BaseProvider(ABC):
     """
     Making a Query and return result
     """
+
     @abstractmethod
     async def query(self, sentence=""):
         pass
@@ -390,7 +399,7 @@ class BaseProvider(ABC):
 def registerProvider(provider):
     global _PROVIDERS
     name = provider.driver()
-    classpath = f'asyncdb.providers.{name}'
+    classpath = f"asyncdb.providers.{name}"
     try:
         cls = module_exists(name, classpath)
         _PROVIDERS[name] = cls

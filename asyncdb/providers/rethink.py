@@ -29,7 +29,7 @@ from rethinkdb.errors import (
     ReqlOpFailedError,
     ReqlOpIndeterminateError,
     ReqlResourceLimitError,
-    ReqlRuntimeError
+    ReqlRuntimeError,
 )
 
 from asyncdb.exceptions import (
@@ -49,6 +49,7 @@ from . import (
 )
 
 rt = RethinkDB()
+
 
 class rethink(BaseProvider):
     _provider = "rethinkdb"
@@ -87,34 +88,27 @@ class rethink(BaseProvider):
         self._engine.set_loop_type("asyncio")
         asyncio.set_event_loop(self._loop)
 
-
     async def connection(self):
         self._logger.debug(
             "RT Connection to host {} on port {} to database {}".format(
                 self._params["host"], self._params["port"], self._params["db"]
             )
         )
-        self._params['timeout'] = self._timeout
+        self._params["timeout"] = self._timeout
         try:
             self._connection = await self._engine.connect(**self._params)
             if self._params["db"]:
                 await self.db(self._params["db"])
         except ReqlRuntimeError as err:
-            error = "No database connection could be established: {}".format(
-                str(err)
-            )
+            error = "No database connection could be established: {}".format(str(err))
             raise ProviderError(message=error, code=503)
             return False
         except ReqlDriverError as err:
-            error = "No database connection could be established: {}".format(
-                str(err)
-            )
+            error = "No database connection could be established: {}".format(str(err))
             raise ProviderError(message=error, code=503)
             return False
         except Exception as err:
-            error = "Exception on RethinkDB: {}".format(
-                str(err)
-            )
+            error = "Exception on RethinkDB: {}".format(str(err))
             raise ProviderError(message=error, code=503)
             return False
         finally:
@@ -170,12 +164,9 @@ class rethink(BaseProvider):
         ------
         """
         try:
-            if dbname not in await self._engine.db_list().run(
-                self._connection
-            ):
+            if dbname not in await self._engine.db_list().run(self._connection):
                 self._db = dbname
-                return await self._engine.db_create(self._db
-                                                    ).run(self._connection)
+                return await self._engine.db_create(self._db).run(self._connection)
         finally:
             self._db = dbname
             return self
@@ -199,13 +190,9 @@ class rethink(BaseProvider):
             if table in await self._engine.db(self._db).table_list().run(
                 self._connection
             ):
-                return await self._engine.table(table).sync().run(
-                    self._connection
-                )
+                return await self._engine.table(table).sync().run(self._connection)
 
-    async def createindex(
-        self, table, field="", name="", fields=[], multi=True
-    ):
+    async def createindex(self, table, field="", name="", fields=[], multi=True):
         """
         CreateIndex
               create and index into a field or multiple fields
@@ -218,9 +205,9 @@ class rethink(BaseProvider):
                 if field:
                     try:
                         return (
-                            await self._engine.table(table).index_create(
-                                field, multi=multi
-                            ).run(self._connection)
+                            await self._engine.table(table)
+                            .index_create(field, multi=multi)
+                            .run(self._connection)
                         )
                     except ReqlOpFailedError as err:
                         raise ProviderError(message=err, code=503)
@@ -232,9 +219,9 @@ class rethink(BaseProvider):
                         idx.append(self._engine.row(field))
                     try:
                         return (
-                            await self._engine.table(table).index_create(
-                                name, idx
-                            ).run(self._connection)
+                            await self._engine.table(table)
+                            .index_create(name, idx)
+                            .run(self._connection)
                         )
                     except (ReqlDriverError, ReqlRuntimeError):
                         return False
@@ -249,16 +236,15 @@ class rethink(BaseProvider):
         try:
             if pk:
                 return (
-                    await self._engine.db(
-                        self._db
-                    ).table_create(table,
-                                   primary_key=pk).run(self._connection)
+                    await self._engine.db(self._db)
+                    .table_create(table, primary_key=pk)
+                    .run(self._connection)
                 )
             else:
                 return (
-                    await self._engine.db(self._db).table_create(table).run(
-                        self._connection
-                    )
+                    await self._engine.db(self._db)
+                    .table_create(table)
+                    .run(self._connection)
                 )
         finally:
             return self
@@ -272,9 +258,7 @@ class rethink(BaseProvider):
         if self.conditions:
             conditions = {**conditions, **self.conditions}
 
-        conditions.update(
-            (x, None) for (x, y) in conditions.items() if y == "null"
-        )
+        conditions.update((x, None) for (x, y) in conditions.items() if y == "null")
         print("Conditions for clean {}".format(conditions))
 
         try:
@@ -302,8 +286,7 @@ class rethink(BaseProvider):
     async def list_tables(self):
         if self._connection:
             future = asyncio.Future()
-            lists = await self._engine.db(self._db
-                                          ).table_list().run(self._connection)
+            lists = await self._engine.db(self._db).table_list().run(self._connection)
             future.set_result(lists)
             return [x for x in lists]
         else:
@@ -312,16 +295,13 @@ class rethink(BaseProvider):
     async def drop_table(self, table):
         try:
             future = asyncio.Future()
-            lists = await self._engine.db(self._db
-                                          ).table_list().run(self._connection)
+            lists = await self._engine.db(self._db).table_list().run(self._connection)
             future.set_result(list)
             if not table in [x for x in lists]:
                 error = "Table {} not exists in database".format(table)
                 raise ProviderError(error)
             return (
-                await
-                self._engine.db(self._db
-                                ).table_drop(table).run(self._connection)
+                await self._engine.db(self._db).table_drop(table).run(self._connection)
             )
         except (ReqlDriverError, ReqlRuntimeError) as err:
             raise ProviderError(str(err))
@@ -363,23 +343,25 @@ class rethink(BaseProvider):
             try:
                 # self._columns = await self._engine.table(table).get(1).keys().run(self._connection)
                 self._columns = (
-                    await
-                    self._engine.table(table).nth(0).default(None).keys().run(
-                        self._connection
-                    )
+                    await self._engine.table(table)
+                    .nth(0)
+                    .default(None)
+                    .keys()
+                    .run(self._connection)
                 )
                 # print(self._columns)
                 if not filter:
                     cursor = (
-                        await
-                        self._engine.db(self._db
-                                        ).table(table).run(self._connection)
+                        await self._engine.db(self._db)
+                        .table(table)
+                        .run(self._connection)
                     )
                 else:
                     cursor = (
-                        await self._engine.db(
-                            self._db
-                        ).table(table).filter(filter).run(self._connection)
+                        await self._engine.db(self._db)
+                        .table(table)
+                        .filter(filter)
+                        .run(self._connection)
                     )
                 while await cursor.fetch_next():
                     row = await cursor.next()
@@ -416,9 +398,10 @@ class rethink(BaseProvider):
             # startTime = datetime.now()
             try:
                 data = (
-                    await self._engine.table(table).filter(filter).nth(id).run(
-                        self._connection
-                    )
+                    await self._engine.table(table)
+                    .filter(filter)
+                    .nth(id)
+                    .run(self._connection)
                 )
                 if data:
                     self._result = data
@@ -455,9 +438,7 @@ class rethink(BaseProvider):
 
         if self._connection:
             try:
-                data = await self._engine.table(table).get(id).run(
-                    self._connection
-                )
+                data = await self._engine.table(table).get(id).run(self._connection)
                 if data:
                     self._result = data
                 else:
@@ -485,17 +466,15 @@ class rethink(BaseProvider):
             try:
                 if index:
                     cursor = (
-                        await
-                        self._engine.table(table).get_all(filter,
-                                                          index=index).run(
-                                                              self._connection
-                                                          )
+                        await self._engine.table(table)
+                        .get_all(filter, index=index)
+                        .run(self._connection)
                     )
                 else:
                     cursor = (
-                        await self._engine.table(table).get_all(filter).run(
-                            self._connection
-                        )
+                        await self._engine.table(table)
+                        .get_all(filter)
+                        .run(self._connection)
                     )
                 data = []
                 while await cursor.fetch_next():
@@ -522,10 +501,9 @@ class rethink(BaseProvider):
         if self._connection:
             try:
                 data = (
-                    await self._engine.table(table).
-                    filter(lambda doc: doc[field].match(regexp)).run(
-                        self._connection
-                    )
+                    await self._engine.table(table)
+                    .filter(lambda doc: doc[field].match(regexp))
+                    .run(self._connection)
                 )
                 if data:
                     self._result = data
@@ -546,17 +524,13 @@ class rethink(BaseProvider):
         if self._connection:
             try:
                 inserted = (
-                    await
-                    self._engine.table(table).insert(data,
-                                                     conflict="replace").run(
-                                                         self._connection
-                                                     )
+                    await self._engine.table(table)
+                    .insert(data, conflict="replace")
+                    .run(self._connection)
                 )
                 if inserted["errors"] > 0:
                     raise ProviderError(
-                        "INSERT Runtime Error: {}".format(
-                            inserted["first_error"]
-                        )
+                        "INSERT Runtime Error: {}".format(inserted["first_error"])
                     )
                     return False
                 return inserted
@@ -581,15 +555,14 @@ class rethink(BaseProvider):
         if self._connection:
             try:
                 self._result = (
-                    await self._engine.table(table).get(id).replace(data).run(
-                        self._connection
-                    )
+                    await self._engine.table(table)
+                    .get(id)
+                    .replace(data)
+                    .run(self._connection)
                 )
                 if self._result["errors"] > 0:
                     raise ProviderError(
-                        "REPLACE Runtime Error: {}".format(
-                            self._result["first_error"]
-                        )
+                        "REPLACE Runtime Error: {}".format(self._result["first_error"])
                     )
                     return False
                 return self._result
@@ -613,10 +586,10 @@ class rethink(BaseProvider):
             if id:
                 try:
                     self._result = (
-                        await
-                        self._engine.table(table).get(id).update(data).run(
-                            self._connection
-                        )
+                        await self._engine.table(table)
+                        .get(id)
+                        .update(data)
+                        .run(self._connection)
                     )
                     # self._result = await self._engine.table(table).get(id).update(data).run(self._connection)
                     return self._result
@@ -625,16 +598,15 @@ class rethink(BaseProvider):
                     raise ProviderError(error)
                     return False
                 except ReqlNonExistenceError:
-                    raise ProviderError(
-                        "Object {} doesnt exists".format(table)
-                    )
+                    raise ProviderError("Object {} doesnt exists".format(table))
                     return False
             elif type(filter) == dict and len(filter) > 0:
                 try:
                     self._result = (
-                        await self._engine.table(table).filter(filter).update(
-                            data, return_changes=False
-                        ).run(self._connection)
+                        await self._engine.table(table)
+                        .filter(filter)
+                        .update(data, return_changes=False)
+                        .run(self._connection)
                     )
                     # self._result = await self._engine.table(table).filter(filter).update(data).run(self._connection)
                     return self._result
@@ -643,16 +615,12 @@ class rethink(BaseProvider):
                     raise ProviderError(error)
                     return False
                 except ReqlNonExistenceError:
-                    raise ProviderError(
-                        "Object {} doesnt exists".format(table)
-                    )
+                    raise ProviderError("Object {} doesnt exists".format(table))
                     return False
             else:
                 # update all documents in table
                 return (
-                    await self._engine.table(table).update(data).run(
-                        self._connection
-                    )
+                    await self._engine.table(table).update(data).run(self._connection)
                 )
         else:
             return False
@@ -665,9 +633,9 @@ class rethink(BaseProvider):
         if self._connection:
             try:
                 self._result = (
-                    await self._engine.table(table).get(id).update(
-                        {field: r.literal(data).run(self._connection)}
-                    )
+                    await self._engine.table(table)
+                    .get(id)
+                    .update({field: r.literal(data).run(self._connection)})
                 )
                 return self._result
             except ReqlRuntimeError as err:
@@ -680,9 +648,7 @@ class rethink(BaseProvider):
         else:
             return False
 
-    async def update_conditions(
-        self, table, data, filter={}, fieldname="filterdate"
-    ):
+    async def update_conditions(self, table, data, filter={}, fieldname="filterdate"):
         """
         update_conditions
              update a record based on a fieldname
@@ -691,9 +657,11 @@ class rethink(BaseProvider):
         if self._connection:
             try:
                 self._result = (
-                    await self._engine.table(table).filter(
-                        ~self._engine.row.has_fields(fieldname)
-                    ).filter(filter).update(data).run(self._connection)
+                    await self._engine.table(table)
+                    .filter(~self._engine.row.has_fields(fieldname))
+                    .filter(filter)
+                    .update(data)
+                    .run(self._connection)
                 )
                 return self._result
             except ReqlRuntimeError as err:
@@ -719,9 +687,10 @@ class rethink(BaseProvider):
             if id:
                 try:
                     self._result = (
-                        await self._engine.table(table).get(id).delete(
-                            return_changes=changes
-                        ).run(self._connection)
+                        await self._engine.table(table)
+                        .get(id)
+                        .delete(return_changes=changes)
+                        .run(self._connection)
                     )
                     return self._result
                 except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
@@ -730,9 +699,10 @@ class rethink(BaseProvider):
             elif isinstance(filter, dict):
                 try:
                     self._result = (
-                        await self._engine.table(table).filter(filter).delete(
-                            return_changes=changes
-                        ).run(self._connection)
+                        await self._engine.table(table)
+                        .filter(filter)
+                        .delete(return_changes=changes)
+                        .run(self._connection)
                     )
                     return self._result
                 except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
@@ -741,9 +711,9 @@ class rethink(BaseProvider):
             else:
                 # delete all documents in table
                 return (
-                    await
-                    self._engine.table(table).delete(return_changes=changes
-                                                     ).run(self._connection)
+                    await self._engine.table(table)
+                    .delete(return_changes=changes)
+                    .run(self._connection)
                 )
         else:
             return False
@@ -770,15 +740,16 @@ class rethink(BaseProvider):
             try:
                 if idx:
                     cursor = (
-                        await self._engine.table(table).order_by(
-                            index=idx
-                        ).between(m, mx, index=idx).run(self._connection)
+                        await self._engine.table(table)
+                        .order_by(index=idx)
+                        .between(m, mx, index=idx)
+                        .run(self._connection)
                     )
                 else:
                     cursor = (
-                        await self._engine.table(table).between(m, mx).run(
-                            self._connection
-                        )
+                        await self._engine.table(table)
+                        .between(m, mx)
+                        .run(self._connection)
                     )
                 data = []
                 while await cursor.fetch_next():
@@ -874,20 +845,17 @@ class rethink(BaseProvider):
                     # elif is_program_date(value):
                     #    val = get_program_date(value)
                     #    self.conditions[key] = "{}".format(val)
-                    elif self.cond_definition and self.cond_definition[
-                        key] == "field":
+                    elif self.cond_definition and self.cond_definition[key] == "field":
                         self.conditions[key] = "{}".format(value)
                     elif value == "null" or value == "NULL":
                         self.conditions[key] = "null"
                     elif (
-                        self.cond_definition
-                        and self.cond_definition[key] == "boolean"
+                        self.cond_definition and self.cond_definition[key] == "boolean"
                     ):
                         self.conditions[key] = value
                     elif isinteger(value) or isnumber(value):
                         self.conditions[key] = value
-                    elif self.cond_definition and self.cond_definition[
-                        key] == "date":
+                    elif self.cond_definition and self.cond_definition[key] == "date":
                         self.conditions[key] = value.replace("'", "")
                     else:
                         print("RT condition %s for value %s" % (key, value))
@@ -910,7 +878,8 @@ class rethink(BaseProvider):
             if hierarchy:
                 try:
                     get_filter = [
-                        k.replace("!", "") for k in conditions
+                        k.replace("!", "")
+                        for k in conditions
                         if k.replace("!", "") in hierarchy
                     ]
                     filter_sorted = sorted(get_filter, key=hierarchy.index)
@@ -920,7 +889,7 @@ class rethink(BaseProvider):
                 try:
                     get_index = hierarchy.index(filter_sorted.pop())
                     # print(get_index)
-                    selected = hierarchy[get_index + 1:]
+                    selected = hierarchy[get_index + 1 :]
                 except (KeyError, IndexError):
                     selected = []
                 try:
@@ -928,9 +897,7 @@ class rethink(BaseProvider):
                         # print('null all conditions below selection')
                         if selected:
                             for n in selected:
-                                result = result.and_(
-                                    self._engine.row[n].eq(None)
-                                )
+                                result = result.and_(self._engine.row[n].eq(None))
                         else:
                             if get_filter:
                                 last = get_filter.pop(0)
@@ -946,53 +913,39 @@ class rethink(BaseProvider):
                                     )
                             else:
                                 last = hierarchy.pop(0)
-                                result = result.and_(
-                                    self._engine.row[last].eq(None)
-                                )
+                                result = result.and_(self._engine.row[last].eq(None))
                 except (KeyError, ValueError):
                     pass
                 try:
                     if self.qry_options["select_child"] == "true":
                         try:
                             child = selected.pop(0)
-                            result = result.and_(
-                                self._engine.row[child].ne(None)
-                            )
+                            result = result.and_(self._engine.row[child].ne(None))
                             # _where[child] = '!null'
                             for n in selected:
-                                result = result.and_(
-                                    self._engine.row[n].eq(None)
-                                )
+                                result = result.and_(self._engine.row[n].eq(None))
                             return result
                         except (ValueError, IndexError):
                             if get_filter:
                                 pass
                             else:
                                 child = hierarchy.pop(0)
-                                result = result.and_(
-                                    self._engine.row[child].ne(None)
-                                )
+                                result = result.and_(self._engine.row[child].ne(None))
                                 # _where[child] = '!null'
                                 for n in hierarchy:
                                     # _where[n] = 'null'
-                                    result = result.and_(
-                                        self._engine.row[n].eq(None)
-                                    )
+                                    result = result.and_(self._engine.row[n].eq(None))
                 except (KeyError, ValueError):
                     pass
                 try:
                     if self.qry_options["select_stores"] == "true":
                         try:
                             last = selected.pop()
-                            result = result.and_(
-                                self._engine.row[last].ne(None)
-                            )
+                            result = result.and_(self._engine.row[last].ne(None))
                             return result
                         except (ValueError, IndexError):
                             last = hierarchy.pop()
-                            result = result.and_(
-                                self._engine.row[last].ne(None)
-                            )
+                            result = result.and_(self._engine.row[last].ne(None))
                 except (KeyError, ValueError):
                     pass
         return result
@@ -1002,15 +955,14 @@ class rethink(BaseProvider):
         if self._connection:
             try:
                 self._result = (
-                    await self._engine.table(table).filter(filter).nth(id).run(
-                        self._connection
-                    )
+                    await self._engine.table(table)
+                    .filter(filter)
+                    .nth(id)
+                    .run(self._connection)
                 )
                 return self._result
             except ReqlNonExistenceError as err:
-                raise ReqlNonExistenceError(
-                    "Empty Result: {}".format(str(err))
-                )
+                raise ReqlNonExistenceError("Empty Result: {}".format(str(err)))
             except ReqlRuntimeError as err:
                 raise ReqlRuntimeError(str(err))
             except Exception as err:
@@ -1026,9 +978,7 @@ class rethink(BaseProvider):
             conditions = {**self.conditions}
         if self.where:
             conditions.update(self.where)
-        conditions.update(
-            (x, None) for (x, y) in conditions.items() if y == "null"
-        )
+        conditions.update((x, None) for (x, y) in conditions.items() if y == "null")
         try:
             if conditions["filterdate"] == "CURRENT_DATE":
                 conditions["filterdate"] = today(mask="%Y-%m-%d")
@@ -1059,9 +1009,7 @@ class rethink(BaseProvider):
         if self.where:
             conditions.update(self.where)
 
-        conditions.update(
-            (x, None) for (x, y) in conditions.items() if y == "null"
-        )
+        conditions.update((x, None) for (x, y) in conditions.items() if y == "null")
 
         print("RT CONDITIONS {}".format(conditions))
 
@@ -1115,8 +1063,9 @@ class rethink(BaseProvider):
                 # print(value)
                 search = search.filter(
                     (
-                        lambda exp: self._engine.expr(value).
-                        coerce_to("array").contains(exp[key])
+                        lambda exp: self._engine.expr(value)
+                        .coerce_to("array")
+                        .contains(exp[key])
                     )
                 )
             else:
@@ -1128,9 +1077,7 @@ class rethink(BaseProvider):
                         )
                     elif value.startswith("["):
                         # between
-                        result = result.and_(
-                            self._engine.row[key].between(10, 20)
-                        )
+                        result = result.and_(self._engine.row[key].between(10, 20))
                     else:
                         result = result.and_(self._engine.row[key].eq(value))
                 else:
