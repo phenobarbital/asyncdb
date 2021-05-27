@@ -27,6 +27,16 @@ from asyncdb.utils import (
 
 from asyncdb.providers.sql import SQLProvider, baseCursor
 
+types_map = {
+    1: 'string',
+    2: 'nvarchar',
+    # Type #3 supposed to be an integer, but in some cases decimals are returned
+    # with this type. To be on safe side, marking it as float.
+    3: 'integer',
+    4: 'datetime',
+    5: 'float',
+}
+
 
 class mssqlCursor(baseCursor):
     _connection = None

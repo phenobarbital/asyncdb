@@ -7,7 +7,7 @@ from datetime import datetime
 import logging
 from typing import List, Dict, Optional, Any, Iterable
 
-from .mssql import mssql
+from .mssql import mssql, types_map
 import pymssql
 
 from asyncdb.exceptions import (
@@ -190,6 +190,8 @@ class sqlserver(mssql):
             raise EmptyStatement("Error: Empty Sentence")
         if not self._connection:
             await self.connection()
+        if isinstance(sentence, str):
+            sentence = sentence.encode(self._charset)
         try:
             startTime = datetime.now()
             self._cursor = self._connection.cursor()
