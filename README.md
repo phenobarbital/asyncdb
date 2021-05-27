@@ -22,7 +22,7 @@ The main goal of AsyncDB is using asyncio-based technologies.
 
 ### Requirements ###
 
-* Python >= 3.7
+* Python >= 3.8
 * asyncio (https://pypi.python.org/pypi/asyncio/)
 
 ### Quick Tutorial ###
@@ -36,12 +36,14 @@ Currently AsyncDB supports the following databases:
 * RethinkDB (requires rethinkdb)
 * Redis (requires aioredis)
 * Memcache (requires aiomcache)
+* MS SQL Server (non-asyncio using freeTDS and pymssql)
+* Apache Cassandra
+* CouchBase (WIP: using aiocouch)
+* MongoDB (WIP: using motor)
+* InfluxDB (WIP: using influxdb)
 
 #### Future work: ####
-* MS SQL Server (non-asyncio using freeTDS or using aiodbc)
-* Apache Cassandra
-* CouchBase
-* InfluxDB
+
 * Prometheus
 
 ### Contribution guidelines ###
