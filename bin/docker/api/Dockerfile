@@ -1,4 +1,4 @@
-FROM python:3.7.6-slim-buster
+FROM python:3.9.5-slim-buster
 RUN ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime && dpkg-reconfigure --frontend noninteractive tzdata
 RUN apt-get -y update && apt-get -y install git  make automake gcc g++ subversion libpq-dev postgresql-server-dev-11 \
     zlib1g-dev libblas-dev  liblapack-dev gfortran libxml2-dev libxslt1-dev python3-cffi libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info
