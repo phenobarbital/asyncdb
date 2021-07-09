@@ -36,7 +36,7 @@ setup(
         "wheel==0.36.2",
         "Cython==0.29.21",
         "numpy==1.19.4",
-        "asyncpg==0.22.0",
+        "asyncpg==0.23.0",
         "asyncio==3.4.3",
         "PyDrive==1.3.1",
         "uvloop==0.14.0",
