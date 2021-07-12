@@ -108,25 +108,25 @@ class pgPool(BasePool):
             "hstore", codec_name="pg_contrib.hstore"
         )
 
-        def timedelta_decoder(delta: Tuple) -> relativedelta:
-            return relativedelta(months=delta[0], days=delta[1], microseconds=delta[2])
+        # def timedelta_decoder(delta: Tuple) -> relativedelta:
+        #     return relativedelta(months=delta[0], days=delta[1], microseconds=delta[2])
+        #
+        # def timedelta_encoder(delta: relativedelta):
+        #     ndelta = delta.normalized()
+        #     return (
+        #         ndelta.years * 12 + ndelta.months,
+        #         ndelta.days,
+        #         (ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds) * 1_000_000
+        #         + ndelta.microseconds,
+        #     )
 
-        def timedelta_encoder(delta: relativedelta):
-            ndelta = delta.normalized()
-            return (
-                ndelta.years * 12 + ndelta.months,
-                ndelta.days,
-                (ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds) * 1_000_000
-                + ndelta.microseconds,
-            )
-
-        await connection.set_type_codec(
-            "interval",
-            schema="pg_catalog",
-            encoder=timedelta_encoder,
-            decoder=timedelta_decoder,
-            format="tuple",
-        )
+        # await connection.set_type_codec(
+        #     "interval",
+        #     schema="pg_catalog",
+        #     encoder=timedelta_encoder,
+        #     decoder=timedelta_decoder,
+        #     format="tuple",
+        # )
 
         def _uuid_encoder(value):
             if value:
