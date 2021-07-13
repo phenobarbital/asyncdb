@@ -67,6 +67,7 @@ class pgPool(BasePool):
     _max_clients = 1500
     _min_size = 5
     application_name = "Navigator"
+    _numeric_as_float: bool = False
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
@@ -78,6 +79,8 @@ class pgPool(BasePool):
             self._max_clients = kwargs["max_clients"]
         if "min_size" in kwargs:
             self._min_size = kwargs["min_size"]
+        if "numeric_as_float" in kwargs:
+            self._numeric_as_float = kwargs['numeric_as_float']
 
     def get_event_loop(self):
         return self._loop
@@ -108,25 +111,26 @@ class pgPool(BasePool):
             "hstore", codec_name="pg_contrib.hstore"
         )
 
-        # def timedelta_decoder(delta: Tuple) -> relativedelta:
-        #     return relativedelta(months=delta[0], days=delta[1], microseconds=delta[2])
-        #
-        # def timedelta_encoder(delta: relativedelta):
-        #     ndelta = delta.normalized()
-        #     return (
-        #         ndelta.years * 12 + ndelta.months,
-        #         ndelta.days,
-        #         (ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds) * 1_000_000
-        #         + ndelta.microseconds,
-        #     )
+        def timedelta_decoder(delta: Tuple) -> relativedelta:
+            return relativedelta(months=delta[0], days=delta[1], microseconds=delta[2])
 
-        # await connection.set_type_codec(
-        #     "interval",
-        #     schema="pg_catalog",
-        #     encoder=timedelta_encoder,
-        #     decoder=timedelta_decoder,
-        #     format="tuple",
-        # )
+        def timedelta_encoder(delta: relativedelta):
+            ndelta = delta.normalized()
+            return (
+                ndelta.years * 12 + ndelta.months,
+                ndelta.days,
+                (ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds) * 1_000_000
+                + ndelta.microseconds,
+            )
+
+        if self._numeric_as_float is True:
+            await connection.set_type_codec(
+                "interval",
+                schema="pg_catalog",
+                encoder=timedelta_encoder,
+                decoder=timedelta_decoder,
+                format="tuple",
+            )
 
         def _uuid_encoder(value):
             if value:
@@ -160,8 +164,8 @@ class pgPool(BasePool):
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             server_settings = {
                 "application_name": self.application_name,
-                "idle_in_transaction_session_timeout": "600",
-                "tcp_keepalives_idle": "600",
+                "idle_in_transaction_session_timeout": "3600",
+                "tcp_keepalives_idle": "3600",
                 "max_parallel_workers": "16",
             }
             server_settings = {**server_settings, **self._server_settings}
@@ -375,6 +379,7 @@ class pg(SQLProvider):
     _query_raw = "SELECT {fields} FROM {table} {where_cond}"
     _server_settings = {}
     application_name: str = "Navigator"
+    _numeric_as_float: bool = False
 
     def __init__(self, dsn="", loop=None, params={}, pool=None, **kwargs):
         super(pg, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
@@ -385,6 +390,8 @@ class pg(SQLProvider):
             self._server_settings = kwargs["server_settings"]
         if "application_name" in self._server_settings:
             self.application_name = self._server_settings["application_name"]
+        if "numeric_as_float" in kwargs:
+            self._numeric_as_float = kwargs['numeric_as_float']
 
     async def close(self, timeout=5):
         """
@@ -466,6 +473,22 @@ class pg(SQLProvider):
                 await self._connection.set_builtin_type_codec(
                     "hstore", codec_name="pg_contrib.hstore"
                 )
+                await connection.set_type_codec(
+                    "interval",
+                    schema="pg_catalog",
+                    encoder=timedelta_encoder,
+                    decoder=timedelta_decoder,
+                    format="tuple",
+                )
+                
+                if self._numeric_as_float is True:
+                    await connection.set_type_codec(
+                        "interval",
+                        schema="pg_catalog",
+                        encoder=timedelta_encoder,
+                        decoder=timedelta_decoder,
+                        format="tuple",
+                    )
 
                 def timedelta_decoder(delta: Tuple) -> relativedelta:
                     return relativedelta(
@@ -481,14 +504,6 @@ class pg(SQLProvider):
                         * 1_000_000
                         + ndelta.microseconds,
                     )
-
-                await connection.set_type_codec(
-                    "interval",
-                    schema="pg_catalog",
-                    encoder=timedelta_encoder,
-                    decoder=timedelta_decoder,
-                    format="tuple",
-                )
 
                 def _uuid_encoder(value):
                     if value:
