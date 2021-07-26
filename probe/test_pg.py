@@ -1,5 +1,5 @@
 import asyncio
-
+from datetime import datetime
 loop = asyncio.get_event_loop()
 asyncio.set_event_loop(loop)
 
@@ -30,9 +30,13 @@ async def connect(c):
         print('Connection: ', conn)
         result, error = await conn.test_connection()
         print(result, error)
+        start = datetime.now()
         result, error = await conn.query(sql)
+        exec_time = (datetime.now() - start).total_seconds()
+
         if not error:
             print(result)
+        print(f"Execution Time {exec_time:.3f}s\n")
         # execute a sentence
         result, error = await conn.execute("SET TIMEZONE TO 'America/New_York'")
         print(result)
@@ -47,10 +51,13 @@ async def pooler(p):
         if not error:
             for row in result:
                 print(row)
+        start = datetime.now()
         result, error = await conn.query('SELECT * FROM troc.dashboards')
+        exec_time = (datetime.now() - start).total_seconds()
         if not error:
             for row in result:
                 print(row)
+        print(f"Execution Time {exec_time:.3f}s\n")
 
 if __name__ == "__main__":
     loop.run_until_complete(connect(db))
