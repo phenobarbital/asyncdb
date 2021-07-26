@@ -87,7 +87,7 @@ class sqlserver(mssql):
             self._params["as_dict"] = True
             self._params["timeout"] = self._timeout
             self._params["charset"] = self._charset.upper()
-            self._params["tds_version"] = "7.3"
+            self._params["tds_version"] = "8.0"
             self._connection = pymssql.connect(**self._params)
             if self._connection:
                 self._connected = True

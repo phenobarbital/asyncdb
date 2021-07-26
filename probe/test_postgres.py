@@ -72,11 +72,11 @@ async def test_connection(db):
 
 
 # non-async version
-def connection(db):
+async def connection(db):
     start = datetime.datetime.now()
     with db.connect() as conn:
         print(conn.get_connection())
-        result, error = conn.test_connection()
+        result, error = await conn.test_connection()
         print(result)
         # execute a sentence
         result, error = conn.perform("SET TIMEZONE TO 'America/New_York'")
@@ -103,7 +103,7 @@ def connection(db):
 
 
 async def test_db(db):
-    connection(pg)
+    await connection(pg)
 
 
 if __name__ == '__main__':
