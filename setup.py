@@ -64,7 +64,7 @@ setup(
         "rethinkdb==2.4.8",
         "lxml>=4.6.2",
         "isodate==0.6.0",
-        "pandas==1.2.1",
+        "pandas==1.3.1",
         "dask==2.30.0",
         "xlrd==1.2.0",
         "openpyxl==3.0.6",
