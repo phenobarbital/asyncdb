@@ -262,7 +262,7 @@ class redis(BaseProvider):
 
     async def close(self):
         try:
-            await self._connection.close()
+            await self._connection.disconnect()
         finally:
             self._connection = None
             self._connected = False
