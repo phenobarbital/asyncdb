@@ -40,16 +40,8 @@ class sa(BaseProvider, Thread):
     _connected = False
     _initialized_on = None
 
-    def __init__(self, dsn="", loop=None, params={}):
-        self._params = params
-        if not dsn:
-            self._dsn = self.create_dsn(self._params)
-        else:
-            self._dsn = dsn
-        try:
-            self._DEBUG = bool(params["DEBUG"])
-        except KeyError:
-            self._DEBUG = False
+    def __init__(self, dsn="", loop=None, params={}, **kwargs):
+        super(sa, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         # create the variables
         self._result = None
         self._connection = None
@@ -57,7 +49,6 @@ class sa(BaseProvider, Thread):
         self._loop = None
         # create a new loop before thread
         self._loop = asyncio.new_event_loop()
-        # asyncio.set_event_loop(self._loop)
         # calling parent Thread
         Thread.__init__(self)
         self.connect()

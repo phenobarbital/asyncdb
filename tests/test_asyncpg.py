@@ -73,7 +73,7 @@ async def test_pool_connect(event_loop):
 
 async def test_connection(conn):
     await conn.connection()
-    pytest.assume(conn.is_connected() == True)
+    pytest.assume(conn.is_connected() is True)
     result, error = await conn.test_connection()
     row = result[0]
     pytest.assume(row[0] == 1)
@@ -144,7 +144,7 @@ async def test_cicle(conn):
         )
         st = [(k, v) for k,v in stores]
         # check the prepared sentences:
-        pytest.assume(len(st) == 1470)
+        pytest.assume(len(st) == 1524)
         error = await conn.executemany(
             "INSERT INTO test.stores (store_id, store_name) VALUES ($1, $2)", st
         )
@@ -159,7 +159,7 @@ async def test_cicle(conn):
             "SELECT store_id, store_name FROM test.stores"
         ):
             rows.append(record['store_id'])
-        pytest.assume(len(rows) == 1470)
+        pytest.assume(len(rows) == 1524)
         # truncate the table
         result, error = await conn.execute("DELETE FROM test.stores")
         pytest.assume(not error)
@@ -170,7 +170,7 @@ async def test_cicle(conn):
             columns=["store_id", "store_name"],
             source=st,
         )
-        pytest.assume(result == 'COPY 1470')
+        pytest.assume(result == 'COPY 1524')
         ## copying into a file-like object:
         file = BytesIO()
         file.seek(0)

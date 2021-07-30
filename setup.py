@@ -35,7 +35,7 @@ setup(
     install_requires=[
         "wheel==0.36.2",
         "Cython==0.29.21",
-        "numpy==1.19.4",
+        "numpy==1.21.1",
         "asyncpg==0.23.0",
         "asyncio==3.4.3",
         "PyDrive==1.3.1",
@@ -49,7 +49,7 @@ setup(
         "jsonpath-rw-ext==1.2.2",
         "dateparser==1.0.0",
         "iso8601==0.1.13",
-        "aiopg==1.0.0",
+        "aiopg==1.3.1",
         "tqdm==4.51.0",
         "tabulate==0.8.7",
         "python-magic==0.4.18",
@@ -91,6 +91,9 @@ setup(
         "rapidjson==1.0.0",
         "typing-extensions==3.7.4.3",
         "aredis==1.1.8",
+        "polars==0.8.10",
+        "py-polars==0.8.10",
+        "pyarrow==4.0.1"
     ],
     extra_requires=[
         'cryptography==3.4.6'
