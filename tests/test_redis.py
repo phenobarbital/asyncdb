@@ -39,6 +39,19 @@ async def test_pool_by_dsn(event_loop):
     result, error = await db.test_connection('helloworld')
     pytest.assume(not error)
     pytest.assume(result == 'helloworld')
+    user = {
+        "Name": "Pradeep",
+        "Company": "SCTL",
+        "Address": "Mumbai",
+        "Location": "RCP",
+    }
+    await db.set_hash("user", user)
+    pytest.assume(await db.exists("user") == 1)
+    result = await db.get_hash("user")
+    # print(result, await db.exists("user"))
+    pytest.assume(result["Name"] == "Pradeep")
+    await db.delete("user")
+    pytest.assume(await db.exists("user") == 0)
     await pool.close()
     assert pool.is_closed() is True
 
