@@ -19,8 +19,9 @@ rd = AsyncPool("redis", dsn=redis_url, loop=loop)
 # rd = redisPool(dsn=redis_url, loop=loop)
 loop.run_until_complete(rd.connect())
 
-# rd = AsyncDB('redis', dsn=redis_url, loop=loop)
-# loop.run_until_complete(rd.connection())
+ot = AsyncDB('redis', dsn=redis_url, loop=loop)
+loop.run_until_complete(ot.connection())
+
 
 
 async def test_redis(conn):
@@ -65,4 +66,5 @@ try:
     loop.run_until_complete(test_redis(r))
 finally:
     loop.run_until_complete(rd.close())
+    loop.run_until_complete(ot.close())
     loop.close()
