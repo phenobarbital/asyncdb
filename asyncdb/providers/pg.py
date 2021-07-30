@@ -297,7 +297,7 @@ class pgPool(BasePool):
                     close = asyncio.create_task(self._pool.close())
                     # close.add_done_callback(_handle_done_tasks)
                     try:
-                        await asyncio.wait_for(close, timeout=timeout, loop=self._loop)
+                        await asyncio.wait_for(close, timeout=timeout) #, loop=self._loop)
                     except asyncio.exceptions.TimeoutError as err:
                         # print(traceback.format_exc())
                         pass
@@ -427,12 +427,26 @@ class pg(SQLProvider):
     def terminate(self):
         self._loop.run_until_complete(self.close())
 
+    async def is_in_transaction(self):
+        return self._connection.is_in_transaction()
+
+    def is_connected(self):
+        try:
+            self._connected = not (self._connection.is_closed())
+            return self._connected
+        except Exception as err:
+            self._logger.exception(err)
+            return False
+
     async def connection(self):
+        """connection.
+
+        Get an asyncpg connection
         """
-        Get a connection
-        """
-        if self._connection:
-            return self
+        if self._connection is not None:
+            if not self._connection.is_closed():
+                self._connected = True
+                return self
 
         self._connection = None
         self._connected = False
@@ -473,37 +487,37 @@ class pg(SQLProvider):
                 await self._connection.set_builtin_type_codec(
                     "hstore", codec_name="pg_contrib.hstore"
                 )
-                await connection.set_type_codec(
-                    "interval",
-                    schema="pg_catalog",
-                    encoder=timedelta_encoder,
-                    decoder=timedelta_decoder,
-                    format="tuple",
-                )
-                
-                if self._numeric_as_float is True:
-                    await connection.set_type_codec(
-                        "interval",
-                        schema="pg_catalog",
-                        encoder=timedelta_encoder,
-                        decoder=timedelta_decoder,
-                        format="tuple",
-                    )
-
-                def timedelta_decoder(delta: Tuple) -> relativedelta:
-                    return relativedelta(
-                        months=delta[0], days=delta[1], microseconds=delta[2]
-                    )
-
-                def timedelta_encoder(delta: relativedelta):
-                    ndelta = delta.normalized()
-                    return (
-                        ndelta.years * 12 + ndelta.months,
-                        ndelta.days,
-                        (ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds)
-                        * 1_000_000
-                        + ndelta.microseconds,
-                    )
+                # await connection.set_type_codec(
+                #     "interval",
+                #     schema="pg_catalog",
+                #     encoder=timedelta_encoder,
+                #     decoder=timedelta_decoder,
+                #     format="tuple",
+                # )
+                #
+                # if self._numeric_as_float is True:
+                #     await connection.set_type_codec(
+                #         "interval",
+                #         schema="pg_catalog",
+                #         encoder=timedelta_encoder,
+                #         decoder=timedelta_decoder,
+                #         format="tuple",
+                #     )
+                #
+                # def timedelta_decoder(delta: Tuple) -> relativedelta:
+                #     return relativedelta(
+                #         months=delta[0], days=delta[1], microseconds=delta[2]
+                #     )
+                #
+                # def timedelta_encoder(delta: relativedelta):
+                #     ndelta = delta.normalized()
+                #     return (
+                #         ndelta.years * 12 + ndelta.months,
+                #         ndelta.days,
+                #         (ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds)
+                #         * 1_000_000
+                #         + ndelta.microseconds,
+                #     )
 
                 def _uuid_encoder(value):
                     if value:
@@ -520,14 +534,15 @@ class pg(SQLProvider):
                     format="binary",
                 )
             if self._connection:
-                if self.init_func:
+                self._connected = True
+                if self.init_func is not None:
                     try:
                         await self.init_func(self._connection)
                     except Exception as err:
                         print("Error on Init Connection: {}".format(err))
                         pass
-                self._connected = True
                 self._initialized_on = time.time()
+                self._logger.debug(f'Initialized on: {self._initialized_on}')
         except TooManyConnectionsError as err:
             raise TooManyConnections("Too Many Connections Error: {}".format(str(err)))
         except ConnectionDoesNotExistError as err:
