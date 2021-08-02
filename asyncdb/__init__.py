@@ -1,3 +1,7 @@
+"""AsyncDB.
+
+Asyncio-based database connectors for NAV.
+"""
 # -*- coding: utf-8 -*-
 import asyncio
 import uvloop
@@ -9,6 +13,7 @@ from .meta import (
     asyncORM,
     asyncRecord,
 )
+__version__ = '1.7.1'
 
 __all__ = ["asyncORM", "asyncRecord"]
 

@@ -41,6 +41,7 @@ class BasePool(ABC):
     def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
         if loop:
             self._loop = loop
+            asyncio.set_event_loop(self._loop)
         else:
             self._loop = asyncio.get_event_loop()
             asyncio.set_event_loop(self._loop)
