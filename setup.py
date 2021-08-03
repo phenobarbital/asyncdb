@@ -90,10 +90,7 @@ setup(
         "python-rapidjson==0.9.3",
         "rapidjson==1.0.0",
         "typing-extensions==3.7.4.3",
-        "aredis==1.1.8",
-        "polars==0.8.10",
-        "py-polars==0.8.10",
-        "pyarrow==4.0.1"
+        "aredis==1.1.8"
     ],
     extra_requires=[
         'cryptography==3.4.6'
