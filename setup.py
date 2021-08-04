@@ -85,7 +85,6 @@ setup(
         "aioinflux[pandas]",
         "pymssql==2.2.1",
         "motor==2.3.0",
-        "aiocouch==2.0.1",
         "elasticsearch[async]",
         "python-rapidjson==0.9.3",
         "rapidjson==1.0.0",
