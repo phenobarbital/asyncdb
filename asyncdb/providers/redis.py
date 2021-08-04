@@ -126,6 +126,8 @@ class redisPool(BasePool):
         Close Pool
         """
         try:
+            if self._connection is not None:
+                await self._connection.close()
             if self._pool:
                 await self._pool.disconnect()
             self._connected = False
