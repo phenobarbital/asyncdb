@@ -264,6 +264,10 @@ class redis(BaseProvider):
         try:
             # gracefully closing underlying connection
             await self._connection.close()
+        except AttributeError:
+            pass
+        except Exception as err:
+            self._logger.exception(f'Redis Closing Error: {err}')
         finally:
             self._connection = None
             self._connected = False
