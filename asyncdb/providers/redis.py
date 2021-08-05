@@ -202,13 +202,21 @@ class redis(BaseProvider):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         # clean up anything you need to clean up
-        return await self.close()
+        try:
+            return await self.close()
+        except Exception as err:
+            pass
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
-        self._loop.run_until_complete(self.close())
+        try:
+            self._loop.run_until_complete(
+                self.close()
+            )
+        except Exception as err:
+            pass
 
     """
     Properties
