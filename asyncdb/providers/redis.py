@@ -130,7 +130,8 @@ class redisPool(BasePool):
             if self._connection is not None:
                 await self._connection.close()
             if self._pool:
-                await self._pool.disconnect(inuse_connections = True)
+                # await self._pool.disconnect(inuse_connections = True)
+                await self._pool.disconnect()
             self._connected = False
             self._pool = None
             return True
