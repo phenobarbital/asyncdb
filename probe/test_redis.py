@@ -44,13 +44,22 @@ async def test_redis(conn):
     if await conn.exists("user"):
         print(await conn.get_hash("user"))
         await conn.delete("user")
-    for lp in range(10000):
-        print(f'Test number {lp}')
-        async with await rd.acquire() as conn:
-            await conn.ping()
-            await conn.execute("set", "Test1", "UltraTest")
-            await conn.delete("Test1")
+    # for lp in range(10000):
+    #     print(f'Test number {lp}')
+    #     async with await rd.acquire() as conn:
+    #         await conn.ping()
+    #         await conn.execute("set", "Test1", "UltraTest")
+    #         await conn.delete("Test1")
+    # test the connector
+    db = AsyncDB('redis', dsn=redis_url, loop=loop)
+    async with await db.connection() as conn:
+        print(conn.is_connected())
+        result, error = await db.test_connection()
+        print(result, error)
+        result, error = await db.test_connection('bigtest')
+    print(db.is_closed())
     print('Ending ...')
+
 
 try:
     print("Connected: {}".format(rd.is_connected()))

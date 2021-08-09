@@ -92,6 +92,7 @@ class redisPool(BasePool):
         if self._pool:
             self._connected = True
             self._initialized_on = time.time()
+        return self
 
     async def acquire(self):
         """
@@ -129,7 +130,7 @@ class redisPool(BasePool):
             if self._connection is not None:
                 await self._connection.close()
             if self._pool:
-                await self._pool.disconnect()
+                await self._pool.disconnect(inuse_connections = True)
             self._connected = False
             self._pool = None
             return True
@@ -205,6 +206,7 @@ class redis(BaseProvider):
         try:
             return await self.close()
         except Exception as err:
+            print(err)
             pass
 
     def __enter__(self):
@@ -260,6 +262,7 @@ class redis(BaseProvider):
         if self._connection:
             self._connected = True
             self._initialized_on = time.time()
+        return self
 
     def is_closed(self):
         if not self._connection:
@@ -273,10 +276,11 @@ class redis(BaseProvider):
     async def close(self):
         try:
             # gracefully closing underlying connection
-            await self._connection.disconnect()
+            await self._connection.close()
         except AttributeError:
             pass
         except Exception as err:
+            print('Closing: ', err)
             self._logger.exception(f'Redis Closing Error: {err}')
         finally:
             self._connection = None
