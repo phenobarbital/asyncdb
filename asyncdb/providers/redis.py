@@ -273,7 +273,7 @@ class redis(BaseProvider):
     async def close(self):
         try:
             # gracefully closing underlying connection
-            await self._connection.close()
+            await self._connection.disconnect()
         except AttributeError:
             pass
         except Exception as err:
