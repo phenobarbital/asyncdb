@@ -54,10 +54,10 @@ def default_exception_handler(loop, context: Any):
             try:
                 logging.exception(f"{exception.__name__!s}*{msg}* over task {task}")
                 raise exception(msg)
-            finally:
-                loop.stop()
-                logging.info("Successfully shutdown the AsyncDB Loop.")
-                loop.close()
+            # finally:
+            #     loop.stop()
+            #     logging.info("Successfully shutdown the AsyncDB Loop.")
+                # loop.close()
 
 
 def _handle_done_tasks(task: asyncio.Task) -> Any:
