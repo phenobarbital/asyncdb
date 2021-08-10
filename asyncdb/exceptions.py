@@ -54,6 +54,8 @@ def default_exception_handler(loop, context: Any):
             try:
                 logging.exception(f"{exception.__name__!s}*{msg}* over task {task}")
                 raise exception(msg)
+            except Exception as err:
+                logging.exception(err)
             # finally:
             #     loop.stop()
             #     logging.info("Successfully shutdown the AsyncDB Loop.")
