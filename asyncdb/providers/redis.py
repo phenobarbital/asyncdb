@@ -118,7 +118,8 @@ class redisPool(BasePool):
         if not connection:
             return True
         try:
-            await self._pool.release(connection)
+            print(type(connection.get_connection()))
+            await self._pool.release(connection.get_connection())
         except Exception as err:
             raise ProviderError("Release Error: {}".format(str(err)))
 
@@ -127,13 +128,12 @@ class redisPool(BasePool):
         Close Pool
         """
         try:
-            if self._connection is not None:
-                await self._connection.close()
+            # if self._connection is not None:
+            #     await self._connection.close()
             if self._pool:
-                # await self._pool.disconnect(inuse_connections = True)
-                await self._pool.disconnect()
+                await self._pool.disconnect(inuse_connections = True)
+                # await self._pool.disconnect()
             self._connected = False
-            self._pool = None
             return True
         except (aioredis.exceptions.ConnectionError) as err:
             raise ProviderError("Connection close Error: {}".format(str(err)))
@@ -269,7 +269,7 @@ class redis(BaseProvider):
         if not self._connection:
             return True
         else:
-            return not self._connection._connected
+            return not self._connected
 
     async def ping(self, msg: str = ""):
         await self._connection.ping()
@@ -284,7 +284,6 @@ class redis(BaseProvider):
             print('Closing: ', err)
             self._logger.exception(f'Redis Closing Error: {err}')
         finally:
-            self._connection = None
             self._connected = False
 
     async def execute(self, sentence, *args):
