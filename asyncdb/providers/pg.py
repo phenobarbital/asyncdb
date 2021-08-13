@@ -174,14 +174,12 @@ class pgPool(BasePool):
                 max_queries=self._max_queries,
                 min_size=self._min_size,
                 max_size=self._max_clients,
-                max_inactive_connection_lifetime=100,
-                timeout=5,
+                max_inactive_connection_lifetime=3600,
+                timeout=10,
                 command_timeout=self._timeout,
                 init=self.init_connection,
                 setup=self.setup_connection,
                 loop=self._loop,
-                max_cached_statement_lifetime=max_cached_statement_lifetime,
-                max_cacheable_statement_size=max_cacheable_statement_size,
                 server_settings=server_settings,
             )
         except TooManyConnectionsError as err:
