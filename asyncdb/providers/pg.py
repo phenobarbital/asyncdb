@@ -166,7 +166,7 @@ class pgPool(BasePool):
                 "application_name": self.application_name,
                 "idle_in_transaction_session_timeout": "3600",
                 "tcp_keepalives_idle": "3600",
-                "max_parallel_workers": "16",
+                "max_parallel_workers": "24",
             }
             server_settings = {**server_settings, **self._server_settings}
             self._pool = await asyncpg.create_pool(
@@ -280,12 +280,12 @@ class pgPool(BasePool):
         Close Pool Connection
     """
 
-    async def wait_close(self, gracefully=True, timeout=10):
+    async def wait_close(self, gracefully=True, timeout=1):
         if self._pool:
             # try to closing main connection
             try:
                 if self._connection:
-                    await self._pool.release(self._connection, timeout=2)
+                    await self._pool.release(self._connection, timeout=timeout)
                     self._connection = None
             except (InternalClientError, InterfaceError) as err:
                 raise ProviderError("Release Interface Error: {}".format(str(err)))
@@ -294,13 +294,7 @@ class pgPool(BasePool):
             try:
                 if gracefully:
                     await self._pool.expire_connections()
-                    close = asyncio.create_task(self._pool.close())
-                    # close.add_done_callback(_handle_done_tasks)
-                    try:
-                        await asyncio.wait_for(close, timeout=timeout) #, loop=self._loop)
-                    except asyncio.exceptions.TimeoutError as err:
-                        # print(traceback.format_exc())
-                        pass
+                    await self._pool.close()
                 # # until end, close the pool correctly:
                 self._pool.terminate()
             except Exception as err:
@@ -317,7 +311,7 @@ class pgPool(BasePool):
     async def close(self):
         try:
             if self._connection:
-                await self._pool.release(self._connection, timeout=2)
+                await self._pool.release(self._connection, timeout=1)
                 self._connection = None
         except InterfaceError as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
@@ -325,12 +319,7 @@ class pgPool(BasePool):
             raise ProviderError("Release Error: {}".format(str(err)))
         try:
             await self._pool.expire_connections()
-            close = asyncio.create_task(self._pool.close())
-            # close.add_done_callback(_handle_done_tasks)
-            try:
-                await asyncio.wait_for(close, timeout=2, loop=self._loop)
-            except asyncio.exceptions.TimeoutError as err:
-                pass
+            await self._pool.close()
         except Exception as err:
             print("Pool Closing Error: {}".format(str(err)))
         finally:
@@ -339,7 +328,7 @@ class pgPool(BasePool):
 
     def terminate(self, gracefully=True):
         self._loop.run_until_complete(
-            self.wait_close(gracefully=gracefully, timeout=10)
+            self.wait_close(gracefully=gracefully, timeout=1)
         )
 
     """
