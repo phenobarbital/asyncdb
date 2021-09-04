@@ -4,5 +4,5 @@ codecov==2.0.22
 coverage[toml]==5.1
 flit==3.0.0
 mypy==0.782
-pylint==2.4.4
+pylint==2.7.0
 sphinx==3.3.1
