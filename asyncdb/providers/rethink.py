@@ -87,6 +87,11 @@ class rethink(BaseProvider):
         # set asyncio type
         self._engine.set_loop_type("asyncio")
         asyncio.set_event_loop(self._loop)
+        try:
+            self._params["db"] = self._params["database"]
+            del self._params["database"]
+        except KeyError:
+            pass
 
     async def connection(self):
         self._logger.debug(
@@ -382,6 +387,8 @@ class rethink(BaseProvider):
             except ReqlOpIndeterminateError as error:
                 error = "Query Runtime Error: {}".format(str(err))
                 raise ReqlOpIndeterminateError(error)
+            except rethinkdb.errors.ReqlPermissionError as err:
+                raise ProviderError(err)
             finally:
                 # self._generated = datetime.now() - startTime
                 return [self._result, error]
