@@ -57,6 +57,9 @@ from asyncdb.providers.sql import SQLProvider, baseCursor
 max_cached_statement_lifetime = 600
 max_cacheable_statement_size = 1024 * 15
 
+class NAVConnection(asyncpg.Connection):
+    def _get_reset_query(self):
+        return None
 
 class pgPool(BasePool):
     _max_queries = 100
@@ -64,10 +67,9 @@ class pgPool(BasePool):
     _server_settings = {}
     init_func = None
     setup_func = None
-    _max_clients = 1500
-    _min_size = 5
+    _max_clients = 300
+    _min_size = 10
     application_name = "Navigator"
-    _numeric_as_float: bool = False
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
@@ -84,6 +86,20 @@ class pgPool(BasePool):
 
     def get_event_loop(self):
         return self._loop
+
+    """
+    Context magic Methods
+    """
+
+    async def __aenter__(self) -> "BasePool":
+        if not self._pool:
+            await self.connect()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        # clean up anything you need to clean up
+        await self.release(self._connection)
+        self._connection = None
 
     async def setup_connection(self, connection):
         if self.setup_func:
@@ -110,27 +126,6 @@ class pgPool(BasePool):
         await connection.set_builtin_type_codec(
             "hstore", codec_name="pg_contrib.hstore"
         )
-
-        def timedelta_decoder(delta: Tuple) -> relativedelta:
-            return relativedelta(months=delta[0], days=delta[1], microseconds=delta[2])
-
-        def timedelta_encoder(delta: relativedelta):
-            ndelta = delta.normalized()
-            return (
-                ndelta.years * 12 + ndelta.months,
-                ndelta.days,
-                (ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds) * 1_000_000
-                + ndelta.microseconds,
-            )
-
-        if self._numeric_as_float is True:
-            await connection.set_type_codec(
-                "interval",
-                schema="pg_catalog",
-                encoder=timedelta_encoder,
-                decoder=timedelta_decoder,
-                format="tuple",
-            )
 
         def _uuid_encoder(value):
             if value:
@@ -166,7 +161,8 @@ class pgPool(BasePool):
                 "application_name": self.application_name,
                 "idle_in_transaction_session_timeout": "3600",
                 "tcp_keepalives_idle": "3600",
-                "max_parallel_workers": "24",
+                "max_parallel_workers": "48",
+                "jit": "off"
             }
             server_settings = {**server_settings, **self._server_settings}
             self._pool = await asyncpg.create_pool(
@@ -181,6 +177,7 @@ class pgPool(BasePool):
                 setup=self.setup_connection,
                 loop=self._loop,
                 server_settings=server_settings,
+                connection_class=NAVConnection
             )
         except TooManyConnectionsError as err:
             print("Too Many Connections Error: {}".format(str(err)))
@@ -447,9 +444,10 @@ class pg(SQLProvider):
 
         server_settings = {
             "application_name": self.application_name,
-            "idle_in_transaction_session_timeout": "600",
-            "tcp_keepalives_idle": "600",
-            "max_parallel_workers": "16",
+            "idle_in_transaction_session_timeout": "3600",
+            "tcp_keepalives_idle": "3600",
+            "max_parallel_workers": "24",
+            "jit": "off"
         }
         server_settings = {**server_settings, **self._server_settings}
 
@@ -464,6 +462,7 @@ class pg(SQLProvider):
                     max_cached_statement_lifetime=max_cached_statement_lifetime,
                     max_cacheable_statement_size=max_cacheable_statement_size,
                     server_settings=server_settings,
+                    connection_class=NAVConnection
                 )
                 await self._connection.set_type_codec(
                     "json", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
@@ -474,37 +473,6 @@ class pg(SQLProvider):
                 await self._connection.set_builtin_type_codec(
                     "hstore", codec_name="pg_contrib.hstore"
                 )
-                # await connection.set_type_codec(
-                #     "interval",
-                #     schema="pg_catalog",
-                #     encoder=timedelta_encoder,
-                #     decoder=timedelta_decoder,
-                #     format="tuple",
-                # )
-                #
-                # if self._numeric_as_float is True:
-                #     await connection.set_type_codec(
-                #         "interval",
-                #         schema="pg_catalog",
-                #         encoder=timedelta_encoder,
-                #         decoder=timedelta_decoder,
-                #         format="tuple",
-                #     )
-                #
-                # def timedelta_decoder(delta: Tuple) -> relativedelta:
-                #     return relativedelta(
-                #         months=delta[0], days=delta[1], microseconds=delta[2]
-                #     )
-                #
-                # def timedelta_encoder(delta: relativedelta):
-                #     ndelta = delta.normalized()
-                #     return (
-                #         ndelta.years * 12 + ndelta.months,
-                #         ndelta.days,
-                #         (ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds)
-                #         * 1_000_000
-                #         + ndelta.microseconds,
-                #     )
 
                 def _uuid_encoder(value):
                     if value:
