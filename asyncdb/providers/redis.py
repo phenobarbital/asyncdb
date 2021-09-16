@@ -205,7 +205,7 @@ class redis(BaseProvider):
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         # clean up anything you need to clean up
         try:
-            return await self.close()
+            await self.close()
         except Exception as err:
             print(err)
             pass
