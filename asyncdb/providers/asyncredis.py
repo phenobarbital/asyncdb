@@ -205,7 +205,16 @@ class asyncredis(BaseProvider):
         return self
 
     def __exit__(self, *args):
-        self.release()
+        asyncio.run_until_complete(self.release())
+
+    async def __aenter__(self):
+        await self.connection()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        # clean up anything you need to clean up
+        await self.close()
+        self._connection = None
 
     """
     Properties
