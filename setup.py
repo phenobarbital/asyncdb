@@ -33,6 +33,7 @@ setup(
         "cchardet==2.1.7"
     ],
     install_requires=[
+        "wheel==0.37.0",
         "Cython==0.29.21",
         "numpy==1.21.1",
         "asyncpg==0.23.0",
@@ -80,7 +81,7 @@ setup(
         "pyodbc==4.0.30",
         "cchardet==2.1.7",
         "aiocassandra==2.0.1",
-        "cassandra-driver==3.24.0",
+        "cassandra-driver==3.25.0",
         "aioinflux[pandas]",
         "pymssql==2.2.1",
         "motor==2.3.0",
