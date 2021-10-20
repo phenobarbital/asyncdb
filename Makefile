@@ -1,9 +1,6 @@
 .venv:
-	python3.8 -m venv .venv
-	source .venv/bin/activate && make setup dev
+	python3.9 -m venv .venv
 	echo 'run `source .venv/bin/activate` to start develop asyncDB'
-
-venv: .venv
 
 setup:
 	python -m pip install -Ur docs/requirements.txt
@@ -21,6 +18,12 @@ lint:
 	python -m pylint --rcfile .pylint asyncdb/*.py
 	python -m pylint --rcfile .pylint asyncdb/utils/*.py
 	python -m black --check asyncdb
+
+setup_test:
+	pip install pytest>=6.0.0
+	pip install pytest-asyncio==0.14.0
+	pip install pytest-xdist==2.1.0
+	pip install pytest-assume==2.4.2
 
 test:
 	python -m coverage run -m asyncdb.tests
