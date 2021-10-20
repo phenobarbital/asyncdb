@@ -13,7 +13,7 @@ from .meta import (
     asyncORM,
     asyncRecord,
 )
-__version__ = '1.7.1'
+__version__ = '1.7.18'
 
 __all__ = ["asyncORM", "asyncRecord"]
 
