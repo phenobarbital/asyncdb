@@ -30,13 +30,16 @@ setup(
         "Cython==0.29.21",
         "numpy==1.19.4",
         "asyncio==3.4.3",
-        "cchardet==2.1.7"
+        "cchardet==2.1.7",
+        'cryptography==3.4.7'
     ],
     install_requires=[
         "wheel==0.37.0",
         "Cython==0.29.21",
         "numpy==1.21.1",
-        "asyncpg==0.23.0",
+        'cryptography==3.4.7',
+        "asyncpg==0.24.0",
+        "cchardet==2.1.7",
         "asyncio==3.4.3",
         "PyDrive==1.3.1",
         "uvloop==0.14.0",
@@ -44,7 +47,7 @@ setup(
         "objectpath==0.6.1",
         "MarkupSafe==1.1.1",
         "jinja2==2.11.3",
-        "requests==2.25.1",
+        "requests==2.26.0",
         "jsonpath-rw==1.4.0",
         "jsonpath-rw-ext==1.2.2",
         "dateparser==1.0.0",
@@ -58,6 +61,8 @@ setup(
         "boto3==1.16.29",
         "xlrd==1.2.0",
         "bs4==0.0.1",
+        "beautifulsoup4==4.10.0",
+        "soupsieve==2.2.1",
         "pylibmc==1.6.1",
         "redis==3.5.3",
         "aioredis==2.0.0",
@@ -74,12 +79,9 @@ setup(
         "asyncio_redis==0.16.0",
         "sqlalchemy==1.3.20",
         "sqlalchemy-aio==0.16.0",
-        "redis==3.5.3",
-        "pylibmc==1.6.1",
         "attrs==20.2.0",
         "aioodbc==0.3.3",
         "pyodbc==4.0.30",
-        "cchardet==2.1.7",
         "aiocassandra==2.0.1",
         "cassandra-driver==3.25.0",
         "aioinflux[pandas]",
@@ -90,9 +92,6 @@ setup(
         "rapidjson==1.0.0",
         "typing-extensions==3.10.0.2",
         "aredis==1.1.8"
-    ],
-    extra_requires=[
-        'cryptography==3.4.7'
     ],
     tests_require=[
         'pytest>=6.0.0',
