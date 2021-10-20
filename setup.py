@@ -26,14 +26,13 @@ setup(
     author_email="jlara@trocglobal.com",
     packages=find_packages(exclude=["contrib", "docs", "tests"]),
     setup_requires=[
-        "wheel==0.36.2",
+        "wheel==0.37.0",
         "Cython==0.29.21",
         "numpy==1.19.4",
         "asyncio==3.4.3",
         "cchardet==2.1.7"
     ],
     install_requires=[
-        "wheel==0.36.2",
         "Cython==0.29.21",
         "numpy==1.21.1",
         "asyncpg==0.23.0",
@@ -95,7 +94,7 @@ setup(
         'cryptography==3.4.6'
     ],
     tests_require=[
-        'pytest>=5.4.0',
+        'pytest>=6.0.0',
         'pytest-asyncio==0.14.0',
         'pytest-xdist==2.1.0',
         'pytest-assume==2.4.2'

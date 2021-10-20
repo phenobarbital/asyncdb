@@ -31,10 +31,16 @@ async def conn(event_loop):
 
 @pytest.fixture
 async def pooler(event_loop):
-    pool = AsyncPool('pg', dsn=asyncpg_url, loop=event_loop)
+    args = {
+        "timeout": 36000,
+        "server_settings": {
+            "application_name": "Testing"
+        }
+    }
+    pool = AsyncPool('pg', dsn=asyncpg_url, loop=event_loop, **args)
     await pool.connect()
     yield pool
-    await pool.wait_close(gracefully=True, timeout=5)
+    await pool.wait_close(gracefully=True, timeout=10)
 
 pytestmark = pytest.mark.asyncio
 
@@ -81,17 +87,18 @@ async def test_connection(conn):
     pytest.assume(conn.get_columns() == ["store_id", "store_name"])
     assert not error
 
-async def test_huge_query(pooler):
-    sql = 'SELECT * FROM trocplaces.stores'
-    check_conn = None
-    async with await pooler.acquire() as conn:
+async def test_huge_query(event_loop):
+    sql = 'SELECT * FROM trocplaces.stores LIMIT 1000'
+    pool = AsyncPool("pg", params=PARAMS, loop=event_loop)
+    await pool.connect()
+    pytest.assume(pool.is_connected() == True)
+    async with await pool.acquire() as conn:
         result, error = await conn.execute("SET TIMEZONE TO 'America/New_York'")
         pytest.assume(not error)
         result, error = await conn.query(sql)
-        pytest.assume(not error)
-        pytest.assume(result is not None)
-        check_conn = conn
-    pytest.assume(check_conn is not None)
+        assert not error
+        # pytest.assume(not error)
+        # pytest.assume(result is not None)
 
 
 @pytest.mark.parametrize("passed, expected", [
