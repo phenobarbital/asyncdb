@@ -85,14 +85,14 @@ setup(
         "aioinflux[pandas]",
         "pymssql==2.2.1",
         "motor==2.3.0",
-        "elasticsearch[async]",
+        "elasticsearch[async]==7.15.1",
         "python-rapidjson==0.9.3",
         "rapidjson==1.0.0",
         "typing-extensions==3.10.0.2",
         "aredis==1.1.8"
     ],
     extra_requires=[
-        'cryptography==3.4.6'
+        'cryptography==3.4.7'
     ],
     tests_require=[
         'pytest>=6.0.0',
