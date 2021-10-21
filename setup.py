@@ -47,7 +47,6 @@ setup(
         "urllib3>=1.26.6",
         "cryptography==3.4.7",
         "objectpath==0.6.1",
-        'MarkupSafe==1.1.1',
         "jinja2==2.11.3",
         "requests>=2.25.0",
         "jsonpath-rw==1.4.0",
