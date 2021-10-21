@@ -90,7 +90,7 @@ setup(
         "aioinflux[pandas]==0.9.0",
         "pymssql==2.2.1",
         "motor==2.3.0",
-        "elasticsearch[async]==7.15.1",
+        # "elasticsearch[async]==7.15.1",
         "hiredis==2.0.0",
         "aiomcache==0.6.0",
         "aiosqlite==0.15.0",
