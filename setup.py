@@ -56,7 +56,7 @@ setup(
         "isodate==0.6.0",
         "attrs==20.2.0",
         "rapidjson==1.0.0",
-        "python-rapidjson==0.9.3",
+        "python-rapidjson>=1.5",
         "typing-extensions==3.10.0.2",
         "async-generator==1.10",
         "idna>=3.3",
