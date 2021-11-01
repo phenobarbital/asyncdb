@@ -417,10 +417,11 @@ class pg(SQLProvider):
     def is_connected(self):
         try:
             self._connected = not (self._connection.is_closed())
-            return self._connected
+        except AttributeError:
+            self._connected = False
         except Exception as err:
             self._logger.exception(err)
-            return False
+        return self._connected
 
     async def connection(self):
         """connection.
