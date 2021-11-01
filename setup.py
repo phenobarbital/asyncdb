@@ -84,7 +84,7 @@ setup(
         "rethinkdb==2.4.8",
         "lxml>=4.6.2",
         "pandas==1.3.4",
-        "dask==2.30.0",
+        "dask==2021.10.0",
         "openpyxl==3.0.9",
         "aioinflux[pandas]==0.9.0",
         "pymssql==2.2.1",
