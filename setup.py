@@ -94,7 +94,7 @@ setup(
         "elasticsearch[async]==7.15.1",
         "PyDrive==1.3.1",
         "hiredis==2.0.0",
-        "aiomcache>=0.6.0",
+        "aiomcache==0.7.0",
         "aiosqlite>=0.15.0",
         "asyncio_redis>=0.16.0",
         "sqlalchemy==1.3.20",

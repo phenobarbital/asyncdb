@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 import asyncio
 import importlib
 import os.path
@@ -22,23 +23,16 @@ from asyncdb.utils.functions import module_exists, SafeDict
 _PROVIDERS = {}
 
 # logging system
-import logging
 
 
 class BasePool(ABC):
-    _dsn = ""
-    _loop = None
-    _pool = None
-    _timeout = 600
-    _max_queries = 300
-    _connected: bool = False
-    _connection = None
-    _params = None
-    _DEBUG: bool = False
-    _logger = None
     init_func: Optional[Callable] = None
 
     def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
+        self._pool = None
+        self._max_queries = 300
+        self._connection = None
+        self._connected = False
         if loop:
             self._loop = loop
             asyncio.set_event_loop(self._loop)
@@ -61,7 +55,8 @@ class BasePool(ABC):
         try:
             self._timeout = kwargs["timeout"]
         except KeyError:
-            pass
+            self._timeout = 600
+        # set the logger:
         self._logger = logging.getLogger(__name__)
 
     def create_dsn(self, params):
