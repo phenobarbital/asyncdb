@@ -19,13 +19,15 @@ from asyncdb.utils import *
 
 
 class memcachePool(BasePool):
-    _dsn = None
     _max_queries = 10
     _pool = None
-    _connection = None
 
     def __init__(self, loop=None, params={}):
-        super(memcachePool, self).__init__(loop=loop, params=params)
+        self._dsn = None
+        self._connection = None
+        super(memcachePool, self).__init__(
+            loop=loop, params=params
+        )
         self._pool = None
 
     def create_dsn(self, params):
@@ -45,13 +47,15 @@ class memcachePool(BasePool):
         self._loop.run_until_complete(self.release())
 
     async def connect(self):
-        self._logger.debug("AsyncMcache: Connecting to {}".format(self._params))
+        self._logger.debug(
+            "AsyncMcache: Connecting to {}".format(self._params))
         try:
             self._pool = aiomcache.Client(
-                pool_size=self._max_queries, loop=self._loop, **self._params
+                pool_size=self._max_queries, **self._params
             )
         except aiomcache.exceptions.ClientException as err:
-            raise ProviderError("Unable to connect to Memcache: {}".format(str(err)))
+            raise ProviderError(
+                "Unable to connect to Memcache: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Unknown Error: {}".format(str(err)))
             return False
@@ -70,7 +74,8 @@ class memcachePool(BasePool):
             # self._connection = await self._pool.acquire()
             self._connection = self._pool
         except aiomcache.exceptions.ClientException as err:
-            raise ProviderError("Unable to connect to Memcache: {}".format(str(err)))
+            raise ProviderError(
+                "Unable to connect to Memcache: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Unknown Error: {}".format(str(err)))
             return False
@@ -138,11 +143,13 @@ class memcache(BaseProvider):
         """
         __init async Memcache initialization
         """
-        self._logger.debug("AsyncMcache: Connecting to {}".format(self._params))
+        self._logger.debug(
+            "AsyncMcache: Connecting to {}".format(self._params))
         try:
-            self._connection = aiomcache.Client(loop=self._loop, **self._params)
+            self._connection = aiomcache.Client(**self._params)
         except (aiomcache.exceptions.ValidationException) as err:
-            raise ProviderError("Invalid Connection Parameters: {}".format(str(err)))
+            raise ProviderError(
+                "Invalid Connection Parameters: {}".format(str(err)))
         except (aiomcache.exceptions.ClientException) as err:
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
@@ -174,7 +181,8 @@ class memcache(BaseProvider):
             except (aiomcache.exceptions.ClientException) as err:
                 raise ProviderError("Close Error: {}".format(str(err)))
             except Exception as err:
-                raise ProviderError("Unknown Memcache Error: {}".format(str(err)))
+                raise ProviderError(
+                    "Unknown Memcache Error: {}".format(str(err)))
                 return False
 
     async def flush(self):
@@ -235,7 +243,8 @@ class memcache(BaseProvider):
         except (aiomcache.exceptions.ClientException) as err:
             raise ProviderError("Memcache Exists Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError("Memcache Exists Unknown Error: {}".format(str(err)))
+            raise ProviderError(
+                "Memcache Exists Unknown Error: {}".format(str(err)))
 
     async def multiget(self, *kwargs):
         try:
