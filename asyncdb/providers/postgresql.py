@@ -44,17 +44,11 @@ class postgresqlCursor(baseCursor):
 class postgresql(SQLProvider, Thread):
     _provider = "postgresql"
     _syntax = "sql"
-    _test_query = "SELECT 1::integer as column"
-    _dsn = "postgresql://{user}:{password}@{host}:{port}/{database}"
-    _loop = None
-    _pool = None
-    # _engine = None
-    _connection = None
-    _connected = False
-    _initialized_on = None
 
     def __init__(self, dsn="", loop=None, params={}):
         self._params = params
+        self._test_query = "SELECT 1::integer as column"
+        self._dsn = "postgresql://{user}:{password}@{host}:{port}/{database}"
         if not dsn:
             self._dsn = self.create_dsn(self._params)
         else:
