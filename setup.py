@@ -80,7 +80,7 @@ setup(
         "beautifulsoup4>=4.10.0",
         "pylibmc==1.6.1",
         "redis==3.5.3",
-        "aioredis==2.0.0",
+        "aioredis==2.0.1",
         "rethinkdb==2.4.8",
         "lxml>=4.6.2",
         "pandas==1.3.4",
@@ -107,7 +107,7 @@ setup(
     ],
     tests_require=[
         'pytest>=6.0.0',
-        'pytest-asyncio==0.14.0',
+        'pytest-asyncio==0.18.0',
         'pytest-xdist==2.1.0',
         'pytest-assume==2.4.2'
     ],

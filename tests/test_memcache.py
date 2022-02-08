@@ -48,7 +48,7 @@ async def test_pool_by_params(driver, event_loop):
 
 
 @pytest.mark.parametrize("driver", [
-    (DRIVER)
+    (DRIVER), (DRIVER)
 ])
 async def test_connect(driver, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)

@@ -171,14 +171,10 @@ class redisPool(BasePool):
 class redis(BaseProvider):
     _provider = "redis"
     _syntax = "json"
-    _pool = None
-    _dsn = "redis://{host}:{port}/{db}"
-    _connection = None
-    _connected = False
-    _loop = None
     _encoding = "utf-8"
 
     def __init__(self, dsn="", connection=None, loop=None, pool=None, params={}):
+        self._dsn = "redis://{host}:{port}/{db}"
         super(redis, self).__init__(dsn=dsn, loop=loop, params=params)
         if connection is not None:
             self._connection = connection
@@ -278,7 +274,13 @@ class redis(BaseProvider):
         try:
             # gracefully closing underlying connection
             await self._connection.close()
-        except AttributeError:
+            try:
+                # safely closing the inner connection pool
+                await self._connection.connection_pool.disconnect()
+            except Exception as err:
+                print(err)
+        except (RuntimeError, AttributeError) as err:
+            print('HERE ', err)
             pass
         except Exception as err:
             print('Closing: ', err)
@@ -417,12 +419,13 @@ class redis(BaseProvider):
      Hash functions
     """
 
-    async def hmset(self, name: str, mapping: dict):
+    async def hmset(self, name: str, info: dict):
         """
         set the value of a key in field (redis dict)
         """
         try:
-            await self._connection.hmset(name, mapping)
+            # await self._connection.hmset(name, mapping)
+            await self._connection.hset(name, mapping=info)
         except (aioredis.RedisError, aioredis.exceptions.ConnectionError) as err:
             raise ProviderError("Redis Hmset Error: {}".format(str(err)))
         except Exception as err:

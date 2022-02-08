@@ -39,6 +39,10 @@ class BasePool(ABC):
         else:
             self._loop = asyncio.get_event_loop()
             asyncio.set_event_loop(self._loop)
+        if self._loop.is_closed():
+            self._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._loop)
+        # exception handler
         self._loop.set_exception_handler(default_exception_handler)
         self._params = params.copy()
         if dsn:
@@ -159,35 +163,33 @@ BaseDB
 class BaseProvider(ABC):
     _provider = "base"
     _syntax = "sql"  # can use QueryParser for parsing SQL queries
-    _dsn = ""
-    _connection = None
-    _connected = False
-    _util = None
-    _refresh = False
-    _result = []
-    _columns = []
-    _parameters = ()
-    _cursor = None
     _dict = []
-    _loop = None
-    _pool = None
-    _params = {}
-    _sta = ""
-    _attributes = None
     _test_query = None
-    _timeout = 600
-    _max_connections = 4
-    _generated = None
-    _DEBUG = False
-    _logger = None
     init_func: Optional[Callable] = None
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
         self._params = {}
+        self._pool = None
+        self._connection = None
+        self._connected = False
+        self._util = None
+        self._refresh = False
+        self._result = []
+        self._columns = []
+        self._parameters = ()
+        self._cursor = None
+        self._sta = None
+        self._attributes = None
+        self._generated = None
+        self._max_connections = 4
         if loop:
             self._loop = loop
         else:
             self._loop = asyncio.get_event_loop()
+        if self._loop.is_closed():
+            self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
+        self._loop.set_exception_handler(default_exception_handler)
         # get params
         if params:
             self._params = params
@@ -207,8 +209,11 @@ class BaseProvider(ABC):
         try:
             self._timeout = kwargs["timeout"]
         except KeyError:
-            pass
-        self._logger = logging.getLogger(__name__)
+            self._timeout = 600
+        try:
+            self._logger = logging.getLogger(__name__)
+        except Exception as err:
+            raise
 
     def create_dsn(self, params):
         try:
