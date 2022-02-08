@@ -54,33 +54,19 @@ rt = RethinkDB()
 class rethink(BaseProvider):
     _provider = "rethinkdb"
     _syntax = "rql"
-    _test_query = ""
-    _loop = None
-    _engine = None
-    _connection = None
-    _connected = False
-    _prepared = None
-    _parameters = ()
-    _cursor = None
-    _transaction = None
-    _initialized_on = None
     _db = None
-    conditions = {}
-    fields = []
-    cond_definition = None
-    refresh = False
-    where = None
-    ordering = None
-    qry_options = None
-    _group = None
-    distinct = None
 
     def __init__(self, loop=None, params={}, **kwargs):
+        self.conditions = {}
+        self.fields = []
+        self.cond_definition = None
+        self.refresh = False
+        self.where = None
+        self.ordering = None
+        self.qry_options = None
+        self._group = None
+        self.distinct = None
         super(rethink, self).__init__(loop=loop, params=params, **kwargs)
-        if loop:
-            self._loop = loop
-        else:
-            self._loop = asyncio.get_event_loop()
         self.conditions = {}
         # set rt object
         self._engine = rt

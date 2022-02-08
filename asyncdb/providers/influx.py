@@ -29,16 +29,16 @@ from asyncdb.utils import (
 
 
 class influx(BaseProvider):
-
     _provider = "influxdb"
-    _dsn = "influxdb://{user}:{password}@{host}:{port}/{database}"
     _syntax = "sql"
     _test_query = "SELECT 1"
     _parameters = ()
-    _initialized_on = None
     _query_raw = "SELECT {fields} FROM {table} {where_cond}"
-    _timeout: int = 5
     _version: str = None
+
+    def __init__(self, dsn="", loop=None, params={}, pool=None, **kwargs):
+        self._dsn = "influxdb://{user}:{password}@{host}:{port}/{database}"
+        super(influx, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
     async def close(self):
         """
