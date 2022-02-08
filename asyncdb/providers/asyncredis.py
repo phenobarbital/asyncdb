@@ -10,6 +10,7 @@ TODO:
 
 import asyncio
 import aredis
+from aredis import StrictRedis, Connection
 import objectpath
 import time
 from typing import Callable
@@ -24,15 +25,11 @@ from asyncdb.utils import *
 
 
 class asyncredisPool(BasePool):
-    _dsn: str = "redis://{host}:{port}/{db}"
-    _client: Callable = None
-    _max_queries = 300
-    _pool = None
-    _connection = None
     _encoding: str = "utf-8"
-    properties: dict = {}
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
+        self.properties = {}
+        self._dsn: str = "redis://{host}:{port}/{db}"
         super(asyncredisPool, self).__init__(dsn=dsn, loop=loop, params=params)
         self._pool = None
         try:
@@ -43,8 +40,13 @@ class asyncredisPool(BasePool):
         if "max_queries" in kwargs:
             self._max_queries = kwargs["max_queries"]
 
-    def get_loop(self):
-        return self._loop
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        # clean up anything you need to clean up
+        try:
+            await self.release()
+        except Exception as err:
+            print(err)
+            pass
 
     # Create a redis connection pool
     async def connect(self, **kwargs):
@@ -71,12 +73,16 @@ class asyncredisPool(BasePool):
         if self._pool:
             try:
                 # create the connection and get the properties:
-                self._connection = aredis.StrictRedis(connection_pool=self._pool)
-                self.properties = await self._connection.info()
+                self._connection = aredis.StrictRedis(
+                    connection_pool=self._pool
+                )
             except Exception as err:
                 raise ProviderError("Unable to connect to Redis: {}".format(str(err)))
             self._connected = True
             self._initialized_on = time.time()
+
+    def get_connection(self):
+        return self._pool.get_connection()
 
     async def acquire(self):
         """
@@ -88,7 +94,9 @@ class asyncredisPool(BasePool):
         try:
             if not self._pool:
                 await self._pool.connect()
-            self._connection = aredis.StrictRedis(connection_pool=self._pool)
+            self._connection = aredis.StrictRedis(
+                connection_pool=self._pool
+            )
         except (aredis.exceptions.ConnectionError, aredis.exceptions.RedisError) as err:
             raise ConnectionError(
                 "Redis Pool is closed o doesnt exists: {}".format(str(err))
@@ -100,12 +108,15 @@ class asyncredisPool(BasePool):
             db = asyncredis(connection=self._connection, pool=self)
         return db
 
+
     async def release(self, connection=None):
         """
         Release a connection from the pool
         """
         if not connection:
             conn = self._connection
+            if isinstance(conn, StrictRedis):
+                return True
         else:
             if isinstance(connection, asyncredis):
                 conn = connection.engine()
@@ -125,11 +136,9 @@ class asyncredisPool(BasePool):
         Close Pool
         """
         try:
-            if self._connection:
-                await self.release(self._connection)
-            if self._pool:
-                self._pool.disconnect()
-            self._connected = False
+            for conn in self._pool._in_use_connections:
+                self._pool.release(conn)
+            self._pool.disconnect()
         except (aredis.exceptions.ConnectionError, aredis.exceptions.RedisError) as err:
             raise ConnectionError(
                 "Redis Pool is closed o doesnt exists: {}".format(str(err))
@@ -137,6 +146,8 @@ class asyncredisPool(BasePool):
         except Exception as err:
             logging.exception("Pool Closing Error: {}".format(str(err)))
             return False
+        finally:
+            self._connected = False
 
     def is_closed(self):
         self._logger.debug("Connection closed: %s" % (not self._connected))
@@ -151,6 +162,7 @@ class asyncredisPool(BasePool):
                 result = await self._connection.execute_command(
                     sentence, *args, **kwargs
                 )
+                print(sentence, result)
                 return result
             except TypeError as err:
                 raise ProviderError("Execute Error: {}".format(str(err)))
@@ -178,19 +190,18 @@ class asyncredisPool(BasePool):
 class asyncredis(BaseProvider):
     _provider = "redis"
     _syntax = "json"
-    _pool = None
-    _dsn = "redis://{host}:{port}/{db}"
-    _connection = None
-    _connected = False
-    _loop = None
     _encoding = "utf-8"
 
     def __init__(self, dsn="", connection=None, pool=None, loop=None, params={}):
+        self._dsn = "redis://{host}:{port}/{db}"
         super(asyncredis, self).__init__(dsn=dsn, loop=loop, params=params)
         if pool:
             self._pool = pool
             self._loop = self._pool.get_loop()
             self._connection = connection
+            if connection:
+                self._connected = True
+            self._dsn = self._pool._dsn
         try:
             if params["encoding"]:
                 self._encoding = params["encoding"]
@@ -208,7 +219,8 @@ class asyncredis(BaseProvider):
         asyncio.run_until_complete(self.release())
 
     async def __aenter__(self):
-        await self.connection()
+        if not self._connection:
+            await self.connection()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -242,7 +254,9 @@ class asyncredis(BaseProvider):
         self.logger.info("AsyncRedis: Connecting to {}".format(self._dsn))
         try:
             if self._pool:
-                self._connection = aredis.StrictRedis(connection_pool=self._pool)
+                self._connection = aredis.StrictRedis(
+                    connection_pool=self._pool.pool()
+                )
             else:
                 self._connection = aredis.StrictRedis.from_url(
                     self._dsn,
@@ -273,13 +287,16 @@ class asyncredis(BaseProvider):
             await self._pool.release(connection=self._connection)
 
     async def close(self):
-        if self._connection:
+        if self._pool:
+            pass # dont touch Pool
+        else:
             try:
-                for conn in self._connection.connection_pool._available_connections:
-                    conn.disconnect()
-                    conn = None
+                for conn in self._connection.connection_pool._in_use_connections:
+                    print(conn)
+                    self._connection.connection_pool.release(conn)
+                self._connection.connection_pool.disconnect()
             except Exception as err:
-                logging.exception("Error closing Redis Connection")
+                logging.exception("Error closing Redis Pool")
             finally:
                 del self._connection
                 self._connected = False
