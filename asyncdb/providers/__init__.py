@@ -185,6 +185,8 @@ class BaseProvider(ABC):
         self._attributes = None
         self._generated = None
         self._max_connections = 4
+        self._initialized_on = None
+        self._result = None
         if loop:
             self._loop = loop
         else:

@@ -33,11 +33,7 @@ class baseCursor:
     Iterable Object for Cursor-Like functionality
     """
 
-    _cursor = None
-    _connection = None
     _provider: BaseProvider = None
-    _result: Any = None
-    _sentence: str = ""
 
     def __init__(
         self,
@@ -46,6 +42,7 @@ class baseCursor:
         result: Optional[List] = None,
         parameters: Iterable[Any] = None,
     ):
+        self._cursor = None
         self._provider = provider
         self._result = result
         self._sentence = sentence
@@ -91,12 +88,11 @@ class SQLProvider(BaseProvider):
 
     _syntax = "sql"
     _test_query = "SELECT 1"
-    _prepared = None
-    _initialized_on = None
-    _query_raw = "SELECT {fields} FROM {table} {where_cond}"
     __cursor__ = None
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
+        self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
+        self._prepared = None
         try:
             # dynamic loading of Cursor Class
             cls = f"asyncdb.providers.{self._provider}"
