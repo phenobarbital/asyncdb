@@ -96,6 +96,9 @@ class BasePool(ABC):
     def pool(self):
         return self._pool
 
+    def get_loop(self):
+        return self._loop
+
     def is_connected(self):
         return self._connected
 

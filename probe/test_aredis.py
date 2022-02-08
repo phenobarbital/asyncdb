@@ -43,7 +43,6 @@ redis_url = "redis://localhost:6379/3"
 #     loop.close()
 
 rd = AsyncPool("asyncredis", dsn=redis_url, loop=loop)
-# # rd = redisPool(dsn=redis_url, loop=loop)
 loop.run_until_complete(rd.connect())
 #
 # # rd = AsyncDB('redis', dsn=redis_url, loop=loop)
