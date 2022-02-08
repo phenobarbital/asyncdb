@@ -20,7 +20,6 @@ from asyncdb.utils import *
 
 class memcachePool(BasePool):
     _max_queries = 10
-    _pool = None
 
     def __init__(self, loop=None, params={}):
         self._dsn = None
@@ -113,11 +112,6 @@ class memcachePool(BasePool):
 class memcache(BaseProvider):
     _provider = "memcache"
     _syntax = "nosql"
-    _pool = None
-    _dsn = ""
-    _connection = None
-    _connected = False
-    _loop = None
     _encoding = "utf-8"
 
     def __init__(self, loop=None, pool=None, params={}):

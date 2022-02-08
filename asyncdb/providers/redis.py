@@ -25,14 +25,10 @@ from asyncdb.utils import *
 
 
 class redisPool(BasePool):
-    _dsn = "redis://{host}:{port}/{db}"
-    _max_queries = 300
-    _pool = None
-    _connection = None
     _encoding = "utf-8"
-    _connected = False
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
+        self._dsn = "redis://{host}:{port}/{db}"
         super(redisPool, self).__init__(dsn=dsn, loop=loop, params=params)
         self._pool = None
         try:

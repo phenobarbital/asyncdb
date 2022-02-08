@@ -71,7 +71,7 @@ class sqlite(SQLProvider):
         try:
             print("Running Connect")
             self._connection = aiosqlite.connect(
-                database=self._dsn, loop=self._loop, **kwargs
+                database=self._dsn, **kwargs
             )
             if self._connection:
                 self._connected = True
@@ -96,7 +96,7 @@ class sqlite(SQLProvider):
         self._connected = False
         try:
             self._connection = await aiosqlite.connect(
-                database=self._dsn, loop=self._loop, **kwargs
+                database=self._dsn, **kwargs
             )
             if self._connection:
                 if callable(self.init_func):
@@ -223,7 +223,7 @@ class sqlite(SQLProvider):
             error = "Error on Query: {}".format(str(err))
             raise ProviderError(error)
         finally:
-            await self._cursor.close()
+            # await self._cursor.close()
             return [result, error]
 
     async def executemany(self, sentence: str, *args):
@@ -237,7 +237,7 @@ class sqlite(SQLProvider):
             error = "Error on Query: {}".format(str(err))
             raise ProviderError(error)
         finally:
-            await self._cursor.close()
+            # await self._cursor.close()
             return [result, error]
 
     async def fetch(self, sentence: str, parameters: Iterable[Any] = None) -> Iterable:

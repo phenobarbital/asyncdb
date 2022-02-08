@@ -61,41 +61,29 @@ class postgres(threading.Thread, SQLProvider):
     _provider = "postgresql"
     _syntax = "sql"
     _test_query = "SELECT 1"
-    _dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
-    _loop = None
-    _connection = None
-    _connected = False
-    _prepared = None
     _parameters = ()
-    _cursor = None
-    _transaction = None
-    _initialized_on = None
-    init_func = None
-    _query_raw = "SELECT {fields} FROM {table} {where_cond}"
     _is_started = False
-    _result = None
     _error = None
 
     def __init__(self, dsn="", loop=None, pool=None, params={}, **kwargs):
+        self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
         self._params = params
         self._result = None
-        if not dsn:
-            self._dsn = self.create_dsn(self._params)
-        else:
-            self._dsn = dsn
-        try:
-            self._timeout = kwargs["timeout"]
-        except KeyError:
-            pass
         if loop:
             self._loop = loop
         else:
             self._loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self._loop)
+        SQLProvider.__init__(
+            dsn=dsn,
+            loop=self._loop,
+            pool=pool,
+            params=params,
+            **kwargs
+        )
         # calling parent Thread
         Thread.__init__(self, name="postgres")
         self.stop_event = threading.Event()
-        self._logger = logging.getLogger(__name__)
 
     def get_connection(self):
         self.join(timeout=self._timeout)

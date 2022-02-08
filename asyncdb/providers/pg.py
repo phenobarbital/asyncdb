@@ -3,7 +3,7 @@ Notes on pg Provider
 --------------------
 This provider implements all funcionalities from asyncpg (cursors, transactions, copy from and to files, pools, native data types, etc)
 """
-
+import os
 import asyncio
 import json
 import time
@@ -13,7 +13,7 @@ import uuid
 import asyncpg
 from asyncpg.pgproto import pgproto
 from dateutil.relativedelta import relativedelta
-from typing import Tuple
+from typing import Tuple, Optional, Callable
 
 from asyncpg.exceptions import (
     ConnectionDoesNotExistError,
@@ -62,16 +62,15 @@ class NAVConnection(asyncpg.Connection):
         return None
 
 class pgPool(BasePool):
-    _max_queries = 100
-    _dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
-    _server_settings = {}
-    init_func = None
-    setup_func = None
-    _max_clients = 300
-    _min_size = 10
-    application_name = "Navigator"
+    setup_func: Optional[Callable] = None
+    init_func: Optional[Callable] = None
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
+        self.application_name = os.getenv('APP_NAME', "NAV")
+        self._max_clients = 300
+        self._min_size = 10
+        self._server_settings = {}
+        self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
@@ -355,17 +354,14 @@ class pg(SQLProvider):
     _provider = "postgresql"
     _syntax = "sql"
     _test_query = "SELECT 1"
-    _dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
-    _prepared = None
-    _cursor = None
-    _transaction = None
-    _initialized_on = None
-    _query_raw = "SELECT {fields} FROM {table} {where_cond}"
-    _server_settings = {}
     application_name: str = "Navigator"
-    _numeric_as_float: bool = False
 
     def __init__(self, dsn="", loop=None, params={}, pool=None, **kwargs):
+        self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
+        self._prepared = None
+        self._cursor = None
+        self._transaction = None
+        self._server_settings = {}
         super(pg, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         if pool:
             self._pool = pool
@@ -376,6 +372,8 @@ class pg(SQLProvider):
             self.application_name = self._server_settings["application_name"]
         if "numeric_as_float" in kwargs:
             self._numeric_as_float = kwargs['numeric_as_float']
+        else:
+            self._numeric_as_float = False
 
     async def close(self, timeout=5):
         """
