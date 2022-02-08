@@ -13,10 +13,9 @@ from asyncdb import AsyncDB, AsyncPool
 from asyncdb.exceptions import NoDataFound, ProviderError
 from asyncdb.providers.redis import redis, redisPool
 
-redis_url = "redis://localhost:6379/3"
+redis_url = "redis://127.0.0.1:6379/3"
 
 rd = AsyncPool("redis", dsn=redis_url, loop=loop)
-# rd = redisPool(dsn=redis_url, loop=loop)
 loop.run_until_complete(rd.connect())
 
 ot = AsyncDB('redis', dsn=redis_url, loop=loop)
