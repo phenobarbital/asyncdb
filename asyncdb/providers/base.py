@@ -8,6 +8,7 @@ from abc import (
 from typing import (
     Callable,
     Optional,
+    Any
 )
 from asyncdb.exceptions import (
     default_exception_handler,
@@ -38,7 +39,9 @@ class BasePool(ABC):
             self._loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self._loop)
         # exception handler
-        self._loop.set_exception_handler(default_exception_handler)
+        self._loop.set_exception_handler(
+            default_exception_handler
+        )
         self._params = params.copy()
         if dsn:
             self._dsn = dsn
@@ -346,14 +349,14 @@ class BaseProvider(ABC):
     async def connection(self):
         pass
 
-    async def prepare(self):
+    async def prepare(self, sentence: Any = None):
         """
         Prepare an statement
         """
         pass
 
     @abstractmethod
-    async def execute(self, sentence=""):
+    async def execute(self, sentence: Any = None):
         """
         Execute a sentence
         """

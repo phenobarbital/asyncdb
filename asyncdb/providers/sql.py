@@ -2,12 +2,23 @@ import json
 import traceback
 import importlib
 import logging
+import asyncio
+from abc import (
+    ABC,
+    abstractmethod,
+)
 from asyncdb.providers import BaseProvider
-from asyncdb.utils import colors, SafeDict, Msg
-from asyncdb.utils.functions import _escapeString, _quoteString
+from asyncdb.utils.functions import (
+    SafeDict
+)
 from asyncdb.utils.models import Entity, Model
 from asyncdb.utils.encoders import BaseEncoder
-from asyncdb.exceptions import StatementError
+from asyncdb.exceptions import (
+    EmptyStatement,
+    NoDataFound,
+    ProviderError,
+    StatementError,
+)
 from dataclasses import is_dataclass, asdict
 import asyncpg
 
@@ -15,25 +26,19 @@ from typing import (
     Any,
     List,
     Dict,
-    Generator,
     Iterable,
     Optional,
 )
 
-from asyncdb.utils import (
-    SafeDict,
-    _escapeString,
-)
 
-
-class baseCursor:
+class baseCursor(ABC):
     """
     baseCursor.
 
     Iterable Object for Cursor-Like functionality
     """
 
-    _provider: BaseProvider = None
+    _provider: BaseProvider
 
     def __init__(
         self,
@@ -42,7 +47,7 @@ class baseCursor:
         result: Optional[List] = None,
         parameters: Iterable[Any] = None,
     ):
-        self._cursor = None
+        # self._cursor = None
         self._provider = provider
         self._result = result
         self._sentence = sentence
@@ -69,6 +74,10 @@ class baseCursor:
         else:
             raise StopAsyncIteration
 
+    @abstractmethod
+    async def execute(sentence: Any, params: dict) -> Any:
+        pass
+
     async def fetchone(self) -> Optional[Dict]:
         return await self._cursor.fetchone()
 
@@ -85,12 +94,10 @@ class SQLProvider(BaseProvider):
 
     Driver methods for SQL-based providers
     """
-
     _syntax = "sql"
     _test_query = "SELECT 1"
-    __cursor__ = None
 
-    def __init__(self, dsn="", loop=None, params={}, **kwargs):
+    def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
         self._prepared = None
         try:
@@ -100,9 +107,11 @@ class SQLProvider(BaseProvider):
             module = importlib.import_module(cls, package="providers")
             self.__cursor__ = getattr(module, cursor)
         except ImportError as err:
-            print("Error Loading Cursor Class: ", err)
+            logging.exception(f"Error Loading Cursor Class: {err}")
             pass
-        super(SQLProvider, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        super(SQLProvider, self).__init__(
+            dsn=dsn, loop=loop, params=params, **kwargs
+        )
 
     """
     Context magic Methods
@@ -115,14 +124,17 @@ class SQLProvider(BaseProvider):
         self.terminate()
         pass
 
-    async def __aenter__(self) -> "sqlite":
+    async def __aenter__(self) -> Any:
         if not self._connection:
             await self.connection()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         # clean up anything you need to clean up
-        return await self.close(timeout=5)
+        try:
+            return await self.close(timeout=5)
+        except Exception as err:
+            self._logger.exception(err)
 
     async def close(self, timeout=5):
         """
@@ -132,9 +144,12 @@ class SQLProvider(BaseProvider):
             if self._connection:
                 if self._cursor:
                     await self._cursor.close()
-                await asyncio.wait_for(self._connection.close(), timeout=timeout)
+                await asyncio.wait_for(
+                    self._connection.close(), timeout=timeout
+                )
         except Exception as err:
-            raise ProviderError("{}: Closing Error: {}".format(__name__, str(err)))
+            raise ProviderError(
+                "{}: Closing Error: {}".format(__name__, str(err)))
         finally:
             self._connection = None
             self._connected = False
@@ -154,24 +169,36 @@ class SQLProvider(BaseProvider):
         """
         await self.close()
 
-    async def valid_operation(self, sentence: str):
+    async def valid_operation(self, sentence: Any):
         self._result = None
         if not sentence:
-            raise EmptyStatement("Error: cannot sent an empty SQL sentence")
+            raise EmptyStatement(
+                "Error: cannot sent an empty SQL sentence"
+            )
         if not self._connection:
             await self.connection()
 
-    def cursor(self, sentence: str, parameters: Iterable[Any] = None) -> Iterable:
+    def cursor(
+                self,
+                sentence: str,
+                parameters: Iterable[Any] = None
+            ) -> Iterable:
         """ Returns a iterable Cursor Object """
         if not sentence:
-            raise EmptyStatement("Error: cannot sent an empty SQL sentence")
+            raise EmptyStatement(
+                "SQL Error: Cannot sent an empty SQL sentence"
+            )
         if parameters is None:
             parameters = []
         try:
-            return self.__cursor__(self, sentence=sentence, parameters=parameters)
+            return self.__cursor__(
+                self,
+                sentence=sentence,
+                parameters=parameters
+            )
         except Exception as err:
             print(err)
-            return False
+            return []
 
     """
     Meta-Operations
@@ -201,63 +228,63 @@ class SQLProvider(BaseProvider):
 
     def where(self, sentence, where):
         sql = ""
-        if sentence:
-            where_string = ""
-            if not where:
-                sql = sentence.format_map(SafeDict(where_cond=""))
-            elif type(where) == dict:
-                where_cond = []
-                for key, value in where.items():
-                    # print("KEY {}, VAL: {}".format(key, value))
-                    if type(value) == str or type(value) == int:
-                        if value == "null" or value == "NULL":
-                            where_string.append("%s IS NULL" % (key))
-                        elif value == "!null" or value == "!NULL":
-                            where_string.append("%s IS NOT NULL" % (key))
-                        elif key.endswith("!"):
-                            where_cond.append("%s != %s" % (key[:-1], value))
-                        else:
-                            if (
-                                type(value) == str
-                                and value.startswith("'")
-                                and value.endswith("'")
-                            ):
-                                where_cond.append("%s = %s" % (key, "{}".format(value)))
-                            elif type(value) == int:
-                                where_cond.append("%s = %s" % (key, "{}".format(value)))
-                            else:
-                                where_cond.append(
-                                    "%s = %s" % (key, "'{}'".format(value))
-                                )
-                    elif type(value) == bool:
-                        val = str(value)
-                        where_cond.append("%s = %s" % (key, val))
+        where_string = ""
+        if not where:
+            sql = sentence.format_map(SafeDict(where_cond=""))
+        elif type(where) == dict:
+            where_cond = []
+            for key, value in where.items():
+                # print("KEY {}, VAL: {}".format(key, value))
+                if type(value) == str or type(value) == int:
+                    if value == "null" or value == "NULL":
+                        where_string.append("%s IS NULL" % (key))
+                    elif value == "!null" or value == "!NULL":
+                        where_string.append("%s IS NOT NULL" % (key))
+                    elif key.endswith("!"):
+                        where_cond.append("%s != %s" % (key[:-1], value))
                     else:
-                        val = ",".join(map(str, value))
-                        if type(val) == str and "'" not in val:
-                            where_cond.append("%s IN (%s)" % (key, "'{}'".format(val)))
+                        if (
+                            type(value) == str
+                            and value.startswith("'")
+                            and value.endswith("'")
+                        ):
+                            where_cond.append("%s = %s" %
+                                              (key, "{}".format(value)))
+                        elif type(value) == int:
+                            where_cond.append("%s = %s" %
+                                              (key, "{}".format(value)))
                         else:
-                            where_cond.append("%s IN (%s)" % (key, val))
-                # if 'WHERE ' in sentence:
-                #    where_string = ' AND %s' % (' AND '.join(where_cond))
-                # else:
-                where_string = " WHERE %s" % (" AND ".join(where_cond))
-                print("WHERE cond is %s" % where_string)
-                sql = sentence.format_map(SafeDict(where_cond=where_string))
-            elif type(where) == str:
-                where_string = where
-                if not where.startswith("WHERE"):
-                    where_string = " WHERE %s" % where
-                sql = sentence.format_map(SafeDict(where_cond=where_string))
-            else:
-                sql = sentence.format_map(SafeDict(where_cond=""))
-            del where
-            del where_string
-            return sql
+                            where_cond.append(
+                                "%s = %s" % (key, "'{}'".format(value))
+                            )
+                elif type(value) == bool:
+                    val = str(value)
+                    where_cond.append("%s = %s" % (key, val))
+                else:
+                    val = ",".join(map(str, value))
+                    if type(val) == str and "'" not in val:
+                        where_cond.append("%s IN (%s)" %
+                                          (key, "'{}'".format(val)))
+                    else:
+                        where_cond.append("%s IN (%s)" % (key, val))
+            # if 'WHERE ' in sentence:
+            #    where_string = ' AND %s' % (' AND '.join(where_cond))
+            # else:
+            where_string = " WHERE %s" % (" AND ".join(where_cond))
+            print("WHERE cond is %s" % where_string)
+            sql = sentence.format_map(SafeDict(where_cond=where_string))
+        elif type(where) == str:
+            where_string = where
+            if not where.startswith("WHERE"):
+                where_string = " WHERE %s" % where
+            sql = sentence.format_map(SafeDict(where_cond=where_string))
         else:
-            return False
+            sql = sentence.format_map(SafeDict(where_cond=""))
+        del where
+        del where_string
+        return sql
 
-    def limit(self, sentence, limit=1):
+    def limit(self, sentence, limit: int = 1):
         """
         LIMIT
           add limiting to SQL
@@ -273,7 +300,9 @@ class SQLProvider(BaseProvider):
         """
         if sentence:
             if type(ordering) == str:
-                return "{q} ORDER BY {ordering}".format(q=sentence, ordering=ordering)
+                return "{q} ORDER BY {ordering}".format(
+                    q=sentence, ordering=ordering
+                )
             elif type(ordering) == list:
                 return "{q} ORDER BY {ordering}".format(
                     q=sentence, ordering=", ".join(ordering)
@@ -297,9 +326,10 @@ class SQLProvider(BaseProvider):
             else:
                 return False
         except (ProviderError, StatementError) as err:
+            logging.exception(err)
             return False
-        except Exception as e:
-            print(e)
+        except Exception as err:
+            logging.exception(err)
             return False
         return sql
 
@@ -308,7 +338,10 @@ class SQLProvider(BaseProvider):
         column_info
           get column information about a table
         """
-        discover = "SELECT attname AS column_name, atttypid::regtype AS data_type FROM pg_attribute WHERE attrelid = '{}'::regclass AND attnum > 0 AND NOT attisdropped ORDER  BY attnum".format(
+        discover = """SELECT attname AS column_name,
+         atttypid::regtype AS data_type
+         FROM pg_attribute WHERE attrelid = '{}'::regclass AND attnum > 0
+         AND NOT attisdropped ORDER  BY attnum""".format(
             table
         )
         try:
@@ -316,10 +349,9 @@ class SQLProvider(BaseProvider):
             if result:
                 return result
         except (NoDataFound, ProviderError):
-            print(err)
             return False
         except Exception as err:
-            print(err)
+            logging.exception(err)
             return False
 
     # def insert(self, table, data, **kwargs):
@@ -354,7 +386,7 @@ class SQLProvider(BaseProvider):
     filter, get_one, get_any, get_all, create, update, delete, insert, remove
     """
 
-    def _where(self, fields: list, **where):
+    def _where(self, fields: Dict, **where):
         """
         TODO: add conditions for BETWEEN, NOT NULL, NULL, etc
         """
@@ -378,12 +410,15 @@ class SQLProvider(BaseProvider):
                     where_cond.append(f"{key} is {value}")
                 elif isinstance(datatype, List):
                     val = ", ".join(
-                        map(str, [Entity.escapeLiteral(v, type(v)) for v in value])
+                        map(str, [Entity.escapeLiteral(v, type(v))
+                            for v in value])
                     )
-                    where_cond.append(f"ARRAY[{val}]<@ {key}::character varying[]")
+                    where_cond.append(
+                        f"ARRAY[{val}]<@ {key}::character varying[]")
                 elif Entity.is_array(datatype):
                     val = ", ".join(
-                        map(str, [Entity.escapeLiteral(v, type(v)) for v in value])
+                        map(str, [Entity.escapeLiteral(v, type(v))
+                            for v in value])
                     )
                     where_cond.append(f"{key} IN ({val})")
                 else:
@@ -395,7 +430,7 @@ class SQLProvider(BaseProvider):
         else:
             return result
 
-    async def delete(self, model: Model, fields: list = [], **kwargs):
+    async def delete(self, model: Model, fields: Dict = {}, **kwargs):
         """
         Deleting a row Model based on Primary Key.
         """
@@ -403,16 +438,15 @@ class SQLProvider(BaseProvider):
             await self.connection()
         result = None
         tablename = f"{model.Meta.schema}.{model.Meta.name}"
-        source = []
         pk = {}
-        cols = []
         for name, field in fields.items():
             column = field.name
             datatype = field.type
             value = Entity.toSQL(getattr(model, field.name), datatype)
             if field.primary_key is True:
                 pk[column] = value
-        # TODO: work in an "update, delete, insert" functions on asyncdb to abstract data-insertion
+        # TODO: work in an "update, delete, insert" functions on
+        # asyncdb to abstract data-insertion
         sql = "DELETE FROM {table} {condition}"
         condition = self._where(fields, **pk)
         sql = sql.format_map(SafeDict(table=tablename))
@@ -423,11 +457,12 @@ class SQLProvider(BaseProvider):
         except Exception as err:
             print(traceback.format_exc())
             raise Exception(
-                "Error on Delete over table {}: {}".format(model.Meta.name, err)
+                "Error on Delete over table {}: {}".format(
+                    model.Meta.name, err)
             )
         return result
 
-    async def insert(self, model: Model, fields: list = [], **kwargs):
+    async def insert(self, model: Model, fields: Dict = {}, **kwargs):
         """
         Inserting new object onto database.
         """
@@ -444,10 +479,12 @@ class SQLProvider(BaseProvider):
         for name, field in fields.items():
             column = field.name
             datatype = field.type
-            dbtype = field.get_dbtype()
+            # dbtype = field.get_dbtype()
             val = getattr(model, field.name)
             if is_dataclass(datatype):
-                value = json.loads(json.dumps(asdict(val), cls=BaseEncoder))
+                value = json.loads(
+                    json.dumps(asdict(val), cls=BaseEncoder)
+                )
             else:
                 value = val
             if field.required is False and value is None or value == "None":
@@ -480,10 +517,11 @@ class SQLProvider(BaseProvider):
         except Exception as err:
             print(traceback.format_exc())
             raise Exception(
-                "Error on Insert over table {}: {}".format(model.Meta.name, err)
+                "Error on Insert over table {}: {}".format(
+                    model.Meta.name, err)
             )
 
-    async def save(self, model: Model, fields: list = [], **kwargs):
+    async def save(self, model: Model, fields: Dict = {}, **kwargs):
         """
         Updating a Model object based on primary Key or conditions
         TODO: check if row doesnt exists, then, insert
@@ -497,7 +535,7 @@ class SQLProvider(BaseProvider):
         n = 1
         for name, field in fields.items():
             column = field.name
-            datatype = field.type
+            # datatype = field.type
             # try:
             #     dbtype = field.get_dbtype()
             # except AttributeError:
@@ -511,7 +549,8 @@ class SQLProvider(BaseProvider):
                     pk[column] = value
             except AttributeError:
                 pass
-        # TODO: work in an "update, delete, insert" functions on asyncdb to abstract data-insertion
+        # TODO: work in an "update, delete, insert" functions on asyncdb to
+        #  abstract data-insertion
         sql = "UPDATE {table} SET {set_fields} {condition}"
         condition = self._where(fields, **pk)
         sql = sql.format_map(SafeDict(table=table))
@@ -529,7 +568,8 @@ class SQLProvider(BaseProvider):
         except Exception as err:
             print(traceback.format_exc())
             raise Exception(
-                "Error on Insert over table {}: {}".format(model.Meta.name, err)
+                "Error on Insert over table {}: {}".format(
+                    model.Meta.name, err)
             )
 
     async def get_all(self, model: Model, **kwargs):
@@ -547,7 +587,8 @@ class SQLProvider(BaseProvider):
         except Exception as err:
             print(traceback.format_exc())
             raise Exception(
-                "Error on Insert over table {}: {}".format(model.Meta.name, err)
+                "Error on Insert over table {}: {}".format(
+                    model.Meta.name, err)
             )
 
     async def get_one(self, model: Model, **kwargs):
@@ -556,7 +597,6 @@ class SQLProvider(BaseProvider):
         table = f"{model.Meta.schema}.{model.Meta.name}"
         pk = {}
         cols = []
-        source = []
         fields = model.columns(model)
         # print(fields)
         for name, field in fields.items():
@@ -579,16 +619,16 @@ class SQLProvider(BaseProvider):
         except Exception as err:
             print(traceback.format_exc())
             raise Exception(
-                "Error on Get One over table {}: {}".format(model.Meta.name, err)
+                "Error on Get One over table {}: {}".format(
+                    model.Meta.name, err)
             )
 
-    async def fetch_one(self, model: Model, fields: list = [], **kwargs):
+    async def fetch_one(self, model: Model, fields: Dict = {}, **kwargs):
         # if not self._connection:
         #     await self.connection()
         table = f"{model.Meta.schema}.{model.Meta.name}"
         pk = {}
         cols = []
-        source = {}
         for name, field in fields.items():
             value = getattr(model, field.name)
             column = field.name
@@ -608,13 +648,13 @@ class SQLProvider(BaseProvider):
         except Exception as err:
             print(traceback.format_exc())
             raise Exception(
-                "Error on Get One over table {}: {}".format(model.Meta.name, err)
+                "Error on Get One over table {}: {}".format(
+                    model.Meta.name, err)
             )
 
-    async def select(self, model: Model, fields: list = [], **kwargs):
+    async def select(self, model: Model, fields: Dict = {}, **kwargs):
         if not self._connection:
             await self.connection()
-        pk = {}
         cols = []
         source = {}
         # print('HERE: ', model.__dict__)
@@ -639,7 +679,8 @@ class SQLProvider(BaseProvider):
         except Exception as err:
             print(traceback.format_exc())
             raise Exception(
-                "Error on Insert over table {}: {}".format(model.Meta.name, err)
+                "Error on Insert over table {}: {}".format(
+                    model.Meta.name, err)
             )
 
     async def filter(self, model: Model, **kwargs):
@@ -655,7 +696,8 @@ class SQLProvider(BaseProvider):
             cols.append(column)
             try:
                 if field.primary_key is True:
-                    pk[column] = Entity.toSQL(getattr(model, field.name), datatype)
+                    pk[column] = Entity.toSQL(
+                        getattr(model, field.name), datatype)
             except AttributeError:
                 pass
         columns = ", ".join(cols)
@@ -667,7 +709,8 @@ class SQLProvider(BaseProvider):
         except Exception as err:
             print(traceback.format_exc())
             raise Exception(
-                "Error on Insert over table {}: {}".format(model.Meta.name, err)
+                "Error on Insert over table {}: {}".format(
+                    model.Meta.name, err)
             )
 
     async def update_rows(self, model: Model, conditions: dict, **kwargs):
@@ -678,7 +721,6 @@ class SQLProvider(BaseProvider):
             await self.connection()
         table = f"{model.Meta.schema}.{model.Meta.name}"
         source = []
-        pk = {}
         cols = []
         fields = model.columns(model)
         for name, field in fields.items():
@@ -688,7 +730,8 @@ class SQLProvider(BaseProvider):
             if column in kwargs:
                 value = Entity.toSQL(kwargs[column], datatype)
                 source.append(
-                    "{} = {}".format(column, Entity.escapeLiteral(value, datatype))
+                    "{} = {}".format(
+                        column, Entity.escapeLiteral(value, datatype))
                 )
         set_fields = ", ".join(source)
         condition = self._where(fields, **conditions)
@@ -704,7 +747,8 @@ class SQLProvider(BaseProvider):
         except Exception as err:
             print(traceback.format_exc())
             raise Exception(
-                "Error on Insert over table {}: {}".format(model.Meta.name, err)
+                "Error on Insert over table {}: {}".format(
+                    model.Meta.name, err)
             )
 
     async def delete_rows(self, model: Model, conditions: dict, **kwargs):
@@ -715,7 +759,6 @@ class SQLProvider(BaseProvider):
             await self.connection()
         table = f"{model.Meta.schema}.{model.Meta.name}"
         source = []
-        pk = {}
         cols = []
         fields = model.columns(model)
         for name, field in fields.items():
@@ -725,11 +768,12 @@ class SQLProvider(BaseProvider):
             if column in kwargs:
                 value = Entity.toSQL(kwargs[column], datatype)
                 source.append(
-                    "{} = {}".format(column, Entity.escapeLiteral(value, datatype))
+                    "{} = {}".format(
+                        column, Entity.escapeLiteral(value, datatype))
                 )
-        set_fields = ", ".join(source)
+        # set_fields = ", ".join(source)
         condition = self._where(fields, **conditions)
-        columns = ", ".join(cols)
+        # columns = ", ".join(cols)
         sql = f"DELETE FROM {table} {condition}"
         logging.debug(sql)
         try:
@@ -771,9 +815,11 @@ class SQLProvider(BaseProvider):
                         # val = getattr(model, col)
                         # if val is not None:
                         #     source.append(val)
-                        # elif field.required is True or field.primary_key is True:
+                        # elif field.required is True
                         if field.required is True:
-                            raise StatementError(f"Missing Required Field: {col}")
+                            raise StatementError(
+                                f"Missing Required Field: {col}"
+                            )
                 else:
                     try:
                         val = row[col]
