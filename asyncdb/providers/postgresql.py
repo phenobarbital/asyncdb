@@ -18,7 +18,7 @@ from sqlalchemy.exc import (
     SQLAlchemyError,
 )
 
-from ..exceptions import (
+from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
     EmptyStatement,
@@ -136,7 +136,8 @@ class postgresql(SQLProvider, Thread):
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._engine = None
-            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "Engine Error, Terminated: {}".format(str(err)))
 
     def connection(self):
         """
@@ -148,13 +149,15 @@ class postgresql(SQLProvider, Thread):
         self.start()
         try:
             if self._engine:
-                self._connection = self._loop.run_until_complete(self._engine.acquire())
+                self._connection = self._loop.run_until_complete(
+                    self._engine.acquire())
         except (SQLAlchemyError, DatabaseError, OperationalError) as err:
             self._connection = None
             raise ProviderError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._connection = None
-            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "Engine Error, Terminated: {}".format(str(err)))
         finally:
             return self
 
@@ -169,7 +172,8 @@ class postgresql(SQLProvider, Thread):
                 else:
                     self._connection.close()
         except Exception as err:
-            raise ProviderError("Release Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "Release Error, Terminated: {}".format(str(err)))
         finally:
             self._connection = None
 
