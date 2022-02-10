@@ -9,7 +9,7 @@ async def shutdown(loop, signal=None):
     if signal:
         logging.info(f"Received exit signal {signal.name}...")
     else:
-        logging.warning(f"Shutting NOT via signal")
+        logging.warning("Shutting NOT via signal")
     logging.info("Closing all connections")
     try:
         tasks = [
@@ -38,7 +38,7 @@ def default_exception_handler(loop, context: Any):
         raise type(context)
     else:
         loop.default_exception_handler(context)
-        if not "exception" in context:
+        if "exception" not in context:
             try:
                 task = context.get("task", context["future"])
             except KeyError:
@@ -52,7 +52,8 @@ def default_exception_handler(loop, context: Any):
             msg = context.get("exception", context["message"])
             exception = type(task.exception())
             try:
-                logging.exception(f"{exception.__name__!s}*{msg}* over task {task}")
+                logging.exception(
+                    f"{exception.__name__!s}*{msg}* over task {task}")
                 raise exception(msg)
             except Exception as err:
                 logging.exception(err)
