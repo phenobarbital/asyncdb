@@ -5,31 +5,29 @@ Asyncio-based database connectors for NAV.
 # -*- coding: utf-8 -*-
 import asyncio
 import uvloop
-import importlib
-import logging
-import sys
 
 from .meta import (
     asyncORM,
     asyncRecord,
 )
-__version__ = '1.7.18'
+__version__ = '1.8.0'
 
 __all__ = ["asyncORM", "asyncRecord"]
 
 # from .providers import *
 from .exceptions import (
-    NotSupported,
     ProviderError,
     asyncDBException,
 )
 
-from .providers import _PROVIDERS
-from .utils.functions import module_exists
+from asyncdb.providers import _PROVIDERS
+from asyncdb.utils.functions import module_exists
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 # Factory interface for Pool-based connectors
+
+
 class AsyncPool:
     """
     AsyncPool.
