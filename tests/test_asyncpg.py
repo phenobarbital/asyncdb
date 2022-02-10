@@ -4,16 +4,10 @@ import asyncio
 import asyncpg
 from io import BytesIO
 from pathlib import Path
+import pytest_asyncio
 
-@pytest.fixture
-def event_loop():
-    loop = asyncio.get_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
 
 asyncpg_url = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator_dev"
-
 PARAMS = {
     "host": '127.0.0.1',
     "port": '5432',
@@ -22,12 +16,14 @@ PARAMS = {
     "database": 'navigator_dev'
 }
 
+
 @pytest.fixture
 async def conn(event_loop):
     db = AsyncDB('pg', dsn=asyncpg_url, loop=event_loop)
     await db.connection()
     yield db
     await db.close()
+
 
 @pytest.fixture
 async def pooler(event_loop):
@@ -44,14 +40,17 @@ async def pooler(event_loop):
 
 pytestmark = pytest.mark.asyncio
 
+
 async def test_pool_by_dsn(event_loop):
     """ test creation using DSN """
     pool = AsyncPool("pg", dsn=asyncpg_url, loop=event_loop)
     assert pool.application_name == 'Navigator'
 
+
 async def test_pool_by_params(event_loop):
     pool = AsyncPool("pg", params=PARAMS, loop=event_loop)
     assert pool.get_dsn() == asyncpg_url
+
 
 async def test_changing_app(event_loop):
     """ Change the Application Name on connect """
@@ -62,6 +61,7 @@ async def test_changing_app(event_loop):
     }
     p = AsyncPool("pg", params=PARAMS, loop=event_loop, **args)
     assert p.application_name == 'Testing'
+
 
 async def test_pool_connect(event_loop):
     pool = AsyncPool("pg", params=PARAMS, loop=event_loop)
@@ -77,6 +77,7 @@ async def test_pool_connect(event_loop):
     pytest.assume(row[0] == 1)
     await pool.release(connection=db)
 
+
 async def test_connection(conn):
     await conn.connection()
     pytest.assume(conn.is_connected() is True)
@@ -86,6 +87,7 @@ async def test_connection(conn):
     prepared, error = await conn.prepare("SELECT store_id, store_name FROM walmart.stores")
     pytest.assume(conn.get_columns() == ["store_id", "store_name"])
     assert not error
+
 
 async def test_huge_query(event_loop):
     sql = 'SELECT * FROM trocplaces.stores LIMIT 1000'
@@ -139,6 +141,7 @@ WITH (
   OIDS=FALSE
 ); """
 
+
 async def test_cicle(conn):
     """ Test all cicle since: table creation, insertion, update, truncate and drop """
     async with await conn.connection() as conn:
@@ -149,7 +152,7 @@ async def test_cicle(conn):
         stores, error = await conn.query(
             "SELECT store_id, store_name FROM walmart.stores"
         )
-        st = [(k, v) for k,v in stores]
+        st = [(k, v) for k, v in stores]
         # check the prepared sentences:
         pytest.assume(len(st) == 1524)
         error = await conn.executemany(
@@ -194,6 +197,7 @@ async def test_cicle(conn):
         result, error = await conn.query('SELECT * FROM test.stores')
         pytest.assume(error)
 
+
 async def test_copy_to_table(conn):
     """ test copy to table functionality """
     async with await conn.connection() as conn:
@@ -203,11 +207,15 @@ async def test_copy_to_table(conn):
         filepath = Path(__file__).resolve().parent
         filepath = filepath.joinpath(file)
         result = await conn.copy_to_table(
-            table = 'stores',
-            schema = 'test',
-            columns = [ 'store_id', 'store_name'],
-            source = filepath
+            table='stores',
+            schema='test',
+            columns=['store_id', 'store_name'],
+            source=filepath
         )
         pytest.assume(result == 'COPY 1470')
         result, error = await conn.execute('DROP TABLE test.stores')
         pytest.assume(result == 'DROP TABLE')
+
+
+def pytest_sessionfinish(session, exitstatus):
+    asyncio.get_event_loop().close()

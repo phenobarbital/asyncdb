@@ -6,12 +6,6 @@ from io import BytesIO
 from pathlib import Path
 import pytest_asyncio
 
-# @pytest.fixture
-# def event_loop():
-#     loop = asyncio.get_event_loop()
-#     asyncio.set_event_loop(loop)
-#     yield loop
-#     loop.stop()
 
 DRIVER = 'redis'
 params = {
@@ -21,14 +15,16 @@ params = {
 }
 DSN = "redis://127.0.0.1:6379/0"
 
-# @pytest_asyncio.fixture
-# async def conn(event_loop):
-#     db = AsyncDB(DRIVER, params=params, loop=event_loop)
-#     await db.connection()
-#     yield db
-#     await db.close()
+
+@pytest_asyncio.fixture
+async def conn(event_loop):
+    db = AsyncDB(DRIVER, params=params, loop=event_loop)
+    await db.connection()
+    yield db
+    await db.close()
 
 pytestmark = pytest.mark.asyncio
+
 
 @pytest.mark.parametrize("driver", [
     (DRIVER)
@@ -60,6 +56,7 @@ async def test_pool_by_dsn(driver, event_loop):
     await pool.close()
     assert pool.is_closed() is True
 
+
 async def test_pool_by_params(event_loop):
     pool = AsyncPool(DRIVER, params=params, loop=event_loop)
     assert pool.is_connected() is False
@@ -69,6 +66,7 @@ async def test_pool_by_params(event_loop):
     await pool.close()
     assert pool.is_closed() is True
 
+
 async def test_pool_by_params2(event_loop):
     pool = AsyncPool(DRIVER, params=params, loop=event_loop)
     assert pool.is_connected() is False
@@ -77,6 +75,7 @@ async def test_pool_by_params2(event_loop):
     pytest.assume(pool.is_connected() is True)
     await pool.close()
     assert pool.is_closed() is True
+
 
 @pytest.mark.parametrize("driver", [
     (DRIVER)
@@ -89,6 +88,7 @@ async def test_conn_by_params(driver, event_loop):
     await db.close()
     print(db.is_closed())
     assert db.is_closed() is True
+
 
 @pytest.mark.parametrize("driver", [
     (DRIVER)
@@ -122,6 +122,7 @@ async def test_context(driver, event_loop):
         pytest.assume(not error)
         pytest.assume(result == 'TEST CONTEXT')
     assert db.is_closed() is True
+
 
 def pytest_sessionfinish(session, exitstatus):
     asyncio.get_event_loop().close()

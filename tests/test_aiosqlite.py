@@ -2,11 +2,16 @@ import asyncio
 import pytest
 from pprint import pprint
 from asyncdb import AsyncDB
+import pytest_asyncio
 
 pytestmark = pytest.mark.asyncio
 
+DRIVER = "sqlite"
+PARAMS = {"database": ":memory:"}
+
+
 async def test_connect(event_loop):
-    db = AsyncDB("sqlite", params={"database": ":memory:"}, loop=event_loop)
+    db = AsyncDB(DRIVER, params=PARAMS, loop=event_loop)
     pytest.assume(db.is_connected() is False)
     async with await db.connection() as conn:
         pytest.assume(db.is_connected() is True)
@@ -15,8 +20,9 @@ async def test_connect(event_loop):
         pytest.assume(result[0][0] == 1)
     assert db.is_closed() is True
 
+
 async def test_operations(event_loop):
-    db = AsyncDB("sqlite", params={"database": ":memory:"}, loop=event_loop)
+    db = AsyncDB(DRIVER, params=PARAMS, loop=event_loop)
     pytest.assume(db.is_connected() is False)
     async with await db.connection() as conn:
         pytest.assume(conn.is_connected() is True)
@@ -60,8 +66,9 @@ async def test_operations(event_loop):
                 pytest.assume(row[0] == "CDG")
     assert db.is_closed() is True
 
+
 async def test_cursors(event_loop):
-    db = AsyncDB("sqlite", params={"database": ":memory:"}, loop=event_loop)
+    db = AsyncDB(DRIVER, params=PARAMS, loop=event_loop)
     pytest.assume(db.is_connected() is False)
     async with await db.connection() as conn:
         pytest.assume(db.is_connected() is True)
@@ -101,6 +108,11 @@ async def test_cursors(event_loop):
                 values = await cursor.fetchall()
                 print(values)
                 pytest.assume(type(values) == list)
-                pytest.assume(values = [('CDG', 'Paris', 'France'), ('LHR', 'London', 'United Kingdom')])
+                pytest.assume(
+                    values=[('CDG', 'Paris', 'France'), ('LHR', 'London', 'United Kingdom')])
             # this returns a cursor based object
     assert db.is_closed() is True
+
+
+def pytest_sessionfinish(session, exitstatus):
+    asyncio.get_event_loop().close()
