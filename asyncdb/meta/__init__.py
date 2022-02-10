@@ -1,6 +1,9 @@
 import asyncio
-from asyncdb.exceptions import ProviderError, NoDataFound, StatementError
-from asyncdb.utils import SafeDict
+from asyncdb.exceptions import (
+    ProviderError,
+    NoDataFound,
+    StatementError
+)
 
 
 class asyncORM(object):
@@ -9,17 +12,8 @@ class asyncORM(object):
        Class for basic record interaction on AsyncDB
     """
 
-    _fields = {}
-    _columns = []
-    _result = None
-    _connection = None
-    _type = "new"
-    _table = None
-    _query = None
-    _loop = None
-    _val = {}
-
     def __init__(self, db, result=None, type="new", loop=None):
+        self._fields = {}
         self._columns = []
         self._fields = {}
         self._result = result
@@ -63,9 +57,8 @@ class asyncORM(object):
                 asyncio.get_running_loop().run_until_complete(
                     self._connection.close(timeout=5)
                 )
-            except Exception as err:
+            except Exception:
                 pass
-            # self._loop.run_until_complete()
 
     """
     Meta Definitions
@@ -101,7 +94,8 @@ class asyncORM(object):
             self._fields = [x.strip() for x in fields.split(",")]
         elif type(fields) == list:
             self._fields = fields
-        self._query = self._connection.fields(sentence=self._query, fields=fields)
+        self._query = self._connection.fields(
+            sentence=self._query, fields=fields)
         return self
 
     def filter(self, filter={}, **kwargs):
@@ -111,11 +105,13 @@ class asyncORM(object):
         """
         where = {}
         if filter:
-            self._query = self._connection.where(sentence=self._query, where=filter)
+            self._query = self._connection.where(
+                sentence=self._query, where=filter)
         if len(kwargs) > 0:
             where.update(kwargs)
             # print("HERE %s" % where)
-            self._query = self._connection.where(sentence=self._query, where=where)
+            self._query = self._connection.where(
+                sentence=self._query, where=where)
         return self
 
     def orderby(self, order):
@@ -124,7 +120,8 @@ class asyncORM(object):
            define Ordering criteria
         """
         if order:
-            self._query = self._connection.orderby(sentence=self._query, ordering=order)
+            self._query = self._connection.orderby(
+                sentence=self._query, ordering=order)
         return self
 
     def all(self):
@@ -135,7 +132,7 @@ class asyncORM(object):
         print("Connection Status: %s" % self._connection.connected)
         try:
             self._query = self._connection.get_query(self._query)
-        except (ProviderError, StatementError) as err:
+        except (ProviderError, StatementError):
             return False
         if self._query:
             self._columns = self._connection.get_columns()
@@ -144,7 +141,10 @@ class asyncORM(object):
                     self._connection.query(self._query)
                 )
                 if self._result and not error:
-                    return asyncResult(result=self._result, columns=self._columns)
+                    return asyncResult(
+                        result=self._result,
+                        columns=self._columns
+                    )
             except NoDataFound:
                 print("NO DATA")
                 return False
@@ -162,7 +162,7 @@ class asyncORM(object):
         print("Connection Status: %s" % self._connection.connected)
         try:
             self._query = self._connection.get_query(self._query)
-        except (ProviderError, StatementError) as err:
+        except (ProviderError, StatementError):
             return False
         if self._query:
             self._columns = self._connection.get_columns()
@@ -171,7 +171,10 @@ class asyncORM(object):
                     self._connection.queryrow(self._query)
                 )
                 if self._result and not error:
-                    return asyncRecord(result=self._result, columns=self._columns)
+                    return asyncRecord(
+                        result=self._result,
+                        columns=self._columns
+                    )
             except NoDataFound:
                 print("NO DATA")
                 return False
@@ -219,13 +222,15 @@ class asyncORM(object):
             except KeyError:
                 if hasattr(self, name):
                     return super(asyncORM, self).__getattr__(name)
-                raise KeyError("asyncORM Error: invalid column name %s" % name)
-                return None
+                raise KeyError(
+                    f"asyncORM Error: invalid column name {name}"
+                )
             except TypeError:
                 if hasattr(self, name):
                     return super(asyncORM, self).__getattr__(name)
-                raise TypeError("asyncORM Error: Empty Object")
-                return None
+                raise TypeError(
+                    "asyncORM Error: Empty Object"
+                )
         else:
             return False
 
@@ -233,7 +238,6 @@ class asyncORM(object):
         """
         setter
         """
-        # print("DEFINE ATTRIBUTE: name {}, value {} is system {}".format(name, value, hasattr(self, name)))
         if hasattr(self, name):
             self.__dict__[name] = value
         elif name in self._columns:
@@ -242,14 +246,18 @@ class asyncORM(object):
                 self._val[name] = "ARRAY[{}]".format(values)
             else:
                 type = self._fields[name]
-                if type in ["integer", "double precision", "long", "float", "numeric"]:
+                if type in [
+                            "integer",
+                            "double precision",
+                            "long",
+                            "float",
+                            "numeric"
+                        ]:
                     self._val[name] = value
                 else:
                     self._val[name] = "'{}'".format(value.replace("'", r"''"))
         else:
-            # object.__setattr__(self, name, value)
             raise KeyError("asyncORM Error: Invalid Column %s" % name)
-            return None
 
     def columns(self):
         """
@@ -306,11 +314,8 @@ class asyncResult(object):
        Class for a Resultset Object
     """
 
-    _result = {}
-    _columns = []
-    _idx = 0
-
     def __init__(self, result, columns=[]):
+        self._columns = []
         self._result = result
         if columns:
             self._columns = columns
@@ -343,11 +348,9 @@ class asyncRecord(object):
           result: asyncpg resultset
     """
 
-    _row = {}
-    _columns = []
-
     def __init__(self, result, columns=[]):
         self._row = result
+        self._columns = []
         if columns:
             self._columns = columns
 
@@ -404,10 +407,12 @@ class asyncRecord(object):
             try:
                 return self._row[attr]
             except KeyError:
-                raise KeyError("asyncRecord Error: invalid column name %s" % attr)
-                return None
+                raise KeyError(
+                    f"asyncRecord Error: invalid column name {attr}"
+                )
             except TypeError:
-                raise TypeError("asyncRecord Error: invalid Result")
-                return None
+                raise TypeError(
+                    f"asyncRecord Error: invalid Result on {attr}"
+                )
         else:
             return False
