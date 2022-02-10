@@ -77,13 +77,14 @@ class asyncDBException(Exception):
 
     code: int = 0
 
-    def __init__(self, message: str, *args, code: int = None, **kwargs):
+    def __init__(self, *args, message: str = '', code: int = None, **kwargs):
         super(asyncDBException, self).__init__()
         self.args = (
             message,
             code,
         )
-        self.message = message
+        if message:
+            self.message = message
         if code:
             self.code = code
 
@@ -100,7 +101,7 @@ class asyncDBException(Exception):
 class ProviderError(asyncDBException):
     """Database Provider Error"""
 
-    def __init__(self, message: str, *args, code: int = None, **kwargs):
+    def __init__(self, *args, message: str = '', code: int = None, **kwargs):
         asyncDBException.__init__(self, message, code, *args, **kwargs)
 
 
