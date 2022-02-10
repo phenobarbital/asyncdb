@@ -169,7 +169,7 @@ class sqlite(SQLProvider):
             await self._cursor.close()
             return self._result
 
-    async def queryrow(self, sentence: str = Any):
+    async def queryrow(self, sentence: Any = None):
         """
         Getting a Query from Database
         """
@@ -206,7 +206,7 @@ class sqlite(SQLProvider):
             await self._cursor.close()
             return self._result
 
-    async def execute(self, sentence: str = Any, *args):
+    async def execute(self, sentence: Any = None, *args):
         """Execute a transaction
         get a SQL sentence and execute
         returns: results of the execution
