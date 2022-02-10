@@ -10,28 +10,27 @@ from .meta import (
     asyncORM,
     asyncRecord,
 )
-__version__ = '1.8.0'
-
-__all__ = ["asyncORM", "asyncRecord"]
-
-# from .providers import *
-from .exceptions import (
+from asyncdb.exceptions import (
     ProviderError,
     asyncDBException,
 )
-
-from asyncdb.providers import _PROVIDERS
+from asyncdb.providers import (
+    _PROVIDERS,
+    registerProvider
+)
 from asyncdb.utils.functions import module_exists
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+__version__ = '1.8.0'
+__all__ = ["asyncORM", "asyncRecord", "registerProvider"]
 
-# Factory interface for Pool-based connectors
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class AsyncPool:
     """
     AsyncPool.
        Base class for Asyncio-based DB Pools.
+       Factory interface for Pool-based connectors.
     """
 
     _provider = None
@@ -55,8 +54,11 @@ class AsyncPool:
             raise ProviderError(message=str(err), code=404)
 
 
-# Factory Proxy Interfaces for Providers
 class AsyncDB:
+    """AsyncDB.
+
+    Factory Proxy Interfaces for Database Providers.
+    """
     _provider = None
     _name = ""
 
