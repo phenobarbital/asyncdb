@@ -13,11 +13,13 @@ from typing import (
     Dict,
     Any,
     Optional,
-    Iterable
+    Iterable,
+    Union
 )
 from asyncdb.exceptions import (
     default_exception_handler,
-    ProviderError
+    ProviderError,
+    EmptyStatement
 )
 from collections.abc import Sequence
 
@@ -159,6 +161,11 @@ class ConnectionBackend(ABC):
     ) -> None:
         self._connection = None
         self._connected = False
+        self._cursor = None
+        try:
+            self.params = params.copy()
+        except TypeError:
+            pass
         if loop:
             self._loop = loop
         else:
@@ -191,8 +198,10 @@ class ConnectionBackend(ABC):
     async def connection(self):
         pass
 
+    connect = connection
+
     @abstractmethod
-    async def close(self):
+    async def close(self, timeout: int = 10):
         pass
 
     # alias for connection
@@ -250,7 +259,7 @@ class ConnectionBackend(ABC):
         await self.close()
 
 
-class ConnectionDSNBackend(ConnectionBackend):
+class ConnectionDSNBackend(ABC):
     """
     Interface for Databases with DSN Support.
     """
@@ -262,9 +271,6 @@ class ConnectionDSNBackend(ConnectionBackend):
             params: Dict[Any, Any] = {},
             **kwargs
     ) -> None:
-        super(ConnectionDSNBackend, self).__init__(
-            loop, params, **kwargs
-        )
         if dsn:
             self._dsn = dsn
         else:
@@ -368,27 +374,24 @@ class DatabaseBackend(ABC):
         pass
 
     @abstractmethod
-    async def execute(self, sentence: Any = None):
+    async def execute(self, sentence: Any = None, *args) -> Optional[Any]:
         """
         Execute a sentence
         """
         pass
 
     @abstractmethod
-    async def execute_many(self, queries: List[str]) -> None:
+    async def execute_many(
+            self,
+            sentence: Union[str, List],
+            *args
+    ) -> Optional[Any]:
         """
         Execute many sentences at once.
         """
         pass
 
     executemany = execute_many
-
-    @abstractmethod
-    async def column_info(self, tablename: str):
-        """
-        Getting Column info from an existing Table in Provider.
-        """
-        pass
 
     @abstractmethod
     async def query(self, sentence=""):
@@ -410,6 +413,9 @@ class DatabaseBackend(ABC):
 
     def prepared_statement(self):
         return self._prepared
+
+    def prepared_attributes(self):
+        return self._attributes
 
     @abstractmethod
     async def fetch_all(self, sentence: str, **kwargs) -> List[Sequence]:
@@ -478,7 +484,7 @@ class CursorBackend(ABC):
 
     async def __anext__(self):
         """Use `cursor.fetchrow()` to provide an async iterable."""
-        row = await self._cursor.fetchrow()
+        row = await self._cursor.fetchone()
         if row is not None:
             return row
         else:
@@ -493,13 +499,13 @@ class CursorBackend(ABC):
     """
 
     async def fetch_one(self) -> Optional[Dict]:
-        return await self._cursor.fetchrow()
+        return await self._cursor.fetchone()
 
     async def fetch_many(self, size: int = None) -> Iterable[List]:
         return await self._cursor.fetch(size)
 
     async def fetch_all(self) -> Iterable[List]:
-        return await self._cursor.fetch_all()
+        return await self._cursor.fetchall()
 
 
 class DBCursorBackend(ABC):
@@ -528,12 +534,28 @@ class DBCursorBackend(ABC):
             logging.exception(f"Error Loading Cursor Class: {err}")
             self.__cursor__ = None
 
-    @abstractmethod
-    async def cursor(self, sentence: str, **kwargs) -> "DBCursorBackend":
-        """
-        Interface Method for returning a Cursor Object.
-        """
-        pass
+    async def cursor(
+                    self,
+                    sentence: str,
+                    params: Iterable[Any] = None,
+                    **kwargs
+    ) -> Optional["DBCursorBackend"]:
+        """ Returns an iterable Cursor Object """
+        if not sentence:
+            raise EmptyStatement(
+                f"{__name__!s} Error: Cannot use an empty sentence"
+            )
+        if params is None:
+            params = []
+        try:
+            return self.__cursor__(
+                provider=self,
+                sentence=sentence,
+                parameters=params
+            )
+        except Exception as err:
+            logging.exception(err)
+            return None
 
     @abstractmethod
     async def fetch(

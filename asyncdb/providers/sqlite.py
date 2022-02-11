@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-import asyncio
 import time
 from typing import (
     Any,
     Iterable,
+    List,
+    Sequence,
+    Optional,
+    Dict,
+    Union
 )
 import aiosqlite
 from asyncdb.exceptions import (
@@ -12,11 +16,16 @@ from asyncdb.exceptions import (
 )
 from asyncdb.providers import (
     registerProvider,
+    BaseCursor,
+    SQLProvider
 )
-from asyncdb.providers.sql import SQLProvider, baseCursor
 
 
-class sqliteCursor(baseCursor):
+class sqliteCursor(BaseCursor):
+    """
+    Cursor Object for SQLite.
+    """
+    _provider: "sqlite"
     _connection: aiosqlite.Connection = None
 
     async def __aenter__(self) -> "sqliteCursor":
@@ -27,60 +36,13 @@ class sqliteCursor(baseCursor):
 
 
 class sqlite(SQLProvider):
-    _provider: str = "sqlite"
+    _provider: str = 'sqlite'
+    _syntax: str = 'sql'
     _dsn: str = "{database}"
 
     async def prepare(self):
         "Ignoring prepared sentences on SQLite"
-        pass
-
-    async def close(self, timeout=5):
-        """
-        Closing Method for SQLite
-        """
-        try:
-            if self._connection:
-                if self._cursor:
-                    await self._cursor.close()
-                await asyncio.wait_for(
-                    self._connection.close(), timeout=timeout
-                )
-        except Exception as err:
-            raise ProviderError("Close Error: {}".format(str(err)))
-        finally:
-            self._connection = None
-            self._connected = False
-            return True
-
-    def connect(self, **kwargs):
-        """
-        Get a proxy connection
-        """
-        self._connection = None
-        self._connected = False
-        try:
-            self._logger.debug('SQLite Connection to: {self._dsn}')
-            self._connection = aiosqlite.connect(
-                database=self._dsn, **kwargs
-            )
-            if self._connection:
-                self._connected = True
-                self._initialized_on = time.time()
-        except aiosqlite.OperationalError:
-            raise ProviderError(
-                "Unable to Open Database File: {}".format(self._dsn)
-            )
-        except aiosqlite.DatabaseError as err:
-            print("Connection Error: {}".format(str(err)))
-            raise ProviderError(
-                "Database Connection Error: {}".format(str(err))
-            )
-        except aiosqlite.Error as err:
-            raise ProviderError("Internal Error: {}".format(str(err)))
-        except Exception as err:
-            raise ProviderError("SQLite Unknown Error: {}".format(str(err)))
-        finally:
-            return self
+        raise NotImplementedError()  # pragma: no cover
 
     async def connection(self, **kwargs):
         """
@@ -97,21 +59,27 @@ class sqlite(SQLProvider):
                     try:
                         await self.init_func(self._connection)
                     except Exception as err:
-                        print("Error on Init Connection: {}".format(err))
+                        self._logger.exception(
+                            f"Error on Init Connection: {err!s}"
+                        )
                 self._connected = True
                 self._initialized_on = time.time()
         except aiosqlite.OperationalError:
             raise ProviderError(
-                "Unable to Open Database File: {}".format(self._dsn))
+                f"Unable to Open Database: {self._dsn}"
+            )
         except aiosqlite.DatabaseError as err:
-            print("Connection Error: {}".format(str(err)))
             raise ProviderError(
-                "Database Connection Error: {}".format(str(err))
+                f"Database Connection Error: {err!s}"
             )
         except aiosqlite.Error as err:
-            raise ProviderError("Internal Error: {}".format(str(err)))
+            raise ProviderError(
+                f"SQLite Internal Error: {err!s}"
+            )
         except Exception as err:
-            raise ProviderError("SQLite Unknown Error: {}".format(str(err)))
+            raise ProviderError(
+                f"SQLite Unknown Error: {err!s}"
+            )
         finally:
             return self
 
@@ -119,25 +87,44 @@ class sqlite(SQLProvider):
         """
         Getting a Query from Database
         """
-        # TODO: getting aiosql structures or sql-like function structures
-        # or query functions
         error = None
         await self.valid_operation(sentence)
         try:
             self._cursor = await self._connection.execute(sentence)
             self._result = await self._cursor.fetchall()
             if not self._result:
-                return [None, NoDataFound]
+                return (None, NoDataFound)
+        except Exception as err:
+            error = "Error on Query: {}".format(str(err))
+            raise ProviderError(error)
+        finally:
+            try:
+                await self._cursor.close()
+            except Exception as err:
+                self._logger.exception(err)
+            return (self._result, error)
+
+    async def queryrow(self, sentence: Any = None) -> Iterable[Any]:
+        """
+        Getting a single Row from Database
+        """
+        error = None
+        await self.valid_operation(sentence)
+        try:
+            self._cursor = await self._connection.execute(sentence)
+            self._result = await self._cursor.fetchone()
+            if not self._result:
+                return (None, NoDataFound)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise ProviderError(error)
         finally:
             await self._cursor.close()
-            return [self._result, error]
+            return (self._result, error)
 
-    async def fetchall(self, sentence: str):
+    async def fetch_all(self, sentence: str, **kwargs) -> List[Sequence]:
         """
-        aliases for query, without error support
+        Alias for Query, but without error Support.
         """
         await self.valid_operation(sentence)
         try:
@@ -152,9 +139,12 @@ class sqlite(SQLProvider):
             await self._cursor.close()
             return self._result
 
-    async def fetchmany(self, sentence: str, size: int = None):
+    # alias to be compatible with aiosqlite methods.
+    fetchall = fetch_all
+
+    async def fetch_many(self, sentence: str, size: int = None):
         """
-        aliases for query, without error support
+        Aliases for query, without error support
         """
         await self.valid_operation(sentence)
         try:
@@ -169,36 +159,22 @@ class sqlite(SQLProvider):
             await self._cursor.close()
             return self._result
 
-    async def queryrow(self, sentence: Any = None):
-        """
-        Getting a Query from Database
-        """
-        # TODO: getting aiosql structures or sql-like function structures
-        # or query functions
-        error = None
-        await self.valid_operation(sentence)
-        try:
-            self._cursor = await self._connection.execute(sentence)
-            self._result = await self._cursor.fetchone()
-            if not self._result:
-                return [None, NoDataFound]
-        except Exception as err:
-            error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
-        finally:
-            await self._cursor.close()
-            return [self._result, error]
+    fetchmany = fetch_many
 
-    async def fetchone(self, sentence: str):
+    async def fetch_one(
+            self,
+            sentence: str,
+            number: int = None
+    ) -> Optional[Dict]:
         """
-        aliases for query, without error support
+        aliases for queryrow, but without error support
         """
         await self.valid_operation(sentence)
         try:
             self._cursor = await self._connection.execute(sentence)
             self._result = await self._cursor.fetchone()
             if not self._result:
-                raise NoDataFound
+                raise NoDataFound()
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise ProviderError(error)
@@ -206,7 +182,9 @@ class sqlite(SQLProvider):
             await self._cursor.close()
             return self._result
 
-    async def execute(self, sentence: Any = None, *args):
+    fetchone = fetch_one
+
+    async def execute(self, sentence: Any = None, *args) -> Optional[Any]:
         """Execute a transaction
         get a SQL sentence and execute
         returns: results of the execution
@@ -222,10 +200,13 @@ class sqlite(SQLProvider):
             error = "Error on Query: {}".format(str(err))
             raise ProviderError(error)
         finally:
-            # await self._cursor.close()
-            return [result, error]
+            return (result, error)
 
-    async def executemany(self, sentence: str, *args):
+    async def execute_many(
+            self,
+            sentence: Union[str, List],
+            *args
+    ) -> Optional[Any]:
         error = None
         await self.valid_operation(sentence)
         try:
@@ -233,11 +214,12 @@ class sqlite(SQLProvider):
             if result:
                 await self._connection.commit()
         except Exception as err:
-            error = "Error on Query: {}".format(str(err))
+            error = f"Error on SQLite Query: {err!s}"
             raise ProviderError(error)
         finally:
-            # await self._cursor.close()
-            return [result, error]
+            return (result, error)
+
+    executemany = execute_many
 
     async def fetch(
                     self,
@@ -248,7 +230,9 @@ class sqlite(SQLProvider):
         await self.valid_operation(sentence)
         if parameters is None:
             parameters = []
-        result = await self._connection.execute(sentence, parameters)
+        result = await self._connection.execute(
+            sentence, parameters
+        )
         return result
 
 
