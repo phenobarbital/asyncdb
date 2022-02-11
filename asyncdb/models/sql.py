@@ -7,7 +7,6 @@ from typing import (
     Any
 )
 from dataclasses import (
-    dataclass,
     is_dataclass
 )
 
