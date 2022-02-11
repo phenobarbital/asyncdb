@@ -7,7 +7,7 @@ from .base import (
     BaseProvider
 )
 _PROVIDERS = {}
-__all__ = [BasePool, BaseProvider]
+__all__ = ["BasePool", "BaseProvider"]
 
 
 def registerProvider(provider):

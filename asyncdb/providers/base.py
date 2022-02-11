@@ -362,12 +362,18 @@ class BaseProvider(ABC):
         """
         pass
 
-    """
-    Making a Query and return result
-    """
+    @abstractmethod
+    async def column_info(self, tablename: str):
+        """
+        Getting Column info from an existing Table in Provider.
+        """
+        pass
 
     @abstractmethod
     async def query(self, sentence=""):
+        """
+        Making a Query and return result
+        """
         pass
 
     @abstractmethod

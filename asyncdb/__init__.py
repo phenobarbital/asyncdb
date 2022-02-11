@@ -16,12 +16,13 @@ from asyncdb.exceptions import (
 )
 from asyncdb.providers import (
     _PROVIDERS,
-    registerProvider
+    registerProvider,
+    BaseProvider
 )
 from asyncdb.utils.functions import module_exists
 
 __version__ = '1.8.0'
-__all__ = ["asyncORM", "asyncRecord", "registerProvider"]
+__all__ = ["asyncORM", "asyncRecord", "registerProvider", "BaseProvider"]
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 

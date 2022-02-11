@@ -3,8 +3,9 @@ Basic, Abstract Model.
 """
 import types
 import logging
-from .types import DB_TYPES
+from .types import DB_TYPES, MODEL_TYPES
 from dataclasses import Field as ff
+from asyncdb import AsyncDB, BaseProvider
 from dataclasses import (
     dataclass,
     is_dataclass,
@@ -31,6 +32,20 @@ from asyncdb.utils.encoders import (
 )
 
 
+@dataclass
+class ValidationError:
+    """
+    Class for Error validation
+    """
+    field: str
+    value: Optional[Union[str, Any]]
+    error: str
+    value_type: Any
+    annotation: type
+    exception: Optional[Exception]
+    errors: List = []
+
+
 class Meta:
     name: str = ""
     schema: str = ""
@@ -46,20 +61,6 @@ class Meta:
 
 def set_connection(cls, conn: Callable):
     cls.connection = conn
-
-
-@dataclass
-class ValidationError:
-    """
-    Class for Error validation
-    """
-    field: str
-    value: str
-    error: str
-    value_type: str
-    annotation: type
-    exception: Optional[Exception]
-    errors: List = []
 
 
 class Field(ff):
@@ -217,14 +218,14 @@ def _dc_method_setattr(
     _dc_method_setattr.
     method for overwrite the "setattr" of Dataclass.
     """
-    if self.Meta.frozen is True and name not in self._columns:
+    if self.Meta.frozen is True and name not in self.__columns__:
         raise TypeError(
             f"Cannot Modify attribute {name} of {self.modelName}, "
             "This DataClass is frozen (read-only class)"
         )
     else:
         object.__setattr__(self, name, value)
-        if name not in self._columns.keys():
+        if name not in self.__columns__.keys():
             try:
                 if self.Meta.strict is True:
                     Msg(
@@ -236,7 +237,7 @@ def _dc_method_setattr(
                     f = Field(required=False, default=value)
                     f.name = name
                     f.type = type(value)
-                    self._columns[name] = f
+                    self.__columns__[name] = f
                     setattr(self, name, value)
             except Exception as err:
                 logging.exception(err)
@@ -359,7 +360,6 @@ class ModelMeta(type):
         }
         dc.__columns__ = cols
         dc.__fields__ = cols.keys()
-        # print(dc._columns)
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
@@ -385,3 +385,209 @@ class ModelMeta(type):
                 except Exception as err:
                     logging.exception(f'Error getting Connection: {err!s}')
         super(ModelMeta, cls).__init__(*args, **kwargs)
+
+
+class Model(metaclass=ModelMeta):
+    """
+    Model.
+
+    Basic Model for DataClasses.
+    """
+    Meta: ClassVar[Any] = Meta
+
+    def __post_init__(self) -> None:
+        """
+        Start validation of fields
+        """
+        try:
+            self._validation()
+        except Exception as err:
+            logging.exception(err)
+
+    Meta = Meta
+
+    def _validation(self) -> None:
+        """
+        _validation.
+        TODO: cover validations as length, not_null, required, etc
+        """
+        errors = {}
+        for name, field in self.columns().items():
+            key = field.name
+            # first check: data type hint
+            val = self.__dict__[key]
+            val_type = type(val)
+            annotated_type = field.type
+            if val_type == "type" or val == annotated_type or val is None:
+                # data not provided
+                try:
+                    if field.metadata["required"] is True \
+                            and self.Meta.strict is True:
+                        errors[key] = ValidationError(
+                            field=key,
+                            value=None,
+                            value_type=val_type,
+                            error="Field Required",
+                            annotation=annotated_type,
+                            exception=None,
+                        )
+                except KeyError:
+                    continue
+                continue
+            else:
+                # print(key, val, annotated_type)
+                try:
+                    instance = self._is_instanceof(val, annotated_type)
+                    # first: check primitives
+                    if instance["result"]:
+                        # is valid
+                        continue
+                    else:
+                        # TODO check for complex types
+                        # adding more complex validations
+                        continue
+                except Exception as err:
+                    errors[key] = ValidationError(
+                        field=key,
+                        value=val,
+                        error="Validation Exception",
+                        value_type=val_type,
+                        annotation=annotated_type,
+                        exception=err,
+                    )
+            # second check: length,
+            # third validation: formats and patterns
+            # fourth validation: function-based validators
+        if errors:
+            print("=== ERRORS ===")
+            print(errors)
+            object.__setattr__(self, "__valid__", False)
+        else:
+            object.__setattr__(self, "__valid__", True)
+
+    def _is_instanceof(self, value: Any, annotated_type: type) -> Dict:
+        result = False
+        exception = None
+        try:
+            result = isinstance(value, annotated_type)
+        except Exception as err:
+            exception = err
+            result = False
+        finally:
+            return {"result": result, "exception": exception}
+
+    def __unicode__(self):
+        return str(__class__)
+
+    def columns(self):
+        return self.__columns__
+
+    def get_fields(self):
+        return self._fields
+
+    def column(self, name):
+        return self.__columns__[name]
+
+    def dict(self):
+        return asdict(self)
+
+    def json(self, **kwargs):
+        encoder = self.__encoder__
+        if len(kwargs) > 0:
+            encoder = DefaultEncoder(sort_keys=False, **kwargs)
+        return encoder(asdict(self))
+
+    def is_valid(self):
+        return bool(self.__valid__)
+
+    def set_connection(self, connection: BaseProvider) -> None:
+        """
+        Manually Set the connection of Dataclass.
+        """
+        try:
+            self.Meta.connection = connection
+        except Exception as err:
+            raise Exception(err)
+
+    def get_connection(self, dsn: str = None) -> BaseProvider:
+        """
+        Getting a database connection and driver based on parameters
+        """
+        if self.Meta.datasource:
+            # TODO: making a connection using a DataSource.
+            pass
+        elif dsn is not None:
+            try:
+                self.Meta.connection = AsyncDB(self.Meta.driver, dsn=dsn)
+            except Exception as err:
+                logging.exception(err)
+        elif hasattr(self.Meta, "credentials"):
+            params = self.Meta.credentials
+            try:
+                self.Meta.connection = AsyncDB(self.Meta.driver, params=params)
+            except Exception as err:
+                logging.exception(err)
+        return self.Meta.connection
+
+    async def close(self):
+        """
+        Closing an existing database connection.
+        """
+        try:
+            await self.Meta.connection.close()
+        except Exception as err:
+            logging.exception(err)
+
+    """
+    Class-method for creation.
+    """
+
+    @classmethod
+    def make_model(cls, name: str, schema: str = "public", fields: list = []):
+        cls = make_dataclass(name, fields, bases=(Model,))
+        m = Meta()
+        m.name = name
+        m.schema = schema
+        m.app_label = schema
+        cls.Meta = m
+        return cls
+
+    @classmethod
+    async def makeModel(
+        cls,
+        name: str,
+        schema: str = "public",
+        fields: list = [],
+        db: BaseProvider = None,
+    ):
+        """
+        Make Model.
+
+        Making a model from field tuples, a JSON schema or a Table.
+        """
+        tablename = "{}.{}".format(schema, name)
+        if not fields:  # we need to look in to it.
+            colinfo = await db.column_info(tablename)
+            fields = []
+            for column in colinfo:
+                tp = column["data_type"]
+                col = Field(
+                    primary_key=column["is_primary"],
+                    notnull=column["notnull"],
+                    db_type=column["format_type"],
+                )
+                # get dtype from database type:
+                try:
+                    dtype = MODEL_TYPES[tp]
+                except KeyError:
+                    dtype = str
+                fields.append((column["column_name"], dtype, col))
+        cls = make_dataclass(name, fields, bases=(Model,))
+        m = Meta()
+        m.name = name
+        m.schema = schema
+        m.app_label = schema
+        m.connection = db
+        m.frozen = False
+        cls.Meta = m
+        return cls
