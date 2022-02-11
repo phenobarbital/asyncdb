@@ -299,36 +299,56 @@ assert instance.is_valid() or 'Not Valid'
 assert instance == Bar(foo=Foo(value=[1, 2]))
 
 
-#
-# Msg('Working with Data Models: ')
-#
-# def auto_now_add(*args, **kwargs):
-#     return uuid.uuid4()
-#
-# class User(Model):
-#     """
-#     User Basic Structure
-#     """
-#     id: uuid.UUID = Column(required=True, primary_key=True, default=auto_now_add(), db_default='uuid_generate_v4()')
-#     firstname: str
-#     lastname: str
-#     name: str = Column(required=True, default='John Doe')
-#     age: int = Column(default=18, required=True)
-#     signup_ts: datetime = Column(default=datetime.now(), db_default='now()')
-#     class Meta:
-#         name = 'users'
-#         schema = 'public'
-#         driver = 'pg'
-#         credentials = {
-#             'user': 'troc_pgdata',
-#             'password': '12345678',
-#             'host': 'localhost',
-#             'port': '5432',
-#             'database': 'navigator_dev',
-#         }
-#         strict = False
-#
-# u = User()
+Msg('Working with Data Models: ')
+
+
+def auto_now_add(*args, **kwargs):
+    return uuid.uuid4()
+
+
+class Users(Model):
+    """
+    User Basic Structure
+    """
+    id: uuid.UUID = Column(
+        required=True,
+        primary_key=True,
+        default=auto_now_add,
+        db_default='uuid_generate_v4()'
+    )
+    firstname: str
+    lastname: str
+    name: str = Column(required=True, default='John Doe')
+    age: int = Column(default=18, required=True)
+    signup_ts: datetime = Column(default=now, db_default='now()')
+
+    def __model_init__(cls, name, attrs) -> None:
+        # can you define values before declaring a dataclass
+        # (mostly pre-initialization)
+        cls.name = f"{cls.firstname} {cls.lastname}"
+
+    class Meta:
+        name = 'users'
+        schema = 'public'
+        driver = 'pg'
+        credentials = {
+            'user': 'troc_pgdata',
+            'password': '12345678',
+            'host': 'localhost',
+            'port': '5432',
+            'database': 'navigator_dev',
+        }
+        strict = False
+
+
+u = {
+    "firstname": 'Super',
+    "lastname": 'Sayayin',
+    "age": 9000
+}
+u = Users()
+print(u.get_connection(), u.get_connection().is_connected())
+
 # print(u.schema(type='sql'))
 #
 # #TODO: definition of Operators

@@ -41,8 +41,7 @@ from asyncdb.exceptions import (
 )
 from asyncdb.providers import (
     BasePool,
-    BaseProvider,
-    registerProvider,
+    registerProvider
 )
 from asyncdb.utils.encoders import (
     BaseEncoder,
@@ -57,9 +56,11 @@ from asyncdb.providers.sql import SQLProvider, baseCursor
 max_cached_statement_lifetime = 600
 max_cacheable_statement_size = 1024 * 15
 
+
 class NAVConnection(asyncpg.Connection):
     def _get_reset_query(self):
         return None
+
 
 class pgPool(BasePool):
     setup_func: Optional[Callable] = None
@@ -71,7 +72,8 @@ class pgPool(BasePool):
         self._min_size = 10
         self._server_settings = {}
         self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
-        super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        super(pgPool, self).__init__(
+            dsn=dsn, loop=loop, params=params, **kwargs)
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if "application_name" in self._server_settings:
@@ -153,7 +155,8 @@ class pgPool(BasePool):
 
     # Create a database connection pool
     async def connect(self):
-        self._logger.debug("AsyncPg (Pool): Connecting to {}".format(self._dsn))
+        self._logger.debug(
+            "AsyncPg (Pool): Connecting to {}".format(self._dsn))
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             server_settings = {
@@ -188,7 +191,8 @@ class pgPool(BasePool):
             )
         except ConnectionRefusedError as err:
             raise ProviderError(
-                "Unable to connect to database, connection Refused: {}".format(str(err))
+                "Unable to connect to database, connection Refused: {}".format(
+                    str(err))
             )
         except ConnectionDoesNotExistError as err:
             raise ProviderError("Connection Error: {}".format(str(err)))
@@ -221,7 +225,8 @@ class pgPool(BasePool):
         try:
             self._connection = await self._pool.acquire()
         except TooManyConnectionsError as err:
-            self._logger.error("Too Many Connections Error: {}".format(str(err)))
+            self._logger.error(
+                "Too Many Connections Error: {}".format(str(err)))
             return False
         except ConnectionDoesNotExistError as err:
             self._logger.error("Connection Error: {}".format(str(err)))
@@ -282,7 +287,8 @@ class pgPool(BasePool):
                     await self._pool.release(self._connection, timeout=timeout)
                     self._connection = None
             except (InternalClientError, InterfaceError) as err:
-                raise ProviderError("Release Interface Error: {}".format(str(err)))
+                raise ProviderError(
+                    "Release Interface Error: {}".format(str(err)))
             except Exception as err:
                 raise ProviderError("Release Error: {}".format(str(err)))
             try:
@@ -335,7 +341,8 @@ class pgPool(BasePool):
                 result = await self._pool.execute(sentence, *args)
                 return result
             except InterfaceError as err:
-                raise ProviderError("Execute Interface Error: {}".format(str(err)))
+                raise ProviderError(
+                    "Execute Interface Error: {}".format(str(err)))
             except Exception as err:
                 raise ProviderError("Execute Error: {}".format(str(err)))
 
@@ -498,7 +505,8 @@ class pg(SQLProvider):
                 self._initialized_on = time.time()
                 self._logger.debug(f'Initialized on: {self._initialized_on}')
         except TooManyConnectionsError as err:
-            raise TooManyConnections("Too Many Connections Error: {}".format(str(err)))
+            raise TooManyConnections(
+                "Too Many Connections Error: {}".format(str(err)))
         except ConnectionDoesNotExistError as err:
             print("Connection Error: {}".format(str(err)))
             raise ProviderError("Connection Error: {}".format(str(err)))
@@ -795,7 +803,8 @@ class pg(SQLProvider):
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
-            error = "Error on Copy, Invalid Statement Error: {}".format(str(err))
+            error = "Error on Copy, Invalid Statement Error: {}".format(
+                str(err))
             self._loop.call_exception_handler(err)
             raise StatementError(error)
         except Exception as err:
@@ -832,7 +841,8 @@ class pg(SQLProvider):
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
-            error = "Error on Copy, Invalid Statement Error: {}".format(str(err))
+            error = "Error on Copy, Invalid Statement Error: {}".format(
+                str(err))
             self._loop.call_exception_handler(err)
             raise StatementError(error)
         except Exception as err:
@@ -864,7 +874,8 @@ class pg(SQLProvider):
             raise StatementError(error)
             return False
         except (InvalidSQLStatementNameError, UndefinedColumnError) as err:
-            error = "Error on Copy, Invalid Statement Error: {}".format(str(err))
+            error = "Error on Copy, Invalid Statement Error: {}".format(
+                str(err))
             raise StatementError(error)
         except (asyncpg.exceptions.UniqueViolationError) as err:
             error = "Error on Copy, Constraint Violated: {}".format(str(err))
