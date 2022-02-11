@@ -1,0 +1,23 @@
+site_name: AsyncDB
+site_description: Asyncio-based database connectors for Python.
+
+theme:
+    name: 'material'
+
+repo_name: phenobarbital/asyncdb
+repo_url: https://github.com/phenobarbital/asyncdb
+# edit_uri: ""
+
+nav:
+    - Introduction: 'index.md'
+    - Database Queries: 'database_queries.md'
+    - Connections & Transactions: 'connections_and_transactions.md'
+    - Cursors & Prepared Statements: 'cursors.md'
+    - Tests & Migrations: 'tests_and_migrations.md'
+    - Contributing: 'contributing.md'
+
+markdown_extensions:
+  - mkautodoc
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences

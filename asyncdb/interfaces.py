@@ -153,7 +153,6 @@ class ConnectionBackend(ABC):
 
     def __init__(
             self,
-            dsn: str = '',
             loop: asyncio.AbstractEventLoop = None,
             params: Dict[Any, Any] = {},
             **kwargs
@@ -251,6 +250,37 @@ class ConnectionBackend(ABC):
         await self.close()
 
 
+class ConnectionDSNBackend(ConnectionBackend):
+    """
+    Interface for Databases with DSN Support.
+    """
+
+    def __init__(
+            self,
+            dsn: str = '',
+            loop: asyncio.AbstractEventLoop = None,
+            params: Dict[Any, Any] = {},
+            **kwargs
+    ) -> None:
+        super(ConnectionDSNBackend, self).__init__(
+            loop, params, **kwargs
+        )
+        if dsn:
+            self._dsn = dsn
+        else:
+            self._dsn = self.create_dsn(params)
+
+    def create_dsn(self, params):
+        try:
+            return self._dsn.format(**params)
+        except Exception as err:
+            self._logger.exception(err)
+            return None
+
+    def get_dsn(self):
+        return self._dsn
+
+
 class TransactionBackend(ABC):
     """
     Interface for Drivers Support transactions.
@@ -273,8 +303,6 @@ class TransactionBackend(ABC):
         """
         Starts a Transaction.
         """
-        if not self._connection:
-            await self.connection()
         self._transaction = self.transaction(options)
 
     @abstractmethod
