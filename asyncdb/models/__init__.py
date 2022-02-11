@@ -12,6 +12,6 @@ from typing import (
     Dict
 )
 from .base import Field, Column, Model
+from .sql import SQLModel
 
-
-__all__ = ['Field', 'Column', 'Model', ]
+__all__ = ['Field', 'Column', 'Model', 'SQLModel', ]

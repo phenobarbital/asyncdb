@@ -7,6 +7,10 @@ import rapidjson as to_json
 from .types import DB_TYPES, MODEL_TYPES, JSON_TYPES
 from dataclasses import Field as ff
 from asyncdb import AsyncDB, BaseProvider
+from abc import (
+    ABC,
+    abstractmethod,
+)
 from dataclasses import (
     dataclass,
     is_dataclass,
@@ -103,7 +107,8 @@ class Field(ff):
         self._required = required
         self._pk = primary_key
         self._nullable = not required
-
+        if 'description' in kwargs:
+            self.description = kwargs['description']
         range = {}
         if min is not None:
             range["min"] = min
@@ -150,7 +155,6 @@ class Field(ff):
             f"default={self.default!r})"
         )
 
-    @property
     def required(self):
         return self._required
 
@@ -393,13 +397,37 @@ class Model(metaclass=ModelMeta):
     """
     Model.
 
-    Basic Model for DataClasses.
+    BaseModel for all DataClasses.
     """
 
     def __post_init__(self) -> None:
         """
         Fill fields with function-factory or calling validations
         """
+        # checking if an attribute is already a dataclass:
+        for name, f in self.__columns__.items():
+            value = getattr(self, f.name)
+            if is_dataclass(f.type):
+                if isinstance(value, dict):
+                    new_val = f.type(**value)
+                    setattr(self, f.name, new_val)
+            elif isinstance(value, list):
+                sub_type = f.type.__args__[0]
+                if is_dataclass(sub_type):
+                    # for every item
+                    items = []
+                    for item in value:
+                        try:
+                            if isinstance(item, dict):
+                                items.append(sub_type(**item))
+                            else:
+                                items.append(item)
+                        except Exception as err:
+                            logging.exception(err)
+                            continue
+                    setattr(self, f.name, items)
+            else:
+                continue
         try:
             self._validation()
         except Exception as err:
