@@ -454,6 +454,7 @@ Module Loading
 def module_exists(module_name, classpath):
     try:
         # try to using importlib
+        print(classpath, module_name)
         module = importlib.import_module(classpath, package="providers")
         obj = getattr(module, module_name)
         return obj
@@ -463,8 +464,10 @@ def module_exists(module_name, classpath):
             obj = __import__(classpath, fromlist=[module_name])
             return obj
         except ImportError:
-            logging.exception(f"No Driver for provider {module_name} was found")
-            raise ImportError(message=f"No Provider {module_name} Found")
+            logging.exception(
+                f"No Driver for provider {module_name} was found"
+            )
+            raise ImportError(f"No Provider {module_name} Found")
 
 
 class colors:
