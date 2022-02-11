@@ -4,10 +4,12 @@ AsyncDB Providers.
 from asyncdb.utils.functions import module_exists
 from .base import (
     BasePool,
-    BaseProvider
+    BaseProvider,
+    BaseCursor,
+    SQLProvider
 )
 _PROVIDERS = {}
-__all__ = ["BasePool", "BaseProvider"]
+__all__ = ["BasePool", "BaseProvider", "BaseCursor", "SQLProvider"]
 
 
 def registerProvider(provider):
