@@ -5,19 +5,15 @@ Notes on sqlalchemy Provider
 This provider implements a basic set of funcionalities from aiopg
 sqlalchemy and use threads
 """
-
 import asyncio
 from threading import Thread
-import logging
 import aiopg
 from aiopg.sa import create_engine
-from psycopg2.extras import NamedTupleCursor
 from sqlalchemy.exc import (
     DatabaseError,
     OperationalError,
     SQLAlchemyError,
 )
-
 from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
@@ -27,8 +23,10 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from . import *
-
+from asyncdb.providers import (
+    BasePool,
+    registerProvider
+)
 from asyncdb.providers.sql import SQLProvider, baseCursor
 
 
