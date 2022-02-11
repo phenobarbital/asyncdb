@@ -4,7 +4,7 @@ from datetime import datetime
 import pprint
 from dataclasses import asdict, fields, InitVar
 from typing import Any, List, Optional, Callable, ClassVar, Union
-from asyncdb.models import Model, Column
+from asyncdb.models import Model, SQLModel, Column
 from asyncdb.utils import Msg
 
 
@@ -249,8 +249,9 @@ class Person(Model):
 
 
 ivan = Person(**person)
+print(ivan)
 print(ivan.json())
-print(ivan.contacts[0], type(ivan.contacts[0]))
+print('DATA TYPES> ', ivan.contacts[0], type(ivan.contacts[0]))
 
 
 Msg('=== Using Methods within Dataclass: ')
@@ -306,7 +307,7 @@ def auto_now_add(*args, **kwargs):
     return uuid.uuid4()
 
 
-class Users(Model):
+class Users(SQLModel):
     """
     User Basic Structure
     """
@@ -322,10 +323,10 @@ class Users(Model):
     age: int = Column(default=18, required=True)
     signup_ts: datetime = Column(default=now, db_default='now()')
 
-    def __model_init__(cls, name, attrs) -> None:
-        # can you define values before declaring a dataclass
-        # (mostly pre-initialization)
-        cls.name = f"{cls.firstname} {cls.lastname}"
+    def __post_init__(self):
+        self.name = f"{self.firstname} {self.lastname}"
+        super(Users, self).__post_init__()
+        print('Columns Are: ', self.columns())
 
     class Meta:
         name = 'users'
@@ -349,7 +350,9 @@ u = {
 u = Users()
 print(u.get_connection(), u.get_connection().is_connected())
 
-# print(u.schema(type='sql'))
+Msg('Printing Model DDL: ')
+print(u.schema(type='sql'))
+
 #
 # #TODO: definition of Operators
 # # from models.operators import or, not
