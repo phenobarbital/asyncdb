@@ -1,40 +1,50 @@
-import os
-import asyncio
-import logging
+"""
+AsyncDB Models.
+
+Dataclass-based Abstract object to represent Data Models.
+"""
+import json
+import rapidjson as to_json
+import types
+import collections
+import datetime
+import uuid
+import numpy as np
 from dataclasses import Field as ff
+import traceback
 from dataclasses import (
     dataclass,
     is_dataclass,
     fields,
-    _FIELDS,
     _FIELD,
     asdict,
     MISSING,
     InitVar,
     make_dataclass,
 )
-import datetime
-import typing
-import uuid
-import numpy as np
+
 from decimal import Decimal
 from asyncdb import AsyncDB
-from asyncdb.utils import colors, SafeDict, Msg
-from asyncdb.utils.encoders import DefaultEncoder, BaseEncoder
+from asyncdb.utils import (
+    colors,
+    SafeDict,
+    Msg
+)
+from asyncdb.utils.encoders import (
+    DefaultEncoder,
+    BaseEncoder
+)
 from asyncdb.exceptions import NoDataFound
 from asyncdb.providers import BaseProvider
+from typing import (
+    Any,
+    List,
+    Dict,
+    Optional,
+    Callable,
+    Union
+)
 
-# from navigator.conf import DATABASES
-import typing
-
-from typing import Any, List, Dict, Optional, get_type_hints, Callable, ClassVar, Union
-from abc import ABC, abstractmethod
-import json
-import rapidjson as to_json
-import types
-import collections
-import numpy as np
-import traceback
 
 MODELS = {}
 
@@ -74,7 +84,7 @@ MODEL_TYPES = {
     "date": datetime.date,
     "timestamp with time zone": datetime.datetime,
     "time": datetime.time,
-    "timestamp without time zone": datetime.timedelta,
+    "timestamp without time zone": datetime.datetime,
     "uuid": uuid.UUID,
     "json": dict,
     "jsonb": dict,
@@ -124,6 +134,10 @@ class Entity:
     @classmethod
     def is_array(cls, t):
         return isinstance(t, (list, List, Dict, dict, collections.Sequence, np.ndarray))
+
+    @classmethod
+    def is_bool(cls, type):
+        return isinstance(type, bool)
 
     @classmethod
     def escapeLiteral(cls, value, ftype, dbtype: str = None):
@@ -193,6 +207,8 @@ default: (represent the "default_factory" class)
 
 """
 # original metaclass structure
+
+
 class Field(ff):
     """
     Field.
@@ -204,6 +220,7 @@ class Field(ff):
     _required: bool = False
     _dbtype: str = None
     _pk: bool = False
+    description: Optional[str] = ''
 
     def __init__(
         self,
@@ -397,7 +414,8 @@ class ModelMeta(type):
     def __new__(cls, name, bases, attrs, **kwargs):
         """__new__ is a classmethod, even without @classmethod decorator"""
         if len(bases) > 1:
-            raise TypeError("Multiple inheritance of Nav data Models are forbidden")
+            raise TypeError(
+                "Multiple inheritance of Nav data Models are forbidden")
         # TODO: avoid ValueError: 'associate_id' in __slots__
         # conflicts with class variable
         if "__annotations__" in attrs:
@@ -425,7 +443,8 @@ class ModelMeta(type):
         attr_meta = attrs.pop("Meta", None)
         new_cls = super().__new__(cls, name, bases, attrs, **kwargs)
         new_cls.Meta = attr_meta or getattr(new_cls, "Meta", Meta)
-        new_cls.Meta.set_connection = types.MethodType(set_connection, new_cls.Meta)
+        new_cls.Meta.set_connection = types.MethodType(
+            set_connection, new_cls.Meta)
         frozen = False
         # adding a "class init method"
         try:
@@ -748,7 +767,8 @@ class Model(metaclass=ModelMeta):
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception(
-                    "Error on Insert over table {}: {}".format(self.Meta.name, err)
+                    "Error on Insert over table {}: {}".format(
+                        self.Meta.name, err)
                 )
 
     async def save(self, **kwargs):
@@ -763,7 +783,8 @@ class Model(metaclass=ModelMeta):
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception(
-                    "Error on Insert over table {}: {}".format(self.Meta.name, err)
+                    "Error on Insert over table {}: {}".format(
+                        self.Meta.name, err)
                 )
 
     async def delete(self, **kwargs):
@@ -782,7 +803,8 @@ class Model(metaclass=ModelMeta):
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception(
-                    "Error on Insert over table {}: {}".format(self.Meta.name, err)
+                    "Error on Insert over table {}: {}".format(
+                        self.Meta.name, err)
                 )
 
     async def fetch(self, **kwargs):
@@ -807,10 +829,12 @@ class Model(metaclass=ModelMeta):
             except NoDataFound as err:
                 raise NoDataFound(err)
             except AttributeError:
-                raise Exception("Error on get {}: {}".format(self.Meta.name, err))
+                raise Exception(
+                    "Error on get {}: {}".format(self.Meta.name, err))
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception("Error on get {}: {}".format(self.Meta.name, err))
+                raise Exception(
+                    "Error on get {}: {}".format(self.Meta.name, err))
 
     async def select(self, **kwargs):
         """
@@ -827,13 +851,15 @@ class Model(metaclass=ModelMeta):
                     return [self.__class__(**dict(r)) for r in result]
                 else:
                     raise NoDataFound(
-                        "No Data on {} with condition {}".format(self.Meta.name, kwargs)
+                        "No Data on {} with condition {}".format(
+                            self.Meta.name, kwargs)
                     )
             except NoDataFound as err:
                 raise NoDataFound(err)
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception("Error on filter {}: {}".format(self.Meta.name, err))
+                raise Exception(
+                    "Error on filter {}: {}".format(self.Meta.name, err))
 
     """
     Class-Methods for interacting with Data
@@ -850,7 +876,8 @@ class Model(metaclass=ModelMeta):
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception(
-                    "Error on query_all over table {}: {}".format(cls.Meta.name, err)
+                    "Error on query_all over table {}: {}".format(
+                        cls.Meta.name, err)
                 )
 
     # classmethods for Data
@@ -867,14 +894,18 @@ class Model(metaclass=ModelMeta):
                 if result:
                     return cls(**dict(result))
                 else:
-                    raise NoDataFound(message=f"Data not found over {cls.Meta.name!s}")
+                    raise NoDataFound(
+                        message=f"Data not found over {cls.Meta.name!s}")
             except NoDataFound:
-                raise NoDataFound(message=f"Data not found over {cls.Meta.name!s}")
+                raise NoDataFound(
+                    message=f"Data not found over {cls.Meta.name!s}")
             except AttributeError as err:
-                raise Exception("Error on get {}: {}".format(cls.Meta.name, err))
+                raise Exception(
+                    "Error on get {}: {}".format(cls.Meta.name, err))
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception("Error on get {}: {}".format(cls.Meta.name, err))
+                raise Exception(
+                    "Error on get {}: {}".format(cls.Meta.name, err))
 
     @classmethod
     async def filter(cls, **kwargs):
@@ -890,13 +921,15 @@ class Model(metaclass=ModelMeta):
                     return [cls(**dict(r)) for r in result]
                 else:
                     raise NoDataFound(
-                        "No Data on {} with condition {}".format(cls.Meta.name, kwargs)
+                        "No Data on {} with condition {}".format(
+                            cls.Meta.name, kwargs)
                     )
             except NoDataFound as err:
                 raise NoDataFound(err)
             except Exception as err:
                 print(traceback.format_exc())
-                raise Exception("Error on filter {}: {}".format(cls.Meta.name, err))
+                raise Exception(
+                    "Error on filter {}: {}".format(cls.Meta.name, err))
 
     @classmethod
     async def remove(cls, conditions: dict = {}, **kwargs):
