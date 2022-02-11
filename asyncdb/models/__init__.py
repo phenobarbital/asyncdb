@@ -11,9 +11,7 @@ __version__ = "0.0.1"
 from typing import (
     Dict
 )
-from .base import Field, Column
+from .base import Field, Column, Model
 
 
-__all__ = ['Field', 'Column']
-
-MODELS: Dict = {}
+__all__ = ['Field', 'Column', 'Model', ]

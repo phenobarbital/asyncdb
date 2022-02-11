@@ -333,7 +333,7 @@ class SQLProvider(BaseProvider):
             return False
         return sql
 
-    def column_info(self, table):
+    async def column_info(self, table):
         """
         column_info
           get column information about a table
@@ -345,7 +345,7 @@ class SQLProvider(BaseProvider):
             table
         )
         try:
-            result, error = self._loop.run_until_complete(self.query(discover))
+            result, error = await self.query(discover)
             if result:
                 return result
         except (NoDataFound, ProviderError):
