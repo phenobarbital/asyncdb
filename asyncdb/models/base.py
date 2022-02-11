@@ -3,7 +3,8 @@ Basic, Abstract Model.
 """
 import types
 import logging
-from .types import DB_TYPES, MODEL_TYPES
+import rapidjson as to_json
+from .types import DB_TYPES, MODEL_TYPES, JSON_TYPES
 from dataclasses import Field as ff
 from asyncdb import AsyncDB, BaseProvider
 from dataclasses import (
@@ -43,7 +44,6 @@ class ValidationError:
     value_type: Any
     annotation: type
     exception: Optional[Exception]
-    errors: List = []
 
 
 class Meta:
@@ -190,8 +190,12 @@ def Column(
       Column.
       Function that returns a Field() object
     """
+    if factory is None:
+        factory = MISSING
     if default is not None and factory is not MISSING:
-        raise ValueError("Cannot specify both default and default_factory")
+        raise ValueError(
+            f"Cannot specify both default: {default} and factory: {factory}"
+        )
     return Field(
         default=default,
         init=init,
@@ -278,7 +282,6 @@ class ModelMeta(type):
     MetaClass object to create dataclasses for modeling Data Models.
     """
     __fields__: Dict[str, Field]
-    Meta: ClassVar[Any] = Meta
 
     def __new__(cls, name, bases, attrs, **kwargs):
         """__new__ is a classmethod, even without @classmethod decorator"""
@@ -379,7 +382,6 @@ class ModelMeta(type):
         cls.__initialised__ = True
         if "driver" in ls:
             if cls.Meta.connection is None:
-                Msg(':: Getting Connection ::', 'DEBUG')
                 try:
                     cls.get_connection(cls, dsn=cls.Meta.dsn)
                 except Exception as err:
@@ -393,18 +395,15 @@ class Model(metaclass=ModelMeta):
 
     Basic Model for DataClasses.
     """
-    Meta: ClassVar[Any] = Meta
 
     def __post_init__(self) -> None:
         """
-        Start validation of fields
+        Fill fields with function-factory or calling validations
         """
         try:
             self._validation()
         except Exception as err:
             logging.exception(err)
-
-    Meta = Meta
 
     def _validation(self) -> None:
         """
@@ -413,6 +412,10 @@ class Model(metaclass=ModelMeta):
         """
         errors = {}
         for name, field in self.columns().items():
+            # print(name, field)
+            if hasattr(field, 'default') and callable(field.default):
+                # default is a function:
+                setattr(self, name, field.default())
             key = field.name
             # first check: data type hint
             val = self.__dict__[key]
@@ -483,7 +486,7 @@ class Model(metaclass=ModelMeta):
         return self.__columns__
 
     def get_fields(self):
-        return self._fields
+        return self.__fields__
 
     def column(self, name):
         return self.__columns__[name]
@@ -513,20 +516,23 @@ class Model(metaclass=ModelMeta):
         """
         Getting a database connection and driver based on parameters
         """
+        Msg(':: Getting Connection ::', 'DEBUG')
         if self.Meta.datasource:
             # TODO: making a connection using a DataSource.
             pass
-        elif dsn is not None:
-            try:
-                self.Meta.connection = AsyncDB(self.Meta.driver, dsn=dsn)
-            except Exception as err:
-                logging.exception(err)
-        elif hasattr(self.Meta, "credentials"):
-            params = self.Meta.credentials
-            try:
-                self.Meta.connection = AsyncDB(self.Meta.driver, params=params)
-            except Exception as err:
-                logging.exception(err)
+        if self.Meta.driver:
+            driver = self.Meta.driver
+            if dsn is not None:
+                try:
+                    self.Meta.connection = AsyncDB(driver, dsn=dsn)
+                except Exception as err:
+                    logging.exception(err)
+            elif hasattr(self.Meta, "credentials"):
+                params = self.Meta.credentials
+                try:
+                    self.Meta.connection = AsyncDB(driver, params=params)
+                except Exception as err:
+                    logging.exception(err)
         return self.Meta.connection
 
     async def close(self):
@@ -537,6 +543,26 @@ class Model(metaclass=ModelMeta):
             await self.Meta.connection.close()
         except Exception as err:
             logging.exception(err)
+
+    def schema(self, type: str = "json") -> Any:
+        result = None
+        name = self.__class__.__name__
+        schema = self.Meta.schema if self.Meta.schema is not None else ""
+        columns = {}
+        if type == "json":
+            for name, field in self.columns().items():
+                print(name, field)
+                key = field.name
+                type = field.type
+                columns[key] = {"name": key, "type": JSON_TYPES[type]}
+            doc = {
+                "name": name,
+                "description": self.__doc__.strip("\n").strip(),
+                "schema": schema,
+                "fields": columns,
+            }
+            result = to_json.dumps(doc)
+        return result
 
     """
     Class-method for creation.
@@ -591,3 +617,5 @@ class Model(metaclass=ModelMeta):
         m.frozen = False
         cls.Meta = m
         return cls
+
+    Meta = Meta

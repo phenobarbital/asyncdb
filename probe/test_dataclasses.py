@@ -1,25 +1,32 @@
-from datetime import datetime
-import dataclasses
-from dataclasses import dataclass, asdict, fields, InitVar
-from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
-from asyncdb.utils.models import Model, Column
-from asyncdb.utils import Msg
 import uuid
 import asyncio
+from datetime import datetime
 import pprint
+from dataclasses import asdict, fields, InitVar
+from typing import Any, List, Optional, Callable, ClassVar, Union
+from asyncdb.models import Model, Column
+from asyncdb.utils import Msg
+
 
 loop = asyncio.get_event_loop()
 
 
-Msg('First: Pure-like Dataclasses ')
-#@dataclass
+Msg('==== FIRST: Pure-like Dataclasses ')
+
+
+def now():
+    return datetime.now()
+
+
 class User(Model):
     id: int
-    name: str = Column(required=True)
+    name: str
     firstname: str
     lastname: str
-    age: int
-    directory: InitVar = ''
+    age: Optional[int] = 43
+    start_at: datetime = Column(factory=now())
+    directory: InitVar = None
+
     class Meta:
         name = 'users'
         schema = 'public'
@@ -28,29 +35,36 @@ class User(Model):
         frozen = False
 
     def __model_init__(cls, name, attrs) -> None:
-        # can you define values before declaring a dataclass (mostly pre-initialization)
+        # can you define values before declaring a dataclass
+        # (mostly pre-initialization)
         cls.name = 'Jesus Lara'
 
     def __post_init__(self, directory):
         super(User, self).__post_init__()
+        print('Columns Are: ', self.columns())
+
 
 u = {
     "id": 1,
     "firstname": 'Super',
     "lastname": 'Sayayin',
-    "age": 42
+    # "age": 42
 }
 u = User(directory='hola', **u)
 print('First version of User: ', u)
 u.name = 'Jesus Ignacio Lara Gimenez'
 print('Compatible with asdict class of dataclass: ', asdict(u))
+print('Is a valid DataClass?: ', u.is_valid())
 
-#@dataclass
+# Support inheritance
+
+
 class Employee(User):
     associate_id: int
     email: str
     status: int = 0
     chief: User = None
+
 
 employee = {
     "id": 2,
@@ -63,10 +77,13 @@ employee = {
 }
 e = Employee(**employee)
 e.chief = u
-pprint.pprint(e.json(ensure_ascii=True, indent=4))
+pprint.pprint(
+    e.json(ensure_ascii=True, indent=4)
+)
 
 
 Msg('==== SECOND METHOD: AsyncDB Model')
+
 
 class User(Model):
     id: int = Column(required=True)
@@ -74,11 +91,13 @@ class User(Model):
     firstname: str
     lastname: str
     age: int = Column(default=42, required=True)
+
     class Meta:
         name = 'users'
         schema = 'public'
         app_label = 'troc'
         strict = False
+
 
 class Employee(User):
     status: int = 0
@@ -86,18 +105,17 @@ class Employee(User):
     email: str = Column(required=False)
     chief: User = Column(required=False)
 
+
 u = User()
 u.id = 1
 u.name = 'Admin'
 u.firstname = 'Super'
 u.lastname = 'Sayayin'
 u.ultra = 'Ultra Sayayin'
+
+# compatible with "fields" method of dataclasses
 print(fields(u))
 print(u.json())
-
-Msg('Exporting Model Schema: ')
-print(u.schema(type='sql'))
-print(u.schema(type='json'))
 
 employee = {
     "id": 1,
@@ -107,16 +125,23 @@ employee = {
 e = Employee(**employee)
 e.email = 'jesuslara@gmail.com'
 e.chief = u
+
+# Comparing Fields versus fields method of dataclasses
 print(e.__dataclass_fields__, fields(e))
 print(e.dict())
 
-
 Msg('Working with complex types, as uuid or datetime: ')
+
+
+def get_id():
+    return uuid.uuid4()
+
+
 class PyUser(Model):
     id: int = Column(default=1, required=True)
     name: str = Column(default='John Doe', required=False)
-    signup_ts: datetime = Column(default=datetime.now(), required=False)
-    guid: uuid.UUID = Column(default=uuid.uuid4(), required=False)
+    signup_ts: datetime = Column(default=now, required=False)
+    guid: uuid.UUID = Column(default=get_id, required=False)
 
     class Meta:
         name = 'pyusers'
@@ -124,51 +149,73 @@ class PyUser(Model):
         app_label = 'troc'
         strict = False
 
+
 a = PyUser()
 a.name = 'Jesus Lara'
 a.id = 2
 print(a)
 print(a.json())
 
+b = PyUser()
+b.name = 'David Lara'
+b.id = 3
+print(b)
+print(b.json())
+
 user = PyUser(id='42', signup_ts='2032-06-21T12:00')
 user.perolito = True
 print(user, user.perolito)
 
+Msg('=== Exporting Model Schema: ')
+print(user.schema(type='json'))
 
-Msg('First version of nested Dataclasses: ')
+Msg('=== Third: Working with nested Dataclasses: ')
+
 
 class NavbarButton(Model):
     href: str
 
+
 class Navbar(Model):
     button: List[NavbarButton]
 
+
 navbar = Navbar(
-    button=[ NavbarButton(href='http://example.com'), NavbarButton(href='http://example2.com') ]
+    button=[NavbarButton(href='http://example.com'),
+            NavbarButton(href='http://example2.com')]
 )
 print(navbar)
+print(navbar.dict())
 
 
-Msg('Working with Metadata: ')
+Msg('=== Working with Metadata: ')
+
+
 class Position(Model):
     name: str
     lon: float = Column(default=0.0, metadata={'unit': 'degrees'})
     lat: float = Column(default=0.0, metadata={'unit': 'degrees'})
     country: str
+    continent: str = 'Europe'
 
-pos = Position(name='Oslo', lon=10.8, lat=59.9)
+
+pos = Position(
+    name='Oslo',
+    lon=10.8,
+    lat=59.9
+)
 print(pos)
-print(f'{pos.name} is at {pos.lat}°N, {pos.lon}°E')
 pos.country = 'Norway'
+print(f'{pos.name} is in {pos.country} at {pos.lat}°N, {pos.lon}°E')
 print(pos)
 
 
-Msg('Complex Methods, nested DataClasses: ')
+Msg('=== More Complex Methods, nested DataClasses: ')
 
 person = {
     'name': 'Ivan',
     'age': 30,
-    'contact': [
+    'contacts': [
         {
             'phone': '+7-999-000-00-00',
             'email': 'ivan@mail.us',
@@ -198,29 +245,43 @@ class Contact(Model):
 class Person(Model):
     name: str = Column(default='')
     age: int = Column(default=18, min=0, max=99)
-    contact: List[Contact] = Column(required=False)
+    contacts: List[Contact] = Column(required=False)
 
 
 ivan = Person(**person)
 print(ivan.json())
+print(ivan.contacts[0], type(ivan.contacts[0]))
 
 
-Msg('Using Methods within Dataclass: ')
+Msg('=== Using Methods within Dataclass: ')
+
+
 class InventoryItem(Model):
     """Class for keeping track of an item in inventory."""
     name: str
     unit_price: float
     quantity: int = 0
+    discount: Optional[int] = 0
 
     def total_cost(self) -> float:
         return self.unit_price * self.quantity
 
+    @property
+    def with_discount(self) -> float:
+        return self.unit_price - float(self.discount)
 
-grapes = InventoryItem(name='Grapes', unit_price=2.55)
+
+grapes = InventoryItem(
+    name='Grapes',
+    unit_price=2.55
+)
 grapes.quantity = 8
 print(f'Total for {grapes.name} is: ', grapes.total_cost())
+grapes.discount = 0.18
+print(f'Price of {grapes.name} with discount: {grapes.with_discount}')
 
 Msg('Complex Model of Nested and Union Classes: ')
+Msg('=== Nested DataClasses: ')
 
 
 class Foo(Model):
@@ -236,6 +297,8 @@ instance = Bar(foo=foo)
 print(instance)
 assert instance.is_valid() or 'Not Valid'
 assert instance == Bar(foo=Foo(value=[1, 2]))
+
+
 #
 # Msg('Working with Data Models: ')
 #
@@ -337,5 +400,8 @@ assert instance == Bar(foo=Foo(value=[1, 2]))
 #     {"firstname":"Arnoldo","lastname":"Lara Gimenez","name":"Arnoldo Lara","age": 52},
 #     {"firstname":"Yolanda","lastname":"Lara Gimenez","name":"Yolanda Lara","age": 49},
 #     {"firstname":"Yolanda","lastname":"Gimenez","name":"Yolanda Gimenez","age": 72}
+# ]
+# asyncio.run(create_users(users))
+# asyncio.run(create_users(users))
 # ]
 # asyncio.run(create_users(users))
