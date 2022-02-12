@@ -2,13 +2,15 @@
 import asyncio
 from datetime import datetime
 from abc import (
+    ABC,
     abstractmethod,
 )
 from typing import (
     Callable,
     Optional,
     Any,
-    Iterable
+    Iterable,
+    List
 )
 from asyncdb.interfaces import (
     PoolBackend,
@@ -172,3 +174,21 @@ class BaseCursor(CursorBackend):
     Iterable Object for Cursor-Like functionality
     """
     _provider: BaseProvider
+
+
+class DDLBackend(ABC):
+    """
+    DDL Backend for Creation of SQL Objects.
+    """
+
+    @abstractmethod
+    async def create(
+        self,
+        object: str = 'table',
+        name: str = '',
+        fields: Optional[List] = None
+    ) -> Optional[Any]:
+        """
+        Create is a generic method for Database Objects Creation.
+        """
+        pass

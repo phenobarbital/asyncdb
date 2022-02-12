@@ -17,7 +17,8 @@ from asyncdb.exceptions import (
 from asyncdb.providers import (
     registerProvider,
     BaseCursor,
-    SQLProvider
+    SQLProvider,
+    DDLBackend
 )
 
 
@@ -35,7 +36,7 @@ class sqliteCursor(BaseCursor):
         return self
 
 
-class sqlite(SQLProvider):
+class sqlite(SQLProvider, DDLBackend):
     _provider: str = 'sqlite'
     _syntax: str = 'sql'
     _dsn: str = "{database}"
@@ -92,6 +93,8 @@ class sqlite(SQLProvider):
         error = None
         await self.valid_operation(sentence)
         try:
+            self._connection.row_factory = lambda c, r: dict(
+                zip([col[0] for col in c.description], r))
             self._cursor = await self._connection.execute(sentence)
             self._result = await self._cursor.fetchall()
             if not self._result:
@@ -113,6 +116,8 @@ class sqlite(SQLProvider):
         error = None
         await self.valid_operation(sentence)
         try:
+            self._connection.row_factory = lambda c, r: dict(
+                zip([col[0] for col in c.description], r))
             self._cursor = await self._connection.execute(sentence)
             self._result = await self._cursor.fetchone()
             if not self._result:
@@ -262,14 +267,12 @@ class sqlite(SQLProvider):
             cursor = await self._connection.execute(
                 f'PRAGMA table_info({tablename});'
             )
-            print(cursor)
             cols = await cursor.fetchall()
-            print(cols)
             self._columns = []
             for col in cols:
                 d = {
-                    "column_name": col['name'],
-                    "data_type": col['type']
+                    "name": col['name'],
+                    "type": col['type']
                 }
                 self._columns.append(d)
             if not self._columns:
@@ -280,7 +283,30 @@ class sqlite(SQLProvider):
         finally:
             return self._columns
 
-        pass
+    async def create(
+        self,
+        object: str = 'table',
+        name: str = '',
+        fields: Optional[List] = None
+    ) -> bool:
+        """
+        Create is a generic method for Database Objects Creation.
+        """
+        if object == 'table':
+            sql = "CREATE TABLE {name}({columns});"
+            columns = ", ".join(["{name} {type}".format(**e) for e in fields])
+            sql = sql.format(name=name, columns=columns)
+            try:
+                result = await self._connection.execute(sql)
+                if result:
+                    await self._connection.commit()
+                    return True
+                else:
+                    return False
+            except Exception as err:
+                raise ProviderError(f"Error in Object Creation: {err!s}")
+        else:
+            raise RuntimeError(f'SQLite: invalid Object type {object!s}')
 
 
 # Registering this Provider
