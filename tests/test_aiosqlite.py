@@ -14,10 +14,10 @@ async def test_connect(event_loop):
     db = AsyncDB(DRIVER, params=PARAMS, loop=event_loop)
     pytest.assume(db.is_connected() is False)
     async with await db.connection() as conn:
-        pytest.assume(db.is_connected() is True)
-        result, error = await db.test_connection()
+        pytest.assume(conn.is_connected() is True)
+        result, error = await conn.test_connection()
         pytest.assume(not error)
-        pytest.assume(result[0][0] == 1)
+        pytest.assume(result[0]['1'] == 1)
     assert db.is_closed() is True
 
 
@@ -26,18 +26,28 @@ async def test_operations(event_loop):
     pytest.assume(db.is_connected() is False)
     async with await db.connection() as conn:
         pytest.assume(conn.is_connected() is True)
-        result, error = await conn.execute("create table tests(id integer, name text)")
+        result = await conn.create(
+            name='tests',
+            fields=[
+                {"name": "id", "type": "integer"},
+                {"name": "name", "type": "text"}
+            ]
+        )
         pytest.assume(result)
-        pytest.assume(not error)
+        columns = await conn.column_info(
+            tablename='tests'
+        )
+        pytest.assume(len(columns) > 0)
+        pytest.assume(columns[0]['name'] == 'id')
         many = "INSERT INTO tests VALUES(?, ?)"
         examples = [(2, "def"), (3, "ghi"), (4, "jkl")]
         print(": Executing Insert of many entries: ")
-        await conn.executemany(many, examples)
+        await conn.execute_many(many, examples)
         result, error = await conn.query("SELECT * FROM tests where id = 2")
         print('TEST> ', result, error)
         pytest.assume(not error)
         for row in result:
-            pytest.assume(result["name"] == 'def')
+            pytest.assume(row["name"] == 'def')
         table = """
             CREATE TABLE airports (
             iata text PRIMARY KEY,
@@ -63,7 +73,7 @@ async def test_operations(event_loop):
         async with await conn.fetch(query, (a_country, a_city)) as result:
             async for row in result:
                 print(row)
-                pytest.assume(row[0] == "CDG")
+                pytest.assume(row['iata'] == "CDG")
     assert db.is_closed() is True
 
 
@@ -91,7 +101,7 @@ async def test_cursors(event_loop):
             ("SVO", "Moscow", "Russia"),
         ]
         airports = "INSERT INTO airports VALUES(?, ?, ?)"
-        await conn.executemany(airports, data)
+        await conn.execute_many(airports, data)
         print('Using Cursor Objects: ')
         b_country = 'France'
         b_city = 'London'
@@ -105,7 +115,7 @@ async def test_cursors(event_loop):
             # its an iterable
             print("Using Context Manager: ")
             async with cursor:
-                values = await cursor.fetchall()
+                values = await cursor.fetch_all()
                 print(values)
                 pytest.assume(type(values) == list)
                 pytest.assume(
