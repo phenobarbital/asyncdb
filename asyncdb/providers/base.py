@@ -82,9 +82,9 @@ class BaseProvider(ConnectionBackend, ConnectionDSNBackend, DatabaseBackend):
         self._generated = None
         self._starttime = None
         self._parameters = ()
-        super(BaseProvider, self).__init__(
-            dsn, loop, params, **kwargs
-        )
+        ConnectionDSNBackend.__init__(self, dsn, loop, params, **kwargs)
+        ConnectionBackend.__init__(self, loop, params, **kwargs)
+        DatabaseBackend.__init__(self, params, **kwargs)
         self._initialized_on = None
 
     def start_timing(self):
@@ -152,6 +152,9 @@ class SQLProvider(BaseDBProvider):
             self._connection = None
             self._connected = False
             return True
+
+    # alias for connection
+    disconnect = close
 
     async def valid_operation(self, sentence: Any):
         if not sentence:

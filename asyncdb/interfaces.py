@@ -198,14 +198,9 @@ class ConnectionBackend(ABC):
     async def connection(self):
         pass
 
-    connect = connection
-
     @abstractmethod
     async def close(self, timeout: int = 10):
         pass
-
-    # alias for connection
-    disconnect = close
 
     # Properties
     @classmethod

@@ -83,6 +83,8 @@ class sqlite(SQLProvider):
         finally:
             return self
 
+    connect = connection
+
     async def query(self, sentence: Any = None) -> Any:
         """
         Getting a Query from Database
@@ -234,6 +236,51 @@ class sqlite(SQLProvider):
             sentence, parameters
         )
         return result
+
+    def tables(self, schema: str = "") -> Iterable[Any]:
+        raise NotImplementedError
+
+    def table(self, tablename: str = "") -> Iterable[Any]:
+        raise NotImplementedError
+
+    def use(self, tablename: str):
+        raise NotImplementedError(
+            'SQLite Error: There is no Database in SQLite'
+        )
+
+    async def column_info(
+            self,
+            tablename: str,
+            schema: str = ''
+    ) -> Iterable[Any]:
+        """
+        Getting Column info from an existing Table in Provider.
+        """
+        try:
+            self._connection.row_factory = lambda c, r: dict(
+                zip([col[0] for col in c.description], r))
+            cursor = await self._connection.execute(
+                f'PRAGMA table_info({tablename});'
+            )
+            print(cursor)
+            cols = await cursor.fetchall()
+            print(cols)
+            self._columns = []
+            for col in cols:
+                d = {
+                    "column_name": col['name'],
+                    "data_type": col['type']
+                }
+                self._columns.append(d)
+            if not self._columns:
+                raise NoDataFound()
+        except Exception as err:
+            error = f"Error Getting Columns: {err!s}"
+            raise ProviderError(error)
+        finally:
+            return self._columns
+
+        pass
 
 
 # Registering this Provider
