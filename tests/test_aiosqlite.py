@@ -30,7 +30,7 @@ async def test_operations(event_loop):
             name='tests',
             fields=[
                 {"name": "id", "type": "integer"},
-                {"name": "name", "type": "text"}
+                {"name": "name", "type": "varchar"}
             ]
         )
         pytest.assume(result)
@@ -122,6 +122,28 @@ async def test_cursors(event_loop):
                     values=[('CDG', 'Paris', 'France'), ('LHR', 'London', 'United Kingdom')])
             # this returns a cursor based object
     assert db.is_closed() is True
+
+
+async def test_execute_many(event_loop):
+    db = AsyncDB(DRIVER, params=PARAMS, loop=event_loop)
+    pytest.assume(db.is_connected() is False)
+    async with await db.connection() as conn:
+        pytest.assume(db.is_connected() is True)
+        result = await conn.create(
+            name='tests_cursors',
+            fields=[
+                {"name": "i", "type": "integer"},
+                {"name": "k", "type": "integer"}
+            ]
+        )
+        pytest.assume(result)
+        context = "INSERT INTO tests_cursors VALUES(?, ?)"
+        await conn.execute_many(context, [[i, i*2] for i in range(100)])
+        async with conn.cursor("SELECT * FROM tests_cursors") as cursor:
+            pytest.assume(cursor)
+            async for row in cursor:
+                print(row)
+                pytest.assume(type(row) == tuple)
 
 
 def pytest_sessionfinish(session, exitstatus):
