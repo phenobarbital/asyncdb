@@ -50,7 +50,7 @@ async def connect(db):
         print('Using Cursor Objects: ')
         b_country = 'France'
         b_city = 'London'
-        async with await conn.cursor(query, (b_country, b_city)) as cursor:
+        async with conn.cursor(query, (b_country, b_city)) as cursor:
             async for row in cursor:
                 print(row)
             # its an iterable

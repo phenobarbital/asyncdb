@@ -529,7 +529,7 @@ class DBCursorBackend(ABC):
             logging.exception(f"Error Loading Cursor Class: {err}")
             self.__cursor__ = None
 
-    async def cursor(
+    def cursor(
                     self,
                     sentence: str,
                     params: Iterable[Any] = None,
