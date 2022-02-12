@@ -6,10 +6,13 @@ from .base import (
     BasePool,
     BaseProvider,
     BaseCursor,
-    SQLProvider
+    SQLProvider,
+    DDLBackend
 )
 _PROVIDERS = {}
-__all__ = ["BasePool", "BaseProvider", "BaseCursor", "SQLProvider"]
+__all__ = [
+    "BasePool", "BaseProvider", "BaseCursor", "SQLProvider", "DDLBackend"
+]
 
 
 def registerProvider(provider):
