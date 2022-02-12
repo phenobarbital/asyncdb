@@ -8,11 +8,17 @@ from asyncdb.exceptions import default_exception_handler
 async def connect(db):
     async with await db.connection() as conn:
         pprint(await conn.test_connection())
-        await conn.execute("create table tests(id integer, name text)")
+        await conn.create(
+            name='tests',
+            fields=[
+                {"name": "id", "type": "integer"},
+                {"name": "name", "type": "text"}
+            ]
+        )
         many = "INSERT INTO tests VALUES(?, ?)"
         examples = [(2, "def"), (3, "ghi"), (4, "jkl")]
         print(": Executing Insert of many entries: ")
-        await conn.executemany(many, examples)
+        await conn.execute_many(many, examples)
         result, error = await conn.query("SELECT * FROM tests")
         for row in result:
             print(row)
@@ -44,14 +50,13 @@ async def connect(db):
         print('Using Cursor Objects: ')
         b_country = 'France'
         b_city = 'London'
-        async with conn.cursor(query, (b_country, b_city)) as cursor:
-            print("using iterator: ")
+        async with await conn.cursor(query, (b_country, b_city)) as cursor:
             async for row in cursor:
                 print(row)
             # its an iterable
-            print("Using Context Manager: ")
+            print("Also: Using Context Manager: ")
             async with cursor:
-                print(await cursor.fetchall())
+                print(await cursor.fetch_all())
             # this returns a cursor based object
 
 
