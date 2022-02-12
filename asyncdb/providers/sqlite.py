@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import time
+import asyncio
 from typing import (
     Any,
     Iterable,
@@ -20,6 +21,7 @@ from asyncdb.providers import (
     SQLProvider,
     DDLBackend
 )
+from asyncdb.interfaces import DBCursorBackend
 
 
 class sqliteCursor(BaseCursor):
@@ -36,14 +38,29 @@ class sqliteCursor(BaseCursor):
         return self
 
 
-class sqlite(SQLProvider, DDLBackend):
+class sqlite(DBCursorBackend, DDLBackend, SQLProvider):
     _provider: str = 'sqlite'
     _syntax: str = 'sql'
     _dsn: str = "{database}"
 
+    def __init__(
+            self,
+            dsn: str = '',
+            loop: asyncio.AbstractEventLoop = None,
+            params: Dict[Any, Any] = {},
+            **kwargs
+    ) -> None:
+        SQLProvider.__init__(self, dsn, loop, params, **kwargs)
+        DBCursorBackend.__init__(self, params, **kwargs)
+
     async def prepare(self):
         "Ignoring prepared sentences on SQLite"
         raise NotImplementedError()  # pragma: no cover
+
+    async def __aenter__(self) -> Any:
+        if not self._connection:
+            await self.connection()
+        return self
 
     async def connection(self, **kwargs):
         """
@@ -190,6 +207,7 @@ class sqlite(SQLProvider, DDLBackend):
             return self._result
 
     fetchone = fetch_one
+    fetchrow = fetch_one
 
     async def execute(self, sentence: Any = None, *args) -> Optional[Any]:
         """Execute a transaction

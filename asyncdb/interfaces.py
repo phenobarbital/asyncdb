@@ -484,10 +484,10 @@ class CursorBackend(ABC):
             return row
         else:
             raise StopAsyncIteration
-
-    @abstractmethod
-    async def execute(sentence: Any, params: Optional[Dict] = None) -> Any:
-        pass
+    #
+    # @abstractmethod
+    # async def execute(sentence: Any, params: Optional[Dict] = None) -> Any:
+    #     pass
 
     """
     Cursor Methods.
