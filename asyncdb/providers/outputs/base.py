@@ -14,4 +14,4 @@ class OutputFormat(ABC):
         pass
 
     async def __call__(self, result, error, *args, **kwargs):
-        return await self.serialize(args, result, error, **kwargs)
+        return await self.serialize(result, error, *args, **kwargs)

@@ -3,6 +3,8 @@ import pytest
 from pprint import pprint
 from asyncdb import AsyncDB
 import pytest_asyncio
+from typing import Generator
+import pypolars as pl
 
 pytestmark = pytest.mark.asyncio
 
@@ -183,6 +185,19 @@ async def test_formats(event_loop):
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         pytest.assume(type(result) == str)
+        conn.output_format('pandas') # change output format to pandas
+        result, error = await conn.query("SELECT * FROM airports")
+        print(result)
+        import pandas
+        pytest.assume(type(result) == pandas.core.frame.DataFrame)
+        conn.output_format('iterable') # change output format to iter generator
+        result, error = await conn.query("SELECT * FROM airports")
+        print(result)
+        # pytest.assume(callable(result)) # TODO: test method for generator exp
+        conn.output_format('polars') # change output format to iter generator
+        result, error = await conn.query("SELECT * FROM airports")
+        print(result)
+        pytest.assume(type(result) == pl.frame.DataFrame)
 
 def pytest_sessionfinish(session, exitstatus):
     asyncio.get_event_loop().close()
