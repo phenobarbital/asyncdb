@@ -5,6 +5,7 @@ from asyncdb import AsyncDB
 import pytest_asyncio
 from typing import Generator
 import pypolars as pl
+import datatable as dt
 
 pytestmark = pytest.mark.asyncio
 
@@ -198,6 +199,15 @@ async def test_formats(event_loop):
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         pytest.assume(type(result) == pl.frame.DataFrame)
+        conn.output_format('datatable') # change output format to iter generator
+        result, error = await conn.query("SELECT * FROM airports")
+        print(result)
+        print(type(result))
+        pytest.assume(type(result) == datatable.Frame)
+        conn.output_format('csv') # change output format to iter generator
+        result, error = await conn.query("SELECT * FROM airports")
+        print(result)
+        pytest.assume(type(result) == str)
 
 def pytest_sessionfinish(session, exitstatus):
     asyncio.get_event_loop().close()
