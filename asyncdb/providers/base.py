@@ -20,6 +20,7 @@ from asyncdb.interfaces import (
     CursorBackend
 )
 from asyncdb.exceptions import ProviderError, EmptyStatement
+from asyncdb.providers.outputs import OutputFactory
 
 
 class BasePool(PoolBackend, ConnectionDSNBackend):
@@ -84,10 +85,14 @@ class BaseProvider(ConnectionBackend, ConnectionDSNBackend, DatabaseBackend):
         self._generated = None
         self._starttime = None
         self._parameters = ()
+        self._serializer = None
+        self._row_format = 'native'
         ConnectionDSNBackend.__init__(self, dsn, loop, params, **kwargs)
         ConnectionBackend.__init__(self, loop, params, **kwargs)
         DatabaseBackend.__init__(self, params, **kwargs)
         self._initialized_on = None
+        # always starts output format to native:
+        self.output_format('native')
 
     def start_timing(self):
         self._starttime = datetime.now()
@@ -95,6 +100,23 @@ class BaseProvider(ConnectionBackend, ConnectionDSNBackend, DatabaseBackend):
     def generated_at(self):
         self._generated = datetime.now() - self._starttime
         return self._generated
+
+    """
+    Formats:
+     - row_format: run before query
+     - output: runs in the return (serialization) of data
+    """
+
+    def row_format(self, format: str = 'native'):
+        self._row_format = format
+
+    async def output(self, result, error):
+        # return result in default format
+        self._result = result
+        return (result, error)
+
+    def output_format(self, format: str = 'native', *args, **kwargs):
+        self._serializer = OutputFactory(self, format, *args, **kwargs)
 
 
 class BaseDBProvider(BaseProvider):
