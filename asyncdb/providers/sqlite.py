@@ -103,6 +103,16 @@ class sqlite(DBCursorBackend, DDLBackend, SQLProvider):
 
     connect = connection
 
+
+    async def valid_operation(self, sentence: Any):
+        await super(sqlite, self).valid_operation(sentence)
+        if self._row_format == 'iterable':
+            # converting to a dictionary
+            self._connection.row_factory = lambda c, r: dict(
+                zip([col[0] for col in c.description], r))
+        else:
+            self._connection.row_factory = None
+
     async def query(self, sentence: Any = None) -> Any:
         """
         Getting a Query from Database
@@ -110,8 +120,6 @@ class sqlite(DBCursorBackend, DDLBackend, SQLProvider):
         error = None
         await self.valid_operation(sentence)
         try:
-            self._connection.row_factory = lambda c, r: dict(
-                zip([col[0] for col in c.description], r))
             self._cursor = await self._connection.execute(sentence)
             self._result = await self._cursor.fetchall()
             if not self._result:
@@ -124,7 +132,7 @@ class sqlite(DBCursorBackend, DDLBackend, SQLProvider):
                 await self._cursor.close()
             except Exception as err:
                 self._logger.exception(err)
-            return (self._result, error)
+            return await self._serializer(self._result, error)
 
     async def queryrow(self, sentence: Any = None) -> Iterable[Any]:
         """
@@ -144,7 +152,7 @@ class sqlite(DBCursorBackend, DDLBackend, SQLProvider):
             raise ProviderError(error)
         finally:
             await self._cursor.close()
-            return (self._result, error)
+            return await self._serializer(self._result, error)
 
     async def fetch_all(self, sentence: str, **kwargs) -> List[Sequence]:
         """

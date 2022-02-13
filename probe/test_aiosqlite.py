@@ -59,7 +59,6 @@ async def connect(db):
                 print(await cursor.fetch_all())
             # this returns a cursor based object
 
-
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.set_exception_handler(default_exception_handler)
