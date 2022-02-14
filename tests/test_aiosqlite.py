@@ -4,7 +4,7 @@ from pprint import pprint
 from asyncdb import AsyncDB
 import pytest_asyncio
 from typing import Generator
-import pypolars as pl
+import polars as pl
 import datatable as dt
 from asyncdb.meta import Record, Recordset
 

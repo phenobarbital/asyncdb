@@ -74,6 +74,7 @@ class PoolBackend(ABC):
         try:
             self._logger = logging.getLogger(name=__name__)
         except Exception as err:
+            self._logger = None
             logging.exception(err)
             raise
 
@@ -166,6 +167,10 @@ class ConnectionBackend(ABC):
             self.params = params.copy()
         except TypeError:
             pass
+        try:
+            self._params = params.copy()
+        except TypeError:
+            self._params = {}
         if loop:
             self._loop = loop
         else:
@@ -191,6 +196,7 @@ class ConnectionBackend(ABC):
         try:
             self._logger = logging.getLogger(name=__name__)
         except Exception as err:
+            self._logger = None
             logging.exception(err)
             raise
 
@@ -266,6 +272,7 @@ class ConnectionDSNBackend(ABC):
             params: Dict[Any, Any] = {},
             **kwargs
     ) -> None:
+        self._dsn = ''
         if dsn:
             self._dsn = dsn
         else:
@@ -386,7 +393,7 @@ class DatabaseBackend(ABC):
         """
         pass
 
-    executemany = execute_many
+    # executemany = execute_many
 
     @abstractmethod
     async def query(self, sentence=""):
