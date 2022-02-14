@@ -185,6 +185,7 @@ navbar = Navbar(
             NavbarButton(href='http://example2.com')]
 )
 print(navbar)
+# nabar.button[0].href
 print(navbar.dict())
 
 
@@ -299,59 +300,59 @@ print(instance)
 assert instance.is_valid() or 'Not Valid'
 assert instance == Bar(foo=Foo(value=[1, 2]))
 
-
-Msg('Working with Data Models: ')
-
-
-def auto_now_add(*args, **kwargs):
-    return uuid.uuid4()
-
-
-class Users(SQLModel):
-    """
-    User Basic Structure
-    """
-    id: uuid.UUID = Column(
-        required=True,
-        primary_key=True,
-        default=auto_now_add,
-        db_default='uuid_generate_v4()'
-    )
-    firstname: str
-    lastname: str
-    name: str = Column(required=True, default='John Doe')
-    age: int = Column(default=18, required=True)
-    signup_ts: datetime = Column(default=now, db_default='now()')
-
-    def __post_init__(self):
-        self.name = f"{self.firstname} {self.lastname}"
-        super(Users, self).__post_init__()
-        print('Columns Are: ', self.columns())
-
-    class Meta:
-        name = 'users'
-        schema = 'public'
-        driver = 'pg'
-        credentials = {
-            'user': 'troc_pgdata',
-            'password': '12345678',
-            'host': 'localhost',
-            'port': '5432',
-            'database': 'navigator_dev',
-        }
-        strict = False
-
-
-u = {
-    "firstname": 'Super',
-    "lastname": 'Sayayin',
-    "age": 9000
-}
-u = Users()
-print(u.get_connection(), u.get_connection().is_connected())
-
-Msg('Printing Model DDL: ')
-print(u.schema(type='sql'))
+#
+# Msg('Working with Data Models: ')
+#
+#
+# def auto_now_add(*args, **kwargs):
+#     return uuid.uuid4()
+#
+#
+# class Users(SQLModel):
+#     """
+#     User Basic Structure
+#     """
+#     id: uuid.UUID = Column(
+#         required=True,
+#         primary_key=True,
+#         default=auto_now_add,
+#         db_default='uuid_generate_v4()'
+#     )
+#     firstname: str
+#     lastname: str
+#     name: str = Column(required=True, default='John Doe')
+#     age: int = Column(default=18, required=True)
+#     signup_ts: datetime = Column(default=now, db_default='now()')
+#
+#     def __post_init__(self):
+#         self.name = f"{self.firstname} {self.lastname}"
+#         super(Users, self).__post_init__()
+#         print('Columns Are: ', self.columns())
+#
+#     class Meta:
+#         name = 'users'
+#         schema = 'public'
+#         driver = 'pg'
+#         credentials = {
+#             'user': 'troc_pgdata',
+#             'password': '12345678',
+#             'host': 'localhost',
+#             'port': '5432',
+#             'database': 'navigator_dev',
+#         }
+#         strict = False
+#
+#
+# u = {
+#     "firstname": 'Super',
+#     "lastname": 'Sayayin',
+#     "age": 9000
+# }
+# u = Users()
+# print(u.get_connection(), u.get_connection().is_connected())
+#
+# Msg('Printing Model DDL: ')
+# print(u.schema(type='sql'))
 
 #
 # #TODO: definition of Operators

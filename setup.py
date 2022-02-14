@@ -84,7 +84,7 @@ setup(
         "rethinkdb==2.4.8",
         "lxml>=4.6.2",
         "pandas==1.3.4",
-        "dask-2022.2.0",
+        "dask==2022.2.0",
         "datatable==1.0.0",
         "polars==0.8.10",
         "py-polars==0.8.10",
