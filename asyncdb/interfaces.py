@@ -271,7 +271,7 @@ class ConnectionDSNBackend(ABC):
         else:
             self._dsn = self.create_dsn(params)
 
-    def create_dsn(self, params):
+    def create_dsn(self, params: Dict):
         try:
             return self._dsn.format(**params)
         except Exception as err:
