@@ -6,6 +6,7 @@ import pytest_asyncio
 from typing import Generator
 import pypolars as pl
 import datatable as dt
+from asyncdb.meta import Record, Recordset
 
 pytestmark = pytest.mark.asyncio
 
@@ -208,11 +209,26 @@ async def test_formats(event_loop):
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         pytest.assume(type(result) == str)
-        conn.output_format('arrow') # change output format to iter generator
+        # testing Record Object
+        conn.output_format('record') # change output format to iter generator
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
-        print(type(result))
-        # pytest.assume(type(result) == str)
+        pytest.assume(type(result) == list)
+        for row in result:
+            pytest.assume(type(row) == Record)
+            pytest.assume(len(row.iata) == 3)
+        # testing Recordset Object
+        conn.output_format('recordset') # change output format to iter generator
+        result, error = await conn.query("SELECT * FROM airports")
+        print(result)
+        pytest.assume(type(result) == Recordset)
+        # working with slices:
+        obj = result[0:2]
+        pytest.assume(len(obj) == 2)
+        for row in result:
+            pytest.assume(type(row) == Record)
+            pytest.assume(len(row.iata) == 3)
+            print(row)
 
 def pytest_sessionfinish(session, exitstatus):
     asyncio.get_event_loop().close()

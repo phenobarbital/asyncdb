@@ -1,4 +1,9 @@
 import asyncio
+from .record import Record
+from .recordset import Recordset
+
+__all__ = ['Record', 'Recordset']
+
 from asyncdb.exceptions import (
     ProviderError,
     NoDataFound,
