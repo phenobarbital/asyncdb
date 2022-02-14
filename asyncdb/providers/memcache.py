@@ -9,41 +9,33 @@ import asyncio
 import time
 import aiomcache
 
+from typing import (
+    List,
+    Dict
+)
 from asyncdb.exceptions import *
 from asyncdb.providers import (
     BasePool,
     BaseProvider,
     registerProvider,
 )
-from asyncdb.utils import *
 
 
 class memcachePool(BasePool):
-    _max_queries = 10
+    """
+    Pool-based version of Memcached connector.
+    """
 
-    def __init__(self, loop=None, params={}):
+    def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
         self._dsn = None
         self._connection = None
+        self._max_queries = 10
         super(memcachePool, self).__init__(
-            loop=loop, params=params
+            dsn, loop, params, **kwargs
         )
-        self._pool = None
 
-    def create_dsn(self, params):
+    def create_dsn(self, params: Dict):
         return params
-
-    def get_event_loop(self):
-        return self._loop
-
-    """
-    Context magic Methods
-    """
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self._loop.run_until_complete(self.release())
 
     async def connect(self):
         self._logger.debug(
@@ -79,7 +71,7 @@ class memcachePool(BasePool):
             raise ProviderError("Unknown Error: {}".format(str(err)))
             return False
         if self._connection:
-            db = memcache(pool=self)
+            db = memcache(pool=self, loop=self._loop)
         return db
 
     async def release(self, connection=None):
@@ -107,6 +99,8 @@ class memcachePool(BasePool):
             raise ProviderError("Connection Close Error: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Closing Error: {}".format(str(err)))
+
+    disconnect = close
 
 
 class memcache(BaseProvider):

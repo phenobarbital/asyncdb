@@ -1,5 +1,5 @@
 import pandas
-import pypolars as polar
+import polars as polar
 import pyarrow as pa
 from .base import OutputFormat
 
