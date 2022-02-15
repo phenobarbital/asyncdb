@@ -26,6 +26,14 @@ async def conn(event_loop):
 pytestmark = pytest.mark.asyncio
 
 
+async def test_pool_by_params(event_loop):
+    pool = AsyncPool(DRIVER, params=params, loop=event_loop)
+    pytest.assume(pool.is_connected() is False)
+    await pool.connect()
+    pytest.assume(pool.is_connected() is True)
+    await pool.close()
+
+
 @pytest.mark.parametrize("driver", [
     (DRIVER)
 ])
