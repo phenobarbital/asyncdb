@@ -103,6 +103,12 @@ class InitProvider(ConnectionBackend, DatabaseBackend):
         self._generated = datetime.now() - self._starttime
         return self._generated
 
+    def last_duration(self):
+        return self._generated
+
+    def set_connection(self, connection):
+        self._connection = connection
+
     """
     Formats:
      - row_format: run before query
