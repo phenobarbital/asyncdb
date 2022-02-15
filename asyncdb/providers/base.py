@@ -72,14 +72,14 @@ class BasePool(PoolBackend, ConnectionDSNBackend):
         pass
 
 
-class BaseProvider(ConnectionBackend, ConnectionDSNBackend, DatabaseBackend):
+class InitProvider(ConnectionBackend, DatabaseBackend):
     """
-    BaseProvider
-        Abstract Class for DB Connection
+    InitProvider
+        Abstract Class for Connections
     ----
     """
-    _provider: str = "base"
-    _syntax: str = "base"  # can use QueryParser for parsing SQL queries
+    _provider: str = "init"
+    _syntax: str = "init"  # can use QueryParser for parsing SQL queries
     init_func: Optional[Callable] = None
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
@@ -91,12 +91,6 @@ class BaseProvider(ConnectionBackend, ConnectionDSNBackend, DatabaseBackend):
         self._serializer = None
         self._row_format = 'native'
         ConnectionBackend.__init__(self, loop=loop, params=params, **kwargs)
-        ConnectionDSNBackend.__init__(
-            self,
-            dsn=dsn,
-            params=params,
-            **kwargs
-        )
         DatabaseBackend.__init__(self, params=params, **kwargs)
         self._initialized_on = None
         # always starts output format to native:
@@ -125,6 +119,30 @@ class BaseProvider(ConnectionBackend, ConnectionDSNBackend, DatabaseBackend):
 
     def output_format(self, format: str = 'native', *args, **kwargs):
         self._serializer = OutputFactory(self, format, *args, **kwargs)
+
+
+class BaseProvider(InitProvider, ConnectionDSNBackend):
+    """
+    BaseProvider
+        Abstract Class for DB Connection
+    ----
+    """
+    _provider: str = "base"
+    _syntax: str = "base"  # can use QueryParser for parsing SQL queries
+    init_func: Optional[Callable] = None
+
+    def __init__(self, dsn="", loop=None, params={}, **kwargs):
+        super(BaseProvider, self).__init__(
+            dsn=dsn, loop=loop, params=params, **kwargs
+        )
+        ConnectionDSNBackend.__init__(
+            self,
+            dsn=dsn,
+            params=params,
+            **kwargs
+        )
+        # always starts output format to native:
+        self.output_format('native')
 
 
 class BaseDBProvider(BaseProvider):
