@@ -43,8 +43,9 @@ from asyncdb.exceptions import (
 from asyncdb.providers import (
     BasePool,
     SQLProvider,
-    baseCursor,
-    registerProvider
+    BaseCursor,
+    registerProvider,
+    DDLBackend
 )
 from asyncdb.utils.encoders import (
     BaseEncoder,
@@ -53,11 +54,8 @@ from asyncdb.utils import (
     SafeDict,
     _escapeString,
 )
-
-from asyncdb.providers import ,
 from asyncdb.interfaces import (
-    DBCursorBackend,
-    DDLBackend
+    DBCursorBackend
 )
 
 max_cached_statement_lifetime = 600
@@ -74,6 +72,7 @@ class pgPool(BasePool):
     init_func: Optional[Callable] = None
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
+        self._test_query = 'SELECT 1'
         self.application_name = os.getenv('APP_NAME', "NAV")
         self._max_clients = 300
         self._min_size = 10
@@ -93,19 +92,6 @@ class pgPool(BasePool):
         if "numeric_as_float" in kwargs:
             self._numeric_as_float = kwargs['numeric_as_float']
 
-    """
-    Context magic Methods
-    """
-    #
-    # async def __aenter__(self) -> "BasePool":
-    #     if not self._pool:
-    #         await self.connect()
-    #     return self
-    #
-    # async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-    #     # clean up anything you need to clean up
-    #     await self.release(self._connection)
-    #     self._connection = None
     async def setup_connection(self, connection):
         if self.setup_func:
             try:
@@ -113,6 +99,22 @@ class pgPool(BasePool):
             except Exception as err:
                 print("Error on Setup Connection: {}".format(err))
                 pass
+
+    async def test_connection(self, **kwargs):
+        """Test Connnection.
+        Making a connection Test using the basic Query Method.
+        """
+        result = None
+        error = None
+        if self._test_query is None:
+            raise [None, NotImplementedError()]
+        try:
+            result = await self.execute(self._test_query, **kwargs)
+        except Exception as err:
+            print(err)
+            error = err
+        finally:
+            return [result, error]
 
     async def init_connection(self, connection):
         # Setup jsonb encoder/decoder
@@ -330,33 +332,31 @@ class pgPool(BasePool):
             self._pool.terminate()
             self._connected = False
 
-    def terminate(self, gracefully=True):
-        self._loop.run_until_complete(
-            self.wait_close(gracefully=gracefully, timeout=1)
-        )
+    disconnect = close
 
-    async def execute(self, sentence, *args):
+    async def execute(self, sentence, *args, **kwargs):
         """
         Execute a connection into the Pool
         """
-        if self._pool:
-            try:
-                result = await self._pool.execute(sentence, *args)
-                return result
-            except InterfaceError as err:
-                raise ProviderError(
-                    "Execute Interface Error: {}".format(str(err)))
-            except Exception as err:
-                raise ProviderError("Execute Error: {}".format(str(err)))
+        try:
+            result = await self._pool.execute(sentence, *args)
+            return result
+        except InterfaceError as err:
+            raise ProviderError(
+                "Execute Interface Error: {}".format(str(err)))
+        except Exception as err:
+            raise ProviderError("Execute Error: {}".format(str(err)))
 
 
-class pglCursor(baseCursor):
+class pglCursor(BaseCursor):
     _connection: asyncpg.Connection = None
 
     async def __aenter__(self) -> "pglCursor":
         if not self._connection:
             await self.connection()
-        self._cursor = await self._connection.cursor(self._sentence, self._params)
+        self._cursor = await self._connection.cursor(
+            self._sentence, self._params
+        )
         return self
 
 
