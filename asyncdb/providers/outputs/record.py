@@ -6,6 +6,7 @@ Returning a asyncdb Record row Format.
 from .base import OutputFormat
 from asyncdb.meta import Record
 
+
 class recordFormat(OutputFormat):
     """
     Returns a List of Records from a Resultset

@@ -548,10 +548,6 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
         finally:
             return self
 
-    """
-    Release a Connection
-    """
-
     async def release(self):
         try:
             if not await self._connection.is_closed():
@@ -583,10 +579,6 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
             return self._pool._connected
         elif self._connection:
             return not self._connection.is_closed()
-
-    """
-    Preparing a sentence
-    """
 
     async def prepare(self, sentence=""):
         error = None
