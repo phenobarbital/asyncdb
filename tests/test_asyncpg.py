@@ -16,12 +16,13 @@ PARAMS = {
     "database": 'navigator_dev'
 }
 
-# @pytest.fixture
-# async def conn(event_loop):
-#     db = AsyncDB('pg', dsn=asyncpg_url, loop=event_loop)
-#     await db.connection()
-#     yield db
-#     await db.close()
+
+@pytest.fixture
+async def conn(event_loop):
+    db = AsyncDB('pg', dsn=asyncpg_url, loop=event_loop)
+    await db.connection()
+    yield db
+    await db.close()
 
 
 @pytest.fixture
@@ -76,13 +77,22 @@ async def test_changing_app(event_loop):
     assert pool.is_closed() is True
 
 
+async def test_context(pooler, event_loop):
+    """ Using Pooler """
+    assert pooler.application_name == 'Navigator'
+    assert pooler.is_closed() is False
+    async with pooler as conn:
+        result = await conn.execute("SELECT 1")
+        pytest.assume(result == 'SELECT 1')
+
+
 async def test_pool_connect(event_loop):
     args = {
         "server_settings": {
             "application_name": "Navigator"
         }
     }
-    pool = AsyncPool("pg", params=PARAMS, loop=event_loop)
+    pool = AsyncPool("pg", params=PARAMS, loop=event_loop, **args)
     pytest.assume(pool.application_name == 'Navigator')
     await pool.connect()
     pytest.assume(pool.is_connected() == True)
@@ -96,7 +106,13 @@ async def test_pool_connect(event_loop):
     await pool.release(
         connection=db
     )
+    async with await pool.acquire() as conn:
+        assert(conn.is_connected() == True)
+        result, error = await conn.test_connection()
+        pytest.assume(not error)
+        pytest.assume(result[0][0] == 1)
     await pool.wait_close()
+    assert pool.is_closed() is True
 #
 #
 # async def test_connection(conn):

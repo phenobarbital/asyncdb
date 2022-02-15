@@ -273,7 +273,7 @@ class pgPool(BasePool):
             conn = self._connection
         else:
             conn = connection
-        if isinstance(connection, pg):
+        if isinstance(conn, pg):
             conn = connection.engine()
         if not conn:
             return True
@@ -281,15 +281,16 @@ class pgPool(BasePool):
             await self._pool.release(conn, timeout=timeout)
             return True
         except InterfaceError as err:
-            raise ProviderError("Release Interface Error: {}".format(str(err)))
+            raise ProviderError(f"Release Interface Error: {err}")
         except InternalClientError as err:
             self._logger.debug(
-                "Connection already released, PoolConnectionHolder.release() called on a free connection holder"
+                "Connection already released, \
+                PoolConnectionHolder.release() \
+                called on a free connection holder"
             )
-            # print("PoolConnectionHolder.release() called on a free connection holder")
             return False
         except Exception as err:
-            raise ProviderError("Release Error: {}".format(str(err)))
+            raise ProviderError(message=f"Release Error: {err}")
 
     async def wait_close(self, gracefully=True, timeout=1):
         """
@@ -391,7 +392,7 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
         DBCursorBackend.__init__(self, params=params, **kwargs)
         if "pool" in kwargs:
             self._pool = kwargs['pool']
-            self._loop = self._pool.get_event_loop()
+            self._loop = self._pool.get_loop()
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if "application_name" in self._server_settings:
@@ -458,11 +459,10 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
             if not self._connection.is_closed():
                 self._connected = True
                 return self
-
         self._connection = None
         self._connected = False
-
         # Setup jsonb encoder/decoder
+
         def _encoder(value):
             return json.dumps(value, cls=BaseEncoder)
 
@@ -479,7 +479,7 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
         server_settings = {**server_settings, **self._server_settings}
 
         try:
-            if self._pool:
+            if self._pool and not self._connection:
                 self._connection = await self._pool.pool().acquire()
             else:
                 self._connection = await asyncpg.connect(
@@ -556,8 +556,12 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
         try:
             if not await self._connection.is_closed():
                 if self._pool:
+                    if isinstance(self._connection, pg):
+                        connection = self._connection.engine()
+                    else:
+                        connection = self._connection
                     release = asyncio.create_task(
-                        self._pool.release(self._connection, timeout=10)
+                        self._pool.release(connection, timeout=10)
                     )
                     asyncio.ensure_future(release, loop=self._loop)
                     return await release
@@ -620,7 +624,7 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
         error = None
         await self.valid_operation(sentence)
         try:
-            startTime = datetime.now()
+            self.start_timing()
             self._result = await self._connection.fetch(sentence)
             if not self._result:
                 return [None, "Data was not found"]
@@ -640,7 +644,7 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
         finally:
-            self._generated = datetime.now() - startTime
+            self.generated_at()
             startTime = 0
             return await self._serializer(self._result, error)
 
@@ -679,6 +683,7 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
         """
         error = None
         result = None
+        self.start_timing()
         await self.valid_operation(sentence)
         try:
             result = await self._connection.execute(sentence)
@@ -693,6 +698,7 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
             error = "Error on Execute: {}".format(str(err))
             raise ProviderError(error)
         finally:
+            self.generated_at()
             return await self._serializer(self._result, error)
 
     async def execute_many(self, sentence: str, *args):
@@ -718,7 +724,7 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
         error = None
         await self.valid_operation(sentence)
         try:
-            startTime = datetime.now()
+            self.start_timing()
             self._result = await self._connection.fetch(sentence)
             if not self._result:
                 return []
@@ -734,7 +740,7 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
         except Exception as err:
             raise Exception(f"Error on Query: {err}")
         finally:
-            self._generated = datetime.now() - startTime
+            self.generated_at()
             startTime = 0
             return self._result
 

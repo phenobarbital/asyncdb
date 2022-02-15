@@ -107,7 +107,7 @@ class PoolBackend(ABC):
     async def __aenter__(self) -> "PoolBackend":
         if not self._pool:
             await self.connect()
-        self._connection = await self.acquire()
+        await self.acquire()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -294,7 +294,10 @@ class ConnectionDSNBackend(ABC):
 
     def create_dsn(self, params: Dict):
         try:
-            return self._dsn.format(**params)
+            if params:
+                return self._dsn.format(**params)
+            else:
+                return None
         except Exception as err:
             print(err)
             self._logger.exception(err)
