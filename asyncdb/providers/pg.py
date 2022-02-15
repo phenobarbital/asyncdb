@@ -687,7 +687,6 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
         await self.valid_operation(sentence)
         try:
             result = await self._connection.execute(sentence)
-            return [result, None]
         except InterfaceWarning as err:
             error = "Interface Warning: {}".format(str(err))
             raise ProviderError(error)
@@ -699,7 +698,7 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
             raise ProviderError(error)
         finally:
             self.generated_at()
-            return await self._serializer(self._result, error)
+            return await self._serializer(result, error)
 
     async def execute_many(self, sentence: str, *args):
         error = None
