@@ -13,6 +13,7 @@ def event_loop():
     loop.close()
 
 
+DRIVER='cassandra'
 PARAMS = {
     "host": "127.0.0.1",
     "port": "9042",
@@ -21,7 +22,6 @@ PARAMS = {
     "database": 'library'
 }
 
-DRIVER='cassandra'
 
 @pytest.fixture
 async def conn(event_loop):

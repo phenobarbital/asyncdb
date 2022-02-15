@@ -13,16 +13,17 @@ def event_loop():
     loop.close()
 
 DRIVER = 'asyncredis'
-params = {
+DSN = "redis://localhost:6379/3"
+PARAMS = {
     "host": "localhost",
     "port": "6379",
     "db": 3
 }
-DSN = "redis://localhost:6379/3"
+
 
 @pytest.fixture
 async def conn(event_loop):
-    db = AsyncDB(DRIVER, params=params, loop=event_loop)
+    db = AsyncDB(DRIVER, params=PARAMS, loop=event_loop)
     await db.connection()
     yield db
     await db.close()
@@ -43,14 +44,14 @@ async def test_pool_by_dsn(event_loop):
     assert pool.is_closed() is True
 
 async def test_pool_by_params(event_loop):
-    pool = AsyncPool(DRIVER, params=params, loop=event_loop)
+    pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
     assert pool.get_dsn() == DSN
 
 @pytest.mark.parametrize("driver", [
     (DRIVER)
 ])
 async def test_pool_by_params(driver, event_loop):
-    db = AsyncDB(driver, params=params, loop=event_loop)
+    db = AsyncDB(driver, params=PARAMS, loop=event_loop)
     assert db.is_connected() is False
     await db.connection()
     pytest.assume(db.is_connected() is True)
@@ -70,7 +71,7 @@ async def test_pool_by_params(driver, event_loop):
     (DRIVER)
 ])
 async def test_connect(driver, event_loop):
-    db = AsyncDB(driver, params=params, loop=event_loop)
+    db = AsyncDB(driver, params=PARAMS, loop=event_loop)
     await db.connection()
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection()
