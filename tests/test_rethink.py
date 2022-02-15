@@ -22,7 +22,7 @@ params = {
 params_auth = {
     "host": "localhost",
     "port": "28015",
-    "db": "troc",
+    "db": "epson",
     "user": "test",
     "password": "supersecret"
 }
@@ -71,6 +71,20 @@ async def test_cursors(driver, event_loop):
     (DRIVER)
 ])
 async def test_connect(driver, event_loop):
+    db = AsyncDB(driver, params=params_auth, loop=event_loop)
+    await db.connection()
+    pytest.assume(db.is_connected() is True)
+    result, error = await db.test_connection()
+    pytest.assume(not error)
+    pytest.assume(type(result) == list)
+    await db.close()
+    assert db.is_closed() is True
+
+
+@pytest.mark.parametrize("driver", [
+    (DRIVER)
+])
+async def test_auth(driver, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
     await db.connection()
     pytest.assume(db.is_connected() is True)
