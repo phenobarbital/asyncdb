@@ -110,7 +110,6 @@ class memcachePool(BasePool):
 class memcache(BaseProvider):
     _provider = "memcache"
     _syntax = "nosql"
-    _encoding = "utf-8"
 
     def __init__(
             self,

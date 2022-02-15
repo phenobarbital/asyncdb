@@ -39,7 +39,14 @@ class PoolBackend(ABC):
             **kwargs
     ) -> None:
         self._pool = None
-        self._max_queries = 300
+        try:
+            self._encoding = kwargs["encoding"]
+        except KeyError:
+            self._encoding = "utf-8"
+        if "max_queries" in kwargs:
+            self._max_queries = kwargs["max_queries"]
+        else:
+            self._max_queries = 300
         self._connection = None
         self._connected = False
         if loop:
@@ -164,6 +171,14 @@ class ConnectionBackend(ABC):
         self._connected = False
         self._cursor = None
         try:
+            self._encoding = kwargs["encoding"]
+        except KeyError:
+            self._encoding = "utf-8"
+        if "max_queries" in kwargs:
+            self._max_queries = kwargs["max_queries"]
+        else:
+            self._max_queries = 300
+        try:
             self.params = params.copy()
         except TypeError:
             pass
@@ -256,8 +271,13 @@ class ConnectionBackend(ABC):
             await self.connection()
         return self
 
-    async def __aexit__(self, exc_type, exc, tb):
-        await self.close()
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        # clean up anything you need to clean up
+        try:
+            await self.close()
+        except Exception as err:
+            print(err)
+            pass
 
 
 class ConnectionDSNBackend(ABC):
@@ -268,11 +288,9 @@ class ConnectionDSNBackend(ABC):
     def __init__(
             self,
             dsn: str = '',
-            loop: asyncio.AbstractEventLoop = None,
             params: Dict[Any, Any] = {},
             **kwargs
     ) -> None:
-        self._dsn = ''
         if dsn:
             self._dsn = dsn
         else:
@@ -282,6 +300,7 @@ class ConnectionDSNBackend(ABC):
         try:
             return self._dsn.format(**params)
         except Exception as err:
+            print(err)
             self._logger.exception(err)
             return None
 

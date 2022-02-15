@@ -31,10 +31,13 @@ class BasePool(PoolBackend, ConnectionDSNBackend):
     init_func: Optional[Callable] = None
 
     def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
-        super(BasePool, self).__init__(
-            dsn, loop, params, **kwargs
+        ConnectionDSNBackend.__init__(
+            self,
+            dsn=dsn,
+            params=params,
+            **kwargs
         )
-        self._params = params.copy()
+        PoolBackend.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
 
     """
     __init async db initialization
@@ -87,8 +90,13 @@ class BaseProvider(ConnectionBackend, ConnectionDSNBackend, DatabaseBackend):
         self._parameters = ()
         self._serializer = None
         self._row_format = 'native'
-        ConnectionDSNBackend.__init__(self, dsn, loop, params, **kwargs)
         ConnectionBackend.__init__(self, loop, params, **kwargs)
+        ConnectionDSNBackend.__init__(
+            self,
+            dsn=dsn,
+            params=params,
+            **kwargs
+        )
         DatabaseBackend.__init__(self, params, **kwargs)
         self._initialized_on = None
         # always starts output format to native:
