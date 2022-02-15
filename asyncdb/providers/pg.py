@@ -14,7 +14,16 @@ import uuid
 import asyncpg
 from asyncpg.pgproto import pgproto
 from dateutil.relativedelta import relativedelta
-from typing import Tuple, Optional, Callable
+from typing import (
+    Tuple,
+    List,
+    Dict,
+    Optional,
+    Callable,
+    Union,
+    Any,
+    Iterable
+)
 
 from asyncpg.exceptions import (
     ConnectionDoesNotExistError,
@@ -360,21 +369,28 @@ class pglCursor(BaseCursor):
         return self
 
 
-class pg(SQLProvider):
+class pg(DBCursorBackend, DDLBackend, SQLProvider):
     _provider = "postgresql"
     _syntax = "sql"
     _test_query = "SELECT 1"
-    application_name: str = "Navigator"
 
-    def __init__(self, dsn="", loop=None, params={}, pool=None, **kwargs):
+    def __init__(
+            self,
+            dsn: str = '',
+            loop: asyncio.AbstractEventLoop = None,
+            params: Dict[Any, Any] = {},
+            **kwargs
+    ) -> None:
         self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
+        self.application_name = os.getenv('APP_NAME', "NAV")
         self._prepared = None
         self._cursor = None
         self._transaction = None
         self._server_settings = {}
-        super(pg, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
-        if pool:
-            self._pool = pool
+        SQLProvider.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
+        DBCursorBackend.__init__(self, params=params, **kwargs)
+        if "pool" in kwargs:
+            self._pool = kwargs['pool']
             self._loop = self._pool.get_event_loop()
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
@@ -415,6 +431,8 @@ class pg(SQLProvider):
         finally:
             self._connection = None
             self._connected = False
+
+    disconnect = close
 
     def terminate(self):
         self._loop.run_until_complete(self.close())
@@ -474,10 +492,16 @@ class pg(SQLProvider):
                     connection_class=NAVConnection
                 )
                 await self._connection.set_type_codec(
-                    "json", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
+                    "json",
+                    encoder=_encoder,
+                    decoder=_decoder,
+                    schema="pg_catalog"
                 )
                 await self._connection.set_type_codec(
-                    "jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
+                    "jsonb",
+                    encoder=_encoder,
+                    decoder=_decoder,
+                    schema="pg_catalog"
                 )
                 await self._connection.set_builtin_type_codec(
                     "hstore", codec_name="pg_contrib.hstore"
@@ -562,47 +586,39 @@ class pg(SQLProvider):
 
     async def prepare(self, sentence=""):
         error = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-
+        await self.valid_operation(sentence)
         try:
-            if not self._connection:
-                await self.connection()
+            stmt = await asyncio.shield(self._connection.prepare(sentence))
             try:
-                stmt = await asyncio.shield(self._connection.prepare(sentence))
-                try:
-                    self._attributes = stmt.get_attributes()
-                    self._columns = [a.name for a in self._attributes]
-                    # self._columns = [a.name for a in stmt.get_attributes()]
-                    self._prepared = stmt
-                    self._parameters = stmt.get_parameters()
-                except TypeError:
-                    self._columns = []
-            except FatalPostgresError as err:
-                error = "Fatal Runtime Error: {}".format(str(err))
-                raise StatementError(error)
-            except PostgresSyntaxError as err:
-                error = "Sentence Syntax Error: {}".format(str(err))
-                raise StatementError(error)
-            except PostgresError as err:
-                error = "PostgreSQL Error: {}".format(str(err))
-                raise StatementError(error)
-            except RuntimeError as err:
-                error = "Prepare Runtime Error: {}".format(str(err))
-                raise StatementError(error)
-            except Exception as err:
-                error = "Unknown Error: {}".format(str(err))
-                raise ProviderError(error)
+                self._attributes = stmt.get_attributes()
+                self._columns = [a.name for a in self._attributes]
+                # self._columns = [a.name for a in stmt.get_attributes()]
+                self._prepared = stmt
+                self._parameters = stmt.get_parameters()
+            except TypeError:
+                self._columns = []
+        except FatalPostgresError as err:
+            error = "Fatal Runtime Error: {}".format(str(err))
+            raise StatementError(error)
+        except PostgresSyntaxError as err:
+            error = "Sentence Syntax Error: {}".format(str(err))
+            raise StatementError(error)
+        except PostgresError as err:
+            error = "PostgreSQL Error: {}".format(str(err))
+            raise StatementError(error)
+        except RuntimeError as err:
+            error = "Prepare Runtime Error: {}".format(str(err))
+            raise StatementError(error)
+        except Exception as err:
+            error = "Unknown Error: {}".format(str(err))
+            raise ProviderError(error)
         finally:
             return [self._prepared, error]
 
     async def query(self, sentence=""):
-        error = None
         self._result = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        error = None
+        await self.valid_operation(sentence)
         try:
             startTime = datetime.now()
             self._result = await self._connection.fetch(sentence)
@@ -626,14 +642,12 @@ class pg(SQLProvider):
         finally:
             self._generated = datetime.now() - startTime
             startTime = 0
-            return [self._result, error]
+            return await self._serializer(self._result, error)
 
     async def queryrow(self, sentence=""):
+        self._result = None
         error = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         try:
             stmt = await self._connection.prepare(sentence)
             self._attributes = stmt.get_attributes()
@@ -656,9 +670,7 @@ class pg(SQLProvider):
             error = "Query Row Error: {}".format(str(err))
             self._loop.call_exception_handler(err)
             raise Exception(error)
-        # finally:
-        # await self.close()
-        return [self._result, error]
+        return await self._serializer(self._result, error)
 
     async def execute(self, sentence=""):
         """Execute a transaction
@@ -667,10 +679,7 @@ class pg(SQLProvider):
         """
         error = None
         result = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         try:
             result = await self._connection.execute(sentence)
             return [result, None]
@@ -682,12 +691,11 @@ class pg(SQLProvider):
             raise ProviderError(error)
         except Exception as err:
             error = "Error on Execute: {}".format(str(err))
-            # self._loop.call_exception_handler(err)
             raise ProviderError(error)
         finally:
-            return [result, error]
+            return await self._serializer(self._result, error)
 
-    async def executemany(self, sentence="", *args):
+    async def execute_many(self, sentence="", *args):
         error = None
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
@@ -705,6 +713,55 @@ class pg(SQLProvider):
             raise Exception(error)
         finally:
             return error
+
+    executemany = execute_many
+
+    async def fetch_all(self, sentence: str = ""):
+        self._result = None
+        error = None
+        await self.valid_operation(sentence)
+        try:
+            startTime = datetime.now()
+            self._result = await self._connection.fetch(sentence)
+            if not self._result:
+                return []
+        except RuntimeError as err:
+            raise
+        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
+            raise StatementError(f"Sentence Error: {err}")
+        except (
+            asyncpg.exceptions.InvalidSQLStatementNameError,
+            asyncpg.exceptions.UndefinedTableError,
+        ) as err:
+            raise StatementError(f"Invalid Statement Error: {err}")
+        except Exception as err:
+            raise Exception(f"Error on Query: {err}")
+        finally:
+            self._generated = datetime.now() - startTime
+            startTime = 0
+            return self._result
+
+    async def fetch_one(self, sentence: str = ""):
+        self._result = None
+        error = None
+        await self.valid_operation(sentence)
+        try:
+            stmt = await self._connection.prepare(sentence)
+            self._attributes = stmt.get_attributes()
+            self._columns = [a.name for a in self._attributes]
+            self._result = await stmt.fetchrow()
+        except RuntimeError as err:
+            raise
+        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
+            raise StatementError(f"Sentence Error: {err}")
+        except (
+            asyncpg.exceptions.InvalidSQLStatementNameError,
+            asyncpg.exceptions.UndefinedTableError,
+        ) as err:
+            raise StatementError(f"Invalid Statement Error: {err}")
+        except Exception as err:
+            raise Exception(f"Error on Query: {err}")
+        return await self._result
 
     """
     Transaction Context
@@ -894,7 +951,7 @@ class pg(SQLProvider):
     Model Logic:
     """
 
-    async def column_info(self, tablename):
+    async def column_info(self, tablename: str, schema: str = None):
         """Column Info.
 
         Get Meta information about a table (column name, data type and PK).
@@ -902,7 +959,11 @@ class pg(SQLProvider):
         Parameters:
         @tablename: str The name of the table (including schema).
         """
-        sql = f"SELECT a.attname AS column_name, a.atttypid::regtype AS data_type, \
+        if schema:
+            table = f"{schema}.{tablename}"
+        else:
+            table = tablename
+        sql = f"SELECT a.attname AS name, a.atttypid::regtype AS type, \
         format_type(a.atttypid, a.atttypmod) as format_type, a.attnotnull::boolean as notnull, \
         coalesce((SELECT true FROM pg_index i WHERE i.indrelid = a.attrelid \
         AND i.indrelid = a.attrelid AND a.attnum = any(i.indkey) \
@@ -916,6 +977,45 @@ class pg(SQLProvider):
             return colinfo
         except Exception as err:
             self._logger.exception(f"Wrong Table information {tablename!s}")
+
+    """
+    DDL Information.
+    """
+    async def create(
+        self,
+        object: str = 'table',
+        name: str = '',
+        fields: Optional[List] = None
+    ) -> bool:
+        """
+        Create is a generic method for Database Objects Creation.
+        """
+        if object == 'table':
+            sql = "CREATE TABLE {name}({columns});"
+            columns = ", ".join(["{name} {type}".format(**e) for e in fields])
+            sql = sql.format(name=name, columns=columns)
+            try:
+                result = await self._connection.execute(sql)
+                if result:
+                    await self._connection.commit()
+                    return True
+                else:
+                    return False
+            except Exception as err:
+                raise ProviderError(f"Error in Object Creation: {err!s}")
+        else:
+            raise RuntimeError(f'SQLite: invalid Object type {object!s}')
+
+    def tables(self, schema: str = "") -> Iterable[Any]:
+        raise NotImplementedError
+
+    def table(self, tablename: str = "") -> Iterable[Any]:
+        raise NotImplementedError
+
+    def use(self, tablename: str):
+        raise NotImplementedError(
+            'AsyncPg Error: There is no Database in SQLite'
+        )
 
 
 """

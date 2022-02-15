@@ -207,6 +207,7 @@ class SQLProvider(BaseDBProvider):
     disconnect = close
 
     async def valid_operation(self, sentence: Any):
+        error = None
         if not sentence:
             raise EmptyStatement(
                 f"{__name__!s} Error: cannot use an empty SQL sentence"
