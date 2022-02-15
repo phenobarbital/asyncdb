@@ -126,6 +126,15 @@ class InitProvider(ConnectionBackend, DatabaseBackend):
     def output_format(self, format: str = 'native', *args, **kwargs):
         self._serializer = OutputFactory(self, format, *args, **kwargs)
 
+    async def valid_operation(self, sentence: Any):
+        error = None
+        if not sentence:
+            raise EmptyStatement(
+                f"{__name__!s} Error: cannot use an empty sentence"
+            )
+        if not self._connection:
+            await self.connection()
+
 
 class BaseProvider(InitProvider, ConnectionDSNBackend):
     """

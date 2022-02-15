@@ -8,19 +8,19 @@ TODO:
  - implements lists and hash datatypes
 """
 
-import asyncio
-
-import aioredis
-from aioredis.connection import Connection, to_bool
-import objectpath
-import time
-
-from asyncdb.exceptions import *
 from asyncdb.providers import (
     BasePool,
     BaseProvider,
     registerProvider,
 )
+from asyncdb.exceptions import *
+import asyncio
+import uvloop
+import aioredis
+from aioredis.connection import Connection, to_bool
+import objectpath
+import time
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class redisPool(BasePool):
