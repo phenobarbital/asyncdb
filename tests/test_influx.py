@@ -5,9 +5,10 @@ import asyncpg
 from io import BytesIO
 from pathlib import Path
 import pytest_asyncio
+from tests.test_asyncpg import PARAMS
 
 DRIVER = 'influx'
-params = {
+PARAMS = {
     "host": "127.0.0.1",
     "port": "8086",
     "database": 'testdb'
@@ -16,7 +17,7 @@ params = {
 
 @pytest.fixture
 async def conn(event_loop):
-    db = AsyncDB(DRIVER, params=params, loop=event_loop)
+    db = AsyncDB(DRIVER, params=PARAMS, loop=event_loop)
     await db.connection()
     yield db
     await db.close()
@@ -28,7 +29,7 @@ pytestmark = pytest.mark.asyncio
     (DRIVER)
 ])
 async def test_pool_by_params(driver, event_loop):
-    db = AsyncDB(driver, params=params, loop=event_loop)
+    db = AsyncDB(driver, params=PARAMS, loop=event_loop)
     assert db.is_connected() is False
 
 
@@ -36,7 +37,7 @@ async def test_pool_by_params(driver, event_loop):
     (DRIVER)
 ])
 async def test_connect(driver, event_loop):
-    db = AsyncDB(driver, params=params, loop=event_loop)
+    db = AsyncDB(driver, params=PARAMS, loop=event_loop)
     await db.connection()
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection()

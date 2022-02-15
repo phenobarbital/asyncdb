@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest_asyncio
 
 
-asyncpg_url = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator_dev"
+DRIVER = 'pg'
+DSN = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator_dev"
 PARAMS = {
     "host": '127.0.0.1',
     "port": '5432',
@@ -19,7 +20,7 @@ PARAMS = {
 
 @pytest.fixture
 async def conn(event_loop):
-    db = AsyncDB('pg', dsn=asyncpg_url, loop=event_loop)
+    db = AsyncDB(DRIVER, dsn=DSN, loop=event_loop)
     await db.connection()
     yield db
     await db.close()
@@ -33,7 +34,7 @@ async def pooler(event_loop):
             "application_name": "Testing"
         }
     }
-    pool = AsyncPool('pg', dsn=asyncpg_url, loop=event_loop, **args)
+    pool = AsyncPool(DRIVER, dsn=DSN, loop=event_loop, **args)
     await pool.connect()
     yield pool
     await pool.wait_close(gracefully=True, timeout=10)
@@ -43,13 +44,13 @@ pytestmark = pytest.mark.asyncio
 
 async def test_pool_by_dsn(event_loop):
     """ test creation using DSN """
-    pool = AsyncPool("pg", dsn=asyncpg_url, loop=event_loop)
+    pool = AsyncPool(DRIVER, dsn=DSN, loop=event_loop)
     assert pool.application_name == 'Navigator'
 
 
 async def test_pool_by_params(event_loop):
-    pool = AsyncPool("pg", params=PARAMS, loop=event_loop)
-    assert pool.get_dsn() == asyncpg_url
+    pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
+    assert pool.get_dsn() == DSN
 
 
 async def test_changing_app(event_loop):
@@ -59,12 +60,12 @@ async def test_changing_app(event_loop):
             "application_name": "Testing"
         }
     }
-    p = AsyncPool("pg", params=PARAMS, loop=event_loop, **args)
+    p = AsyncPool(DRIVER, params=PARAMS, loop=event_loop, **args)
     assert p.application_name == 'Testing'
 
 
 async def test_pool_connect(event_loop):
-    pool = AsyncPool("pg", params=PARAMS, loop=event_loop)
+    pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
     pytest.assume(pool.application_name == 'Navigator')
     await pool.connect()
     pytest.assume(pool.is_connected() == True)
@@ -91,7 +92,7 @@ async def test_connection(conn):
 
 async def test_huge_query(event_loop):
     sql = 'SELECT * FROM trocplaces.stores LIMIT 1000'
-    pool = AsyncPool("pg", params=PARAMS, loop=event_loop)
+    pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
     await pool.connect()
     pytest.assume(pool.is_connected() == True)
     async with await pool.acquire() as conn:
