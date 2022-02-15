@@ -63,10 +63,6 @@ class PoolBackend(ABC):
             default_exception_handler
         )
         try:
-            self._params = params.copy()
-        except TypeError:
-            self._params = {}
-        try:
             self._DEBUG = bool(params["DEBUG"])
         except KeyError:
             try:
@@ -182,10 +178,6 @@ class ConnectionBackend(ABC):
             self.params = params.copy()
         except TypeError:
             pass
-        try:
-            self._params = params.copy()
-        except TypeError:
-            self._params = {}
         if loop:
             self._loop = loop
         else:
@@ -295,6 +287,10 @@ class ConnectionDSNBackend(ABC):
             self._dsn = dsn
         else:
             self._dsn = self.create_dsn(params)
+        try:
+            self._params = params.copy()
+        except TypeError:
+            self._params = {}
 
     def create_dsn(self, params: Dict):
         try:
