@@ -6,6 +6,7 @@ This provider implements all funcionalities from asyncpg
 """
 import os
 import asyncio
+import uvloop
 import json
 import time
 from datetime import datetime
@@ -69,6 +70,8 @@ from asyncdb.interfaces import (
 
 max_cached_statement_lifetime = 600
 max_cacheable_statement_size = 1024 * 15
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class NAVConnection(asyncpg.Connection):
@@ -637,7 +640,6 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
             raise Exception(error)
         finally:
             self.generated_at()
-            startTime = 0
             return await self._serializer(self._result, error)
 
     async def queryrow(self, sentence=""):

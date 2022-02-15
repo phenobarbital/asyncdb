@@ -215,6 +215,10 @@ class ConnectionBackend(ABC):
     async def close(self, timeout: int = 10):
         pass
 
+    def is_closed(self):
+        logging.debug(f"Connection closed on: {self._connection}")
+        return not self._connected
+
     # Properties
     @classmethod
     def type(self):
@@ -550,7 +554,7 @@ class DBCursorBackend(ABC):
             cursor = f"{self._provider}Cursor"
             module = importlib.import_module(cls, package="providers")
             self.__cursor__ = getattr(module, cursor)
-        except ImportError as err:
+        except (ImportError, Exception) as err:
             logging.exception(f"Error Loading Cursor Class: {err}")
             self.__cursor__ = None
 
@@ -577,30 +581,30 @@ class DBCursorBackend(ABC):
             logging.exception(err)
             return None
 
-    @abstractmethod
-    async def fetch(
-            self,
-            sentence: str,
-            number: int = None,
-            **kwargs
-    ) -> List[Sequence]:
-        pass
-
-    @abstractmethod
-    async def fetch_one(
-            self,
-            sentence: str,
-            **kwargs
-    ) -> List[Sequence]:
-        pass
-
-    @abstractmethod
-    async def fetch_all(self, sentence: str, **kwargs) -> List[Sequence]:
-        pass
-
-    @abstractmethod
-    async def fetchrow(self, sentence: str, *args, **kwargs) -> List[Sequence]:
-        pass
+    # @abstractmethod
+    # async def fetch(
+    #         self,
+    #         sentence: str,
+    #         number: int = None,
+    #         **kwargs
+    # ) -> List[Sequence]:
+    #     pass
+    #
+    # @abstractmethod
+    # async def fetch_one(
+    #         self,
+    #         sentence: str,
+    #         **kwargs
+    # ) -> List[Sequence]:
+    #     pass
+    #
+    # @abstractmethod
+    # async def fetch_all(self, sentence: str, **kwargs) -> List[Sequence]:
+    #     pass
+    #
+    # @abstractmethod
+    # async def fetchrow(self, sentence: str, *args, **kwargs) -> List[Sequence]:
+    #     pass
 
     """
     Cursor Iterator Context

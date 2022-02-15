@@ -4,21 +4,23 @@ import asyncio
 import asyncpg
 from io import BytesIO
 from pathlib import Path
+import pytest
 
-@pytest.fixture
-def event_loop():
-    loop = asyncio.get_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
-
+DRIVER = 'rethink'
 params = {
     "host": "localhost",
     "port": "28015",
     "db": "troc"
 }
 
-DRIVER='rethink'
+params_auth = {
+    "host": "localhost",
+    "port": "28015",
+    "db": "troc",
+    "user": "test",
+    "password": "supersecret"
+}
+
 
 @pytest.fixture
 async def conn(event_loop):
@@ -29,12 +31,35 @@ async def conn(event_loop):
 
 pytestmark = pytest.mark.asyncio
 
+
 @pytest.mark.parametrize("driver", [
     (DRIVER)
 ])
-async def test_pool_by_params(driver, event_loop):
+async def test_connect_by_params(driver, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
     assert db.is_connected() is False
+    await db.connection()
+    assert db.is_connected() is True
+    await db.close()
+    assert db.is_closed() is True
+
+
+@pytest.mark.parametrize("driver", [
+    (DRIVER)
+])
+async def test_cursors(driver, event_loop):
+    db = AsyncDB(driver, params=params, loop=event_loop)
+    assert db.is_connected() is False
+    await db.connection()
+    assert db.is_connected() is True
+    await db.use('epson')
+    async with db.cursor(
+            tablename="epson_api_photo_categories") as cursor:
+        async for row in cursor:
+            pytest.assume(type(row) == dict)
+    await db.close()
+    assert db.is_closed() is True
+
 
 @pytest.mark.parametrize("driver", [
     (DRIVER)
@@ -44,12 +69,18 @@ async def test_connect(driver, event_loop):
     await db.connection()
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection()
+    pytest.assume(not error)
     pytest.assume(type(result) == list)
     await db.close()
+    assert db.is_closed() is True
 
 
 async def test_connection(conn):
-    #await conn.connection()
     pytest.assume(conn.is_connected() is True)
     result, error = await conn.test_connection()
+    pytest.assume(not error)
     pytest.assume(type(result) == list)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    asyncio.get_event_loop().close()
