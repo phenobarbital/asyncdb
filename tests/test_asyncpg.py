@@ -75,7 +75,13 @@ async def test_changing_app(event_loop):
     assert pool.application_name == 'Testing'
     assert pool.is_closed() is True
 
+
 async def test_pool_connect(event_loop):
+    args = {
+        "server_settings": {
+            "application_name": "Navigator"
+        }
+    }
     pool = AsyncPool("pg", params=PARAMS, loop=event_loop)
     pytest.assume(pool.application_name == 'Navigator')
     await pool.connect()
@@ -84,10 +90,13 @@ async def test_pool_connect(event_loop):
     pytest.assume(db.is_connected() == True)
     result = await pool.execute("SELECT 1")
     pytest.assume(result == 'SELECT 1')
-    result, error = await db.test_connection()
-    row = result[0]
-    pytest.assume(row[0] == 1)
-    await pool.release(connection=db)
+    result, error = await pool.test_connection()
+    pytest.assume(not error)
+    pytest.assume(result == 'SELECT 1')
+    await pool.release(
+        connection=db
+    )
+    await pool.wait_close()
 #
 #
 # async def test_connection(conn):
