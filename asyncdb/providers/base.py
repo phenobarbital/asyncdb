@@ -90,14 +90,14 @@ class BaseProvider(ConnectionBackend, ConnectionDSNBackend, DatabaseBackend):
         self._parameters = ()
         self._serializer = None
         self._row_format = 'native'
-        ConnectionBackend.__init__(self, loop, params, **kwargs)
+        ConnectionBackend.__init__(self, loop=loop, params=params, **kwargs)
         ConnectionDSNBackend.__init__(
             self,
             dsn=dsn,
             params=params,
             **kwargs
         )
-        DatabaseBackend.__init__(self, params, **kwargs)
+        DatabaseBackend.__init__(self, params=params, **kwargs)
         self._initialized_on = None
         # always starts output format to native:
         self.output_format('native')
