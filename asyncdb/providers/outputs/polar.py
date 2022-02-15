@@ -11,6 +11,7 @@ class PolarFormat(OutputFormat):
     async def serialize(self, result, error, *args, **kwargs):
         df = None
         try:
+            result = [dict(row) for row in result]
             a = pandas.DataFrame(
                 data=result,
                 **kwargs
