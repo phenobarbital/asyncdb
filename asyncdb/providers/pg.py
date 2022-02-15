@@ -695,14 +695,11 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
         finally:
             return await self._serializer(self._result, error)
 
-    async def execute_many(self, sentence="", *args):
+    async def execute_many(self, sentence: str, *args):
         error = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         try:
-            await self._connection.executemany(sentence, *args)
+            result = await self._connection.executemany(sentence, *args)
         except InterfaceWarning as err:
             error = "Interface Warning: {}".format(str(err))
             raise ProviderError(error)
@@ -712,7 +709,7 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
             # self._loop.call_exception_handler(err)
             raise Exception(error)
         finally:
-            return error
+            return await self._serializer(result, error)
 
     executemany = execute_many
 
