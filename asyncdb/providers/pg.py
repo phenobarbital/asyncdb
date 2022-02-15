@@ -1,7 +1,8 @@
 """ pg PostgreSQL Provider.
 Notes on pg Provider
 --------------------
-This provider implements all funcionalities from asyncpg (cursors, transactions, copy from and to files, pools, native data types, etc)
+This provider implements all funcionalities from asyncpg
+(cursors, transactions, copy from and to files, pools, native data types, etc).
 """
 import os
 import asyncio
@@ -41,6 +42,8 @@ from asyncdb.exceptions import (
 )
 from asyncdb.providers import (
     BasePool,
+    SQLProvider,
+    baseCursor,
     registerProvider
 )
 from asyncdb.utils.encoders import (
@@ -51,7 +54,11 @@ from asyncdb.utils import (
     _escapeString,
 )
 
-from asyncdb.providers.sql import SQLProvider, baseCursor
+from asyncdb.providers import ,
+from asyncdb.interfaces import (
+    DBCursorBackend,
+    DDLBackend
+)
 
 max_cached_statement_lifetime = 600
 max_cacheable_statement_size = 1024 * 15
@@ -73,7 +80,8 @@ class pgPool(BasePool):
         self._server_settings = {}
         self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
         super(pgPool, self).__init__(
-            dsn=dsn, loop=loop, params=params, **kwargs)
+            dsn=dsn, loop=loop, params=params, **kwargs
+        )
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if "application_name" in self._server_settings:
@@ -85,23 +93,19 @@ class pgPool(BasePool):
         if "numeric_as_float" in kwargs:
             self._numeric_as_float = kwargs['numeric_as_float']
 
-    def get_event_loop(self):
-        return self._loop
-
     """
     Context magic Methods
     """
-
-    async def __aenter__(self) -> "BasePool":
-        if not self._pool:
-            await self.connect()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        # clean up anything you need to clean up
-        await self.release(self._connection)
-        self._connection = None
-
+    #
+    # async def __aenter__(self) -> "BasePool":
+    #     if not self._pool:
+    #         await self.connect()
+    #     return self
+    #
+    # async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    #     # clean up anything you need to clean up
+    #     await self.release(self._connection)
+    #     self._connection = None
     async def setup_connection(self, connection):
         if self.setup_func:
             try:
@@ -152,9 +156,11 @@ class pgPool(BasePool):
     """
     __init async db initialization
     """
-
     # Create a database connection pool
     async def connect(self):
+        """
+        Creates a Pool Connection.
+        """
         self._logger.debug(
             "AsyncPg (Pool): Connecting to {}".format(self._dsn))
         try:
@@ -181,6 +187,10 @@ class pgPool(BasePool):
                 server_settings=server_settings,
                 connection_class=NAVConnection
             )
+            # is connected
+            if self._pool:
+                self._connected = True
+                self._initialized_on = time.time()
         except TooManyConnectionsError as err:
             print("Too Many Connections Error: {}".format(str(err)))
             raise TooManyConnections(str(err))
@@ -209,16 +219,13 @@ class pgPool(BasePool):
         except Exception as err:
             raise ProviderError("Unknown Error: {}".format(str(err)))
             return False
-        # is connected
-        if self._pool:
-            self._connected = True
-            self._initialized_on = time.time()
-
-    """
-    Take a connection from the pool.
-    """
+        finally:
+            return self
 
     async def acquire(self):
+        """
+        Takes a connection from the pool.
+        """
         db = None
         self._connection = None
         # Take a connection from the pool.
@@ -247,11 +254,10 @@ class pgPool(BasePool):
             db.set_connection(self._connection)
         return db
 
-    """
-    Release a connection from the pool
-    """
-
     async def release(self, connection=None, timeout=5):
+        """
+        Release a connection from the pool
+        """
         if not connection:
             conn = self._connection
         else:
@@ -274,12 +280,11 @@ class pgPool(BasePool):
         except Exception as err:
             raise ProviderError("Release Error: {}".format(str(err)))
 
-    """
-    close
-        Close Pool Connection
-    """
-
     async def wait_close(self, gracefully=True, timeout=1):
+        """
+        close
+            Close Pool Connection
+        """
         if self._pool:
             # try to closing main connection
             try:
@@ -304,11 +309,10 @@ class pgPool(BasePool):
             finally:
                 self._connected = False
 
-    """
-    Close Pool
-    """
-
     async def close(self):
+        """
+        Close Pool
+        """
         try:
             if self._connection:
                 await self._pool.release(self._connection, timeout=1)
@@ -331,11 +335,10 @@ class pgPool(BasePool):
             self.wait_close(gracefully=gracefully, timeout=1)
         )
 
-    """
-    Execute a connection into the Pool
-    """
-
     async def execute(self, sentence, *args):
+        """
+        Execute a connection into the Pool
+        """
         if self._pool:
             try:
                 result = await self._pool.execute(sentence, *args)
