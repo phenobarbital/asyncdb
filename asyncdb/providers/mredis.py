@@ -17,27 +17,36 @@ import time
 from asyncdb.exceptions import *
 from asyncdb.providers import (
     BasePool,
-    BaseProvider,
+    InitProvider,
     registerProvider,
 )
-from asyncdb.utils import *
+from asyncdb.interfaces import (
+    ConnectionDSNBackend
+)
 
-
-class mredis(BaseProvider):
+class mredis(InitProvider, ConnectionDSNBackend):
     _provider = "redis"
     _syntax = "json"
-    _pool = None
-    _dsn = "redis://{host}:{port}/{db}"
-    _connection = None
-    _connected = False
-    _loop = None
     _encoding = "utf-8"
 
-    def __init__(self, dsn="", loop=None, pool=None, params={}):
-        super(mredis, self).__init__(dsn=dsn, loop=loop, params=params)
+    def __init__(self, dsn="", loop=None, pool=None, params={}, **kwargs):
+        self._dsn = "redis://{host}:{port}/{db}"
+        # super(mredis, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        InitProvider.__init__(
+            self,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
+        ConnectionDSNBackend.__init__(
+            self,
+            dsn=dsn,
+            params=params,
+            **kwargs
+        )
         try:
-            if params["encoding"]:
-                self._encoding = params["encoding"]
+            self._encoding = params["encoding"]
+            del params["encoding"]
         except KeyError:
             pass
 
@@ -46,6 +55,8 @@ class mredis(BaseProvider):
     """
 
     def __enter__(self):
+        if not self._connection:
+            self.connection()
         return self
 
     def __exit__(self, *args):
@@ -54,14 +65,6 @@ class mredis(BaseProvider):
     """
     Properties
     """
-
-    @property
-    def pool(self):
-        return self._pool
-
-    def loop(self):
-        return self._loop
-
     @property
     def redis(self):
         return self._connection
@@ -84,6 +87,9 @@ class mredis(BaseProvider):
             args = {**args, **kwargs}
             self._logger.debug("Redis: Connecting to {}".format(self._params))
             self._connection = redis.Redis(connection_pool=self._pool, **args)
+            if self._connection:
+                self._connected = True
+                self._initialized_on = time.time()
         except (redis.exceptions.ConnectionError) as err:
             raise ProviderError(
                 "Unable to connect to Redis, connection Refused: {}".format(str(err))
@@ -93,24 +99,33 @@ class mredis(BaseProvider):
         except Exception as err:
             raise ProviderError("Unknown Redis Error: {}".format(str(err)))
             return False
-        # is connected
-        if self._connection:
-            self._connected = True
-            self._initialized_on = time.time()
+        finally:
+            return self
 
-    def release(self):
+
+    def release(self, connection = None):
         """
         Release a connection and return into pool
         """
-        if self._pool:
-            self._pool.release(connection=self._connection)
+        if not connection:
+            connection = self._connection
+        try:
+            self._pool.release(connection=connection)
+        except Exception as err:
+            self._logger.exception(err)
+        self._connection = None
 
     def close(self):
         if self._connection:
-            try:
-                self.release()
-            finally:
-                del self._connection
+            self._connection.close()
+        if self._pool:
+            self._pool.disconnect(inuse_connections = True)
+            self._connected = False
+
+    def is_closed(self):
+        return not self._connected
+
+    disconnect = close
 
     def execute(self, sentence, *args):
         pass
@@ -124,14 +139,23 @@ class mredis(BaseProvider):
             ) as err:
                 raise ProviderError("Connection Error: {}".format(str(err)))
 
+    execute_many = execute
+
+    def use(self, database):
+        raise NotImplementedError
+
     def prepare(self):
         pass
 
     def query(self, key="", *val):
         return self.get(key, val)
 
+    fetch_all = query
+
     def queryrow(self, key="", *args):
-        pass
+        return self.get(key, val)
+
+    fetch_one = queryrow
 
     def set(self, key, value):
         try:
@@ -162,7 +186,7 @@ class mredis(BaseProvider):
 
     def exists(self, key, *keys):
         try:
-            return self._connection.exists(key, *keys)
+            return bool(self._connection.exists(key, *keys))
         except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
             raise ProviderError("Redis Exists Error: {}".format(str(err)))
         except Exception as err:
@@ -239,12 +263,12 @@ class mredis(BaseProvider):
      Hash functions
     """
 
-    def hmset(self, key, *args, **kwargs):
+    def hmset(self, key, value, *args, **kwargs):
         """
         set the value of a key in field (redis dict)
         """
         try:
-            self._connection.hmset(key, **kwargs)
+            self._connection.hmset(key, value)
         except (redis.exceptions.ReadOnlyError) as err:
             raise ProviderError("Redis is Read Only: {}".format(str(err)))
         except (redis.exceptions.RedisError, redis.exceptions.ResponseError) as err:
@@ -348,6 +372,17 @@ class mredis(BaseProvider):
         except Exception as err:
             raise ProviderError("Redis Hset Unknown Error: {}".format(str(err)))
 
+    def test_connection(self, optional=1):
+        result = None
+        error = None
+        try:
+            self.set("test_123", optional)
+            result = self.get("test_123")
+        except Exception as err:
+            error = err
+        finally:
+            self.delete("test_123")
+            return [result, error]
 
 """
 Registering this Provider
