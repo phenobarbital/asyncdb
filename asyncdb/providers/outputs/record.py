@@ -14,8 +14,11 @@ class recordFormat(OutputFormat):
     async def serialize(self, result, error, *args, **kwargs):
         self._result = None
         try:
-            result = [Record.from_dict(row) for row in result]
-            self._result = result
+            if isinstance(result, list):
+                set = [Record.from_dict(row) for row in result]
+            else:
+                set = Record.from_dict(result)
+            self._result = set
         except Exception as err:
             error = Exception(f"recordFormat: Error on Data: error: {err}")
         finally:

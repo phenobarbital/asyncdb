@@ -32,7 +32,6 @@ class mredis(InitProvider, ConnectionDSNBackend):
 
     def __init__(self, dsn="", loop=None, pool=None, params={}, **kwargs):
         self._dsn = "redis://{host}:{port}/{db}"
-        # super(mredis, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         InitProvider.__init__(
             self,
             loop=loop,
