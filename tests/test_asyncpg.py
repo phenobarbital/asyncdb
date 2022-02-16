@@ -48,7 +48,7 @@ pytestmark = pytest.mark.asyncio
 
 async def test_pool_by_dsn(event_loop):
     """ test creation using DSN """
-    pool = AsyncPool("pg", dsn=asyncpg_url, loop=event_loop)
+    pool = AsyncPool(DRIVER, dsn=asyncpg_url, loop=event_loop)
     assert pool.application_name == 'NAV'
     pytest.assume(pool.is_connected() == False)
     await pool.connect()
@@ -58,7 +58,7 @@ async def test_pool_by_dsn(event_loop):
 
 
 async def test_pool_by_params(event_loop):
-    pool = AsyncPool("pg", params=PARAMS, loop=event_loop)
+    pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
     assert pool.get_dsn() == asyncpg_url
     pytest.assume(pool.is_connected() == False)
     await pool.connect()
@@ -77,7 +77,7 @@ async def test_changing_app(event_loop):
             "application_name": "Testing"
         }
     }
-    pool = AsyncPool("pg", params=PARAMS, loop=event_loop, **args)
+    pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop, **args)
     assert pool.application_name == 'Testing'
     assert pool.is_closed() is True
 
@@ -97,7 +97,7 @@ async def test_pool_connect(event_loop):
             "application_name": "Navigator"
         }
     }
-    pool = AsyncPool("pg", params=PARAMS, loop=event_loop, **args)
+    pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop, **args)
     pytest.assume(pool.application_name == 'Navigator')
     await pool.connect()
     pytest.assume(pool.is_connected() == True)
