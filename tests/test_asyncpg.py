@@ -321,7 +321,7 @@ async def test_formats(event_loop):
         # result, error = await conn.query("SELECT * FROM walmart.stores")
         # pytest.assume(type(result) == str)
         # testing Record Object
-        conn.output_format('record')  # change output format to iter generator
+        conn.output_format('record')   # change output format to iter generator
         result, error = await conn.query("SELECT * FROM walmart.stores")
         pytest.assume(type(result) == list)
         for row in result:
