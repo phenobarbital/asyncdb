@@ -20,8 +20,9 @@ from asyncdb.providers import (
     BaseProvider
 )
 from asyncdb.utils.functions import module_exists
-
-__version__ = '1.8.0'
+from .version import (
+    __title__, __description__, __version__, __author__, __author_email__
+)
 __all__ = ["asyncORM", "asyncRecord", "registerProvider", "BaseProvider"]
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())

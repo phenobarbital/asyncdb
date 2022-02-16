@@ -5,26 +5,39 @@
 See:
 https://github.com/phenobarbital/asyncdb
 """
-
+from os import path
 from setuptools import find_packages, setup
+
+pkg_vars  = {}
+
+
+def get_path(filename):
+    return path.join( path.dirname(path.abspath(__file__)), filename )
+
+with open(get_path('README.md')) as readme:
+    README = readme.read()
+
+with open(get_path('asyncdb/version.py')) as meta:
+    exec(meta.read())
 
 setup(
     name="asyncdb",
-    version=open("VERSION").read().strip(),
+    version=__version__,
     python_requires=">=3.8.0",
     url="https://github.com/phenobarbital/asyncdb",
-    description="Asyncio Datasource library",
-    long_description="Asynchronous library for data source connections, \
-    used by Navigator",
+    description=__description__,
+    platforms=['POSIX'],
+    long_description=README,
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Build Tools",
         "Programming Language :: Python :: 3.8",
     ],
-    author="Jesus Lara",
-    author_email="jlara@trocglobal.com",
+    author=__author__,
+    author_email=__author_email__,
     packages=find_packages(exclude=["contrib", "docs", "tests"]),
+    license=__license__,
     setup_requires=[
         "wheel==0.37.0",
         "Cython==0.29.21",
