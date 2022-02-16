@@ -619,3 +619,36 @@ class DBCursorBackend(ABC):
             return data
         else:
             raise StopAsyncIteration
+
+
+class ModelBackend(ABC):
+    """
+    Interface for Backends with Dataclass-based Models Support.
+    """
+    @abstractmethod
+    async def mdl_create(self, model: Model, rows: list):
+        """
+        Create all records based on a dataset and return result.
+        """
+        pass
+
+    @abstractmethod
+    async def mdl_delete(self, model: Model, conditions: dict, **kwargs):
+        """
+        Deleting some records using Model.
+        """
+        pass
+
+    @abstractmethod
+    async def mdl_update(self, model: Model, conditions: dict, **kwargs):
+        """
+        Updating records using Model.
+        """
+        pass
+
+    @abstractmethod
+    async def mdl_filter(self, model: Model, **kwargs):
+        """
+        Filter a Model based on some criteria.
+        """
+        pass
