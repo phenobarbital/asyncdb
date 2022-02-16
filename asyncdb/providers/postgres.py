@@ -2,9 +2,11 @@
 Notes on pg Provider
 --------------------
 This provider implements all funcionalities from asyncpg
-(cursors, transactions, copy from and to files, pools, native data types, etc) but using Threads
+(cursors, transactions, copy from and to files, pools, native data types, etc)
+but using Threads.
 """
 import asyncio
+import uvloop
 import json
 import sys
 import threading
@@ -14,7 +16,13 @@ from functools import partial
 from threading import Thread
 import logging
 import asyncpg
-
+from typing import (
+    Any,
+    List,
+    Iterable,
+    Optional,
+    Dict
+)
 from asyncpg.exceptions import (
     ConnectionDoesNotExistError,
     FatalPostgresError,
@@ -28,7 +36,6 @@ from asyncpg.exceptions import (
     UndefinedColumnError,
     UndefinedTableError,
 )
-
 from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
@@ -38,49 +45,43 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-
-from asyncdb.meta import (
-    asyncRecord,
-    asyncResult,
-)
-
 from asyncdb.providers import (
-    registerProvider,
+    SQLProvider,
+    BaseCursor,
+    registerProvider
 )
-
 from asyncdb.utils import SafeDict
-
 from asyncdb.utils.encoders import (
     BaseEncoder,
 )
+from asyncdb.meta import Record, Recordset
 
-from asyncdb.providers.sql import SQLProvider, baseCursor
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class postgres(threading.Thread, SQLProvider):
     _provider = "postgresql"
     _syntax = "sql"
     _test_query = "SELECT 1"
-    _parameters = ()
-    _is_started = False
-    _error = None
 
-    def __init__(self, dsn="", loop=None, pool=None, params={}, **kwargs):
+    def __init__(self, dsn="", loop=None, params={}, **kwargs):
         self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
+        self._is_started = False
+        self._error = None
         self._params = params
         self._result = None
+        SQLProvider.__init__(
+            self,
+            dsn=dsn,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
         if loop:
             self._loop = loop
         else:
             self._loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self._loop)
-        SQLProvider.__init__(
-            dsn=dsn,
-            loop=self._loop,
-            pool=pool,
-            params=params,
-            **kwargs
-        )
+        asyncio.set_event_loop(self._loop)
         # calling parent Thread
         Thread.__init__(self, name="postgres")
         self.stop_event = threading.Event()
@@ -111,6 +112,8 @@ class postgres(threading.Thread, SQLProvider):
     """
 
     async def __aenter__(self):
+        if not self._connection:
+            await self.connection()
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
@@ -176,7 +179,7 @@ class postgres(threading.Thread, SQLProvider):
                 print("Error on Init Connection: {}".format(err))
                 pass
 
-    def terminate(self):
+    def disconnect(self):
         if self._loop.is_running():
             self._loop.stop()
         self._loop.close()
@@ -184,8 +187,14 @@ class postgres(threading.Thread, SQLProvider):
         try:
             self.join(timeout=5)
         finally:
-            # self._logger.info('Thread Killed')
+            self._connection = None
+            self._connected = False
             return True
+
+    terminate = disconnect
+
+    def is_closed(self):
+        return not self._connection
 
     def connect(self):
         """
@@ -199,11 +208,16 @@ class postgres(threading.Thread, SQLProvider):
             self.start(target=self._connect)  # start a thread
             self._is_started = True
             self.join(timeout=self._timeout)
+            self._connected = True
         return self
+
+    open = connect
 
     def _connect(self):
         if not self._connection:
-            self._loop.run_until_complete(self.connection())
+            self._loop.run_until_complete(
+                self.connection()
+            )
 
     async def connection(self):
         """
@@ -221,13 +235,13 @@ class postgres(threading.Thread, SQLProvider):
                 timeout=self._timeout,
             )
             if self._connection:
-                # self._logger.info("Open Connection to {}, id: {}".format(self._dsn, self._connection.get_server_pid()))
                 await self.init_connection(self._connection)
                 self._connected = True
                 self._initialized_on = time.time()
         except TooManyConnectionsError as err:
             print(err)
-            raise TooManyConnections("Too Many Connections Error: {}".format(str(err)))
+            raise TooManyConnections(
+                "Too Many Connections Error: {}".format(str(err)))
         except ConnectionDoesNotExistError as err:
             print(err)
             print("Connection Error: {}".format(str(err)))
@@ -256,19 +270,16 @@ class postgres(threading.Thread, SQLProvider):
         try:
             if self._connection:
                 if not self._connection.is_closed():
-                    # if self._DEBUG:
-                    #    self._logger.info("Closing Connection, id: {}".format(self._connection.get_server_pid()))
-                    try:
-                        await self._connection.close(timeout=timeout)
-                        self.join(timeout=timeout)
-                    except InterfaceError as err:
-                        raise ProviderError("Close Error: {}".format(str(err)))
-                    except Exception as err:
-                        await self._connection.terminate()
-                        self._connection = None
-                        raise ProviderError(
-                            "Connection Error, Terminated: {}".format(str(err))
-                        )
+                    await self._connection.close(timeout=timeout)
+                    self.join(timeout=timeout)
+        except InterfaceError as err:
+            raise ProviderError("Close Error: {}".format(str(err)))
+        except Exception as err:
+            await self._connection.terminate()
+            self._connection = None
+            raise ProviderError(
+                "Connection Error, Terminated: {}".format(str(err))
+            )
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
         finally:
@@ -282,12 +293,13 @@ class postgres(threading.Thread, SQLProvider):
         if self._connection:
             try:
                 if not self._connection.is_closed():
-                    # self._logger.info("Closing Connection, id: {}".format(self._connection.get_server_pid()))
                     self._loop.run_until_complete(
                         self._connection.close(timeout=wait_close)
                     )
-            except (InterfaceError, RuntimeError) as err:
-                raise ProviderError("Release Interface Error: {}".format(str(err)))
+            except (InterfaceError, RuntimeError, Exception) as err:
+                raise ProviderError(
+                    message=f"Release Interface Error: {err!s}"
+                )
                 return False
             finally:
                 self._connected = False
@@ -361,8 +373,10 @@ class postgres(threading.Thread, SQLProvider):
             Make a query to DB
         """
         error = None
+        self._result = None
+        await self.valid_operation(sentence)
         try:
-            startTime = datetime.now()
+            self.start_timing()
             self._result = await self._connection.fetch(sentence)
             if not self._result:
                 return [None, "Data was not found"]
@@ -382,9 +396,8 @@ class postgres(threading.Thread, SQLProvider):
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
         finally:
-            self._generated = datetime.now() - startTime
-            startTime = 0
-            return [self._result, error]
+            self.generated_at()
+            return await self._serializer(self._result, error)
 
     async def queryrow(self, sentence=""):
         """
@@ -393,11 +406,10 @@ class postgres(threading.Thread, SQLProvider):
             Make a query to DB returning only one row
         """
         error = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        self._result = None
+        await self.valid_operation(sentence)
         try:
+            self.start_timing()
             stmt = await self._connection.prepare(sentence)
             self._columns = [a.name for a in stmt.get_attributes()]
             self._result = await stmt.fetchrow()
@@ -417,7 +429,8 @@ class postgres(threading.Thread, SQLProvider):
             error = "Error on Query Row: {}".format(str(err))
             raise Exception(error)
         finally:
-            return [self._result, error]
+            self.generated_at()
+            return await self._serializer(self._result, error)
 
     async def execute(self, sentence="", *args):
         """execute.
@@ -443,7 +456,7 @@ class postgres(threading.Thread, SQLProvider):
         finally:
             return [self._result, self._error]
 
-    async def executemany(self, sentence="", *args, timeout=None):
+    async def execute_many(self, sentence="", *args, timeout=None):
         """execute.
 
         Execute a transaction
@@ -467,6 +480,8 @@ class postgres(threading.Thread, SQLProvider):
             self._error = "Error on Execute: {}".format(str(err))
         finally:
             return [True, self._error]
+
+    executemany = execute_many
 
     """
     Transaction Context
@@ -552,18 +567,9 @@ class postgres(threading.Thread, SQLProvider):
     def _test_connection(self):
         self._error = None
         self._result = None
-        if not self._connection:
-            self._loop.run_until_complete(self.connection())
-        try:
-            self._result = self._loop.run_until_complete(
-                self._connection.fetch(self._test_query)
-            )
-        except Exception as err:
-            self._error = "Error on Query: {}".format(str(err))
-            print(self._error)
-            raise Exception(self._error)
-        finally:
-            return [self._result, self._error]
+        self.start(target=self._fetchone, args=(self._test_query,))
+        self.join(timeout=self._timeout)
+        return [self._result, self._error]
 
     def perform(self, sentence):
         self.start(target=self._execute, args=(sentence,))
@@ -582,6 +588,8 @@ class postgres(threading.Thread, SQLProvider):
             self.join(timeout=self._timeout)
             return [self._result, self._error]
 
+    fetch_all = fetchall
+
     def _fetchall(self, sentence):
         self._error = None
         self._result = None
@@ -589,7 +597,8 @@ class postgres(threading.Thread, SQLProvider):
             stmt, error = self._loop.run_until_complete(self.prepare(sentence))
             if stmt:
                 result = self._loop.run_until_complete(stmt.fetch())
-                self._result = asyncResult(result=result, columns=self._columns)
+                self._result = Recordset(
+                    result=result, columns=self._columns)
         except RuntimeError as err:
             self._error = "Runtime Error: {}".format(str(err))
             raise ProviderError(error)
@@ -613,18 +622,91 @@ class postgres(threading.Thread, SQLProvider):
         self.join(timeout=self._timeout)
         return [self._result, self._error]
 
+    fetch_one = fetchone
+
     def _fetchone(self, sentence):
         self._error = None
         self._result = None
         try:
-            row = self._loop.run_until_complete(self._connection.fetchrow(sentence))
+            row = self._loop.run_until_complete(
+                self._connection.fetchrow(sentence))
             if row:
-                self._result = asyncRecord(dict(row))
+                self._result = row
         except Exception as err:
             self._error = "Error on Query Row: {}".format(str(err))
             raise Exception(self._error)
         finally:
             return [self._result, self._error]
+
+    """
+    Model Logic:
+    """
+
+    async def column_info(self, tablename: str, schema: str = None):
+        """Column Info.
+
+        Get Meta information about a table (column name, data type and PK).
+        Useful to build a DataModel from Querying database.
+        Parameters:
+        @tablename: str The name of the table (including schema).
+        """
+        if schema:
+            table = f"{schema}.{tablename}"
+        else:
+            table = tablename
+        sql = f"SELECT a.attname AS name, a.atttypid::regtype AS type, \
+        format_type(a.atttypid, a.atttypmod) as format_type, a.attnotnull::boolean as notnull, \
+        coalesce((SELECT true FROM pg_index i WHERE i.indrelid = a.attrelid \
+        AND i.indrelid = a.attrelid AND a.attnum = any(i.indkey) \
+        AND i.indisprimary), false) as is_primary \
+        FROM pg_attribute a WHERE a.attrelid = '{tablename!s}'::regclass \
+        AND a.attnum > 0 AND NOT a.attisdropped ORDER BY a.attnum"
+        if not self._connection:
+            await self.connection()
+        try:
+            colinfo = await self._connection.fetch(sql)
+            return colinfo
+        except Exception as err:
+            self._logger.exception(f"Wrong Table information {tablename!s}")
+
+    """
+    DDL Information.
+    """
+    async def create(
+        self,
+        object: str = 'table',
+        name: str = '',
+        fields: Optional[List] = None
+    ) -> bool:
+        """
+        Create is a generic method for Database Objects Creation.
+        """
+        if object == 'table':
+            sql = "CREATE TABLE {name}({columns});"
+            columns = ", ".join(["{name} {type}".format(**e) for e in fields])
+            sql = sql.format(name=name, columns=columns)
+            try:
+                result = await self._connection.execute(sql)
+                if result:
+                    await self._connection.commit()
+                    return True
+                else:
+                    return False
+            except Exception as err:
+                raise ProviderError(f"Error in Object Creation: {err!s}")
+        else:
+            raise RuntimeError(f'SQLite: invalid Object type {object!s}')
+
+    def tables(self, schema: str = "") -> Iterable[Any]:
+        raise NotImplementedError
+
+    def table(self, tablename: str = "") -> Iterable[Any]:
+        raise NotImplementedError
+
+    def use(self, tablename: str):
+        raise NotImplementedError(
+            'AsyncPg Error: There is no Database in SQLite'
+        )
 
 
 """
