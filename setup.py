@@ -5,17 +5,23 @@
 See:
 https://github.com/phenobarbital/asyncdb
 """
-
+from os import path
 from setuptools import find_packages, setup
+
+with open(path.join(path.dirname(__file__), 'README.md')) as readme:
+    README = readme.read()
+
+with open('asyncdb/VERSION')) as version:
+    VERSION = version.read().strip()
 
 setup(
     name="asyncdb",
-    version=open("VERSION").read().strip(),
+    version=VERSION,
     python_requires=">=3.8.0",
     url="https://github.com/phenobarbital/asyncdb",
     description="Asyncio Datasource library",
-    long_description="Asynchronous library for data source connections, \
-    used by Navigator",
+    platforms=['POSIX'],
+    long_description=README,
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
