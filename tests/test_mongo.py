@@ -13,6 +13,7 @@ def event_loop():
     loop.close()
 
 
+DRIVER='mongo'
 PARAMS = {
     "host": "127.0.0.1",
     "port": "27017",
@@ -20,7 +21,6 @@ PARAMS = {
     "password": '12345678'
 }
 
-DRIVER='mongo'
 
 @pytest.fixture
 async def conn(event_loop):

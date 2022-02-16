@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest_asyncio
 
 DRIVER = 'memcache'
-params = {
+PARAMS = {
     "host": "localhost",
     "port": 11211
 }
@@ -15,7 +15,7 @@ params = {
 
 @pytest.fixture
 async def conn(event_loop):
-    db = AsyncDB(DRIVER, params=params, loop=event_loop)
+    db = AsyncDB(DRIVER, params=PARAMS, loop=event_loop)
     await db.connection()
     yield db
     await db.close()
@@ -24,7 +24,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_pool_by_params(event_loop):
-    pool = AsyncPool(DRIVER, params=params, loop=event_loop)
+    pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
     pytest.assume(pool.is_connected() is False)
     await pool.connect()
     pytest.assume(pool.is_connected() is True)
@@ -35,7 +35,7 @@ async def test_pool_by_params(event_loop):
     (DRIVER)
 ])
 async def test_pool_by_params2(driver, event_loop):
-    db = AsyncDB(driver, params=params, loop=event_loop)
+    db = AsyncDB(driver, params=PARAMS, loop=event_loop)
     assert db.is_connected() is False
 
 
@@ -43,7 +43,7 @@ async def test_pool_by_params2(driver, event_loop):
     (DRIVER), (DRIVER)
 ])
 async def test_connect(driver, event_loop):
-    db = AsyncDB(driver, params=params, loop=event_loop)
+    db = AsyncDB(driver, params=PARAMS, loop=event_loop)
     await db.connection()
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection('bigtest')
