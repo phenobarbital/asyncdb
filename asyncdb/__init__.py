@@ -51,8 +51,9 @@ class AsyncPool:
                 raise asyncDBException(
                     message="Cannot Load Pool provider {}".format(poolName)
                 )
-        except Exception as err:
-            raise ProviderError(message=str(err), code=404)
+        except Exception:
+            raise
+            # raise ProviderError(message=str(err), code=404)
 
 
 class AsyncDB:

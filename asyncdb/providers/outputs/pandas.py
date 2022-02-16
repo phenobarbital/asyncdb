@@ -9,6 +9,7 @@ class pandasFormat(OutputFormat):
     async def serialize(self, result, error, *args, **kwargs):
         df = None
         try:
+            result = [dict(row) for row in result]
             df = pandas.DataFrame(
                 data=result,
                 **kwargs

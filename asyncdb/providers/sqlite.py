@@ -103,7 +103,6 @@ class sqlite(DBCursorBackend, DDLBackend, SQLProvider):
 
     connect = connection
 
-
     async def valid_operation(self, sentence: Any):
         await super(sqlite, self).valid_operation(sentence)
         if self._row_format == 'iterable':

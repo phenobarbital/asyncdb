@@ -39,7 +39,14 @@ class PoolBackend(ABC):
             **kwargs
     ) -> None:
         self._pool = None
-        self._max_queries = 300
+        try:
+            self._encoding = kwargs["encoding"]
+        except KeyError:
+            self._encoding = "utf-8"
+        if "max_queries" in kwargs:
+            self._max_queries = kwargs["max_queries"]
+        else:
+            self._max_queries = 300
         self._connection = None
         self._connected = False
         if loop:
@@ -56,10 +63,6 @@ class PoolBackend(ABC):
             default_exception_handler
         )
         try:
-            self._params = params.copy()
-        except TypeError:
-            self._params = {}
-        try:
             self._DEBUG = bool(params["DEBUG"])
         except KeyError:
             try:
@@ -74,6 +77,7 @@ class PoolBackend(ABC):
         try:
             self._logger = logging.getLogger(name=__name__)
         except Exception as err:
+            self._logger = None
             logging.exception(err)
             raise
 
@@ -103,7 +107,7 @@ class PoolBackend(ABC):
     async def __aenter__(self) -> "PoolBackend":
         if not self._pool:
             await self.connect()
-        self._connection = await self.acquire()
+        await self.acquire()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -163,6 +167,14 @@ class ConnectionBackend(ABC):
         self._connected = False
         self._cursor = None
         try:
+            self._encoding = kwargs["encoding"]
+        except KeyError:
+            self._encoding = "utf-8"
+        if "max_queries" in kwargs:
+            self._max_queries = kwargs["max_queries"]
+        else:
+            self._max_queries = 300
+        try:
             self.params = params.copy()
         except TypeError:
             pass
@@ -191,6 +203,7 @@ class ConnectionBackend(ABC):
         try:
             self._logger = logging.getLogger(name=__name__)
         except Exception as err:
+            self._logger = None
             logging.exception(err)
             raise
 
@@ -201,6 +214,10 @@ class ConnectionBackend(ABC):
     @abstractmethod
     async def close(self, timeout: int = 10):
         pass
+
+    def is_closed(self):
+        logging.debug(f"Connection closed on: {self._connection}")
+        return not self._connected
 
     # Properties
     @classmethod
@@ -250,8 +267,13 @@ class ConnectionBackend(ABC):
             await self.connection()
         return self
 
-    async def __aexit__(self, exc_type, exc, tb):
-        await self.close()
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        # clean up anything you need to clean up
+        try:
+            await self.close()
+        except Exception as err:
+            print(err)
+            pass
 
 
 class ConnectionDSNBackend(ABC):
@@ -262,7 +284,6 @@ class ConnectionDSNBackend(ABC):
     def __init__(
             self,
             dsn: str = '',
-            loop: asyncio.AbstractEventLoop = None,
             params: Dict[Any, Any] = {},
             **kwargs
     ) -> None:
@@ -270,11 +291,19 @@ class ConnectionDSNBackend(ABC):
             self._dsn = dsn
         else:
             self._dsn = self.create_dsn(params)
-
-    def create_dsn(self, params):
         try:
-            return self._dsn.format(**params)
+            self._params = params.copy()
+        except TypeError:
+            self._params = {}
+
+    def create_dsn(self, params: Dict):
+        try:
+            if params:
+                return self._dsn.format(**params)
+            else:
+                return None
         except Exception as err:
+            print(err)
             self._logger.exception(err)
             return None
 
@@ -386,7 +415,7 @@ class DatabaseBackend(ABC):
         """
         pass
 
-    executemany = execute_many
+    # executemany = execute_many
 
     @abstractmethod
     async def query(self, sentence=""):
@@ -525,7 +554,7 @@ class DBCursorBackend(ABC):
             cursor = f"{self._provider}Cursor"
             module = importlib.import_module(cls, package="providers")
             self.__cursor__ = getattr(module, cursor)
-        except ImportError as err:
+        except (ImportError, Exception) as err:
             logging.exception(f"Error Loading Cursor Class: {err}")
             self.__cursor__ = None
 
@@ -552,30 +581,30 @@ class DBCursorBackend(ABC):
             logging.exception(err)
             return None
 
-    @abstractmethod
-    async def fetch(
-            self,
-            sentence: str,
-            number: int = None,
-            **kwargs
-    ) -> List[Sequence]:
-        pass
-
-    @abstractmethod
-    async def fetch_one(
-            self,
-            sentence: str,
-            **kwargs
-    ) -> List[Sequence]:
-        pass
-
-    @abstractmethod
-    async def fetch_all(self, sentence: str, **kwargs) -> List[Sequence]:
-        pass
-
-    @abstractmethod
-    async def fetchrow(self, sentence: str, *args, **kwargs) -> List[Sequence]:
-        pass
+    # @abstractmethod
+    # async def fetch(
+    #         self,
+    #         sentence: str,
+    #         number: int = None,
+    #         **kwargs
+    # ) -> List[Sequence]:
+    #     pass
+    #
+    # @abstractmethod
+    # async def fetch_one(
+    #         self,
+    #         sentence: str,
+    #         **kwargs
+    # ) -> List[Sequence]:
+    #     pass
+    #
+    # @abstractmethod
+    # async def fetch_all(self, sentence: str, **kwargs) -> List[Sequence]:
+    #     pass
+    #
+    # @abstractmethod
+    # async def fetchrow(self, sentence: str, *args, **kwargs) -> List[Sequence]:
+    #     pass
 
     """
     Cursor Iterator Context

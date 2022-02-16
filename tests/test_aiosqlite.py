@@ -4,7 +4,7 @@ from pprint import pprint
 from asyncdb import AsyncDB
 import pytest_asyncio
 from typing import Generator
-import pypolars as pl
+import polars as pl
 import datatable as dt
 from asyncdb.meta import Record, Recordset
 
@@ -19,11 +19,11 @@ async def test_connect(event_loop):
     pytest.assume(db.is_connected() is False)
     async with await db.connection() as conn:
         pytest.assume(conn.is_connected() is True)
-        conn.row_format('iterable') # returns a dictionary
+        conn.row_format('iterable')  # returns a dictionary
         result, error = await conn.test_connection()
         pytest.assume(not error)
         pytest.assume(result[0]['1'] == 1)
-        conn.row_format('native') # return tuple
+        conn.row_format('native')  # return tuple
         result, error = await conn.test_connection()
         pytest.assume(result[0][0] == 1)
     assert db.is_closed() is True
@@ -51,7 +51,7 @@ async def test_operations(event_loop):
         examples = [(2, "def"), (3, "ghi"), (4, "jkl")]
         print(": Executing Insert of many entries: ")
         await conn.execute_many(many, examples)
-        conn.row_format('iterable') # change output format to dict
+        conn.row_format('iterable')  # change output format to dict
         result, error = await conn.query("SELECT * FROM tests where id = 2")
         print('TEST> ', result, error)
         pytest.assume(not error)
@@ -154,6 +154,7 @@ async def test_execute_many(event_loop):
                 print(row)
                 pytest.assume(type(row) == tuple)
 
+
 async def test_formats(event_loop):
     db = AsyncDB(DRIVER, params=PARAMS, loop=event_loop)
     async with await db.connection() as conn:
@@ -179,38 +180,40 @@ async def test_formats(event_loop):
         airports = "INSERT INTO airports VALUES(?, ?, ?)"
         await conn.execute_many(airports, data)
         # first-format, native:
-        conn.row_format('iterable') # change output format to dict
+        conn.row_format('iterable')  # change output format to dict
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         pytest.assume(type(result) == list)
-        conn.output_format('json') # change output format to json
+        conn.output_format('json')  # change output format to json
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         pytest.assume(type(result) == str)
-        conn.output_format('pandas') # change output format to pandas
+        conn.output_format('pandas')  # change output format to pandas
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         import pandas
         pytest.assume(type(result) == pandas.core.frame.DataFrame)
-        conn.output_format('iterable') # change output format to iter generator
+        # change output format to iter generator
+        conn.output_format('iterable')
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         # pytest.assume(callable(result)) # TODO: test method for generator exp
-        conn.output_format('polars') # change output format to iter generator
+        conn.output_format('polars')  # change output format to iter generator
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         pytest.assume(type(result) == pl.frame.DataFrame)
-        conn.output_format('datatable') # change output format to iter generator
+        # change output format to iter generator
+        conn.output_format('datatable')
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         print(type(result))
         pytest.assume(type(result) == dt.Frame)
-        conn.output_format('csv') # change output format to iter generator
+        conn.output_format('csv')  # change output format to iter generator
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         pytest.assume(type(result) == str)
         # testing Record Object
-        conn.output_format('record') # change output format to iter generator
+        conn.output_format('record')  # change output format to iter generator
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         pytest.assume(type(result) == list)
@@ -218,7 +221,7 @@ async def test_formats(event_loop):
             pytest.assume(type(row) == Record)
             pytest.assume(len(row.iata) == 3)
         # testing Recordset Object
-        conn.output_format('recordset') # change output format to iter generator
+        conn.output_format('recordset')  # change output format to ResultSet
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         pytest.assume(type(result) == Recordset)
@@ -229,6 +232,7 @@ async def test_formats(event_loop):
             pytest.assume(type(row) == Record)
             pytest.assume(len(row.iata) == 3)
             print(row)
+
 
 def pytest_sessionfinish(session, exitstatus):
     asyncio.get_event_loop().close()
