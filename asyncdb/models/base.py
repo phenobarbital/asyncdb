@@ -594,6 +594,149 @@ class Model(metaclass=ModelMeta):
         return result
 
     """
+    Instance method for Dataclasses.
+    """
+    async def save(self, **kwargs):
+        """
+        Saving a Dataclass Model to Database.
+        """
+        if not self.Meta.connection:
+            self.get_connection(self)
+        async with await self.Meta.connection.connection() as conn:
+            try:
+                result = await self.Meta.connection.model_save(
+                    model=self, fields=self.columns()
+                )
+                return result
+            except Exception as err:
+                logging.debug(traceback.format_exc())
+                raise Exception(
+                    "Error on Insert over table {}: {}".format(
+                        self.Meta.name, err)
+                )
+
+    async def insert(self):
+        """
+        Insert a new Dataclass Model to Database.
+        """
+        if not self.Meta.connection:
+            self.get_connection(self)
+        result = None
+        async with await self.Meta.connection.connection() as conn:
+            try:
+                result = await self.Meta.connection.model_insert(
+                    model=self, fields=self.columns()
+                )
+                return result
+            except Exception as err:
+                logging.debug(traceback.format_exc())
+                raise Exception(
+                    "Error on Insert over table {}: {}".format(
+                        self.Meta.name, err)
+                )
+
+    async def delete(self, **kwargs):
+        """
+        Deleting a row Model based on Primary Key
+        """
+        if not self.Meta.connection:
+            self.get_connection(self)
+        result = None
+        async with await self.Meta.connection.connection() as conn:
+            try:
+                result = await self.Meta.connection.model_delete(
+                    model=self, fields=self.columns()
+                )
+                return result
+            except Exception as err:
+                logging.debug(traceback.format_exc())
+                raise Exception(
+                    "Error on Insert over table {}: {}".format(
+                        self.Meta.name, err)
+                )
+
+    async def fetch(self, **kwargs):
+        """
+        Return a new single record based on filter criteria
+        """
+        if not self.Meta.connection:
+            self.get_connection(self)
+        async with await self.Meta.connection.connection() as conn:
+            try:
+                result = await self.Meta.connection.model_get(
+                    model=self, fields=self.columns(), **kwargs
+                )
+                if result:
+                    return self.__class__(**dict(result))
+                else:
+                    raise NoDataFound(
+                        "{} object with condition {} Not Found!".format(
+                            self.Meta.name, kwargs
+                        )
+                    )
+            except NoDataFound as err:
+                raise NoDataFound(err)
+            except AttributeError:
+                raise Exception(
+                    "Error on get {}: {}".format(self.Meta.name, err))
+            except Exception as err:
+                logging.debug(traceback.format_exc())
+                raise Exception(
+                    "Error on get {}: {}".format(self.Meta.name, err))
+
+    get = fetch
+
+    async def select(self, **kwargs):
+        """
+        Need to return a ***collection*** of nested DataClasses
+        """
+        if not self.Meta.connection:
+            self.get_connection(self)
+        async with await self.Meta.connection.connection() as conn:
+            try:
+                result = await self.Meta.connection.model_select(
+                    model=self, fields=self.columns(), **kwargs
+                )
+                if result:
+                    return [self.__class__(**dict(r)) for r in result]
+                else:
+                    raise NoDataFound(
+                        "No Data on {} with condition {}".format(
+                            self.Meta.name, kwargs)
+                    )
+            except NoDataFound as err:
+                raise NoDataFound(err)
+            except Exception as err:
+                logging.debug(traceback.format_exc())
+                raise Exception(
+                    "Error on filter {}: {}".format(self.Meta.name, err))
+
+    async def all(self, **kwargs):
+        """
+        Need to return all rows as a ***collection*** of nested DataClasses
+        """
+        if not self.Meta.connection:
+            self.get_connection(self)
+        async with await self.Meta.connection.connection() as conn:
+            try:
+                result = await self.Meta.connection.model_all(
+                    model=self, fields=self.columns()
+                )
+                if result:
+                    return [self.__class__(**dict(r)) for r in result]
+                else:
+                    raise NoDataFound(
+                        "No Data on {} with condition {}".format(
+                            self.Meta.name, kwargs)
+                    )
+            except NoDataFound as err:
+                raise NoDataFound(err)
+            except Exception as err:
+                logging.debug(traceback.format_exc())
+                raise Exception(
+                    "Error on filter {}: {}".format(self.Meta.name, err))
+
+    """
     Class-based methods for Dataclasses.
     """
     @classmethod
@@ -688,7 +831,7 @@ class Model(metaclass=ModelMeta):
             cls.get_connection(cls)
         async with await cls.Meta.connection.connection() as conn:
             try:
-                result = await cls.Meta.connection.get_one(model=cls, **kwargs)
+                result = await cls.Meta.connection.mdl_get(model=cls, **kwargs)
                 if result:
                     return cls(**dict(result))
                 else:
@@ -705,8 +848,23 @@ class Model(metaclass=ModelMeta):
                 raise Exception(
                     "Error on get {}: {}".format(cls.Meta.name, err))
 
+    # get all data
+    @classmethod
+    async def all(cls, **kwargs):
+        if not cls.Meta.connection:
+            cls.get_connection(cls)
+        async with await cls.Meta.connection.connection() as conn:
+            try:
+                result = await cls.Meta.connection.mdl_all(model=cls, **kwargs)
+                return [cls(**dict(row)) for row in result]
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception(
+                    "Error on query_all over table {}: {}".format(
+                        cls.Meta.name, err)
+                )
     """
-    Class-based methods for creation.
+    Class-based methods for dataclass creation.
     """
 
     @classmethod
@@ -737,7 +895,7 @@ class Model(metaclass=ModelMeta):
             colinfo = await db.column_info(tablename)
             fields = []
             for column in colinfo:
-                tp = column["data_type"]
+                tp = column["type"]
                 col = Field(
                     primary_key=column["is_primary"],
                     notnull=column["notnull"],
@@ -748,7 +906,7 @@ class Model(metaclass=ModelMeta):
                     dtype = MODEL_TYPES[tp]
                 except KeyError:
                     dtype = str
-                fields.append((column["column_name"], dtype, col))
+                fields.append((column["name"], dtype, col))
         cls = make_dataclass(name, fields, bases=(Model,))
         m = Meta()
         m.name = name

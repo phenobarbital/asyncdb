@@ -625,30 +625,90 @@ class ModelBackend(ABC):
     """
     Interface for Backends with Dataclass-based Models Support.
     """
+
+    """
+    Class-based Methods.
+    """
     @abstractmethod
-    async def mdl_create(self, model: Model, rows: list):
+    async def mdl_create(self, model: "Model", rows: list):
         """
         Create all records based on a dataset and return result.
         """
         pass
 
     @abstractmethod
-    async def mdl_delete(self, model: Model, conditions: dict, **kwargs):
+    async def mdl_delete(self, model: "Model", conditions: dict, **kwargs):
         """
         Deleting some records using Model.
         """
         pass
 
     @abstractmethod
-    async def mdl_update(self, model: Model, conditions: dict, **kwargs):
+    async def mdl_update(self, model: "Model", conditions: dict, **kwargs):
         """
         Updating records using Model.
         """
         pass
 
     @abstractmethod
-    async def mdl_filter(self, model: Model, **kwargs):
+    async def mdl_filter(self, model: "Model", **kwargs):
         """
         Filter a Model based on some criteria.
+        """
+        pass
+
+    @abstractmethod
+    async def mdl_all(self, model: "Model", **kwargs):
+        """
+        Get all records on a Model.
+        """
+        pass
+
+    @abstractmethod
+    async def mdl_get(self, model: "Model", **kwargs):
+        """
+        Get one single record from Model.
+        """
+        pass
+
+    @abstractmethod
+    async def model_select(self, model: "Model", fields: Dict = {}, **kwargs):
+        """
+        Get queries with model.
+        """
+        pass
+
+    @abstractmethod
+    async def model_all(self, model: "Model", fields: Dict = {}):
+        """
+        Get queries with model.
+        """
+        pass
+
+    @abstractmethod
+    async def model_get(self, model: "Model", fields: Dict = {}, **kwargs):
+        """
+        Get one row from model.
+        """
+        pass
+
+    @abstractmethod
+    async def model_delete(self, model: "Model", fields: Dict = {}, **kwargs):
+        """
+        delete a row from model.
+        """
+        pass
+
+    @abstractmethod
+    async def model_save(self, model: "Model", fields: Dict = {}, **kwargs):
+        """
+        save a row from model.
+        """
+        pass
+
+    @abstractmethod
+    async def model_insert(self, model: "Model", fields: Dict = {}, **kwargs):
+        """
+        insert a row from model.
         """
         pass

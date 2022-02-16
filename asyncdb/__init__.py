@@ -25,7 +25,9 @@ from .version import (
 )
 __all__ = ["asyncORM", "asyncRecord", "registerProvider", "BaseProvider"]
 
+# install uvloop and set as default loop for asyncio.
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+uvloop.install()
 
 
 class AsyncPool:

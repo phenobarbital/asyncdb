@@ -48,7 +48,7 @@ pytestmark = pytest.mark.asyncio
 
 async def test_pool_by_dsn(event_loop):
     """ test creation using DSN """
-    pool = AsyncPool(DRIVER, dsn=asyncpg_url, loop=event_loop)
+    pool = AsyncPool(DRIVER, dsn=DSN, loop=event_loop)
     assert pool.application_name == 'NAV'
     pytest.assume(pool.is_connected() == False)
     await pool.connect()
@@ -59,7 +59,7 @@ async def test_pool_by_dsn(event_loop):
 
 async def test_pool_by_params(event_loop):
     pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
-    assert pool.get_dsn() == asyncpg_url
+    assert pool.get_dsn() == DSN
     pytest.assume(pool.is_connected() == False)
     await pool.connect()
     pytest.assume(pool.is_connected() == True)
