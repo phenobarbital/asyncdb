@@ -3,18 +3,24 @@ import logging
 import os
 import sys
 import time
-from . import BaseProvider
+from . import BaseProvider, registerProvider
 
 
 class dummy(BaseProvider):
     _provider = "dummy"
     _syntax = "sql"
-    _test_query = "SELECT 1"
 
     def __init__(self, params={}, **kwargs):
-        #
+        self._test_query = "SELECT 1"
+        self._dsn = 'test:/{host}:{port}/{db}'
+        if not params:
+            params = {
+                "host": "127.0.0.1",
+                "port": "0",
+                "db": 0
+            }
         try:
-            super(dummy, self).__init__(params, **kwargs)
+            super(dummy, self).__init__(params=params, **kwargs)
             self._logger.debug(" My params are: {}".format(params))
         except Exception as err:
             raise ProviderError(str(err), errcode=500)
@@ -24,11 +30,9 @@ class dummy(BaseProvider):
 
     async def connection(self):
         print(
-            "{}: Connected at {} with user {} and password {}".format(
-                self._provider,
-                self._params["host"],
-                self._params["user"],
-                self._params["password"],
+            '{driver}: Connected at {host}'.format(
+                driver=self._provider,
+                host=self._params["host"]
             )
         )
         return True
@@ -36,14 +40,21 @@ class dummy(BaseProvider):
     async def close(self):
         print("Connection Closed")
 
+    disconnect = close
+
     async def get_columns(self):
         return {"id": "value"}
+
+    async def use(self, db):
+        print(f'Changing Database to {db}')
 
     async def query(self, sentence=""):
         error = None
         print("Running Query {}".format(sentence))
-        result = ({"data": []}, error)
+        result = ([], error)
         return result
+
+    fetch_all = query
 
     async def execute(self, sentence=""):
         print("Execute Query {}".format(sentence))
@@ -52,8 +63,15 @@ class dummy(BaseProvider):
         result = [data, error]
         return result
 
-    async def fetchrow(self, sentence=""):
-        pass
+    execute_many = execute
+
+    async def queryrow(self, sentence=""):
+        error = None
+        print("Running Row {}".format(sentence))
+        result = ({"row": []}, error)
+        return result
+
+    fetch_one = queryrow
 
 
 registerProvider(dummy)

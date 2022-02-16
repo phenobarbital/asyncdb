@@ -31,10 +31,13 @@ class BasePool(PoolBackend, ConnectionDSNBackend):
     init_func: Optional[Callable] = None
 
     def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
-        super(BasePool, self).__init__(
-            dsn, loop, params, **kwargs
+        ConnectionDSNBackend.__init__(
+            self,
+            dsn=dsn,
+            params=params,
+            **kwargs
         )
-        self._params = params.copy()
+        PoolBackend.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
 
     """
     __init async db initialization
@@ -69,14 +72,14 @@ class BasePool(PoolBackend, ConnectionDSNBackend):
         pass
 
 
-class BaseProvider(ConnectionBackend, ConnectionDSNBackend, DatabaseBackend):
+class InitProvider(ConnectionBackend, DatabaseBackend):
     """
-    BaseProvider
-        Abstract Class for DB Connection
+    InitProvider
+        Abstract Class for Connections
     ----
     """
-    _provider: str = "base"
-    _syntax: str = "base"  # can use QueryParser for parsing SQL queries
+    _provider: str = "init"
+    _syntax: str = "init"  # can use QueryParser for parsing SQL queries
     init_func: Optional[Callable] = None
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
@@ -87,9 +90,8 @@ class BaseProvider(ConnectionBackend, ConnectionDSNBackend, DatabaseBackend):
         self._parameters = ()
         self._serializer = None
         self._row_format = 'native'
-        ConnectionDSNBackend.__init__(self, dsn, loop, params, **kwargs)
-        ConnectionBackend.__init__(self, loop, params, **kwargs)
-        DatabaseBackend.__init__(self, params, **kwargs)
+        ConnectionBackend.__init__(self, loop=loop, params=params, **kwargs)
+        DatabaseBackend.__init__(self, params=params, **kwargs)
         self._initialized_on = None
         # always starts output format to native:
         self.output_format('native')
@@ -100,6 +102,12 @@ class BaseProvider(ConnectionBackend, ConnectionDSNBackend, DatabaseBackend):
     def generated_at(self):
         self._generated = datetime.now() - self._starttime
         return self._generated
+
+    def last_duration(self):
+        return self._generated
+
+    def set_connection(self, connection):
+        self._connection = connection
 
     """
     Formats:
@@ -117,6 +125,39 @@ class BaseProvider(ConnectionBackend, ConnectionDSNBackend, DatabaseBackend):
 
     def output_format(self, format: str = 'native', *args, **kwargs):
         self._serializer = OutputFactory(self, format, *args, **kwargs)
+
+    async def valid_operation(self, sentence: Any):
+        error = None
+        if not sentence:
+            raise EmptyStatement(
+                f"{__name__!s} Error: cannot use an empty sentence"
+            )
+        if not self._connection:
+            await self.connection()
+
+
+class BaseProvider(InitProvider, ConnectionDSNBackend):
+    """
+    BaseProvider
+        Abstract Class for DB Connection
+    ----
+    """
+    _provider: str = "base"
+    _syntax: str = "base"  # can use QueryParser for parsing SQL queries
+    init_func: Optional[Callable] = None
+
+    def __init__(self, dsn="", loop=None, params={}, **kwargs):
+        super(BaseProvider, self).__init__(
+            dsn=dsn, loop=loop, params=params, **kwargs
+        )
+        ConnectionDSNBackend.__init__(
+            self,
+            dsn=dsn,
+            params=params,
+            **kwargs
+        )
+        # always starts output format to native:
+        self.output_format('native')
 
 
 class BaseDBProvider(BaseProvider):
@@ -181,6 +222,7 @@ class SQLProvider(BaseDBProvider):
     disconnect = close
 
     async def valid_operation(self, sentence: Any):
+        error = None
         if not sentence:
             raise EmptyStatement(
                 f"{__name__!s} Error: cannot use an empty SQL sentence"
