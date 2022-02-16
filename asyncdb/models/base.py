@@ -3,6 +3,7 @@ Basic, Abstract Model.
 """
 import types
 import logging
+import traceback
 import rapidjson as to_json
 from .types import DB_TYPES, MODEL_TYPES, JSON_TYPES
 from dataclasses import Field as ff
@@ -593,7 +594,119 @@ class Model(metaclass=ModelMeta):
         return result
 
     """
-    Class-method for creation.
+    Class-based methods for Dataclasses.
+    """
+    @classmethod
+    async def create(cls, records):
+        if not cls.Meta.connection:
+            cls.get_connection(cls)
+        async with await cls.Meta.connection.connection() as conn:
+            try:
+                # working always with native format:
+                cls.Meta.connection.output_format('native')
+            except Exception:
+                pass
+            try:
+                result = await cls.Meta.connection.mdl_create(
+                    model=cls,
+                    rows=records
+                )
+                if result:
+                    return [cls(**dict(r)) for r in result]
+            except Exception as err:
+                logging.debug(traceback.format_exc())
+                raise Exception(
+                    "Error Updating Table {}: {}".format(cls.Meta.name, err)
+                )
+
+    @classmethod
+    async def remove(cls, conditions: dict = {}, **kwargs):
+        if not cls.Meta.connection:
+            cls.get_connection(cls)
+        async with await cls.Meta.connection.connection() as conn:
+            result = None
+            try:
+                result = await cls.Meta.connection.mdl_delete(
+                    model=cls, conditions=conditions, **kwargs
+                )
+                return result
+            except Exception as err:
+                logging.debug(traceback.format_exc())
+                raise Exception(
+                    "Error Deleting Table {}: {}".format(cls.Meta.name, err)
+                )
+
+    @classmethod
+    async def update(cls, conditions: dict = {}, **kwargs):
+        if not cls.Meta.connection:
+            cls.get_connection(cls)
+        async with await cls.Meta.connection.connection() as conn:
+            try:
+                result = await cls.Meta.connection.mdl_update(
+                    model=cls, conditions=conditions, **kwargs
+                )
+                if result:
+                    return [cls(**dict(r)) for r in result]
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception(
+                    "Error Updating Table {}: {}".format(cls.Meta.name, err)
+                )
+
+    @classmethod
+    async def filter(cls, **kwargs):
+        """
+        Need to return a ***collection*** of nested DataClasses
+        """
+        if not cls.Meta.connection:
+            cls.get_connection(cls)
+        async with await cls.Meta.connection.connection() as conn:
+            try:
+                result = await cls.Meta.connection.mdl_filter(
+                    model=cls, **kwargs
+                )
+                if result:
+                    return [cls(**dict(r)) for r in result]
+                else:
+                    raise NoDataFound(
+                        "No Data on {} with condition {}".format(
+                            cls.Meta.name, kwargs)
+                    )
+            except NoDataFound as err:
+                raise NoDataFound(err)
+            except Exception as err:
+                logging.debug(traceback.format_exc())
+                raise Exception(
+                    "Error on filter {}: {}".format(cls.Meta.name, err))
+
+    @classmethod
+    async def get(cls, **kwargs):
+        """
+        Return a new single record based on filter criteria
+        """
+        if not cls.Meta.connection:
+            cls.get_connection(cls)
+        async with await cls.Meta.connection.connection() as conn:
+            try:
+                result = await cls.Meta.connection.get_one(model=cls, **kwargs)
+                if result:
+                    return cls(**dict(result))
+                else:
+                    raise NoDataFound(
+                        message=f"Data not found over {cls.Meta.name!s}")
+            except NoDataFound:
+                raise NoDataFound(
+                    message=f"Data not found over {cls.Meta.name!s}")
+            except AttributeError as err:
+                raise Exception(
+                    "Error on get {}: {}".format(cls.Meta.name, err))
+            except Exception as err:
+                print(traceback.format_exc())
+                raise Exception(
+                    "Error on get {}: {}".format(cls.Meta.name, err))
+
+    """
+    Class-based methods for creation.
     """
 
     @classmethod
