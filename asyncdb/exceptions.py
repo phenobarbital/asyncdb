@@ -92,7 +92,7 @@ class asyncDBException(Exception):
         return f"{__name__}(message={self.message})"
 
     def __str__(self):
-        return f"{self.message}"
+        return f"{__name__}: {self.message}"
 
     def get(self):
         return self.message

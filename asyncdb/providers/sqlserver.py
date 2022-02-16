@@ -6,10 +6,17 @@ import time
 from datetime import datetime
 import logging
 from typing import List, Dict, Optional, Any, Iterable
-
 from .mssql import mssql, types_map
 import pymssql
-
+from typing import (
+    Any,
+    Iterable,
+    List,
+    Sequence,
+    Optional,
+    Dict,
+    Union
+)
 from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
@@ -22,16 +29,16 @@ from asyncdb.exceptions import (
 from asyncdb.providers import (
     BaseProvider,
     registerProvider,
+    SQLProvider,
+    BaseCursor
 )
 from asyncdb.utils import (
     EnumEncoder,
     SafeDict,
 )
 
-from asyncdb.providers.sql import SQLProvider, baseCursor
 
-
-class sqlserverCursor(baseCursor):
+class sqlserverCursor(BaseCursor):
     _connection = None
 
     async def __aenter__(self) -> "sqlserverCursor":
@@ -98,7 +105,8 @@ class sqlserver(mssql):
             print(err)
             self._connection = None
             self._cursor = None
-            raise ProviderError("connection Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "connection Error, Terminated: {}".format(str(err)))
         finally:
             return self
 
@@ -145,7 +153,7 @@ class sqlserver(mssql):
             logging.debug(error)
             return [self._result, error]
 
-    async def executemany(self, sentence="", params: list = []):
+    async def execute_many(self, sentence="", params: list = []):
         """
         Execute multiple sentences
         """
@@ -180,20 +188,18 @@ class sqlserver(mssql):
             print(error)
             return [self._result, error]
 
+    executemany = execute_many
+
     async def query(self, sentence="", params: list = None):
         """
         Making a Query and return result
         """
         error = None
         self._result = None
-        if not sentence:
-            raise EmptyStatement("Error: Empty Sentence")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         if isinstance(sentence, str):
             sentence = sentence.encode(self._charset)
         try:
-            startTime = datetime.now()
             self._cursor = self._connection.cursor()
             self._cursor.execute(sentence, params)
             self._result = self._cursor.fetchall()
@@ -210,22 +216,15 @@ class sqlserver(mssql):
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
         finally:
-            self._generated = datetime.now() - startTime
-            return [self._result, error]
+            return await self._serializer(self._result, error)
 
     async def queryrow(self, sentence=""):
-        cursor.execute("SELECT * FROM persons WHERE salesrep=%s", "John Doe")
-        row = cursor.fetchone()
-
-    async def fetchone(self, sentence="", params: list = []):
         error = None
         self._result = None
-        if not sentence:
-            raise EmptyStatement("Error: Empty Sentence")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
+        if isinstance(sentence, str):
+            sentence = sentence.encode(self._charset)
         try:
-            startTime = datetime.now()
             self._cursor = self._connection.cursor()
             self._cursor.execute(sentence, *params)
             self._result = self._cursor.fetchone()
@@ -239,8 +238,31 @@ class sqlserver(mssql):
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
         finally:
-            self._generated = datetime.now() - startTime
-            return [self._result, error]
+            return await self._serializer(self._result, error)
+
+    async def fetch_one(self, sentence="", params: list = []):
+        error = None
+        self._result = None
+        await self.valid_operation(sentence)
+        if isinstance(sentence, str):
+            sentence = sentence.encode(self._charset)
+        try:
+            self._cursor = self._connection.cursor()
+            self._cursor.execute(sentence, *params)
+            self._result = self._cursor.fetchone()
+            if not self._result:
+                raise NoDataFound("SQL Server: No Data was Found")
+                return [None, "SQL Server: No Data was Found"]
+        except RuntimeError as err:
+            error = "Runtime Error: {}".format(str(err))
+            raise ProviderError(error)
+        except Exception as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
+        finally:
+            return self._result
+
+    fetchone = fetch_one
 
     async def fetch(self, sentence="", size: int = 1, params: list = []):
         error = None
