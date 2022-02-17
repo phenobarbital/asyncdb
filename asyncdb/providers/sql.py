@@ -50,7 +50,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
 
     async def close(self, timeout: int = 5):
         """
-        Closing Method for any SQL Connector
+        Closing Method for any SQL Connector.
         """
         try:
             if self._connection:

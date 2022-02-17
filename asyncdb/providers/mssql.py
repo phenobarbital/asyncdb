@@ -45,34 +45,35 @@ class mssqlCursor(SQLCursor):
     pass
 
 
-class mssql(DBCursorBackend, SQLProvider):
+class mssql(SQLProvider, DBCursorBackend):
     """mssql.
 
     Microsoft SQL Server using low-level _mssql Protocol
     """
 
-    _provider = "sqlserver"
+    _provider = "mssql"
     _syntax = "sql"
     _test_query = "SELECT 1 as one"
     _charset: str = "UTF8"
 
-    def __init__(self, loop=None, pool=None, params={}, **kwargs):
+    def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
         self._dsn = ''
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
         self._version: str = None
         self.application_name = os.getenv('APP_NAME', "NAV")
         self._server_settings: dict = []
+        self._connected: bool = False
         super(mssql, self).__init__(
             loop=loop,
             params=params,
             **kwargs
         )
         try:
-            if "host" in self._params:
-                self._params["server"] = "{}:{}".format(
-                    self._params["host"], self._params["port"]
+            if "host" in self.params:
+                self.params["server"] = "{}:{}".format(
+                    self.params["host"], self.params["port"]
                 )
-                del self._params["host"]
+                del self.params["host"]
         except Exception as err:
             pass
         if "server_settings" in kwargs:
@@ -110,12 +111,12 @@ class mssql(DBCursorBackend, SQLProvider):
         self._connection = None
         self._connected = False
         try:
-            self._params["appname"] = self.application_name
-            self._params["charset"] = self._charset.upper()
-            self._params["tds_version"] = "7.3"
+            self.params["appname"] = self.application_name
+            self.params["charset"] = self._charset.upper()
+            self.params["tds_version"] = "7.3"
             if self._server_settings:
-                self._params["conn_properties"] = self._server_settings
-            self._connection = _mssql.connect(**self._params)
+                self.params["conn_properties"] = self._server_settings
+            self._connection = _mssql.connect(**self.params)
             if self._connection.connected:
                 self._connected = True
                 self._initialized_on = time.time()

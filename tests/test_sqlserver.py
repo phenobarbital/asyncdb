@@ -30,9 +30,11 @@ pytestmark = pytest.mark.asyncio
 @pytest.mark.parametrize("driver", [
     (DRIVER)
 ])
-async def test_pool_by_params(driver, event_loop):
+async def test_connect_by_params(driver, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
     assert db.is_connected() is False
+    assert await db.connection()
+    assert db.is_connected() is True
     await db.close()
 
 
@@ -45,15 +47,27 @@ async def test_connect(driver, event_loop):
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection()
     pytest.assume(type(result) == dict)
+    pytest.assume(result['one'] == 1)
     await db.close()
 
 
-async def test_connection(conn):
-    await conn.connection()
-    pytest.assume(conn.is_connected() is True)
-    result, error = await conn.test_connection()
-    pytest.assume(type(result) == dict)
-    await conn.close()
+@pytest.mark.parametrize("driver", [
+    (DRIVER)
+])
+async def test_context_connection(driver, event_loop):
+    db = AsyncDB(driver, params=params, loop=event_loop)
+    async with await db.connection() as conn:
+        pytest.assume(conn.is_connected() is True)
+        conn.use('AdventureWorks2019')
+        result, error = await conn.query(
+            'SELECT TOP (1000) * FROM "Person"."Person"'
+        )
+        pytest.assume(not error)
+        pytest.assume(type(result) == list)
+        pytest.assume(len(result) == 1000)
+        for row in result:
+            pytest.assume(type(row) == dict)
+    assert db.is_closed() is True
 
 
 def pytest_sessionfinish(session, exitstatus):
