@@ -36,7 +36,9 @@ from asyncdb.utils.types import (
     MODEL_TYPES,
     JSON_TYPES
 )
+from asyncdb.exceptions import NoDataFound
 from asyncdb.utils.encoders import DefaultEncoder
+from asyncdb import AsyncDB
 
 
 @dataclass
@@ -58,7 +60,7 @@ class Meta:
     app_label: str = ""
     frozen: bool = False
     strict: bool = True
-    driver: str = ""
+    driver: str = None
     credentials: dict = {}
     dsn: str = ""
     datasource: str = ""
@@ -271,7 +273,7 @@ def create_dataclass(
     # __class__ = dc
     setattr(dc, "__setattr__", _dc_method_setattr)
     # adding a properly internal json encoder:
-    dc.__encoder__ = er(
+    dc.__encoder__ = DefaultEncoder(
         sort_keys=False
     )
     return dc
@@ -386,7 +388,7 @@ class ModelMeta(type):
             cls.__frozen__ = False
         # Initialized Data Model = True
         cls.__initialised__ = True
-        if "driver" in ls:
+        if cls.Meta.driver is not None:
             if cls.Meta.connection is None:
                 try:
                     cls.get_connection(cls, dsn=cls.Meta.dsn)
@@ -547,15 +549,12 @@ class Model(metaclass=ModelMeta):
         Getting a database connection and driver based on parameters
         """
         Msg(':: Getting Connection ::', 'DEBUG')
-        print('MAYUYA!!', self)
-        # from asyncdb.providers import _PROVIDERS
-        # print(_PROVIDERS)
-        # classpath = "asyncdb.providers.{provider}".format(provider=cls._name)
         if self.Meta.datasource:
             # TODO: making a connection using a DataSource.
             pass
         if self.Meta.driver:
             driver = self.Meta.driver
+            provider = f"asyncdb.providers.{driver}"
             if dsn is not None:
                 try:
                     self.Meta.connection = AsyncDB(driver, dsn=dsn)
@@ -753,7 +752,7 @@ class Model(metaclass=ModelMeta):
         if not cls.Meta.connection:
             cls.get_connection(cls)
         async with await cls.Meta.connection.connection() as conn:
-            result = None
+            result = []
             try:
                 result = await cls.Meta.connection.mdl_delete(
                     model=cls, conditions=conditions, **kwargs
@@ -776,6 +775,8 @@ class Model(metaclass=ModelMeta):
                 )
                 if result:
                     return [cls(**dict(r)) for r in result]
+                else:
+                    return []
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception(
@@ -790,6 +791,7 @@ class Model(metaclass=ModelMeta):
         if not cls.Meta.connection:
             cls.get_connection(cls)
         async with await cls.Meta.connection.connection() as conn:
+            result = []
             try:
                 result = await cls.Meta.connection.mdl_filter(
                     model=cls, **kwargs
@@ -797,10 +799,7 @@ class Model(metaclass=ModelMeta):
                 if result:
                     return [cls(**dict(r)) for r in result]
                 else:
-                    raise NoDataFound(
-                        "No Data on {} with condition {}".format(
-                            cls.Meta.name, kwargs)
-                    )
+                    return []
             except NoDataFound as err:
                 raise NoDataFound(err)
             except Exception as err:

@@ -3,6 +3,7 @@ SQLProvider.
 
 Abstract class covering all major functionalities for Relational SQL-based databases.
 """
+import logging
 from asyncdb.utils.functions import (
     SafeDict
 )
@@ -199,7 +200,6 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             pk = []
             cols = []
             for col, field in fields.items():
-                print("HERE ", col, field)
                 if col not in row:
                     # field doesn't exists
                     default = field.default
@@ -537,7 +537,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         # asyncdb to abstract data-insertion
         sql = "DELETE FROM {table} {condition}"
         condition = self._where(fields, **pk)
-        sql = sql.format_map(SafeDict(table=tablename))
+        sql = sql.format_map(SafeDict(table=table))
         sql = sql.format_map(SafeDict(condition=condition))
         try:
             result = await self._connection.execute(sql)

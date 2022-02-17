@@ -4,7 +4,8 @@ from datetime import datetime
 import pprint
 from dataclasses import asdict, fields, InitVar
 from typing import Any, List, Optional, Callable, ClassVar, Union
-from asyncdb.models import Model, SQLModel, Column
+from asyncdb.models import Model, Column
+from asyncdb.models.sql import SQLModel
 from asyncdb.utils import Msg
 
 
@@ -352,13 +353,13 @@ data = {
     "age": 9000
 }
 u = User(**data)
-print(u.get_connection(), u.get_connection().is_connected())
-
 
 #TODO: definition of Operators
 # from models.operators import or, not
 # or(value) returns OR instead AND
 # not if value is an IN, returns NOT IN
+
+
 async def get_user(age):
     user = await User.get(age=age)
     user.name = 'Jesus Ignacio Jose Lara Gimenez'
@@ -430,10 +431,9 @@ users = [
 ]
 asyncio.run(create_users(users))
 asyncio.run(new_user())
-#
-# asyncio.run(get_user(age=42))
-# asyncio.run(get_all_users())
-# asyncio.run(get_users(age=48, firstname='Román'))
-# asyncio.run(update_users(
-#     filter={"age": 42, "lastname": 'Lara'}, firstname='Jesús')
-# )
+asyncio.run(get_user(age=72))
+asyncio.run(get_all_users())
+asyncio.run(get_users(age=52, firstname='Arnoldo'))
+asyncio.run(update_users(
+    filter={"age": 42, "lastname": 'Gimenez'}, firstname='Yolanda')
+)
