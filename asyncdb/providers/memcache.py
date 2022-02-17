@@ -4,7 +4,6 @@ Notes on memcache Provider
 --------------------
 This provider implements a simple subset of funcionalities from aiomcache, this is a WIP
 """
-
 import asyncio
 import time
 import aiomcache
@@ -14,10 +13,9 @@ from typing import (
     Dict
 )
 from asyncdb.exceptions import *
-from asyncdb.providers import (
+from .base import (
     BasePool,
     BaseProvider,
-    registerProvider,
 )
 
 
@@ -269,9 +267,3 @@ class memcache(BaseProvider):
         finally:
             await self.delete("test_123")
             return [result, error]
-
-
-"""
-Registering this Provider
-"""
-registerProvider(memcache)

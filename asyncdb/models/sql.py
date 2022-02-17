@@ -1,7 +1,7 @@
 """
 Dataclass Model for SQL-oriented databases.
 """
-from .base import Model, ModelMeta
+from .base import Model
 from typing import (
     Optional,
     Any
@@ -11,25 +11,26 @@ from dataclasses import (
 )
 
 
-class SQLModel(Model, metaclass=ModelMeta):
+class SQLModel(Model):
     def query_raw(self, columns: str = '*', filter: Optional[str] = ''):
         name = self.__class__.__name__
         schema = self.Meta.schema if self.Meta.schema is not None else ""
         return f"SELECT {columns} FROM {schema!s}.{name!s} {filter}"
 
-    def schema(self, type: str = "sql") -> Any:
+    @classmethod
+    def model(cls, dialect: str = "sql") -> Any:
         result = None
-        name = self.__class__.__name__
-        schema = self.Meta.schema if self.Meta.schema is not None else ""
-        if type == "json":
-            return super(SQLModel, self).schema(type)
-        elif type == "sql" or type == "SQL":
+        clsname = cls.__name__
+        schema = cls.Meta.schema if cls.Meta.schema is not None else ""
+        table = cls.Meta.name if cls.Meta.name is not None else clsname.lower()
+        columns = cls.columns(cls).items()
+        if dialect == "sql" or dialect == "SQL":
             # TODO: using lexers to different types of SQL
-            table = self.Meta.name if self.Meta.name is not None else name
+            # And db_types to translate dataclass types to DB types.
             doc = f"CREATE TABLE IF NOT EXISTS {schema}.{table} (\n"
             cols = []
             pk = []
-            for name, field in self.columns().items():
+            for name, field in columns:
                 key = field.name
                 default = None
                 try:
@@ -64,5 +65,6 @@ class SQLModel(Model, metaclass=ModelMeta):
                     doc, f"CONSTRAINT {cname} PRIMARY KEY ({primary})"
                 )
             doc = doc + "\n);"
-            result = doc
-        return result
+            return doc
+        else:
+            return cls.model(cls, dialect)

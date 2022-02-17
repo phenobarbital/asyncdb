@@ -5,9 +5,7 @@ import types
 import logging
 import traceback
 import rapidjson as to_json
-from .types import DB_TYPES, MODEL_TYPES, JSON_TYPES
 from dataclasses import Field as ff
-from asyncdb import AsyncDB, BaseProvider
 from abc import (
     ABC,
     abstractmethod,
@@ -33,9 +31,12 @@ from typing import (
     ClassVar
 )
 from asyncdb.utils import Msg
-from asyncdb.utils.encoders import (
-    DefaultEncoder
+from asyncdb.utils.types import (
+    DB_TYPES,
+    MODEL_TYPES,
+    JSON_TYPES
 )
+from asyncdb.utils.encoders import DefaultEncoder
 
 
 @dataclass
@@ -270,7 +271,7 @@ def create_dataclass(
     # __class__ = dc
     setattr(dc, "__setattr__", _dc_method_setattr)
     # adding a properly internal json encoder:
-    dc.__encoder__ = DefaultEncoder(
+    dc.__encoder__ = er(
         sort_keys=False
     )
     return dc
@@ -532,7 +533,7 @@ class Model(metaclass=ModelMeta):
     def is_valid(self):
         return bool(self.__valid__)
 
-    def set_connection(self, connection: BaseProvider) -> None:
+    def set_connection(self, connection: "ConnectionBackend") -> None:
         """
         Manually Set the connection of Dataclass.
         """
@@ -541,11 +542,15 @@ class Model(metaclass=ModelMeta):
         except Exception as err:
             raise Exception(err)
 
-    def get_connection(self, dsn: str = None) -> BaseProvider:
+    def get_connection(self, dsn: str = None) -> "ConnectionBackend":
         """
         Getting a database connection and driver based on parameters
         """
         Msg(':: Getting Connection ::', 'DEBUG')
+        print('MAYUYA!!', self)
+        # from asyncdb.providers import _PROVIDERS
+        # print(_PROVIDERS)
+        # classpath = "asyncdb.providers.{provider}".format(provider=cls._name)
         if self.Meta.datasource:
             # TODO: making a connection using a DataSource.
             pass
@@ -572,26 +577,6 @@ class Model(metaclass=ModelMeta):
             await self.Meta.connection.close()
         except Exception as err:
             logging.exception(err)
-
-    def schema(self, type: str = "json") -> Any:
-        result = None
-        name = self.__class__.__name__
-        schema = self.Meta.schema if self.Meta.schema is not None else ""
-        columns = {}
-        if type == "json":
-            for name, field in self.columns().items():
-                print(name, field)
-                key = field.name
-                type = field.type
-                columns[key] = {"name": key, "type": JSON_TYPES[type]}
-            doc = {
-                "name": name,
-                "description": self.__doc__.strip("\n").strip(),
-                "schema": schema,
-                "fields": columns,
-            }
-            result = to_json.dumps(doc)
-        return result
 
     """
     Instance method for Dataclasses.
@@ -750,6 +735,7 @@ class Model(metaclass=ModelMeta):
             except Exception:
                 pass
             try:
+                print(cls.Meta.connection)
                 result = await cls.Meta.connection.mdl_create(
                     model=cls,
                     rows=records
@@ -864,8 +850,30 @@ class Model(metaclass=ModelMeta):
                         cls.Meta.name, err)
                 )
     """
-    Class-based methods for dataclass creation.
+    Class-based methods for dataclass creation, model creation.
     """
+    @classmethod
+    def model(cls, dialect: str = "json") -> Any:
+        result = None
+        clsname = cls.__name__
+        schema = cls.Meta.schema if cls.Meta.schema is not None else ""
+        table = cls.Meta.name if cls.Meta.name is not None else clsname.lower()
+        columns = cls.columns(cls).items()
+        if dialect == 'json':
+            cols = {}
+            for name, field in columns:
+                key = field.name
+                type = field.type
+                cols[key] = {"name": key, "type": JSON_TYPES[type]}
+            doc = {
+                "name": name,
+                "description": cls.__doc__.strip("\n").strip(),
+                "schema": schema,
+                "fields": cols,
+            }
+            print(doc)
+            result = to_json.dumps(doc)
+        return result
 
     @classmethod
     def make_model(cls, name: str, schema: str = "public", fields: list = []):
@@ -883,7 +891,7 @@ class Model(metaclass=ModelMeta):
         name: str,
         schema: str = "public",
         fields: list = [],
-        db: BaseProvider = None,
+        db: "ConnectionBackend" = None,
     ):
         """
         Make Model.
@@ -917,4 +925,5 @@ class Model(metaclass=ModelMeta):
         cls.Meta = m
         return cls
 
+    Meta = Meta
     Meta = Meta

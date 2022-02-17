@@ -15,12 +15,11 @@ import redis
 import time
 
 from asyncdb.exceptions import *
-from asyncdb.providers import (
+from .base import (
     BasePool,
     InitProvider,
-    registerProvider,
 )
-from asyncdb.interfaces import (
+from .interfaces import (
     ConnectionDSNBackend
 )
 
@@ -398,9 +397,3 @@ class mredis(InitProvider, ConnectionDSNBackend):
         finally:
             self.delete("test_123")
             return [result, error]
-
-
-"""
-Registering this Provider
-"""
-registerProvider(mredis)

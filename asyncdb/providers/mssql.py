@@ -22,18 +22,12 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from asyncdb.providers import (
-    BaseProvider,
-    registerProvider,
-    BaseCursor,
-    SQLProvider
-)
-from asyncdb.interfaces import DBCursorBackend
 from asyncdb.utils import (
     EnumEncoder,
     SafeDict,
 )
-
+from .sql import SQLProvider, SQLCursor
+from .interfaces import DBCursorBackend
 
 types_map = {
     1: 'string',
@@ -46,14 +40,9 @@ types_map = {
 }
 
 
-class mssqlCursor(BaseCursor):
-    _connection = None
-
-    async def __aenter__(self) -> "mssqlCursor":
-        if not self._connection:
-            await self.connection()
-        self._cursor = await self._connection.cursor(self._sentence, self._params)
-        return self
+class mssqlCursor(SQLCursor):
+    """ MS SQL Server Cursor. """
+    pass
 
 
 class mssql(DBCursorBackend, SQLProvider):
@@ -396,9 +385,3 @@ class mssql(DBCursorBackend, SQLProvider):
 
     def prepare(self):
         pass
-
-
-"""
-Registering this Provider
-"""
-registerProvider(mssql)

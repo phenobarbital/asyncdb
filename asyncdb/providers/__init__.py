@@ -1,33 +1,6 @@
 """
 AsyncDB Providers.
 """
-from asyncdb.utils.functions import module_exists
-from .base import (
-    BasePool,
-    BaseProvider,
-    InitProvider,
-    BaseCursor,
-    SQLProvider,
-    DDLBackend
-)
-_PROVIDERS = {}
+from .base import InitProvider, BaseProvider
 
-__all__ = [
-    "BasePool",
-    "InitProvider",
-    "BaseProvider",
-    "BaseCursor",
-    "SQLProvider",
-    "DDLBackend"
-]
-
-
-def registerProvider(provider: InitProvider):
-    global _PROVIDERS
-    name = provider.driver()
-    classpath = f"asyncdb.providers.{name}"
-    try:
-        cls = module_exists(name, classpath)
-        _PROVIDERS[name] = cls
-    except ImportError as err:
-        raise ImportError(err)
+__all__ = ['InitProvider', 'BaseProvider', ]

@@ -50,13 +50,6 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from asyncdb.providers import (
-    BasePool,
-    SQLProvider,
-    BaseCursor,
-    registerProvider,
-    DDLBackend
-)
 from asyncdb.utils.encoders import (
     BaseEncoder,
 )
@@ -64,15 +57,19 @@ from asyncdb.utils import (
     SafeDict,
     _escapeString,
 )
-from asyncdb.interfaces import (
+from .interfaces import (
     DBCursorBackend
 )
+from .base import (
+    BasePool
+)
+from .sql import SQLProvider, SQLCursor
 
 max_cached_statement_lifetime = 600
 max_cacheable_statement_size = 1024 * 15
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
+uvloop.install()
 
 class NAVConnection(asyncpg.Connection):
     def _get_reset_query(self):
@@ -361,20 +358,12 @@ class pgPool(BasePool):
             raise ProviderError("Execute Error: {}".format(str(err)))
 
 
-class pglCursor(BaseCursor):
+class pgCursor(SQLCursor):
     _connection: asyncpg.Connection = None
 
-    async def __aenter__(self) -> "pglCursor":
-        if not self._connection:
-            await self.connection()
-        self._cursor = await self._connection.cursor(
-            self._sentence, self._params
-        )
-        return self
 
-
-class pg(DBCursorBackend, DDLBackend, SQLProvider):
-    _provider = "postgresql"
+class pg(DBCursorBackend, SQLProvider):
+    _provider = "pg"
     _syntax = "sql"
     _test_query = "SELECT 1"
 
@@ -1012,9 +1001,3 @@ class pg(DBCursorBackend, DDLBackend, SQLProvider):
         raise NotImplementedError(
             'AsyncPg Error: There is no Database in SQLite'
         )
-
-
-"""
-Registering this Provider
-"""
-registerProvider(pg)

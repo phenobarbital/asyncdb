@@ -2,9 +2,6 @@
 Notes on RethinkDB async Provider
 --------------------
 TODO:
- * Cursor Logic
-    - cursor.next([wait=True])
-    - iter for cursors (for, next, close)
  * Index Manipulation
  * Limits (r.table('marvel').order_by('belovedness').limit(10).run(conn))
  * map reductions
@@ -20,14 +17,12 @@ from typing import (
     Optional,
     Iterable
 )
-from asyncdb.interfaces import (
+from .interfaces import (
     ConnectionDSNBackend,
     DBCursorBackend
 )
-from asyncdb.providers import (
-    BasePool,
+from .base import (
     InitProvider,
-    registerProvider,
     BaseCursor
 )
 from asyncdb.exceptions import (
@@ -56,8 +51,10 @@ import uvloop
 import logging
 import time
 from datetime import datetime
-from threading import Thread
+
+
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+uvloop.install()
 # RT = RethinkDB()
 
 
@@ -1331,9 +1328,3 @@ class rethink(InitProvider, DBCursorBackend):
                     self._result = data
             finally:
                 return self._result
-
-
-"""
-Registering this Provider
-"""
-registerProvider(rethink)
