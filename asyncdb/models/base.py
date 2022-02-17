@@ -38,7 +38,7 @@ from asyncdb.utils.types import (
 )
 from asyncdb.exceptions import NoDataFound
 from asyncdb.utils.encoders import DefaultEncoder
-from asyncdb import AsyncDB
+from asyncdb.utils import module_exists
 
 
 @dataclass
@@ -391,7 +391,7 @@ class ModelMeta(type):
         if cls.Meta.driver is not None:
             if cls.Meta.connection is None:
                 try:
-                    cls.get_connection(cls, dsn=cls.Meta.dsn)
+                    cls.get_connection(cls)
                 except Exception as err:
                     logging.exception(f'Error getting Connection: {err!s}')
         super(ModelMeta, cls).__init__(*args, **kwargs)
@@ -444,13 +444,14 @@ class Model(metaclass=ModelMeta):
         """
         errors = {}
         for name, field in self.columns().items():
+            key = field.name
+            val = self.__dict__[key]
             # print(name, field)
-            if hasattr(field, 'default') and callable(field.default):
+            if hasattr(field, 'default') and callable(val):
+                print('AQUI ', field.name, 'VALUE: ',  val)
                 # default is a function:
                 setattr(self, name, field.default())
-            key = field.name
             # first check: data type hint
-            val = self.__dict__[key]
             val_type = type(val)
             annotated_type = field.type
             if val_type == "type" or val == annotated_type or val is None:
@@ -544,7 +545,7 @@ class Model(metaclass=ModelMeta):
         except Exception as err:
             raise Exception(err)
 
-    def get_connection(self, dsn: str = None) -> "ConnectionBackend":
+    def get_connection(self) -> "ConnectionBackend":
         """
         Getting a database connection and driver based on parameters
         """
@@ -555,15 +556,19 @@ class Model(metaclass=ModelMeta):
         if self.Meta.driver:
             driver = self.Meta.driver
             provider = f"asyncdb.providers.{driver}"
-            if dsn is not None:
+            try:
+                obj = module_exists(driver, provider)
+            except Exception:
+                raise
+            if self.Meta.dsn is not None:
                 try:
-                    self.Meta.connection = AsyncDB(driver, dsn=dsn)
+                    self.Meta.connection = obj(dsn=self.Meta.dsn)
                 except Exception as err:
                     logging.exception(err)
             elif hasattr(self.Meta, "credentials"):
                 params = self.Meta.credentials
                 try:
-                    self.Meta.connection = AsyncDB(driver, params=params)
+                    self.Meta.connection = obj(params=params)
                 except Exception as err:
                     logging.exception(err)
         return self.Meta.connection
@@ -604,12 +609,12 @@ class Model(metaclass=ModelMeta):
         Insert a new Dataclass Model to Database.
         """
         if not self.Meta.connection:
-            self.get_connection(self)
+            self.get_connection()
         result = None
         async with await self.Meta.connection.connection() as conn:
             try:
                 result = await self.Meta.connection.model_insert(
-                    model=self, fields=self.columns()
+                    model=self, connection=conn, fields=self.columns()
                 )
                 return result
             except Exception as err:
@@ -629,7 +634,10 @@ class Model(metaclass=ModelMeta):
         async with await self.Meta.connection.connection() as conn:
             try:
                 result = await self.Meta.connection.model_delete(
-                    model=self, fields=self.columns()
+                    model=self,
+                    fields=self.columns(),
+                    connection=conn,
+                    **kwargs
                 )
                 return result
             except Exception as err:
@@ -734,7 +742,6 @@ class Model(metaclass=ModelMeta):
             except Exception:
                 pass
             try:
-                print(cls.Meta.connection)
                 result = await cls.Meta.connection.mdl_create(
                     model=cls,
                     rows=records

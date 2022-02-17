@@ -4,6 +4,8 @@ SQLProvider.
 Abstract class covering all major functionalities for Relational SQL-based databases.
 """
 import logging
+import traceback
+import asyncpg
 from asyncdb.utils.functions import (
     SafeDict
 )
@@ -517,7 +519,13 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     model.Meta.name, err)
             )
 
-    async def model_delete(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_delete(
+                self,
+                model: "Model",
+                fields: Dict = {},
+                connection: Any = None,
+                **kwargs
+            ):
         """
         Deleting a row Model based on Primary Key.
         """
@@ -540,8 +548,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         sql = sql.format_map(SafeDict(table=table))
         sql = sql.format_map(SafeDict(condition=condition))
         try:
-            result = await self._connection.execute(sql)
-            # DELETE 1
+            result, error = await connection.execute(sql)
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise Exception(
@@ -550,7 +557,13 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             )
         return result
 
-    async def model_insert(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_insert(
+                self,
+                model: "Model",
+                fields: Dict = {},
+                connection: Any = None,
+                **kwargs
+            ):
         """
         Inserting new object onto database.
         """
@@ -590,15 +603,16 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             columns = ",".join(cols)
             values = ",".join(["${}".format(a) for a in range(1, n)])
             insert = f"INSERT INTO {table} ({columns}) VALUES({values}) {primary}"
+            # print(insert)
             logging.debug(f"INSERT: {insert}")
-            stmt = await self._connection.prepare(insert)
+            stmt, error = await connection.prepare(insert)
             result = await stmt.fetchrow(*source, timeout=2)
             logging.debug(stmt.get_statusmsg())
             if result:
                 # setting the values dynamically from returning
                 for f in pk:
                     setattr(model, f, result[f])
-                return result
+                return model
         except asyncpg.exceptions.UniqueViolationError as err:
             raise StatementError("Constraint Error: {}".format(err))
         except Exception as err:
