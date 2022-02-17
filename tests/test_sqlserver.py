@@ -5,7 +5,9 @@ import asyncpg
 from io import BytesIO
 from pathlib import Path
 import pytest_asyncio
-
+import pandas
+import datatable as dt
+from asyncdb.meta import Record, Recordset
 
 DRIVER = 'sqlserver'
 params = {
@@ -133,11 +135,54 @@ async def test_procedure(driver, event_loop):
             "VIBA_ENDPOINT_GET_LIST",
             orgid=93, user_id=1
         )
-        print(result, error)
         pytest.assume(not error)
         pytest.assume(type(result) == list)
         pytest.assume(len(result) > 0)
     assert db.is_closed() is True
+
+
+async def test_formats(conn):
+    pytest.assume(conn.is_connected() is True)
+    conn.use('AdventureWorks2019')
+    sql = "SELECT * FROM Person.Person WHERE FirstName = 'Ken'"
+    conn.output_format('native')  # change output format to native
+    result, error = await conn.query(
+        sql
+    )
+    pytest.assume(not error)
+    pytest.assume(type(result) == list)
+    pytest.assume(len(result) == 6)
+    conn.output_format('record')  # change output format to list of records
+    result, error = await conn.query(
+        sql
+    )
+    pytest.assume(not error)
+    pytest.assume(type(result) == list)
+    for row in result:
+        pytest.assume(type(row) == Record)
+    conn.output_format('recordset')  # change output format to recordset
+    result, error = await conn.query(
+        sql
+    )
+    pytest.assume(not error)
+    pytest.assume(type(result) == Recordset)
+    for row in result:
+        pytest.assume(type(row) == Record)
+    # Bug with Datatable and UUID support.
+    # conn.output_format('datatable')  # change output format to Datatable Frame
+    # result, error = await conn.query(
+    #     sql
+    # )
+    # pytest.assume(not error)
+    # print(result)
+    # pytest.assume(type(result) == dt.Frame)
+    conn.output_format('pandas')  # change output format to Pandas Dataframe
+    result, error = await conn.query(
+        sql
+    )
+    pytest.assume(not error)
+    print(result)
+    pytest.assume(type(result) == pandas.core.frame.DataFrame)
 
 
 def pytest_sessionfinish(session, exitstatus):
