@@ -19,8 +19,6 @@ from .version import (
     __title__, __description__, __version__, __author__, __author_email__
 )
 from .providers import (
-    _PROVIDERS,
-    registerProvider,
     InitProvider,
     BaseProvider
 )
@@ -71,10 +69,6 @@ class AsyncDB:
     def __new__(cls, provider="dummy", **kwargs):
         cls._provider = None
         cls._name = provider
-        if provider in _PROVIDERS:
-            obj = _PROVIDERS[provider]
-            cls._provider = obj(**kwargs)
-            return cls._provider
         classpath = "asyncdb.providers.{provider}".format(provider=cls._name)
         try:
             obj = module_exists(cls._name, classpath)
