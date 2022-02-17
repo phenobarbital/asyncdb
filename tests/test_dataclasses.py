@@ -128,11 +128,22 @@ async def test_dataclass_with_credentials(driver, event_loop):
     ]
     users = await User.create(users)
     for user in users:
-        print(user)
         pytest.assume(type(user) == User)
         # change something:
         user.age = 45
         await user.save()
+    # check if the data is currently good:
+    result, error = await db.query(
+        f"SELECT * FROM {User.Meta.schema}.{User.Meta.name}"
+    )
+    for u in result:
+        pytest.assume(u['age'] == 45)
+    # making more comparisons
+    result, error = await db.queryrow(
+        f"SELECT * FROM {User.Meta.schema}.{User.Meta.name} WHERE lastname = 'Gimenez'"
+    )
+    yolanda = await User.get(age=45, lastname='Gimenez')
+    pytest.assume(result['firstname'] == yolanda.firstname)
     # get all users:
     users = await User.all()
     print('get all users: ')
