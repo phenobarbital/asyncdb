@@ -24,7 +24,6 @@ from .outputs import OutputFactory
 from asyncdb.exceptions import ProviderError, EmptyStatement
 
 
-
 class BasePool(PoolBackend, ConnectionDSNBackend):
     """BasePool.
 
@@ -92,6 +91,8 @@ class InitProvider(ConnectionBackend, DatabaseBackend):
         self._parameters = ()
         self._serializer = None
         self._row_format = 'native'
+        self._connected: bool = False
+        self._connection = None
         ConnectionBackend.__init__(self, loop=loop, params=params, **kwargs)
         DatabaseBackend.__init__(self, params=params, **kwargs)
         self._initialized_on = None
@@ -149,8 +150,11 @@ class BaseProvider(InitProvider, ConnectionDSNBackend):
     init_func: Optional[Callable] = None
 
     def __init__(self, dsn="", loop=None, params={}, **kwargs):
-        super(BaseProvider, self).__init__(
-            dsn=dsn, loop=loop, params=params, **kwargs
+        InitProvider.__init__(
+            self,
+            loop=loop,
+            params=params,
+            **kwargs
         )
         ConnectionDSNBackend.__init__(
             self,

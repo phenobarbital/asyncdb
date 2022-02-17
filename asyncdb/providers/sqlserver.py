@@ -78,7 +78,6 @@ class sqlserver(mssql):
 
     Microsoft SQL Server using DB-API connection
     """
-
     _provider = "sqlserver"
 
     async def connection(self):
@@ -88,17 +87,17 @@ class sqlserver(mssql):
         self._connection = None
         self._connected = False
         try:
-            self._params["appname"] = self.application_name
-            self._params["as_dict"] = True
-            self._params["timeout"] = self._timeout
-            self._params["charset"] = self._charset.upper()
-            self._params["tds_version"] = "8.0"
-            self._connection = pymssql.connect(**self._params)
+            self.params["appname"] = self.application_name
+            self.params["as_dict"] = True
+            self.params["timeout"] = self._timeout
+            self.params["charset"] = self._charset.upper()
+            self.params["tds_version"] = "8.0"
+            self._connection = pymssql.connect(**self.params)
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
-            if 'database' in self._params:
-                self.use(self._params["database"])
+            if 'database' in self.params:
+                self.use(self.params["database"])
         except Exception as err:
             print(err)
             self._connection = None

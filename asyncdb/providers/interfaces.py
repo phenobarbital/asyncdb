@@ -176,8 +176,8 @@ class ConnectionBackend(ABC):
             self._max_queries = 300
         try:
             self.params = params.copy()
-        except TypeError:
-            pass
+        except (TypeError, AttributeError):
+            self.params = {}
         if loop:
             self._loop = loop
         else:
@@ -290,10 +290,13 @@ class ConnectionDSNBackend(ABC):
         if dsn:
             self._dsn = dsn
         else:
-            self._dsn = self.create_dsn(params)
+            try:
+                self._dsn = self.create_dsn(params)
+            except Exception:
+                self._dsn = None
         try:
             self._params = params.copy()
-        except TypeError:
+        except (TypeError, AttributeError):
             self._params = {}
 
     def create_dsn(self, params: Dict):
@@ -543,6 +546,7 @@ class DBCursorBackend(ABC):
             *args,
             **kwargs
     ) -> None:
+        print('::: DB CURSOR BACKEND ::: ')
         self._columns: List[Any] = []
         self._attributes = None
         self._result: List[Any] = []
@@ -555,8 +559,10 @@ class DBCursorBackend(ABC):
             module = importlib.import_module(cls, package="providers")
             self.__cursor__ = getattr(module, cursor)
         except (ImportError, Exception) as err:
+            print(err)
             logging.exception(f"Error Loading Cursor Class: {err}")
             self.__cursor__ = None
+        print('::: END CURSOR BACKEND')
 
     def cursor(
                     self,

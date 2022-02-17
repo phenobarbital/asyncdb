@@ -71,6 +71,7 @@ max_cacheable_statement_size = 1024 * 15
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 uvloop.install()
 
+
 class NAVConnection(asyncpg.Connection):
     def _get_reset_query(self):
         return None
@@ -362,7 +363,7 @@ class pgCursor(SQLCursor):
     _connection: asyncpg.Connection = None
 
 
-class pg(DBCursorBackend, SQLProvider):
+class pg(SQLProvider, DBCursorBackend):
     _provider = "pg"
     _syntax = "sql"
     _test_query = "SELECT 1"

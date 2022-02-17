@@ -32,7 +32,8 @@ class sqliteCursor(SQLCursor):
         )
         return self
 
-class sqlite(DBCursorBackend, SQLProvider):
+
+class sqlite(SQLProvider, DBCursorBackend):
     _provider: str = 'sqlite'
     _syntax: str = 'sql'
     _dsn: str = "{database}"
