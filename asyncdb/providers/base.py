@@ -10,17 +10,19 @@ from typing import (
     Optional,
     Any,
     Iterable,
-    List
+    List,
+    Dict
 )
-from asyncdb.interfaces import (
+from .interfaces import (
     PoolBackend,
     ConnectionDSNBackend,
     ConnectionBackend,
     DatabaseBackend,
     CursorBackend
 )
+from .outputs import OutputFactory
 from asyncdb.exceptions import ProviderError, EmptyStatement
-from asyncdb.providers.outputs import OutputFactory
+
 
 
 class BasePool(PoolBackend, ConnectionDSNBackend):
@@ -184,53 +186,6 @@ class BaseDBProvider(BaseProvider):
         pass
 
 
-class SQLProvider(BaseDBProvider):
-    """SQLProvider.
-
-    Driver for SQL-based providers.
-    """
-    _syntax = "sql"
-    _test_query = "SELECT 1"
-
-    def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
-        self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
-        super(SQLProvider, self).__init__(
-            dsn=dsn, loop=loop, params=params, **kwargs
-        )
-
-    async def close(self, timeout: int = 5):
-        """
-        Closing Method for any SQL Connector
-        """
-        try:
-            if self._connection:
-                if self._cursor:
-                    await self._cursor.close()
-                await asyncio.wait_for(
-                    self._connection.close(), timeout=timeout
-                )
-        except Exception as err:
-            raise ProviderError(
-                f"{__name__!s}: Closing Error: {err!s}"
-            )
-        finally:
-            self._connection = None
-            self._connected = False
-            return True
-
-    # alias for connection
-    disconnect = close
-
-    async def valid_operation(self, sentence: Any):
-        error = None
-        if not sentence:
-            raise EmptyStatement(
-                f"{__name__!s} Error: cannot use an empty SQL sentence"
-            )
-        if not self._connection:
-            await self.connection()
-
-
 class BaseCursor(CursorBackend):
     """
     baseCursor.
@@ -240,19 +195,94 @@ class BaseCursor(CursorBackend):
     _provider: BaseProvider
 
 
-class DDLBackend(ABC):
+class ModelBackend(ABC):
     """
-    DDL Backend for Creation of SQL Objects.
+    Interface for Backends with Dataclass-based Models Support.
     """
 
+    """
+    Class-based Methods.
+    """
     @abstractmethod
-    async def create(
-        self,
-        object: str = 'table',
-        name: str = '',
-        fields: Optional[List] = None
-    ) -> Optional[Any]:
+    async def mdl_create(self, model: "Model", rows: list):
         """
-        Create is a generic method for Database Objects Creation.
+        Create all records based on a dataset and return result.
+        """
+        pass
+
+    @abstractmethod
+    async def mdl_delete(self, model: "Model", conditions: dict, **kwargs):
+        """
+        Deleting some records using Model.
+        """
+        pass
+
+    @abstractmethod
+    async def mdl_update(self, model: "Model", conditions: dict, **kwargs):
+        """
+        Updating records using Model.
+        """
+        pass
+
+    @abstractmethod
+    async def mdl_filter(self, model: "Model", **kwargs):
+        """
+        Filter a Model based on some criteria.
+        """
+        pass
+
+    @abstractmethod
+    async def mdl_all(self, model: "Model", **kwargs):
+        """
+        Get all records on a Model.
+        """
+        pass
+
+    @abstractmethod
+    async def mdl_get(self, model: "Model", **kwargs):
+        """
+        Get one single record from Model.
+        """
+        pass
+
+    @abstractmethod
+    async def model_select(self, model: "Model", fields: Dict = {}, **kwargs):
+        """
+        Get queries with model.
+        """
+        pass
+
+    @abstractmethod
+    async def model_all(self, model: "Model", fields: Dict = {}):
+        """
+        Get queries with model.
+        """
+        pass
+
+    @abstractmethod
+    async def model_get(self, model: "Model", fields: Dict = {}, **kwargs):
+        """
+        Get one row from model.
+        """
+        pass
+
+    @abstractmethod
+    async def model_delete(self, model: "Model", fields: Dict = {}, **kwargs):
+        """
+        delete a row from model.
+        """
+        pass
+
+    @abstractmethod
+    async def model_save(self, model: "Model", fields: Dict = {}, **kwargs):
+        """
+        save a row from model.
+        """
+        pass
+
+    @abstractmethod
+    async def model_insert(self, model: "Model", fields: Dict = {}, **kwargs):
+        """
+        insert a row from model.
         """
         pass

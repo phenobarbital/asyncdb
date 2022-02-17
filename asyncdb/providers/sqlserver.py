@@ -26,19 +26,17 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from asyncdb.providers import (
-    BaseProvider,
-    registerProvider,
+from .sql import (
     SQLProvider,
-    BaseCursor
+    SQLCursor
 )
 from asyncdb.utils import (
     EnumEncoder,
-    SafeDict,
+    SafeDict
 )
 
 
-class sqlserverCursor(BaseCursor):
+class sqlserverCursor(SQLCursor):
     _connection = None
 
     async def __aenter__(self) -> "sqlserverCursor":
@@ -288,9 +286,3 @@ class sqlserver(mssql):
         finally:
             self._generated = datetime.now() - startTime
             return [self._result, error]
-
-
-"""
-Registering this Provider
-"""
-registerProvider(sqlserver)

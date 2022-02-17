@@ -1,14 +1,29 @@
-"""
-SQLProvider.
+import json
+import traceback
+import importlib
+import logging
+import asyncio
+from abc import (
+    ABC,
+    abstractmethod,
+)
+from asyncdb.providers import BaseProvider
+from asyncdb.interfaces import ModelBackend
 
-Abstract class covering all major functionalities for Relational SQL-based databases.
-"""
 from asyncdb.utils.functions import (
     SafeDict
 )
-from asyncdb.utils.types import Entity
+from asyncdb.utils.models import Entity, Model
 from asyncdb.utils.encoders import BaseEncoder
+from asyncdb.exceptions import (
+    EmptyStatement,
+    NoDataFound,
+    ProviderError,
+    StatementError,
+)
 from dataclasses import is_dataclass, asdict
+import asyncpg
+
 from typing import (
     Any,
     List,
@@ -16,38 +31,117 @@ from typing import (
     Iterable,
     Optional,
 )
-from .base import BaseDBProvider, ModelBackend, BaseCursor
 
 
-class SQLCursor(BaseCursor):
-    _connection = None
+class baseCursor(ABC):
+    """
+    baseCursor.
 
-    async def __aenter__(self) -> "BaseCursor":
-        if not self._connection:
-            await self.connection()
-        self._cursor = await self._connection.cursor(
-            self._sentence, self._params
-        )
+    Iterable Object for Cursor-Like functionality
+    """
+
+    _provider: BaseProvider
+
+    def __init__(
+        self,
+        provider: BaseProvider,
+        sentence: str,
+        result: Optional[List] = None,
+        parameters: Iterable[Any] = None,
+    ):
+        # self._cursor = None
+        self._provider = provider
+        self._result = result
+        self._sentence = sentence
+        self._params = parameters
+        self._connection = self._provider.get_connection()
+
+    async def __aenter__(self) -> "baseCursor":
+        self._cursor = await self._connection.cursor()
+        await self._cursor.execute(self._sentence, self._params)
         return self
 
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        return await self._provider.close()
 
-class SQLProvider(BaseDBProvider, ModelBackend):
-    """SQLProvider.
+    def __aiter__(self) -> "baseCursor":
+        """The cursor is also an async iterator."""
+        return self
 
-    Driver for SQL-based providers.
+    async def __anext__(self):
+        """Use `cursor.fetchone()` to provide an async iterable."""
+        row = await self._cursor.fetchone()
+        if row is not None:
+            return row
+        else:
+            raise StopAsyncIteration
+
+    @abstractmethod
+    async def execute(sentence: Any, params: dict) -> Any:
+        pass
+
+    async def fetchone(self) -> Optional[Dict]:
+        return await self._cursor.fetchone()
+
+    async def fetchmany(self, size: int = None) -> Iterable[List]:
+        return await self._cursor.fetchmany(size)
+
+    async def fetchall(self) -> Iterable[List]:
+        return await self._cursor.fetchall()
+
+
+class SQLProvider(BaseProvider, ModelBackend):
+    """
+    SQLProvider.
+
+    Driver methods for SQL-based providers
     """
     _syntax = "sql"
     _test_query = "SELECT 1"
 
     def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
+        self._prepared = None
+        try:
+            # dynamic loading of Cursor Class
+            cls = f"asyncdb.providers.{self._provider}"
+            cursor = f"{self._provider}Cursor"
+            module = importlib.import_module(cls, package="providers")
+            self.__cursor__ = getattr(module, cursor)
+        except ImportError as err:
+            logging.exception(f"Error Loading Cursor Class: {err}")
+            pass
         super(SQLProvider, self).__init__(
             dsn=dsn, loop=loop, params=params, **kwargs
         )
+        BaseProvider.__init__(self, dsn, loop, params, **kwargs)
 
-    async def close(self, timeout: int = 5):
+    """
+    Context magic Methods
+    """
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback, *args):
+        self.terminate()
+        pass
+
+    async def __aenter__(self) -> Any:
+        if not self._connection:
+            await self.connection()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        # clean up anything you need to clean up
+        try:
+            return await self.close(timeout=5)
+        except Exception as err:
+            self._logger.exception(err)
+
+    async def close(self, timeout=5):
         """
-        Closing Method for any SQL Connector
+        Closing Method for SQL Connector
         """
         try:
             if self._connection:
@@ -58,28 +152,189 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                 )
         except Exception as err:
             raise ProviderError(
-                f"{__name__!s}: Closing Error: {err!s}"
-            )
+                "{}: Closing Error: {}".format(__name__, str(err)))
         finally:
             self._connection = None
             self._connected = False
             return True
 
-    # alias for connection
-    disconnect = close
+    async def connect(self, **kwargs):
+        """
+        Get a proxy connection, alias of connection
+        """
+        self._connection = None
+        self._connected = False
+        return await self.connection(self, **kwargs)
+
+    async def release(self):
+        """
+        Release a Connection
+        """
+        await self.close()
 
     async def valid_operation(self, sentence: Any):
-        """
-        Returns if is a valid operation.
-        TODO: add some validations.
-        """
-        error = None
+        self._result = None
         if not sentence:
             raise EmptyStatement(
-                f"{__name__!s} Error: cannot use an empty SQL sentence"
+                "Error: cannot sent an empty SQL sentence"
             )
         if not self._connection:
             await self.connection()
+
+    def cursor(
+                self,
+                sentence: str,
+                parameters: Iterable[Any] = None
+            ) -> Iterable:
+        """ Returns a iterable Cursor Object """
+        if not sentence:
+            raise EmptyStatement(
+                "SQL Error: Cannot sent an empty SQL sentence"
+            )
+        if parameters is None:
+            parameters = []
+        try:
+            return self.__cursor__(
+                self,
+                sentence=sentence,
+                parameters=parameters
+            )
+        except Exception as err:
+            print(err)
+            return []
+
+    """
+    Meta-Operations
+    """
+
+    def table(self, table):
+        try:
+            return self._query_raw.format_map(SafeDict(table=table))
+        except Exception as e:
+            print(e)
+            return False
+
+    def fields(self, sentence, fields=None):
+        _sql = False
+        if not fields:
+            _sql = sentence.format_map(SafeDict(fields="*"))
+        elif type(fields) == str:
+            _sql = sentence.format_map(SafeDict(fields=fields))
+        elif type(fields) == list:
+            _sql = sentence.format_map(SafeDict(fields=",".join(fields)))
+        return _sql
+
+    """
+    where
+      add WHERE conditions to SQL
+    """
+
+    def where(self, sentence, where):
+        sql = ""
+        where_string = ""
+        if not where:
+            sql = sentence.format_map(SafeDict(where_cond=""))
+        elif type(where) == dict:
+            where_cond = []
+            for key, value in where.items():
+                # print("KEY {}, VAL: {}".format(key, value))
+                if type(value) == str or type(value) == int:
+                    if value == "null" or value == "NULL":
+                        where_string.append("%s IS NULL" % (key))
+                    elif value == "!null" or value == "!NULL":
+                        where_string.append("%s IS NOT NULL" % (key))
+                    elif key.endswith("!"):
+                        where_cond.append("%s != %s" % (key[:-1], value))
+                    else:
+                        if (
+                            type(value) == str
+                            and value.startswith("'")
+                            and value.endswith("'")
+                        ):
+                            where_cond.append("%s = %s" %
+                                              (key, "{}".format(value)))
+                        elif type(value) == int:
+                            where_cond.append("%s = %s" %
+                                              (key, "{}".format(value)))
+                        else:
+                            where_cond.append(
+                                "%s = %s" % (key, "'{}'".format(value))
+                            )
+                elif type(value) == bool:
+                    val = str(value)
+                    where_cond.append("%s = %s" % (key, val))
+                else:
+                    val = ",".join(map(str, value))
+                    if type(val) == str and "'" not in val:
+                        where_cond.append("%s IN (%s)" %
+                                          (key, "'{}'".format(val)))
+                    else:
+                        where_cond.append("%s IN (%s)" % (key, val))
+            # if 'WHERE ' in sentence:
+            #    where_string = ' AND %s' % (' AND '.join(where_cond))
+            # else:
+            where_string = " WHERE %s" % (" AND ".join(where_cond))
+            print("WHERE cond is %s" % where_string)
+            sql = sentence.format_map(SafeDict(where_cond=where_string))
+        elif type(where) == str:
+            where_string = where
+            if not where.startswith("WHERE"):
+                where_string = " WHERE %s" % where
+            sql = sentence.format_map(SafeDict(where_cond=where_string))
+        else:
+            sql = sentence.format_map(SafeDict(where_cond=""))
+        del where
+        del where_string
+        return sql
+
+    def limit(self, sentence, limit: int = 1):
+        """
+        LIMIT
+          add limiting to SQL
+        """
+        if sentence:
+            return "{q} LIMIT {limit}".format(q=sentence, limit=limit)
+        return self
+
+    def orderby(self, sentence, ordering=[]):
+        """
+        LIMIT
+          add limiting to SQL
+        """
+        if sentence:
+            if type(ordering) == str:
+                return "{q} ORDER BY {ordering}".format(
+                    q=sentence, ordering=ordering
+                )
+            elif type(ordering) == list:
+                return "{q} ORDER BY {ordering}".format(
+                    q=sentence, ordering=", ".join(ordering)
+                )
+        return self
+
+    def get_query(self, sentence):
+        """
+        get_query
+          Get formmated query
+        """
+        sql = sentence
+        try:
+            # remove fields and where_cond
+            sql = sentence.format_map(SafeDict(fields="*", where_cond=""))
+            if not self.connected:
+                self.connection()
+            prepared, error = self._loop.run_until_complete(self.prepare(sql))
+            if not error:
+                self._columns = self.get_columns()
+            else:
+                return False
+        except (ProviderError, StatementError) as err:
+            logging.exception(err)
+            return False
+        except Exception as err:
+            logging.exception(err)
+            return False
+        return sql
 
     async def column_info(self, table):
         """
@@ -144,7 +399,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         else:
             return result
 
-    async def mdl_update(self, model: "Model", conditions: dict, **kwargs):
+    async def mdl_update(self, model: Model, conditions: dict, **kwargs):
         """
         Updating some records and returned.
         """
@@ -182,7 +437,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     model.Meta.name, err)
             )
 
-    async def mdl_create(self, model: "Model", rows: list):
+    async def mdl_create(self, model: Model, rows: list):
         """
         Create all records based on a dataset and return result.
         TODO: migrating from asyncpg prepared.
@@ -256,7 +511,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         else:
             return results
 
-    async def mdl_delete(self, model: "Model", conditions: dict, **kwargs):
+    async def mdl_delete(self, model: Model, conditions: dict, **kwargs):
         """
         Deleting some records and returned.
         """
@@ -290,7 +545,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                 "Error on Deleting table {}: {}".format(model.Meta.name, err)
             )
 
-    async def mdl_filter(self, model: "Model", **kwargs):
+    async def mdl_filter(self, model: Model, **kwargs):
         """
         Filtering.
         """
@@ -324,7 +579,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     model.Meta.name, err)
             )
 
-    async def mdl_all(self, model: "Model", **kwargs):
+    async def mdl_all(self, model: Model, **kwargs):
         """
         Get all records on database
         """
@@ -344,7 +599,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     model.Meta.name, err)
             )
 
-    async def mdl_get(self, model: "Model", **kwargs):
+    async def mdl_get(self, model: Model, **kwargs):
         """
         Get a single record.
         """
@@ -381,7 +636,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
     """
     Instance-based Dataclass Methods.
     """
-    async def model_save(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_save(self, model: Model, fields: Dict = {}, **kwargs):
         """
         Updating a Model object based on primary Key or conditions
         TODO: check if row doesnt exists, then, insert
@@ -433,7 +688,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     model.Meta.name, err)
             )
 
-    async def model_select(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_select(self, model: Model, fields: Dict = {}, **kwargs):
         cols = []
         source = {}
         try:
@@ -463,7 +718,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     model.Meta.name, err)
             )
 
-    async def model_all(self, model: "Model", fields: Dict = {}):
+    async def model_all(self, model: Model, fields: Dict = {}):
         cols = []
         source = {}
         try:
@@ -487,7 +742,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     model.Meta.name, err)
             )
 
-    async def model_get(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_get(self, model: Model, fields: Dict = {}, **kwargs):
         try:
             table = f"{model.Meta.schema}.{model.Meta.name}"
         except Exception:
@@ -517,7 +772,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     model.Meta.name, err)
             )
 
-    async def model_delete(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_delete(self, model: Model, fields: Dict = {}, **kwargs):
         """
         Deleting a row Model based on Primary Key.
         """
@@ -550,7 +805,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             )
         return result
 
-    async def model_insert(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_insert(self, model: Model, fields: Dict = {}, **kwargs):
         """
         Inserting new object onto database.
         """

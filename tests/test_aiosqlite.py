@@ -8,10 +8,11 @@ import polars as pl
 import datatable as dt
 from asyncdb.meta import Record, Recordset
 
-pytestmark = pytest.mark.asyncio
-
 DRIVER = "sqlite"
 PARAMS = {"database": ":memory:"}
+
+
+pytestmark = pytest.mark.asyncio
 
 
 async def test_connect(event_loop):
@@ -232,6 +233,7 @@ async def test_formats(event_loop):
             pytest.assume(type(row) == Record)
             pytest.assume(len(row.iata) == 3)
             print(row)
+    assert db.is_closed() is True
 
 
 def pytest_sessionfinish(session, exitstatus):

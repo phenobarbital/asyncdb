@@ -167,7 +167,7 @@ user.perolito = True
 print(user, user.perolito)
 
 Msg('=== Exporting Model Schema: ')
-print(user.schema(type='json'))
+print(PyUser.model(dialect='json'))
 
 Msg('=== Third: Working with nested Dataclasses: ')
 
@@ -300,132 +300,140 @@ print(instance)
 assert instance.is_valid() or 'Not Valid'
 assert instance == Bar(foo=Foo(value=[1, 2]))
 
-#
-# Msg('Working with Data Models: ')
-#
-#
-# def auto_now_add(*args, **kwargs):
-#     return uuid.uuid4()
-#
-#
-# class Users(SQLModel):
-#     """
-#     User Basic Structure
-#     """
-#     id: uuid.UUID = Column(
-#         required=True,
-#         primary_key=True,
-#         default=auto_now_add,
-#         db_default='uuid_generate_v4()'
-#     )
-#     firstname: str
-#     lastname: str
-#     name: str = Column(required=True, default='John Doe')
-#     age: int = Column(default=18, required=True)
-#     signup_ts: datetime = Column(default=now, db_default='now()')
-#
-#     def __post_init__(self):
-#         self.name = f"{self.firstname} {self.lastname}"
-#         super(Users, self).__post_init__()
-#         print('Columns Are: ', self.columns())
-#
-#     class Meta:
-#         name = 'users'
-#         schema = 'public'
-#         driver = 'pg'
-#         credentials = {
-#             'user': 'troc_pgdata',
-#             'password': '12345678',
-#             'host': 'localhost',
-#             'port': '5432',
-#             'database': 'navigator_dev',
-#         }
-#         strict = False
-#
-#
-# u = {
-#     "firstname": 'Super',
-#     "lastname": 'Sayayin',
-#     "age": 9000
-# }
-# u = Users()
-# print(u.get_connection(), u.get_connection().is_connected())
-#
-# Msg('Printing Model DDL: ')
-# print(u.schema(type='sql'))
 
+Msg('Working with Data Models: ')
+
+
+def auto_now_add(*args, **kwargs):
+    return uuid.uuid4()
+
+
+class User(SQLModel):
+    """
+    User Basic Structure
+    """
+    id: uuid.UUID = Column(
+        required=True,
+        primary_key=True,
+        default=auto_now_add,
+        db_default='uuid_generate_v4()'
+    )
+    firstname: str
+    lastname: str
+    name: str = Column(required=True, default='John Doe')
+    age: int = Column(default=18, required=True)
+    signup_ts: datetime = Column(default=now, db_default='now()')
+
+    def __post_init__(self):
+        self.name = f"{self.firstname} {self.lastname}"
+        super(User, self).__post_init__()
+        print('Columns Are: ', self.columns())
+
+    class Meta:
+        name = 'users'
+        schema = 'public'
+        driver = 'pg'
+        credentials = {
+            'user': 'troc_pgdata',
+            'password': '12345678',
+            'host': 'localhost',
+            'port': '5432',
+            'database': 'navigator_dev',
+        }
+        strict = False
+
+
+print('Model: ', User)
+Msg('Printing Model DDL: ')
+print(User.model(dialect='sql'))
+data = {
+    "firstname": 'Super',
+    "lastname": 'Sayayin',
+    "age": 9000
+}
+u = User(**data)
+print(u.get_connection(), u.get_connection().is_connected())
+
+
+#TODO: definition of Operators
+# from models.operators import or, not
+# or(value) returns OR instead AND
+# not if value is an IN, returns NOT IN
+async def get_user(age):
+    user = await User.get(age=age)
+    user.name = 'Jesus Ignacio Jose Lara Gimenez'
+    user.age += 1
+    print('User is: ', user)
+    await user.save()
+    user.age = 42
+    await user.save()
+
+
+async def new_user():
+    Msg('Inserting and deleting a user: ', 'DEBUG')
+    data = {
+        "firstname": 'Román',
+        "lastname": 'Lara',
+        "name": 'Rafael David Lara'
+    }
+    u = User(**data)
+    await u.insert()
+    print(u.json())
+    # also, we can deleting as well
+    await u.delete()
+
+
+async def get_all_users():
+    users = await User.all()
+    print('get all users: ')
+    for user in users:
+        print(user)
+
+
+async def get_users(**kwargs):
+    users = await User.filter(**kwargs)
+    print('get some users: ')
+    for user in users:
+        user.age = 48
+        await user.save()
+        print(user)
+
+
+async def update_users(filter: list, **kwargs):
+    users = await User.update(filter, **kwargs)
+    print('Users updated:')
+    for user in users:
+        print(user)
+
+
+async def create_users(users):
+    users = await User.create(users)
+    print('Users created:')
+    for user in users:
+        print(user)
+"""
+async methods:
+  get
+  filter
+  -
+  fetch
+  fetchone
+  query
+"""
+users = [
+    {"firstname": "Arnoldo", "lastname": "Lara Gimenez",
+        "name": "Arnoldo Lara", "age": 52},
+    {"firstname": "Yolanda", "lastname": "Lara Gimenez",
+        "name": "Yolanda Lara", "age": 49},
+    {"firstname": "Yolanda", "lastname": "Gimenez",
+        "name": "Yolanda Gimenez", "age": 72}
+]
+asyncio.run(create_users(users))
+asyncio.run(new_user())
 #
-# #TODO: definition of Operators
-# # from models.operators import or, not
-# # or(value) returns OR instead AND
-# # not if value is an IN, returns NOT IN
-# async def get_user(age):
-#     user = await User.get(age=age)
-#     user.name = 'Jesus Ignacio Jose Lara Gimenez'
-#     user.age+=1
-#     print('User is: ', user)
-#     await user.save()
-#     user.age = 42
-#     await user.save()
-#
-# async def new_user():
-#     Msg('Inserting and deleting a user: ', 'DEBUG')
-#     data = {
-#         "firstname": 'Román',
-#         "lastname": 'Lara',
-#         "name": 'Rafael David Lara'
-#     }
-#     u = User(**data)
-#     await u.insert()
-#     print(u.json())
-#     # also, we can deleting as well
-#     await u.delete()
-#
-# async def get_all_users():
-#     users = await User.all()
-#     print('get all users: ')
-#     for user in users:
-#         print(user)
-#
-# async def get_users(**kwargs):
-#     users = await User.filter(**kwargs)
-#     print('get users: ')
-#     for user in users:
-#         user.age = 48
-#         await user.save()
-#         print(user)
-#
-# async def update_users(filter: list, **kwargs):
-#     users = await User.update(filter, **kwargs)
-#     print('Users updated:')
-#     for user in users:
-#         print(user)
-#
-# async def create_users(users):
-#     users = await User.create(users)
-#     print('Users created:')
-#     for user in users:
-#         print(user)
-# """
-# async methods:
-#   get
-#   filter
-#   -
-#   fetch
-#   fetchone
-#   query
-# """
-# # asyncio.run(new_user())
-# # asyncio.run(get_user(age=42))
-# # asyncio.run(get_all_users())
-# # asyncio.run(get_users(age=48, firstname='Román'))
-# # asyncio.run(update_users(filter={"age": 42, "lastname": 'Lara'}, firstname='Jesús'))
-# users = [
-#     {"firstname":"Arnoldo","lastname":"Lara Gimenez","name":"Arnoldo Lara","age": 52},
-#     {"firstname":"Yolanda","lastname":"Lara Gimenez","name":"Yolanda Lara","age": 49},
-#     {"firstname":"Yolanda","lastname":"Gimenez","name":"Yolanda Gimenez","age": 72}
-# ]
-# asyncio.run(create_users(users))
-# asyncio.run(create_users(users))
-# ]
-# asyncio.run(create_users(users))
+# asyncio.run(get_user(age=42))
+# asyncio.run(get_all_users())
+# asyncio.run(get_users(age=48, firstname='Román'))
+# asyncio.run(update_users(
+#     filter={"age": 42, "lastname": 'Lara'}, firstname='Jesús')
+# )

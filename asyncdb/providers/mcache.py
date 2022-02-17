@@ -11,10 +11,9 @@ import time
 
 from asyncdb.exceptions import *
 
-from asyncdb.providers import (
+from .base import (
     BasePool,
     InitProvider,
-    registerProvider,
 )
 
 
@@ -197,9 +196,3 @@ class mcache(InitProvider):
             raise ProviderError("Get Memcache Error: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
-
-
-"""
-Registering this Provider
-"""
-registerProvider(mcache)

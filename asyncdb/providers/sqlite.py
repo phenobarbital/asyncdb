@@ -15,16 +15,11 @@ from asyncdb.exceptions import (
     NoDataFound,
     ProviderError
 )
-from asyncdb.providers import (
-    registerProvider,
-    BaseCursor,
-    SQLProvider,
-    DDLBackend
-)
-from asyncdb.interfaces import DBCursorBackend
+from .sql import SQLProvider, SQLCursor
+from .interfaces import DBCursorBackend
 
 
-class sqliteCursor(BaseCursor):
+class sqliteCursor(SQLCursor):
     """
     Cursor Object for SQLite.
     """
@@ -37,8 +32,7 @@ class sqliteCursor(BaseCursor):
         )
         return self
 
-
-class sqlite(DBCursorBackend, DDLBackend, SQLProvider):
+class sqlite(DBCursorBackend, SQLProvider):
     _provider: str = 'sqlite'
     _syntax: str = 'sql'
     _dsn: str = "{database}"
@@ -332,7 +326,3 @@ class sqlite(DBCursorBackend, DDLBackend, SQLProvider):
                 raise ProviderError(f"Error in Object Creation: {err!s}")
         else:
             raise RuntimeError(f'SQLite: invalid Object type {object!s}')
-
-
-# Registering this Provider
-registerProvider(sqlite)

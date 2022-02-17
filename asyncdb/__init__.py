@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
 """AsyncDB.
 
 Asyncio-based database connectors for NAV.
 """
-# -*- coding: utf-8 -*-
 import asyncio
 import uvloop
 
@@ -10,20 +10,22 @@ from .meta import (
     asyncORM,
     asyncRecord,
 )
-from asyncdb.exceptions import (
+from .exceptions import (
     ProviderError,
     asyncDBException,
 )
-from asyncdb.providers import (
-    _PROVIDERS,
-    registerProvider,
-    BaseProvider
-)
-from asyncdb.utils.functions import module_exists
+from .utils import module_exists
 from .version import (
     __title__, __description__, __version__, __author__, __author_email__
 )
-__all__ = ["asyncORM", "asyncRecord", "registerProvider", "BaseProvider"]
+from .providers import (
+    _PROVIDERS,
+    registerProvider,
+    InitProvider,
+    BaseProvider
+)
+
+__all__ = ["InitProvider", "BaseProvider"]
 
 # install uvloop and set as default loop for asyncio.
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -56,7 +58,6 @@ class AsyncPool:
                 )
         except Exception:
             raise
-            # raise ProviderError(message=str(err), code=404)
 
 
 class AsyncDB:
@@ -84,5 +85,5 @@ class AsyncDB:
                 raise asyncDBException(
                     message="Cannot Load provider {}".format(cls._name)
                 )
-        except Exception as err:
-            raise ProviderError(message=str(err), code=404)
+        except Exception:
+            raise

@@ -45,11 +45,9 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from asyncdb.providers import (
-    SQLProvider,
-    BaseCursor,
-    registerProvider
-)
+from .sql import SQLProvider
+from .base import BaseCursor
+
 from asyncdb.utils import SafeDict
 from asyncdb.utils.encoders import (
     BaseEncoder,
@@ -57,6 +55,7 @@ from asyncdb.utils.encoders import (
 from asyncdb.meta import Record, Recordset
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+uvloop.install()
 
 
 class postgres(threading.Thread, SQLProvider):
@@ -707,9 +706,3 @@ class postgres(threading.Thread, SQLProvider):
         raise NotImplementedError(
             'AsyncPg Error: There is no Database in SQLite'
         )
-
-
-"""
-Registering this Provider
-"""
-registerProvider(postgres)

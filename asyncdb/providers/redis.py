@@ -7,20 +7,21 @@ TODO:
  - use jsonpath to query json-objects
  - implements lists and hash datatypes
 """
-
-from asyncdb.providers import (
-    BasePool,
-    BaseProvider,
-    registerProvider,
-)
-from asyncdb.exceptions import *
 import asyncio
 import uvloop
 import aioredis
-from aioredis.connection import Connection, to_bool
 import objectpath
 import time
+from aioredis.connection import Connection, to_bool
+
+from .base import (
+    BasePool,
+    BaseProvider,
+)
+from asyncdb.exceptions import *
+
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+uvloop.install()
 
 
 class redisPool(BasePool):
@@ -501,9 +502,3 @@ class redis(BaseProvider):
         except Exception as err:
             raise ProviderError(
                 "Redis lrange Unknown Error: {}".format(str(err)))
-
-
-"""
-Registering this Provider
-"""
-registerProvider(redis)

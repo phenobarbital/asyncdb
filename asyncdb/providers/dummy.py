@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 import time
-from . import BaseProvider, registerProvider
+from .base import BaseProvider
 
 
 class dummy(BaseProvider):
@@ -72,6 +72,3 @@ class dummy(BaseProvider):
         return result
 
     fetch_one = queryrow
-
-
-registerProvider(dummy)
