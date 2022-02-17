@@ -15,6 +15,13 @@ params = {
     "user": 'sa',
     "password": 'P4ssW0rd1.'
 }
+server_params = {
+    "server": "localhost",
+    "port": "3307",
+    "database": 'PRD_MI',
+    "user": 'navuser',
+    "password": 'L2MeomsUgYpFBJ6t'
+}
 
 
 @pytest.fixture
@@ -67,6 +74,69 @@ async def test_context_connection(driver, event_loop):
         pytest.assume(len(result) == 1000)
         for row in result:
             pytest.assume(type(row) == dict)
+    assert db.is_closed() is True
+
+
+@pytest.mark.parametrize("driver", [
+    (DRIVER)
+])
+async def test_context_fetch_row(driver, event_loop):
+    db = AsyncDB(driver, params=params, loop=event_loop)
+    async with await db.connection() as conn:
+        pytest.assume(conn.is_connected() is True)
+        conn.use('AdventureWorks2019')
+        result, error = await conn.queryrow(
+            "SELECT * FROM Person.Person WHERE FirstName = 'Ken' and LastName = 'Sánchez' ORDER BY BusinessEntityID"
+        )
+        pytest.assume(not error)
+        pytest.assume(type(result) == dict)
+        pytest.assume(result['MiddleName'] == 'J')
+    assert db.is_closed() is True
+
+
+@pytest.mark.parametrize("driver", [
+    (DRIVER)
+])
+async def test_context_native_methods(driver, event_loop):
+    db = AsyncDB(driver, params=params, loop=event_loop)
+    sql = "SELECT * FROM Person.Person WHERE FirstName = 'Ken' ORDER BY BusinessEntityID"
+    async with await db.connection() as conn:
+        pytest.assume(conn.is_connected() is True)
+        conn.use('AdventureWorks2019')
+        result = await conn.fetch_all(
+            sql
+        )
+        pytest.assume(type(result) == list)
+        pytest.assume(len(result) == 6)
+        result = await conn.fetch_one(
+            sql
+        )
+        pytest.assume(type(result) == dict)
+        pytest.assume(result['MiddleName'] == 'J')
+        result = await conn.fetch(
+            sql, size=2
+        )
+        pytest.assume(type(result) == list)
+        pytest.assume(len(result) == 2)
+    assert db.is_closed() is True
+
+
+@pytest.mark.parametrize("driver", [
+    (DRIVER)
+])
+async def test_procedure(driver, event_loop):
+    db = AsyncDB(driver, params=server_params, loop=event_loop)
+    async with await db.connection() as conn:
+        pytest.assume(conn.is_connected() is True)
+        conn.use('PRD_MI')
+        result, error = await conn.procedure(
+            "VIBA_ENDPOINT_GET_LIST",
+            orgid=93, user_id=1
+        )
+        print(result, error)
+        pytest.assume(not error)
+        pytest.assume(type(result) == list)
+        pytest.assume(len(result) > 0)
     assert db.is_closed() is True
 
 
