@@ -546,7 +546,6 @@ class DBCursorBackend(ABC):
             *args,
             **kwargs
     ) -> None:
-        print('::: DB CURSOR BACKEND ::: ')
         self._columns: List[Any] = []
         self._attributes = None
         self._result: List[Any] = []
@@ -562,7 +561,6 @@ class DBCursorBackend(ABC):
             print(err)
             logging.exception(f"Error Loading Cursor Class: {err}")
             self.__cursor__ = None
-        print('::: END CURSOR BACKEND')
 
     def cursor(
                     self,

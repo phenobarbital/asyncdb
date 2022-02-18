@@ -22,7 +22,7 @@ lint:
 	python -m black --check asyncdb
 
 setup_test:
-	pip install pytest>=6.0.0
+	pip install pytest==6.0.0
 	pip install pytest-asyncio==0.18.0
 	pip install pytest-xdist==2.1.0
 	pip install pytest-assume==2.4.2
