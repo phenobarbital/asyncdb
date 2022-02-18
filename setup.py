@@ -8,11 +8,10 @@ https://github.com/phenobarbital/asyncdb
 from os import path
 from setuptools import find_packages, setup
 
-pkg_vars  = {}
-
 
 def get_path(filename):
-    return path.join( path.dirname(path.abspath(__file__)), filename )
+    return path.join(path.dirname(path.abspath(__file__)), filename)
+
 
 with open(get_path('README.md')) as readme:
     README = readme.read()
@@ -44,11 +43,15 @@ setup(
         "numpy==1.19.4",
         "asyncio==3.4.3",
         "cchardet==2.1.7",
-        'cryptography==3.4.7'
+        'cryptography==3.4.7',
+        "cpython==0.0.6",
+        "gendoc==1.0.1"
     ],
     install_requires=[
         "wheel==0.37.0",
-        "Cython==0.29.21",
+        "cpython==0.0.6",
+        "Cython==0.29.28",
+        "gendoc==1.0.1",
         "numpy==1.21.1",
         'cryptography==3.4.7',
         "asyncpg==0.24.0",
@@ -121,7 +124,8 @@ setup(
         "pyodbc==4.0.30",
         "aiocassandra==2.0.1",
         "cassandra-driver==3.25.0",
-        "aredis==1.1.8"
+        "aredis==1.1.8",
+        "pymongo-4.0.1"
     ],
     tests_require=[
         'pytest>=6.0.0',
