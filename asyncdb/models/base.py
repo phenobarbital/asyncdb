@@ -301,7 +301,7 @@ class ModelMeta(type):
             annotations = attrs["__annotations__"]
             cols = []
             for field, type in annotations.items():
-                logging.debug(f"Field: {field}, Type: {type}")
+                # logging.debug(f"Field: {field}, Type: {type}")
                 if field in attrs:
                     df = attrs[field]
                     if isinstance(df, Field):
