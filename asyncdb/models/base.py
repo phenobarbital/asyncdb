@@ -132,9 +132,9 @@ class Field(ff):
             meta = {**meta, **kwargs["metadata"]}
             del kwargs["metadata"]
         args["metadata"] = {**meta, **range, **kwargs}
+        self._default_factory = MISSING
         if default is not None:
             self._default = default
-            self._default_factory = MISSING
         else:
             self._default = None
             if notnull is False:
