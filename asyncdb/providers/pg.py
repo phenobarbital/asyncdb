@@ -69,7 +69,6 @@ max_cached_statement_lifetime = 600
 max_cacheable_statement_size = 1024 * 15
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-uvloop.install()
 
 
 class NAVConnection(asyncpg.Connection):
@@ -195,7 +194,7 @@ class pgPool(BasePool):
                 command_timeout=self._timeout,
                 init=self.init_connection,
                 setup=self.setup_connection,
-                loop=self._loop,
+                # loop=self._loop,
                 server_settings=server_settings,
                 connection_class=NAVConnection
             )
