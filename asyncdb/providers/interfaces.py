@@ -56,7 +56,7 @@ class PoolBackend(ABC):
             self._loop = asyncio.get_event_loop()
             asyncio.set_event_loop(self._loop)
         if self._loop.is_closed():
-            self._loop = asyncio.new_event_loop()
+            self._loop = asyncio.get_running_loop()
             asyncio.set_event_loop(self._loop)
         # exception handler
         self._loop.set_exception_handler(
@@ -183,7 +183,7 @@ class ConnectionBackend(ABC):
         else:
             self._loop = asyncio.get_event_loop()
         if self._loop.is_closed():
-            self._loop = asyncio.new_event_loop()
+            self._loop = asyncio.get_running_loop()
         asyncio.set_event_loop(self._loop)
         # exception handler
         self._loop.set_exception_handler(
