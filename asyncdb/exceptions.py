@@ -72,21 +72,21 @@ def _handle_done_tasks(task: asyncio.Task) -> Any:
         logging.exception(f"Exception raised by Task {task}, error: {err}")
 
 
-class asyncDBException(Exception):
+class AsyncDBException(Exception):
     """Base class for other exceptions"""
 
     code: int = 0
+    message: str = ''
 
-    def __init__(self, *args, message: str = '', code: int = None, **kwargs):
-        super(asyncDBException, self).__init__()
+    def __init__(self, *args, message: str = '', code: int = None):
         self.args = (
             message,
             code,
+            *args
         )
-        if message:
-            self.message = message
-        if code:
-            self.code = code
+        self.message = message
+        self.code = code
+        super(AsyncDBException, self).__init__(message)
 
     def __repr__(self):
         return f"{__name__}(message={self.message})"
@@ -98,23 +98,20 @@ class asyncDBException(Exception):
         return self.message
 
 
-class ProviderError(asyncDBException):
+class ProviderError(AsyncDBException):
     """Database Provider Error"""
 
-    def __init__(self, *args, message: str = '', code: int = None, **kwargs):
-        asyncDBException.__init__(self, message, code, *args, **kwargs)
 
-
-class DataError(asyncDBException, ValueError):
+class DataError(AsyncDBException, ValueError):
     """An error caused by invalid query input."""
 
 
-class NotSupported(asyncDBException):
+class NotSupported(AsyncDBException):
     """Not Supported functionality"""
 
 
 class UninitializedError(ProviderError):
-    """Exception when provider cant be initialized"""
+    """Exception when provider cannot be initialized"""
 
 
 class ConnectionTimeout(ProviderError):
@@ -131,16 +128,16 @@ class TooManyConnections(ProviderError):
     """Too Many Connections"""
 
 
-class EmptyStatement(asyncDBException):
+class EmptyStatement(AsyncDBException):
     """Raise when no Statement was found"""
 
 
 class UnknownPropertyError(ProviderError):
-    """Raise when invalid property was provide"""
+    """Raise when invalid property was provided"""
 
 
 class StatementError(ProviderError):
-    """Raise when an Statement Error"""
+    """Raise when statement Error"""
 
 
 class ConditionsError(ProviderError):
