@@ -10,7 +10,6 @@ from typing import (
     Optional,
     Any,
     Iterable,
-    List,
     Dict
 )
 from .interfaces import (
@@ -21,7 +20,8 @@ from .interfaces import (
     CursorBackend
 )
 from .outputs import OutputFactory
-from asyncdb.exceptions import ProviderError, EmptyStatement
+from asyncdb.exceptions import EmptyStatement
+from asyncdb.models import Model
 
 
 class BasePool(PoolBackend, ConnectionDSNBackend):
@@ -31,7 +31,7 @@ class BasePool(PoolBackend, ConnectionDSNBackend):
     """
     init_func: Optional[Callable] = None
 
-    def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
+    def __init__(self, dsn: str = "", loop=None, params: dict = None, **kwargs):
         ConnectionDSNBackend.__init__(
             self,
             dsn=dsn,
@@ -64,14 +64,6 @@ class BasePool(PoolBackend, ConnectionDSNBackend):
     async def close(self, **kwargs):
         pass
 
-    """
-    Release a connection from the pool
-    """
-
-    @abstractmethod
-    async def release(self, connection, timeout=10):
-        pass
-
 
 class InitProvider(ConnectionBackend, DatabaseBackend):
     """
@@ -83,13 +75,16 @@ class InitProvider(ConnectionBackend, DatabaseBackend):
     _syntax: str = "init"  # can use QueryParser for parsing SQL queries
     init_func: Optional[Callable] = None
 
-    def __init__(self, dsn="", loop=None, params={}, **kwargs):
+    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
+        if params is None:
+            params = {}
         self._pool = None
         self._max_connections = 4
         self._generated = None
         self._starttime = None
         self._parameters = ()
-        self._serializer = None
+        # noinspection PyTypeChecker
+        self._serializer: OutputFactory = None
         self._row_format = 'native'
         self._connected: bool = False
         self._connection = None
@@ -124,13 +119,12 @@ class InitProvider(ConnectionBackend, DatabaseBackend):
     async def output(self, result, error):
         # return result in default format
         self._result = result
-        return (result, error)
+        return [result, error]
 
     def output_format(self, format: str = 'native', *args, **kwargs):
         self._serializer = OutputFactory(self, format, *args, **kwargs)
 
     async def valid_operation(self, sentence: Any):
-        error = None
         if not sentence:
             raise EmptyStatement(
                 f"{__name__!s} Error: cannot use an empty sentence"
@@ -149,7 +143,7 @@ class BaseProvider(InitProvider, ConnectionDSNBackend):
     _syntax: str = "base"  # can use QueryParser for parsing SQL queries
     init_func: Optional[Callable] = None
 
-    def __init__(self, dsn="", loop=None, params={}, **kwargs):
+    def __init__(self, dsn="", loop=None, params: dict = None, **kwargs):
         InitProvider.__init__(
             self,
             loop=loop,
@@ -250,42 +244,42 @@ class ModelBackend(ABC):
         pass
 
     @abstractmethod
-    async def model_select(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_select(self, model: "Model", fields: Dict = None, **kwargs):
         """
         Get queries with model.
         """
         pass
 
     @abstractmethod
-    async def model_all(self, model: "Model", fields: Dict = {}):
+    async def model_all(self, model: "Model", fields: Dict = None):
         """
         Get queries with model.
         """
         pass
 
     @abstractmethod
-    async def model_get(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_get(self, model: "Model", fields: Dict = None, **kwargs):
         """
         Get one row from model.
         """
         pass
 
     @abstractmethod
-    async def model_delete(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_delete(self, model: "Model", fields: Dict = None, **kwargs):
         """
         delete a row from model.
         """
         pass
 
     @abstractmethod
-    async def model_save(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_save(self, model: "Model", fields: Dict = None, **kwargs):
         """
         save a row from model.
         """
         pass
 
     @abstractmethod
-    async def model_insert(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_insert(self, model: "Model", fields: Dict = None, **kwargs):
         """
         insert a row from model.
         """

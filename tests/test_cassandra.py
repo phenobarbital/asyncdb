@@ -1,9 +1,6 @@
 import pytest
-from asyncdb import AsyncDB, AsyncPool
+from asyncdb import AsyncDB
 import asyncio
-import asyncpg
-from io import BytesIO
-from pathlib import Path
 
 @pytest.fixture
 def event_loop():

@@ -3,31 +3,33 @@ SQLProvider.
 
 Abstract class covering all major functionalities for Relational SQL-based databases.
 """
+import asyncio
 import logging
 import traceback
 import asyncpg
+import json
 from asyncdb.utils.functions import (
     SafeDict
 )
 from asyncdb.utils.types import Entity
 from asyncdb.utils.encoders import BaseEncoder
+from asyncdb.exceptions import StatementError, ProviderError, EmptyStatement
 from dataclasses import is_dataclass, asdict
 from typing import (
     Any,
     List,
     Dict,
-    Iterable,
-    Optional,
 )
 from .base import BaseDBProvider, ModelBackend, BaseCursor
+from asyncdb.models import Model
 
 
 class SQLCursor(BaseCursor):
     _connection = None
 
     async def __aenter__(self) -> "BaseCursor":
-        if not self._connection:
-            await self.connection()
+        # if not self._connection:
+        #     await self.connection()
         self._cursor = await self._connection.cursor(
             self._sentence, self._params
         )
@@ -42,7 +44,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
     _syntax = "sql"
     _test_query = "SELECT 1"
 
-    def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
+    def __init__(self, dsn: str = "", loop=None, params: dict = None, **kwargs):
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
         super(SQLProvider, self).__init__(
             dsn=dsn, loop=loop, params=params, **kwargs
@@ -76,7 +78,6 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         Returns if is a valid operation.
         TODO: add some validations.
         """
-        error = None
         if not sentence:
             raise EmptyStatement(
                 f"{__name__!s} Error: cannot use an empty SQL sentence"
@@ -111,7 +112,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         if not where:
             return result
         elif type(where) == str:
-            result = "WHERE {}".format(where)
+            return "WHERE {}".format(where)
         elif type(where) == dict:
             where_cond = []
             for key, value in where.items():
@@ -336,7 +337,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             table = model.__name__
         sql = f"SELECT * FROM {table}"
         try:
-            prepared, error = await self.prepare(sql)
+            # prepared, error = await self.prepare(sql)
             result = await self._connection.fetch(sql)
             return result
         except Exception as err:
@@ -581,10 +582,15 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             datatype = field.type
             # dbtype = field.get_dbtype()
             val = getattr(model, field.name)
-            if is_dataclass(datatype):
-                value = json.loads(
-                    json.dumps(asdict(val), cls=BaseEncoder)
-                )
+            if is_dataclass(datatype) and val is not None:
+                if isinstance(val, list):
+                    value = json.loads(
+                        json.dumps([asdict(d) for d in val], cls=BaseEncoder)
+                    )
+                else:
+                    value = json.loads(
+                        json.dumps(asdict(val), cls=BaseEncoder)
+                    )
             else:
                 value = val
             if field.required is False and value is None or value == "None":

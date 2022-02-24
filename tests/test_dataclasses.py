@@ -36,22 +36,21 @@ def auto_now_add(*args, **kwargs):
 def now():
     return datetime.now()
 
+class Contact(Model):
+    account: str = ''
+    value: str = ''
 
 class User(SQLModel):
     """
     User Basic Structure
     """
-    id: uuid.UUID = Column(
-        required=True,
-        primary_key=True,
-        default=auto_now_add,
-        db_default='uuid_generate_v4()'
-    )
+    id: uuid.UUID = Column(required=True, primary_key=True, default=auto_now_add, db_default='uuid_generate_v4()')
     firstname: str
     lastname: str
     name: str = Column(required=True, default='John Doe')
     age: int = Column(default=18, required=True)
-    signup_ts: datetime = Column(default=now, db_default='now()')
+    signup_ts: datetime = Column(default=datetime.now(), db_default='now()')
+    contacts: Contact = Column(required=False)
 
     def __post_init__(self):
         self.name = f"{self.firstname} {self.lastname}"
@@ -87,9 +86,14 @@ async def test_dataclass_with_dsn(driver, event_loop):
     data = {
         "firstname": 'Jesus',
         "lastname": 'Lara',
-        "age": 43
+        "age": 43,
+        "contacts": [
+            Contact(**{"account": "email", "value": "jlara@gmail.com"}),
+            Contact(**{"account": "email", "value": "jlara@trocglobal.com"})
+        ]
     }
     u = User(**data)
+    print('CONN ', u.get_connection())
     jesus = await u.insert()
     pytest.assume(jesus.age == 43)
     # delete the row

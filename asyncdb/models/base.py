@@ -446,11 +446,13 @@ class Model(metaclass=ModelMeta):
         for name, field in self.columns().items():
             key = field.name
             val = self.__dict__[key]
-            # print(name, field)
             if hasattr(field, 'default') and callable(val):
-                print('AQUI ', field.name, 'VALUE: ',  val)
                 # default is a function:
-                setattr(self, name, field.default())
+                try:
+                    setattr(self, name, field.default())
+                except TypeError:
+                    logging.warning(f'Error Calling Value on {field} with name {name}')
+                    setattr(self, name, None)
             # first check: data type hint
             val_type = type(val)
             annotated_type = field.type

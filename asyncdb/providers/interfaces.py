@@ -35,7 +35,7 @@ class PoolBackend(ABC):
             self,
             dsn: str = '',
             loop: asyncio.AbstractEventLoop = None,
-            params: Dict[Any, Any] = {},
+            params: Dict[Any, Any] = None,
             **kwargs
     ) -> None:
         self._pool = None
@@ -64,7 +64,7 @@ class PoolBackend(ABC):
         )
         try:
             self._DEBUG = bool(params["DEBUG"])
-        except KeyError:
+        except (TypeError, KeyError):
             try:
                 self._DEBUG = kwargs["debug"]
             except KeyError:
@@ -142,12 +142,12 @@ class PoolBackend(ABC):
         return not self._connected
 
     @classmethod
-    def driver(self):
-        return self.__name__
+    def driver(cls):
+        return cls.__name__
 
     @classmethod
-    def dialect(self):
-        return self._syntax
+    def dialect(cls):
+        return cls._syntax
 
 
 class ConnectionBackend(ABC):
@@ -160,12 +160,14 @@ class ConnectionBackend(ABC):
     def __init__(
             self,
             loop: asyncio.AbstractEventLoop = None,
-            params: Dict[Any, Any] = {},
+            params: Dict[Any, Any] = Any,
             **kwargs
     ) -> None:
         self._connection = None
         self._connected = False
         self._cursor = None
+        self._generated = None
+        self._pool = None
         try:
             self._encoding = kwargs["encoding"]
         except KeyError:
@@ -176,7 +178,7 @@ class ConnectionBackend(ABC):
             self._max_queries = 300
         try:
             self.params = params.copy()
-        except (TypeError, AttributeError):
+        except (TypeError, AttributeError, ValueError):
             self.params = {}
         if loop:
             self._loop = loop
@@ -221,8 +223,8 @@ class ConnectionBackend(ABC):
 
     # Properties
     @classmethod
-    def type(self):
-        return self._provider
+    def type(cls):
+        return cls._provider
 
     @property
     def log(self):
@@ -239,10 +241,6 @@ class ConnectionBackend(ABC):
     def is_connected(self):
         return self._connected
 
-    def is_closed(self):
-        logging.debug(f"Connection closed on: {self._connection}")
-        return not self._connected
-
     def get_connection(self):
         return self._connection
 
@@ -252,12 +250,12 @@ class ConnectionBackend(ABC):
         return self._generated
 
     @classmethod
-    def driver(self):
-        return self.__name__
+    def driver(cls):
+        return cls.__name__
 
     @classmethod
-    def dialect(self):
-        return self._syntax
+    def dialect(cls):
+        return cls._syntax
 
     """
     Async Context magic Methods
@@ -280,23 +278,21 @@ class ConnectionDSNBackend(ABC):
     """
     Interface for Databases with DSN Support.
     """
+    _logger: Any = None
 
     def __init__(
             self,
             dsn: str = '',
-            params: Dict[Any, Any] = {},
+            params: Dict[Any, Any] = None,
             **kwargs
     ) -> None:
         if dsn:
             self._dsn = dsn
         else:
-            try:
-                self._dsn = self.create_dsn(params)
-            except Exception:
-                self._dsn = None
+            self._dsn = self.create_dsn(params)
         try:
             self._params = params.copy()
-        except (TypeError, AttributeError):
+        except (TypeError, AttributeError, ValueError):
             self._params = {}
 
     def create_dsn(self, params: Dict):
@@ -421,20 +417,20 @@ class DatabaseBackend(ABC):
     # executemany = execute_many
 
     @abstractmethod
-    async def query(self, sentence=""):
+    async def query(self, sentence: Union[str, List], **kwargs):
         """
         Making a Query and return result
         """
         pass
 
     @abstractmethod
-    async def queryrow(self, sentence=""):
+    async def queryrow(self, sentence: Union[str, List]):
         pass
 
     @abstractmethod
     async def prepare(self, sentence: Any = None):
         """
-        Prepare an statement.
+        Prepare a statement.
         """
         pass
 
@@ -516,6 +512,7 @@ class CursorBackend(ABC):
             return row
         else:
             raise StopAsyncIteration
+
     #
     # @abstractmethod
     # async def execute(sentence: Any, params: Optional[Dict] = None) -> Any:

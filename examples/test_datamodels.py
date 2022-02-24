@@ -1,14 +1,10 @@
 from datetime import datetime
-import dataclasses
-from dataclasses import dataclass, asdict, fields, InitVar
-from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
-
 from asyncdb import AsyncDB
-from asyncdb.utils.models import Model, Column
+from asyncdb.models import Model, Column
+from asyncdb.models.sql import SQLModel
 from asyncdb.utils import Msg
 import uuid
 import asyncio
-import pprint
 
 loop = asyncio.get_event_loop()
 asyncpg_url = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator_dev"
@@ -30,7 +26,7 @@ class Contact(Model):
     account: str = ''
     value: str = ''
 
-class User(Model):
+class User(SQLModel):
     """
     User Basic Structure
     """
@@ -45,7 +41,7 @@ class User(Model):
     class Meta:
         name = 'users'
         schema = 'public'
-        #driver = 'pg'
+        driver = 'pg'
         # credentials = {
         #     'user': 'troc_pgdata',
         #     'password': '12345678',
@@ -53,12 +49,14 @@ class User(Model):
         #     'port': '5432',
         #     'database': 'navigator_dev',
         # }
-        #dsn = asyncpg_url
+        dsn = asyncpg_url
         strict = False
 
 u = User()
-print(u.schema(type='sql'))
-u.set_connection(p)
+print(u.model(dialect='sql'))
+# print(u.get_connection())
+# u.set_connection(p)
+
 #TODO: definition of Operators
 # from models.operators import or, not
 # or(value) returns OR instead AND
@@ -79,13 +77,13 @@ async def new_user():
         "lastname": 'Lara',
         "name": 'Román Antonio Lara',
         "age": 48,
-        "contacts": Contact(**{"account": "email", "value": "jlara@gmail"})
+       "contacts": [Contact(**{"account": "email", "value": "jlara@gmail.com"}), Contact(**{"account": "email", "value": "jlara@trocglobal.com"})]
     }
     u = User(**data)
     await u.insert()
     print(u.json())
     # also, we can deleting as well
-    #await u.delete()
+    await u.delete()
 
 async def get_all_users():
     users = await User.all()
@@ -134,8 +132,8 @@ users = [
 # asyncio.run(update_users(filter={"age": 72, "lastname": 'Gimenez'}, firstname='Yolanda Ramona'))
 
 loop.run_until_complete(create_users(users))
-#loop.run_until_complete(new_user())
-#loop.run_until_complete(get_user(age=48))
-#loop.run_until_complete(get_all_users())
-# loop.run_until_complete(get_users(age=48, firstname='Román'))
+loop.run_until_complete(new_user())
+loop.run_until_complete(get_user(age=48))
+loop.run_until_complete(get_all_users())
+loop.run_until_complete(get_users(age=48, firstname='Román'))
 loop.run_until_complete(update_users(filter={"age": 72, "lastname": 'Gimenez'}, firstname='Yolanda Ramona'))
