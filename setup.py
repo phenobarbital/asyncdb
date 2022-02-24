@@ -39,7 +39,7 @@ setup(
     license=__license__,
     setup_requires=[
         "wheel==0.37.0",
-        "Cython==0.29.21",
+        "Cython==0.29.28",
         "numpy==1.21.1",
         "asyncio==3.4.3",
         "cchardet==2.1.7",

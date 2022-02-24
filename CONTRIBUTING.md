@@ -2,13 +2,21 @@
 
 ## Preparation
 
-AsyncDB is designed to use last syntax of asyncio-tools, for that reason, you'll need to have at least Python 3.7 available for testing.
+AsyncDB is designed to use last syntax of asyncio-tools, for that reason, you'll need to have at least Python 3.8 available for testing.
 
 You can do this with [pyenv][]:
 
-    $ pyenv install 3.7.4
-    $ pyenv local 3.7.4
 
+    $ pyenv install 3.8.1
+    $ pyenv local 3.8.1
+
+Or using virtualenv:
+
+    $ python3.8 -m venv .venv
+
+Also, we can use the command "make venv" inside of Makefile.
+
+    $ make venv
 
 ## Setup
 
@@ -23,7 +31,7 @@ install the appropriate tools and dependencies:
 
 ## Formatting
 
-asyncDB start using *[black][]* for formatting code.
+asyncDB start using *[black][]* for formating code.
 
     $ make format
 
