@@ -1,10 +1,24 @@
 import asyncio
 import logging
-from typing import Any
+from typing import (
+    Any, Tuple
+)
 
 
-# from pprint import pprint
-async def shutdown(loop, signal=None):
+def _handle_done_tasks(
+            task: asyncio.Task,
+            logger: logging.Logger,
+            *args: Tuple[Any, ...]
+) -> Any:
+    try:
+        return task.result()
+    except asyncio.CancelledError:
+        pass  # Task cancellation should not be logged as an error.
+    except Exception as err:  # pylint: disable=broad-except
+        logger.exception(f"Exception raised by Task {task}, error: {err}", *args)
+
+
+async def shutdown(loop: asyncio.AbstractEventLoop, signal: Any = None):
     """Cleanup tasks tied to the service's shutdown."""
     if signal:
         logging.info(f"Received exit signal {signal.name}...")
@@ -17,20 +31,20 @@ async def shutdown(loop, signal=None):
             for task in asyncio.all_tasks()
             if task is not asyncio.current_task() and not task.done()
         ]
-        # [task.cancel() for task in tasks]
-        logging.info(f"Cancelling {len(tasks)} outstanding tasks")
-        await asyncio.gather(*tasks, return_exceptions=True)
+        [task.cancel() for task in tasks]
+        logging.warning(f"Cancelling {len(tasks)} outstanding tasks")
+        await asyncio.gather(*tasks, loop=loop, return_exceptions=True)
+        logging.warning('Asyncio Shutdown: Done graceful shutdown of subtasks')
     except asyncio.CancelledError:
         print("All Tasks has been canceled")
     except Exception as err:
         print("Asyncio Generic Error", err)
     finally:
         loop.stop()
-        # loop.close()
 
 
-def default_exception_handler(loop, context: Any):
-    logging.info(f"Exception Handler Caught: {context!s}")
+def default_exception_handler(loop: asyncio.AbstractEventLoop, context: Any):
+    logging.info(f"AsyncDB Exception Handler Caught: {context!s}")
     # first, handle with default handler
     if isinstance(context, Exception):
         # is a basic exception
@@ -57,19 +71,6 @@ def default_exception_handler(loop, context: Any):
                 raise exception(msg)
             except Exception as err:
                 logging.exception(err)
-            # finally:
-            #     loop.stop()
-            #     logging.info("Successfully shutdown the AsyncDB Loop.")
-                # loop.close()
-
-
-def _handle_done_tasks(task: asyncio.Task) -> Any:
-    try:
-        return task.result()
-    except asyncio.CancelledError:
-        pass  # Task cancellation should not be logged as an error.
-    except Exception as err:
-        logging.exception(f"Exception raised by Task {task}, error: {err}")
 
 
 class AsyncDBException(Exception):
