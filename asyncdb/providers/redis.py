@@ -213,7 +213,7 @@ class redis(BaseProvider):
     async def ping(self, msg: str = ""):
         await self._connection.ping()
 
-    async def close(self):
+    async def close(self, timeout: int = 10):
         try:
             # gracefully closing underlying connection
             await self._connection.close()

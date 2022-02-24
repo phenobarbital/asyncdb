@@ -9,23 +9,19 @@ import asyncio
 import uvloop
 import json
 import time
-from datetime import datetime
-import traceback
 import uuid
 import asyncpg
 from asyncpg.pgproto import pgproto
-from dateutil.relativedelta import relativedelta
+from dataclasses import asdict, is_dataclass
 from typing import (
-    Tuple,
     List,
     Dict,
     Optional,
     Callable,
-    Union,
     Any,
-    Iterable
+    Iterable,
+    Union
 )
-
 from asyncpg.exceptions import (
     ConnectionDoesNotExistError,
     FatalPostgresError,
@@ -37,15 +33,12 @@ from asyncpg.exceptions import (
     PostgresSyntaxError,
     TooManyConnectionsError,
     UndefinedColumnError,
-    UndefinedTableError,
+    # UndefinedTableError,
 )
-
 from asyncdb.exceptions import (
-    _handle_done_tasks,
     ConnectionTimeout,
     DataError,
     EmptyStatement,
-    NoDataFound,
     ProviderError,
     StatementError,
     TooManyConnections,
@@ -53,10 +46,10 @@ from asyncdb.exceptions import (
 from asyncdb.utils.encoders import (
     BaseEncoder,
 )
-from asyncdb.utils import (
-    SafeDict,
-    _escapeString,
-)
+# from asyncdb.utils import (
+#     SafeDict,
+#     _escapeString,
+# )
 from .interfaces import (
     DBCursorBackend
 )
@@ -80,7 +73,7 @@ class pgPool(BasePool):
     setup_func: Optional[Callable] = None
     init_func: Optional[Callable] = None
 
-    def __init__(self, dsn="", loop=None, params={}, **kwargs):
+    def __init__(self, dsn="", loop=None, params: dict = None, **kwargs):
         self._test_query = 'SELECT 1'
         self.application_name = os.getenv('APP_NAME', "NAV")
         self._max_clients = 300
@@ -109,7 +102,7 @@ class pgPool(BasePool):
                 print("Error on Setup Connection: {}".format(err))
                 pass
 
-    async def test_connection(self, **kwargs):
+    async def test_connection(self, *args):
         """Test Connnection.
         Making a connection Test using the basic Query Method.
         """
@@ -118,7 +111,7 @@ class pgPool(BasePool):
         if self._test_query is None:
             raise [None, NotImplementedError()]
         try:
-            result = await self.execute(self._test_query, **kwargs)
+            result = await self.execute(self._test_query, *args)
         except Exception as err:
             print(err)
             error = err
@@ -144,7 +137,9 @@ class pgPool(BasePool):
         )
 
         def _uuid_encoder(value):
-            if value:
+            if isinstance(value, uuid.UUID):
+                val = value.bytes
+            elif value is not None:
                 val = uuid.UUID(value).bytes
             else:
                 val = b""
@@ -205,7 +200,6 @@ class pgPool(BasePool):
         except TooManyConnectionsError as err:
             print("Too Many Connections Error: {}".format(str(err)))
             raise TooManyConnections(str(err))
-            return False
         except TimeoutError as err:
             raise ConnectionTimeout(
                 "Unable to connect to database: {}".format(str(err))
@@ -217,19 +211,15 @@ class pgPool(BasePool):
             )
         except ConnectionDoesNotExistError as err:
             raise ProviderError("Connection Error: {}".format(str(err)))
-            return False
         except InternalClientError as err:
             raise ProviderError("Internal Error: {}".format(str(err)))
-            return False
         except InterfaceError as err:
             raise ProviderError("Interface Error: {}".format(str(err)))
-            return False
         except InterfaceWarning as err:
             print("Interface Warning: {}".format(str(err)))
             return False
         except Exception as err:
             raise ProviderError("Unknown Error: {}".format(str(err)))
-            return False
         finally:
             return self
 
@@ -284,9 +274,9 @@ class pgPool(BasePool):
             raise ProviderError(f"Release Interface Error: {err}")
         except InternalClientError as err:
             self._logger.debug(
-                "Connection already released, \
+                f"Connection already released, \
                 PoolConnectionHolder.release() \
-                called on a free connection holder"
+                called on a free connection holder: {err}"
             )
             return False
         except Exception as err:
@@ -344,7 +334,7 @@ class pgPool(BasePool):
 
     disconnect = close
 
-    async def execute(self, sentence, *args, **kwargs):
+    async def execute(self, sentence, *args):
         """
         Execute a connection into the Pool
         """
@@ -371,7 +361,7 @@ class pg(SQLProvider, DBCursorBackend):
             self,
             dsn: str = '',
             loop: asyncio.AbstractEventLoop = None,
-            params: Dict[Any, Any] = {},
+            params: Dict[Any, Any] = None,
             **kwargs
     ) -> None:
         self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
@@ -456,7 +446,10 @@ class pg(SQLProvider, DBCursorBackend):
         # Setup jsonb encoder/decoder
 
         def _encoder(value):
-            return json.dumps(value, cls=BaseEncoder)
+            if is_dataclass(value):
+                return json.dumps(asdict(value), cls=BaseEncoder)
+            else:
+                return json.dumps(value, cls=BaseEncoder)
 
         def _decoder(value):
             return json.loads(value)
@@ -500,13 +493,15 @@ class pg(SQLProvider, DBCursorBackend):
                 )
 
                 def _uuid_encoder(value):
-                    if value:
+                    if isinstance(value, uuid.UUID):
+                        val = value.bytes
+                    elif value is not None:
                         val = uuid.UUID(value).bytes
                     else:
                         val = b""
                     return val
 
-                await connection.set_type_codec(
+                await self._connection.set_type_codec(
                     "uuid",
                     encoder=_uuid_encoder,
                     decoder=lambda u: pgproto.UUID(u),
@@ -557,7 +552,6 @@ class pg(SQLProvider, DBCursorBackend):
                     await self._connection.close(timeout=5)
         except (InterfaceError, RuntimeError) as err:
             raise ProviderError("Release Interface Error: {}".format(str(err)))
-            return False
         finally:
             self._connected = False
             self._connection = None
@@ -603,7 +597,7 @@ class pg(SQLProvider, DBCursorBackend):
         finally:
             return [self._prepared, error]
 
-    async def query(self, sentence=""):
+    async def query(self, sentence: Union[str, List], **kwargs):
         self._result = None
         error = None
         await self.valid_operation(sentence)
@@ -659,7 +653,7 @@ class pg(SQLProvider, DBCursorBackend):
             raise Exception(error)
         return await self._serializer(self._result, error)
 
-    async def execute(self, sentence=""):
+    async def execute(self, sentence: Any = None, *args) -> Optional[Any]:
         """Execute a transaction
         get a SQL sentence and execute
         returns: results of the execution
@@ -685,16 +679,15 @@ class pg(SQLProvider, DBCursorBackend):
 
     async def execute_many(self, sentence: str, *args):
         error = None
+        result = None
         await self.valid_operation(sentence)
         try:
             result = await self._connection.executemany(sentence, *args)
         except InterfaceWarning as err:
             error = "Interface Warning: {}".format(str(err))
             raise ProviderError(error)
-            return False
         except Exception as err:
             error = "Error on Execute: {}".format(str(err))
-            # self._loop.call_exception_handler(err)
             raise Exception(error)
         finally:
             return await self._serializer(result, error)
@@ -703,7 +696,6 @@ class pg(SQLProvider, DBCursorBackend):
 
     async def fetch_all(self, sentence: str = ""):
         self._result = None
-        error = None
         await self.valid_operation(sentence)
         try:
             self.start_timing()
@@ -711,7 +703,7 @@ class pg(SQLProvider, DBCursorBackend):
             if not self._result:
                 return []
         except RuntimeError as err:
-            raise
+            raise ProviderError(f"Sentence Error: {err}")
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             raise StatementError(f"Sentence Error: {err}")
         except (
@@ -723,12 +715,10 @@ class pg(SQLProvider, DBCursorBackend):
             raise Exception(f"Error on Query: {err}")
         finally:
             self.generated_at()
-            startTime = 0
             return self._result
 
     async def fetch_one(self, sentence: str = ""):
         self._result = None
-        error = None
         await self.valid_operation(sentence)
         try:
             stmt = await self._connection.prepare(sentence)
@@ -736,7 +726,7 @@ class pg(SQLProvider, DBCursorBackend):
             self._columns = [a.name for a in self._attributes]
             self._result = await stmt.fetchrow()
         except RuntimeError as err:
-            raise
+            raise ProviderError(f"Sentence Error: {err}")
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             raise StatementError(f"Sentence Error: {err}")
         except (
@@ -822,7 +812,7 @@ class pg(SQLProvider, DBCursorBackend):
     """
 
     async def copy_from_table(
-        self, table="", schema="public", output=None, type="csv", columns=None
+        self, table="", schema="public", output=None, file_type="csv", columns=None
     ):
         """table_copy
         get a copy of table data into a file, file-like object or a coroutine passed on "output"
@@ -836,12 +826,12 @@ class pg(SQLProvider, DBCursorBackend):
                 table_name=table,
                 schema_name=schema,
                 columns=columns,
-                format=type,
+                format=file_type,
                 output=output,
             )
             print(result)
             return result
-        except (asyncpg.exceptions.UndefinedTableError):
+        except asyncpg.exceptions.UndefinedTableError:
             error = "Error on Copy, Table doesnt exists: {}".format(str(table))
             raise StatementError(error)
         except (
@@ -857,7 +847,7 @@ class pg(SQLProvider, DBCursorBackend):
             raise Exception(error)
 
     async def copy_to_table(
-        self, table="", schema="public", source=None, type="csv", columns=None
+        self, table="", schema="public", source=None, file_type="csv", columns=None
     ):
         """copy_to_table
         get data from a file, file-like object or a coroutine passed on "source" and copy into table
@@ -874,12 +864,12 @@ class pg(SQLProvider, DBCursorBackend):
                 table_name=table,
                 schema_name=schema,
                 columns=columns,
-                format=type,
+                format=file_type,
                 source=source,
             )
             print(result)
             return result
-        except (asyncpg.exceptions.UndefinedTableError):
+        except asyncpg.exceptions.UndefinedTableError:
             error = "Error on Copy, Table doesnt exists: {}".format(str(table))
             raise StatementError(error)
         except (
@@ -912,20 +902,19 @@ class pg(SQLProvider, DBCursorBackend):
                 table_name=table, schema_name=schema, columns=columns, records=source
             )
             return result
-        except (asyncpg.exceptions.UndefinedTableError) as err:
+        except asyncpg.exceptions.UndefinedTableError as err:
             error = "Error on Copy: {}, Table doesnt exists: {}".format(
                 str(err), str(table)
             )
             raise StatementError(error)
-            return False
         except (InvalidSQLStatementNameError, UndefinedColumnError) as err:
             error = "Error on Copy, Invalid Statement Error: {}".format(
                 str(err))
             raise StatementError(error)
-        except (asyncpg.exceptions.UniqueViolationError) as err:
+        except asyncpg.exceptions.UniqueViolationError as err:
             error = "Error on Copy, Constraint Violated: {}".format(str(err))
             raise DataError(error)
-        except (asyncpg.exceptions.InterfaceError) as err:
+        except asyncpg.exceptions.InterfaceError as err:
             error = "Error on Copy into Table Function: {}".format(str(err))
             raise ProviderError(error)
         except Exception as err:
@@ -953,7 +942,7 @@ class pg(SQLProvider, DBCursorBackend):
         coalesce((SELECT true FROM pg_index i WHERE i.indrelid = a.attrelid \
         AND i.indrelid = a.attrelid AND a.attnum = any(i.indkey) \
         AND i.indisprimary), false) as is_primary \
-        FROM pg_attribute a WHERE a.attrelid = '{tablename!s}'::regclass \
+        FROM pg_attribute a WHERE a.attrelid = '{table!s}'::regclass \
         AND a.attnum > 0 AND NOT a.attisdropped ORDER BY a.attnum"
         if not self._connection:
             await self.connection()
@@ -961,21 +950,21 @@ class pg(SQLProvider, DBCursorBackend):
             colinfo = await self._connection.fetch(sql)
             return colinfo
         except Exception as err:
-            self._logger.exception(f"Wrong Table information {tablename!s}")
+            self._logger.exception(f"Wrong Table information {tablename!s}: {err}")
 
     """
     DDL Information.
     """
     async def create(
         self,
-        object: str = 'table',
+        obj: str = 'table',
         name: str = '',
         fields: Optional[List] = None
     ) -> bool:
         """
         Create is a generic method for Database Objects Creation.
         """
-        if object == 'table':
+        if obj == 'table':
             sql = "CREATE TABLE {name}({columns});"
             columns = ", ".join(["{name} {type}".format(**e) for e in fields])
             sql = sql.format(name=name, columns=columns)

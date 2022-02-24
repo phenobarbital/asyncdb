@@ -79,7 +79,7 @@ class AsyncDBException(Exception):
     code: int = 0
     message: str = ''
 
-    def __init__(self, *args, message: str = '', code: int = None):
+    def __init__(self, *args: object, message: str = '', code: int = None) -> None:
         self.args = (
             message,
             code,

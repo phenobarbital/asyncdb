@@ -19,7 +19,6 @@ class SQLModel(Model):
 
     @classmethod
     def model(cls, dialect: str = "sql") -> Any:
-        result = None
         clsname = cls.__name__
         schema = cls.Meta.schema if cls.Meta.schema is not None else ""
         table = cls.Meta.name if cls.Meta.name is not None else clsname.lower()
@@ -67,4 +66,5 @@ class SQLModel(Model):
             doc = doc + "\n);"
             return doc
         else:
-            return cls.model(cls, dialect)
+            super(SQLModel, cls).model(cls, dialect)
+            # return cls.model(cls, dialect)
