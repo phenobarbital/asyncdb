@@ -39,7 +39,7 @@ from asyncdb.utils.types import (
 from asyncdb.exceptions import NoDataFound
 from asyncdb.utils.encoders import DefaultEncoder
 from asyncdb.utils import module_exists
-
+from asyncdb.providers.interfaces import ConnectionBackend
 
 @dataclass
 class ValidationError:
@@ -397,7 +397,7 @@ class ModelMeta(type):
         super(ModelMeta, cls).__init__(*args, **kwargs)
 
 
-class Model(metaclass=ModelMeta):
+class Model(ABC, metaclass=ModelMeta):
     """
     Model.
 
@@ -670,7 +670,7 @@ class Model(metaclass=ModelMeta):
                     )
             except NoDataFound as err:
                 raise NoDataFound(err)
-            except AttributeError:
+            except AttributeError as err:
                 raise Exception(
                     "Error on get {}: {}".format(self.Meta.name, err))
             except Exception as err:
