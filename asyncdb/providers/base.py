@@ -65,7 +65,7 @@ class BasePool(PoolBackend, ConnectionDSNBackend):
         pass
 
 
-class InitProvider(ConnectionBackend, DatabaseBackend):
+class InitProvider(ConnectionBackend, DatabaseBackend, ABC):
     """
     InitProvider
         Abstract Class for Connections
@@ -113,16 +113,16 @@ class InitProvider(ConnectionBackend, DatabaseBackend):
      - output: runs in the return (serialization) of data
     """
 
-    def row_format(self, format: str = 'native'):
-        self._row_format = format
+    def row_format(self, frmt: str = 'native'):
+        self._row_format = frmt
 
     async def output(self, result, error):
         # return result in default format
         self._result = result
         return [result, error]
 
-    def output_format(self, format: str = 'native', *args, **kwargs):
-        self._serializer = OutputFactory(self, format, *args, **kwargs)
+    def output_format(self, frmt: str = 'native', *args, **kwargs):
+        self._serializer = OutputFactory(self, frmt, *args, **kwargs)
 
     async def valid_operation(self, sentence: Any):
         if not sentence:
@@ -133,7 +133,7 @@ class InitProvider(ConnectionBackend, DatabaseBackend):
             await self.connection()
 
 
-class BaseProvider(InitProvider, ConnectionDSNBackend):
+class BaseProvider(InitProvider, ConnectionDSNBackend, ABC):
     """
     BaseProvider
         Abstract Class for DB Connection
