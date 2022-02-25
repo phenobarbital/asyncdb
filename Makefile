@@ -5,7 +5,6 @@ venv:
 setup:
 	pip install wheel==0.37.0
 	pip install -e .
-	python -m pip install -Ur docs/requirements.txt
 
 dev:
 	flit install --symlink
@@ -21,11 +20,8 @@ lint:
 	python -m pylint --rcfile .pylint asyncdb/utils/*.py
 	python -m black --check asyncdb
 
-setup_test:
-	pip install pytest==6.0.0
-	pip install pytest-asyncio==0.18.0
-	pip install pytest-xdist==2.1.0
-	pip install pytest-assume==2.4.2
+setup_dev:
+	python -m pip install -Ur docs/requirements-dev.txt
 
 test:
 	python -m coverage run -m asyncdb.tests

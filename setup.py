@@ -107,9 +107,9 @@ setup(
         "sqlalchemy-aio==0.16.0",
         "aioodbc==0.3.3",
         "pyodbc==4.0.30",
-        "aiocassandra==2.0.1",
-        "cassandra-driver==3.25.0",
-        "aredis==1.1.8"
+        "lz4==4.0.0",
+        "scales==1.0.9",
+        "cassandra-driver==3.25.0"
     ],
     tests_require=[
         'pytest>=6.0.0',
