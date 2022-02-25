@@ -6,10 +6,6 @@ import logging
 import traceback
 import rapidjson as to_json
 from dataclasses import Field as ff
-from abc import (
-    ABC,
-    abstractmethod,
-)
 from dataclasses import (
     dataclass,
     is_dataclass,
@@ -27,8 +23,7 @@ from typing import (
     Dict,
     Optional,
     Union,
-    Any,
-    ClassVar
+    Any
 )
 from asyncdb.utils import Msg
 from asyncdb.utils.types import (
@@ -397,7 +392,7 @@ class ModelMeta(type):
         super(ModelMeta, cls).__init__(*args, **kwargs)
 
 
-class Model(ABC, metaclass=ModelMeta):
+class Model(metaclass=ModelMeta):
     """
     Model.
 

@@ -12,6 +12,7 @@ from typing import (
     Union
 )
 from .record import Record
+from cassandra.cluster import ResultSet
 
 
 class Recordset(Sequence):
@@ -34,7 +35,11 @@ class Recordset(Sequence):
     def from_result(cls, result: Iterator) -> "Recordset":
         cols = []
         try:
-            cols = result[0].keys()
+            if isinstance(result, ResultSet):
+                cols = result.one().keys
+                result = list(result)
+            else:
+                cols = result[0].keys()
             return cls(result, columns = cols)
         except Exception as err:
             raise ValueError(f"Recordset: Invalid data set {err}")
