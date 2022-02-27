@@ -50,7 +50,7 @@ setup(
         "wheel==0.37.0",
         "cpython==0.0.6",
         "Cython==0.29.28",
-        "numpy==1.21.1",
+        "numpy==1.22.2",
         "cryptography==3.4.7",
         "aiohttp==3.8.1",
         "asyncpg==0.24.0",
@@ -86,7 +86,7 @@ setup(
         "aioredis==2.0.1",
         "rethinkdb==2.4.8",
         "lxml>=4.6.2",
-        "pandas==1.3.4",
+        "pandas==1.4.1",
         "dask==2022.2.0",
         "datatable==1.0.0",
         "polars==0.8.10",
@@ -94,7 +94,6 @@ setup(
         "pyarrow==4.0.1",
         "connectorx==0.2.3",
         "openpyxl==3.0.9",
-        "aioinflux[pandas]==0.9.0",
         "pymssql==2.2.1",
         "pymongo>=3.12.1",
         "motor==2.5.1",
@@ -109,7 +108,9 @@ setup(
         "pyodbc==4.0.30",
         "lz4==4.0.0",
         "scales==1.0.9",
-        "cassandra-driver==3.25.0"
+        "cassandra-driver==3.25.0",
+        "influxdb-client==1.26.0",
+        "rx==3.2.0"
     ],
     tests_require=[
         'pytest>=6.0.0',
