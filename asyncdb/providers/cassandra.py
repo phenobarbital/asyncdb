@@ -9,6 +9,7 @@ from asyncdb.exceptions import (
     ProviderError,
 )
 import pandas as pd
+from asyncdb.meta import Recordset
 from asyncdb.providers import InitProvider
 from cassandra import ReadTimeout
 from cassandra.cluster import Cluster, EXEC_PROFILE_DEFAULT, ExecutionProfile, NoHostAvailable, ResultSet
@@ -43,6 +44,9 @@ def pandas_factory(colnames, rows):
     df = pd.DataFrame(rows, columns=colnames)
     return df
 
+def record_factory(colnames, rows):
+    return Recordset(result=[dict(zip(colnames, values)) for values in rows], columns=colnames)
+    
 
 class cassandra(InitProvider):
     _provider = "cassandra"
@@ -153,11 +157,20 @@ class cassandra(InitProvider):
                 consistency_level=ConsistencyLevel.LOCAL_QUORUM,
                 serial_consistency_level=ConsistencyLevel.LOCAL_SERIAL,
             )
+            recordprofile = ExecutionProfile(
+                load_balancing_policy=policy,
+                retry_policy=DowngradingConsistencyRetryPolicy(),
+                request_timeout=self._timeout,
+                row_factory=record_factory,
+                consistency_level=ConsistencyLevel.LOCAL_QUORUM,
+                serial_consistency_level=ConsistencyLevel.LOCAL_SERIAL,
+            )
             profiles = {
                 EXEC_PROFILE_DEFAULT: defaultprofile,
                 'pandas': pandasprofile,
                 'ordered': orderedprofile,
-                'default': tupleprofile
+                'default': tupleprofile,
+                'recordset': recordprofile
             }
             params = {
                 "port": self.params["port"],
@@ -278,7 +291,7 @@ class cassandra(InitProvider):
             fut = self._connection.execute_async(smt, params, execution_profile=factory)
             try:
                 self._result = fut.result()
-                if factory == 'pandas':
+                if factory in ('pandas', 'record', 'recordset'):
                     self._result.result = df = self._result._current_rows
             except ReadTimeout:
                 error = f'Timeout reading Data from {sentence}'
