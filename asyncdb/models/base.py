@@ -1,6 +1,8 @@
 """
 Basic, Abstract Model.
 """
+from __future__ import annotations
+
 import types
 import logging
 import traceback
@@ -236,7 +238,7 @@ def _dc_method_setattr(
             try:
                 if self.Meta.strict is True:
                     Msg(
-                        "Warning: *{name}* doesn't exists on {self.modelName}",
+                        f"Warning: *{name}* doesn't exists on {self.modelName}",
                         "WARN",
                     )
                 else:
@@ -532,6 +534,31 @@ class Model(metaclass=ModelMeta):
 
     def is_valid(self):
         return bool(self.__valid__)
+
+    def create_field(self, name: str, value: Any) -> None:
+        """create_field.
+        create a new Field on Model (when strict is False).  
+        Args:
+            name (str): name of the field
+            value (Any): value to be assigned.
+        """  
+        f = Field(required=False, default=value)
+        f.name = name
+        f.type = type(value)
+        self.__columns__[name] = f
+        setattr(self, name, value)
+        
+    def set(self, name: str, value: Any) -> None:
+        """set.
+        Alias for Create Field.
+        Args:
+            name (str): name of the field
+            value (Any): value to be assigned.
+        """
+        if name not in self.__columns__:
+            self.create_field(name, value)
+        else:
+            setattr(self, name, value)
 
     def set_connection(self, connection: "ConnectionBackend") -> None:
         """
