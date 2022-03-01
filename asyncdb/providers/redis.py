@@ -178,7 +178,7 @@ class redis(BaseProvider):
         """
         __init async redis initialization
         """
-        self._logger.info("AsyncRedis: Connecting to {}".format(self._dsn))
+        self._logger.info("REDIS: Connecting to {}".format(self._dsn))
         try:
             self._connection = await aioredis.from_url(
                 self._dsn,
