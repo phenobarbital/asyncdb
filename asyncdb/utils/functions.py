@@ -463,8 +463,10 @@ def module_exists(module_name, classpath):
             obj = __import__(classpath, fromlist=[module_name])
             return obj
         except ImportError:
-            logging.exception(f"No Driver for provider {module_name} was found")
-            raise ImportError(message=f"No Provider {module_name} Found")
+            logging.exception(
+                f"No Driver for provider {module_name} was found"
+            )
+            raise ImportError(f"No Provider {module_name} Found")
 
 
 class colors:

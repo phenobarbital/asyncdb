@@ -6,39 +6,30 @@ This provider implements a simple subset of funcionalities from aiomcache, this 
 """
 
 import asyncio
-
 import pylibmc
 import time
 
 from asyncdb.exceptions import *
 
-from asyncdb.providers import (
+from .base import (
     BasePool,
-    BaseProvider,
-    registerProvider,
+    InitProvider,
 )
 
-from asyncdb.utils import *
 
-
-class mcache(BaseProvider):
+class mcache(InitProvider):
     _provider = "memcache"
     _syntax = "nosql"
-    _pool = None
-    _dsn = ""
-    _connection = None
-    _connected = False
-    _loop = None
-    _encoding = "utf-8"
-    _server = None
     _behaviors = {"tcp_nodelay": True, "ketama": True}
 
-    def __init__(self, loop=None, params={}):
-        super(mcache, self).__init__(loop=loop, params=params)
+    def __init__(self, loop=None, params={}, **kwargs):
+        super(mcache, self).__init__(loop=loop, params=params, **kwargs)
         self._server = ["{0}:{1}".format(params["host"], params["port"])]
         try:
-            if params["behaviors"]:
-                self._behaviors = {**self._behaviors, **params["behaviors"]}
+            if kwargs["behaviors"]:
+                self._behaviors = {
+                    **self._behaviors, **kwargs["behaviors"]
+                }
         except KeyError:
             pass
 
@@ -57,10 +48,12 @@ class mcache(BaseProvider):
         """
         __init Memcache initialization
         """
-        self._logger.info("Memcache: Connecting to {}".format(self._params))
+        self._logger.info("Memcache: Connecting to {}".format(self._server))
         try:
             self._connection = pylibmc.Client(
-                self._server, binary=True, behaviors=self._behaviors
+                self._server,
+                binary=True,
+                behaviors=self._behaviors
             )
         except (pylibmc.Error) as err:
             raise ProviderError("Connection Error: {}".format(str(err)))
@@ -87,8 +80,11 @@ class mcache(BaseProvider):
         except (pylibmc.Error) as err:
             raise ProviderError("Close Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError("Unknown Memcache Closing Error: {}".format(str(err)))
+            raise ProviderError(
+                "Unknown Memcache Closing Error: {}".format(str(err)))
             return False
+
+    disconnect = close
 
     def flush(self):
         """
@@ -103,17 +99,39 @@ class mcache(BaseProvider):
             raise ProviderError("Unknown Memcache Error: {}".format(str(err)))
             return False
 
+    def test_connection(self, optional=1):
+        result = None
+        error = None
+        try:
+            self.set("test_123", optional)
+            result = self.get("test_123")
+        except Exception as err:
+            error = err
+        finally:
+            self.delete("test_123")
+            return [result, error]
+
     async def execute(self, sentence=""):
+        pass
+
+    async def execute_many(self, sentence=""):
         pass
 
     async def prepare(self, sentence=""):
         pass
 
-    async def query(self, key="", *val):
+    async def use(self, database=""):
+        pass
+
+    def query(self, key="", *val):
         return self.get_multi(key, val)
 
-    async def queryrow(self, key="", *args):
+    fetch_all = query
+
+    def queryrow(self, key="", *args):
         return self.get(key, val)
+
+    fetch_one = queryrow
 
     def set(self, key, value, timeout=None):
         try:
@@ -155,7 +173,8 @@ class mcache(BaseProvider):
         except (pylibmc.Error) as err:
             raise ProviderError("Memcache Exists Error: {}".format(str(err)))
         except Exception as err:
-            raise ProviderError("Memcache Exists Unknown Error: {}".format(str(err)))
+            raise ProviderError(
+                "Memcache Exists Unknown Error: {}".format(str(err)))
 
     def delete_multi(self, *kwargs):
         try:
@@ -177,9 +196,3 @@ class mcache(BaseProvider):
             raise ProviderError("Get Memcache Error: {}".format(str(err)))
         except Exception as err:
             raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
-
-
-"""
-Registering this Provider
-"""
-registerProvider(mcache)

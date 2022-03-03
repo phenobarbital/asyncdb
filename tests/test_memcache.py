@@ -4,18 +4,10 @@ import asyncio
 import asyncpg
 from io import BytesIO
 from pathlib import Path
-
-
-@pytest.fixture
-def event_loop():
-    loop = asyncio.get_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
-
+import pytest_asyncio
 
 DRIVER = 'memcache'
-params = {
+PARAMS = {
     "host": "localhost",
     "port": 11211
 }
@@ -23,7 +15,7 @@ params = {
 
 @pytest.fixture
 async def conn(event_loop):
-    db = AsyncDB(DRIVER, params=params, loop=event_loop)
+    db = AsyncDB(DRIVER, params=PARAMS, loop=event_loop)
     await db.connection()
     yield db
     await db.close()
@@ -32,7 +24,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_pool_by_params(event_loop):
-    pool = AsyncPool(DRIVER, params=params, loop=event_loop)
+    pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
     pytest.assume(pool.is_connected() is False)
     await pool.connect()
     pytest.assume(pool.is_connected() is True)
@@ -42,29 +34,22 @@ async def test_pool_by_params(event_loop):
 @pytest.mark.parametrize("driver", [
     (DRIVER)
 ])
-async def test_pool_by_params(driver, event_loop):
-    db = AsyncDB(driver, params=params, loop=event_loop)
+async def test_pool_by_params2(driver, event_loop):
+    db = AsyncDB(driver, params=PARAMS, loop=event_loop)
     assert db.is_connected() is False
 
 
 @pytest.mark.parametrize("driver", [
-    (DRIVER)
+    (DRIVER), (DRIVER)
 ])
 async def test_connect(driver, event_loop):
-    db = AsyncDB(driver, params=params, loop=event_loop)
+    db = AsyncDB(driver, params=PARAMS, loop=event_loop)
     await db.connection()
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection('bigtest')
     pytest.assume(not error)
     assert result == 'bigtest'
     await db.close()
-
-
-async def test_connection(conn):
-    pytest.assume(conn.is_connected() is True)
-    result, error = await conn.test_connection('bigtest')
-    pytest.assume(not error)
-    pytest.assume(result == 'bigtest')
 
 
 async def multiget(conn):
@@ -79,3 +64,7 @@ async def multiget(conn):
     await conn.delete("Test3")
     value = await conn.get("Test2")
     assert (not value)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    asyncio.get_event_loop().close()
