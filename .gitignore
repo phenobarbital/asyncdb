@@ -24,7 +24,7 @@ env/
 .venv/*
 .troc/
 develop-eggs/
-#dist/
+dist/
 dist/*
 downloads/
 eggs/
