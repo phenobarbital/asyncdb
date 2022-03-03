@@ -33,14 +33,17 @@ classifiers=[
   "License :: OSI Approved :: BSD License",
 ]
 description-file = "README.md"
-requires-python = ">=3.8.5"
+requires-python = ">=3.9.7"
 
 [tool.pytest.ini_options]
 addopts = [
   "--strict-config",
   "--strict-markers",
 ]
-
+log_cli = true
+log_cli_level = "DEBUG"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 filterwarnings = [
     "error",
     'ignore:The loop argument is deprecated since Python 3\.8, and scheduled for removal in Python 3\.10:DeprecationWarning:asyncio',
