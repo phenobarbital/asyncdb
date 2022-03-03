@@ -53,7 +53,7 @@ async def test_pool_by_dsn(event_loop):
     pytest.assume(pool.is_connected() == False)
     await pool.connect()
     pytest.assume(pool.is_connected() == True)
-    await pool.close()
+    await pool.wait_close(True, 5)
     assert pool.is_closed() is True
 
 
