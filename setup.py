@@ -13,8 +13,10 @@ def get_path(filename):
     return path.join(path.dirname(path.abspath(__file__)), filename)
 
 
-with open(get_path('README.md')) as readme:
-    README = readme.read()
+def readme():
+    with open(get_path('README.md')) as readme:
+        return readme.read()
+
 
 with open(get_path('asyncdb/version.py')) as meta:
     exec(meta.read())
@@ -25,13 +27,21 @@ setup(
     python_requires=">=3.8.0",
     url="https://github.com/phenobarbital/asyncdb",
     description=__description__,
+    keywords=['asyncio', 'asyncpg', 'aioredis', 'aiomcache', 'cassandra']
     platforms=['POSIX'],
-    long_description=README,
+    long_description=readme(),
+    long_description_content_type='text/markdown',
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
+        "Operating System :: POSIX :: Linux",
+        "Environment :: Web Environment",
         "Topic :: Software Development :: Build Tools",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: Software Development :: Libraries :: Database Connectors",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Framework :: AsyncIO",
     ],
     author=__author__,
     author_email=__author_email__,
@@ -121,6 +131,7 @@ setup(
         'pytest-xdist==2.1.0',
         'pytest-assume==2.4.2'
     ],
+    test_suite='tests',
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/asyncdb",
         "Funding": "https://paypal.me/phenobarbital",
