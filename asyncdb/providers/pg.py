@@ -282,7 +282,7 @@ class pgPool(BasePool):
         except Exception as err:
             raise ProviderError(message=f"Release Error: {err}")
 
-    async def wait_close(self, gracefully=True, timeout=1):
+    async def wait_close(self, gracefully=True, timeout=5):
         """
         close
             Close Pool Connection
@@ -300,8 +300,16 @@ class pgPool(BasePool):
                 raise ProviderError("Release Error: {}".format(str(err)))
             try:
                 if gracefully:
-                    await self._pool.expire_connections()
-                    await self._pool.close()
+                    await asyncio.wait_for(
+                        self._pool.expire_connections(),
+                        timeout=timeout,
+                        loop=self._loop
+                    )
+                    await asyncio.wait_for(
+                        self._pool.close(),
+                        timeout=timeout,
+                        loop=self._loop
+                    )
                 # # until end, close the pool correctly:
                 self._pool.terminate()
             except Exception as err:
@@ -736,7 +744,7 @@ class pg(SQLProvider, DBCursorBackend):
             raise StatementError(f"Invalid Statement Error: {err}")
         except Exception as err:
             raise Exception(f"Error on Query: {err}")
-        return await self._result
+        return self._result
 
     """
     Transaction Context
