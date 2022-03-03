@@ -2,9 +2,6 @@
 Notes on RethinkDB async Provider
 --------------------
 TODO:
- * Cursor Logic
-    - cursor.next([wait=True])
-    - iter for cursors (for, next, close)
  * Index Manipulation
  * Limits (r.table('marvel').order_by('belovedness').limit(10).run(conn))
  * map reductions
@@ -13,25 +10,21 @@ TODO:
  * to_json_string, to_json
 
 """
-import ast
-import asyncio
-import logging
-import time
-from datetime import datetime
-from threading import Thread
-
-from rethinkdb import RethinkDB
-
-from rethinkdb.errors import (
-    ReqlDriverError,
-    ReqlError,
-    ReqlNonExistenceError,
-    ReqlOpFailedError,
-    ReqlOpIndeterminateError,
-    ReqlResourceLimitError,
-    ReqlRuntimeError,
+from typing import (
+    List,
+    Dict,
+    Any,
+    Optional,
+    Iterable
 )
-
+from .interfaces import (
+    ConnectionDSNBackend,
+    DBCursorBackend
+)
+from .base import (
+    InitProvider,
+    BaseCursor
+)
 from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
@@ -41,81 +34,153 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from asyncdb.utils.functions import *
-
-from . import (
-    BaseProvider,
-    registerProvider,
+from rethinkdb.errors import (
+    ReqlDriverError,
+    ReqlError,
+    ReqlNonExistenceError,
+    ReqlOpFailedError,
+    ReqlOpIndeterminateError,
+    ReqlResourceLimitError,
+    ReqlRuntimeError,
 )
+import rethinkdb
+from rethinkdb import RethinkDB
+import ast
+import asyncio
+import uvloop
+import logging
+import time
+from datetime import datetime
 
-rt = RethinkDB()
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+uvloop.install()
+# RT = RethinkDB()
 
 
-class rethink(BaseProvider):
-    _provider = "rethinkdb"
-    _syntax = "rql"
-    _test_query = ""
-    _loop = None
-    _engine = None
-    _connection = None
-    _connected = False
-    _prepared = None
-    _parameters = ()
-    _cursor = None
-    _transaction = None
-    _initialized_on = None
-    _db = None
-    conditions = {}
-    fields = []
-    cond_definition = None
-    refresh = False
-    where = None
-    ordering = None
-    qry_options = None
-    _group = None
-    distinct = None
+class rethinkCursor(BaseCursor):
+    """
+    Cursor Object for RethinkDB.
+    """
+    _provider: "rethink"
+    _connection: Any = None
 
-    def __init__(self, loop=None, params={}, **kwargs):
-        super(rethink, self).__init__(loop=loop, params=params, **kwargs)
-        if loop:
-            self._loop = loop
+    def __init__(
+        self,
+        provider: Any,
+        sentence: Any
+    ):
+        self._provider = provider
+        self._sentence = sentence
+        self._connection = self._provider.get_connection()
+
+    async def __aenter__(self) -> "rethinkCursor":
+        print('ENTER HERE: ')
+        return self
+
+    async def __aenter__(self) -> "CursorBackend":
+        try:
+            self._cursor = await self._sentence.run(self._connection)
+        except Exception as err:
+            logging.exception(err)
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        try:
+            return await self._cursor.close()
+        except Exception as err:
+            logging.exception(err)
+
+    async def __anext__(self):
+        """Use `cursor.fetchrow()` to provide an async iterable."""
+        try:
+            row = await self._cursor.next()
+        except rethinkdb.errors.ReqlCursorEmpty:
+            row = None
+        if row is not None:
+            return row
         else:
-            self._loop = asyncio.get_event_loop()
+            raise StopAsyncIteration
+
+    async def fetch_one(self) -> Optional[Dict]:
+        return await self._cursor.next()
+
+    async def fetch_many(self, size: int = None) -> Iterable[List]:
+        pass
+
+    async def fetch_all(self) -> Iterable[List]:
+        return list(self._cursor)
+
+    """
+    Cursor Methods.
+    """
+
+    async def fetch_one(self) -> Optional[Dict]:
+        return await self._cursor.fetchone()
+
+    async def fetch_many(self, size: int = None) -> Iterable[List]:
+        return await self._cursor.fetch(size)
+
+    async def fetch_all(self) -> Iterable[List]:
+        return await self._cursor.fetchall()
+
+
+class rethink(InitProvider, DBCursorBackend):
+    _provider = "rethink"
+    _syntax = "rql"
+
+    def __init__(self, dsn="", loop=None, params={}, **kwargs):
         self.conditions = {}
+        self.fields = []
+        self.conditions = {}
+        self.cond_definition = None
+        self.refresh = False
+        self.where = None
+        self.ordering = None
+        self.qry_options = None
+        self._group = None
+        self.distinct = None
+        InitProvider.__init__(
+            self,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
+        DBCursorBackend.__init__(self, params, **kwargs)
         # set rt object
-        self._engine = rt
+        self._engine = RethinkDB()
         # set asyncio type
         self._engine.set_loop_type("asyncio")
         asyncio.set_event_loop(self._loop)
+        # rethink understand "database" as db
         try:
-            self._params["db"] = self._params["database"]
-            del self._params["database"]
+            self.params["db"] = self.params["database"]
+            del self.params["database"]
         except KeyError:
             pass
 
     async def connection(self):
         self._logger.debug(
             "RT Connection to host {} on port {} to database {}".format(
-                self._params["host"], self._params["port"], self._params["db"]
+                self.params["host"], self.params["port"], self.params["db"]
             )
         )
-        self._params["timeout"] = self._timeout
+        self.params["timeout"] = self._timeout
         try:
-            self._connection = await self._engine.connect(**self._params)
-            if self._params["db"]:
-                await self.db(self._params["db"])
+            self._connection = await self._engine.connect(
+                **self.params
+            )
+            if self.params["db"]:
+                await self.db(self.params["db"])
         except ReqlRuntimeError as err:
-            error = "No database connection could be established: {}".format(str(err))
+            error = f"No database connection could be established: {err!s}"
             raise ProviderError(message=error, code=503)
-            return False
         except ReqlDriverError as err:
-            error = "No database connection could be established: {}".format(str(err))
+            error = f"No database connection could be established: {err!s}"
             raise ProviderError(message=error, code=503)
-            return False
         except Exception as err:
-            error = "Exception on RethinkDB: {}".format(str(err))
+            error = f"Exception on RethinkDB: {err!s}"
             raise ProviderError(message=error, code=503)
-            return False
         finally:
             if self._connection:
                 self._connected = True
@@ -124,19 +189,15 @@ class rethink(BaseProvider):
     def engine(self):
         return self._engine
 
-    def create_dsn(self, params):
-        return None
-
     async def close(self, wait=True):
         try:
             if self._connection:
                 await self._connection.close(noreply_wait=wait)
         finally:
             self._connection = None
+            self._connected = False
 
-    def terminate(self):
-        self._logger.debug("Closing Rethink Connection")
-        self._loop.run_until_complete(self.close())
+    disconnect = close
 
     async def release(self):
         await self.close(wait=10)
@@ -145,7 +206,7 @@ class rethink(BaseProvider):
     Basic Methods
     """
 
-    async def db(self, db):
+    async def use(self, db: str):
         self._db = db
         try:
             self._connection.use(self._db)
@@ -153,14 +214,7 @@ class rethink(BaseProvider):
             raise ProviderError(message=err, code=503)
         return self
 
-    def use(self, db):
-        self._db = db
-        # print(self._db)
-        try:
-            self._connection.use(self._db)
-        except ReqlError as err:
-            raise ProviderError(message=err, code=503)
-        return self
+    db = use
 
     async def createdb(self, dbname):
         """
@@ -173,7 +227,6 @@ class rethink(BaseProvider):
                 self._db = dbname
                 return await self._engine.db_create(self._db).run(self._connection)
         finally:
-            self._db = dbname
             return self
 
     async def dropdb(self, dbname):
@@ -183,7 +236,8 @@ class rethink(BaseProvider):
         try:
             await self._engine.db_drop(dbname).run(self._connection)
         finally:
-            self._connection.use("test")
+            if dbname == self._db:
+                self._connection.use("test")
             return self
 
     async def sync(self, table):
@@ -263,16 +317,15 @@ class rethink(BaseProvider):
         if self.conditions:
             conditions = {**conditions, **self.conditions}
 
-        conditions.update((x, None) for (x, y) in conditions.items() if y == "null")
-        print("Conditions for clean {}".format(conditions))
-
+        conditions.update((x, None)
+                          for (x, y) in conditions.items() if y == "null")
+        self._logger.debug("Conditions for clean {}".format(conditions))
         try:
             if conditions["filterdate"] == "CURRENT_DATE":
                 conditions["filterdate"] = today(mask="%Y-%m-%d")
         except (KeyError, ValueError):
             conditions["filterdate"] = today(mask="%Y-%m-%d")
         result = await self.delete(table, filter=conditions, changes=False)
-        # print(result)
         if result:
             return result
         else:
@@ -280,8 +333,8 @@ class rethink(BaseProvider):
 
     async def listdb(self):
         if self._connection:
-            lists = await self._engine.db_list().run(self._connection)
-            return [x for x in lists]
+            list = await self._engine.db_list().run(self._connection)
+            return [x for x in list]
         else:
             return []
 
@@ -314,372 +367,471 @@ class rethink(BaseProvider):
     """
     Derived Methods (mandatory)
     """
-
     async def test_connection(self):
         result = None
         error = None
         try:
             result = await self._engine.db_list().run(self._connection)
-            if result:
-                return [result, error]
         except Exception as err:
             return [None, err]
         finally:
             return [result, error]
 
     def execute(self):
-        pass
+        raise NotImplementedError
+
+    def execute_many(self):
+        raise NotImplementedError
 
     def prepare(self):
         pass
 
-    async def query(self, table, filter=None):
+    async def query(self, tablename, filter=None):
         """
         query
             get all rows from a table
         -----
         """
         error = None
-        if not table:
-            raise EmptyStatement("Rethink: Table name is an empty string")
-
-        if self._connection:
-            data = []
-            try:
-                # self._columns = await self._engine.table(table).get(1).keys().run(self._connection)
-                self._columns = (
-                    await self._engine.table(table)
-                    .nth(0)
-                    .default(None)
-                    .keys()
+        self._result = None
+        await self.valid_operation(tablename)
+        data = []
+        try:
+            self.start_timing()
+            self._columns = (
+                await self._engine.table(tablename)
+                .nth(0)
+                .default(None)
+                .keys()
+                .run(self._connection)
+            )
+            if not filter:
+                cursor = (
+                    await self._engine.db(self._db)
+                    .table(tablename)
                     .run(self._connection)
                 )
-                # print(self._columns)
-                if not filter:
-                    cursor = (
-                        await self._engine.db(self._db)
-                        .table(table)
-                        .run(self._connection)
-                    )
-                else:
-                    cursor = (
-                        await self._engine.db(self._db)
-                        .table(table)
-                        .filter(filter)
-                        .run(self._connection)
-                    )
-                while await cursor.fetch_next():
-                    row = await cursor.next()
-                    data.append(row)
-                if data:
-                    self._result = data
-                else:
-                    raise NoDataFound(message="Empty Result", code=404)
-            except ReqlNonExistenceError as err:
-                error = "Query Runtime Error: {}".format(str(err))
-                raise ReqlNonExistenceError(error)
-            except ReqlRuntimeError as err:
-                error = "Query Runtime Error: {}".format(str(err))
-                raise NoDataFound(error)
-            except ReqlResourceLimitError as error:
-                error = "Query Runtime Error: {}".format(str(err))
-                raise ReqlResourceLimitError(error)
-            except ReqlOpIndeterminateError as error:
-                error = "Query Runtime Error: {}".format(str(err))
-                raise ReqlOpIndeterminateError(error)
-            except rethinkdb.errors.ReqlPermissionError as err:
-                raise ProviderError(err)
-            finally:
-                # self._generated = datetime.now() - startTime
-                return [self._result, error]
+            else:
+                cursor = (
+                    await self._engine.db(self._db)
+                    .table(tablename)
+                    .filter(filter)
+                    .run(self._connection)
+                )
+            while await cursor.fetch_next():
+                row = await cursor.next()
+                data.append(row)
+            if data:
+                self._result = data
+            else:
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Result on {tablename!s}",
+                    code=404
+                )
+        except (ReqlNonExistenceError, ReqlRuntimeError) as err:
+            error = f"Query Runtime Error: {err!s}"
+            raise NoDataFound(error)
+        except ReqlResourceLimitError as err:
+            error = f"Query Limit Error: {err!s}"
+            raise ProviderError(message=error)
+        except ReqlOpIndeterminateError as err:
+            error = f"Query Runtime Error: {err!s}"
+            raise ProviderError(message=error)
+        except (rethinkdb.errors.ReqlPermissionError, Exception) as err:
+            raise ProviderError(message=err)
+        finally:
+            self.generated_at()
+            return await self._serializer(self._result, error)
 
-    async def queryrow(self, table, filter={}, id=0):
+    async def fetch_all(self, tablename: str, filter: Any = None):
+        """
+        fetch_all
+            get all rows from a table (native)
+        -----
+        """
+        error = None
+        self._result = None
+        await self.valid_operation(tablename)
+        data = []
+        try:
+            self.start_timing()
+            if not filter:
+                cursor = (
+                    await self._engine.db(self._db)
+                    .table(tablename)
+                    .run(self._connection)
+                )
+            else:
+                cursor = (
+                    await self._engine.db(self._db)
+                    .table(tablename)
+                    .filter(filter)
+                    .run(self._connection)
+                )
+            while await cursor.fetch_next():
+                row = await cursor.next()
+                data.append(row)
+            if data:
+                self._result = data
+            else:
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Result on {tablename!s}",
+                    code=404
+                )
+        except (ReqlNonExistenceError, ReqlRuntimeError) as err:
+            error = f"Query Runtime Error: {err!s}"
+            raise NoDataFound(error)
+        except ReqlResourceLimitError as err:
+            error = f"Query Limit Error: {err!s}"
+            raise ProviderError(message=error)
+        except ReqlOpIndeterminateError as err:
+            error = f"Query Runtime Error: {err!s}"
+            raise ProviderError(message=error)
+        except (rethinkdb.errors.ReqlPermissionError, Exception) as err:
+            raise ProviderError(message=err)
+        finally:
+            self.generated_at()
+            return self._result
+
+    async def queryrow(self, tablename: str, filter: Dict = {}, id=0):
         """
         queryrow
             get only one row
         """
         error = None
-        if not table:
-            raise EmptyStatement("Rethink: Table name is an empty string")
-        if self._connection:
-            # startTime = datetime.now()
-            try:
-                data = (
-                    await self._engine.table(table)
-                    .filter(filter)
-                    .nth(id)
-                    .run(self._connection)
+        self._result = None
+        await self.valid_operation(tablename)
+        try:
+            self.start_timing()
+            data = (
+                await self._engine.table(tablename)
+                .filter(filter)
+                .nth(id)
+                .run(self._connection)
+            )
+            if data:
+                self._result = data
+            else:
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Row Result on {tablename!s}",
+                    code=404
                 )
-                if data:
-                    self._result = data
-                else:
-                    raise NoDataFound(message="Empty Result", code=404)
-            except ReqlNonExistenceError as err:
-                error = "Empty Result: {}".format(str(err))
-                raise NoDataFound(error)
-            except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
-                error = "QueryRow Runtime Error: {}".format(str(err))
-                raise ProviderError(err)
-                return False
-            finally:
-                return [self._result, error]
-        else:
-            return [None, "Not Connected"]
+        except (ReqlNonExistenceError, ReqlRuntimeError) as err:
+            error = f"Query Runtime Error: {err!s}"
+            raise NoDataFound(error)
+        except ReqlResourceLimitError as err:
+            error = f"Query Limit Error: {err!s}"
+            raise ProviderError(message=error)
+        except ReqlOpIndeterminateError as err:
+            error = f"Query Runtime Error: {err!s}"
+            raise ProviderError(message=error)
+        except (rethinkdb.errors.ReqlPermissionError, Exception) as err:
+            raise ProviderError(message=err)
+        finally:
+            self.generated_at()
+            return await self._serializer(self._result, error)
+
+    async def fetch_one(self, tablename: str, filter: Dict = {}, id=0):
+        """
+        queryrow
+            get only one row
+        """
+        error = None
+        self._result = None
+        await self.valid_operation(tablename)
+        try:
+            self.start_timing()
+            data = (
+                await self._engine.table(tablename)
+                .filter(filter)
+                .nth(id)
+                .run(self._connection)
+            )
+            if data:
+                self._result = data
+            else:
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Row Result on {tablename!s}",
+                    code=404
+                )
+        except (ReqlNonExistenceError, ReqlRuntimeError) as err:
+            error = f"Query Runtime Error: {err!s}"
+            raise NoDataFound(error)
+        except ReqlResourceLimitError as err:
+            error = f"Query Limit Error: {err!s}"
+            raise ProviderError(message=error)
+        except ReqlOpIndeterminateError as err:
+            error = f"Query Runtime Error: {err!s}"
+            raise ProviderError(message=error)
+        except (rethinkdb.errors.ReqlPermissionError, Exception) as err:
+            raise ProviderError(message=err)
+        finally:
+            self.generated_at()
+            return self._result
 
     """
     New Methods
     """
-
-    async def get(self, table, id):
+    async def get(self, tablename: str, id: int = 0):
         """
         get
-           get only one row based on primary key or filtering, Get a document by primary key
+           get only one row based on primary key or filtering,
+           Get a document by primary key.
         -----
         """
         error = None
-        if not id:
-            raise EmptyStatement("Rethink: Id for get cannot be empty")
+        await self.valid_operation(tablename)
+        try:
+            data = await self._engine.table(
+                tablename
+                ).get(id).run(self._connection)
+            if data:
+                self._result = data
+            else:
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Row Result on {tablename!s}",
+                    code=404
+                )
+        except ReqlNonExistenceError as err:
+            error = f"Missing (non existence) on {tablename}: {err!s}"
+            raise NoDataFound(error)
+        except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
+            error = f"RethinkDB Runtime Error: {err!s}"
+            raise ProviderError(error)
+        except Exception as err:
+            error = f'Unexpected RethinkDB Error: {err!s}'
+            raise ProviderError(error)
+        finally:
+            return await self._serializer(self._result, error)
 
-        if not table:
-            raise EmptyStatement("Rethink: Table name is an empty string")
-
-        if self._connection:
-            try:
-                data = await self._engine.table(table).get(id).run(self._connection)
-                if data:
-                    self._result = data
-                else:
-                    raise NoDataFound(message="Empty Result", code=404)
-            except ReqlNonExistenceError as err:
-                error = "Empty Result: {}".format(str(err))
-                raise NoDataFound(error)
-            except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
-                error = "QueryRow Runtime Error: {}".format(str(err))
-                raise ProviderError(err)
-                return False
-            finally:
-                return [self._result, error]
-
-    async def get_all(self, table, filter=[], index=""):
+    async def get_all(self, tablename, filter=[], index=""):
         """
-        get_all
-           get all rows where the given value matches the value of the requested index
+        get_all.
+           get all rows where the given value matches the value of
+           the requested index.
         -----
         """
-        if not table:
-            raise EmptyStatement("Rethink: Table name is an empty string")
+        error = None
+        self._result = None
+        await self.valid_operation(tablename)
+        try:
+            if index:
+                cursor = (
+                    await self._engine.table(tablename)
+                    .get_all(filter, index=index)
+                    .run(self._connection)
+                )
+            else:
+                cursor = (
+                    await self._engine.table(tablename)
+                    .get_all(filter)
+                    .run(self._connection)
+                )
+            data = []
+            while await cursor.fetch_next():
+                item = await cursor.next()
+                data.append(item)
+            if data:
+                self._result = data
+            else:
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Row Result on {tablename!s}",
+                    code=404
+                )
+        except ReqlNonExistenceError as err:
+            error = f"Missing (non existence) on {tablename}: {err!s}"
+            raise NoDataFound(error)
+        except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
+            error = f"RethinkDB Runtime Error: {err!s}"
+            raise ProviderError(error)
+        except Exception as err:
+            error = f'Unexpected RethinkDB Error: {err!s}'
+            raise ProviderError(error)
+        finally:
+            return await self._serializer(self._result, error)
 
-        if self._connection:
-            try:
-                if index:
-                    cursor = (
-                        await self._engine.table(table)
-                        .get_all(filter, index=index)
-                        .run(self._connection)
-                    )
-                else:
-                    cursor = (
-                        await self._engine.table(table)
-                        .get_all(filter)
-                        .run(self._connection)
-                    )
-                data = []
-                while await cursor.fetch_next():
-                    item = await cursor.next()
-                    data.append(item)
-                if data:
-                    self._result = data
-                else:
-                    raise NoDataFound(message="Empty Result", code=404)
-                return self._result
-            except ReqlRuntimeError as err:
-                error = "Query Get All Runtime Error: {}".format(str(err))
-                raise ProviderError(error)
-                return False
-
-    async def match(self, table, field="id", regexp="(?i)^[a-z]+$"):
+    async def match(self, tablename, field="id", regexp="(?i)^[a-z]+$"):
         """
         match
            get all rows where the given value matches with a regular expression
         -----
         """
-        if not table:
-            raise EmptyStatement("Rethink: Table name is an empty string")
-        if self._connection:
-            try:
-                data = (
-                    await self._engine.table(table)
-                    .filter(lambda doc: doc[field].match(regexp))
-                    .run(self._connection)
+        self._result = None
+        await self.valid_operation(tablename)
+        try:
+            data = (
+                await self._engine.table(tablename)
+                .filter(lambda doc: doc[field].match(regexp))
+                .run(self._connection)
+            )
+            if data:
+                self._result = data
+            else:
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Row Result on {tablename!s}",
+                    code=404
                 )
-                if data:
-                    self._result = data
-                else:
-                    raise NoDataFound(message="Empty Result", code=404)
-                return self._result
-            except ReqlRuntimeError as err:
-                error = "Query Get All Runtime Error: {}".format(str(err))
-                raise ProviderError(error)
-                return False
+        except ReqlNonExistenceError as err:
+            error = f"Missing (non existence) on {tablename}: {err!s}"
+            raise NoDataFound(error)
+        except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
+            error = f"RethinkDB Runtime Error: {err!s}"
+            raise ProviderError(error)
+        except Exception as err:
+            error = f'Unexpected RethinkDB Error: {err!s}'
+            raise ProviderError(error)
+        finally:
+            return await self._serializer(self._result, error)
 
-    async def insert(self, table, data):
+    async def insert(self, tablename, data):
         """
         insert
              create a record (insert)
         -----
         """
-        if self._connection:
-            try:
-                inserted = (
-                    await self._engine.table(table)
-                    .insert(data, conflict="replace")
-                    .run(self._connection)
+        try:
+            inserted = (
+                await self._engine.table(tablename)
+                .insert(data, conflict="replace")
+                .run(self._connection)
+            )
+            if inserted["errors"] > 0:
+                raise ProviderError(
+                    "INSERT Runtime Error: {}".format(
+                        inserted["first_error"])
                 )
-                if inserted["errors"] > 0:
-                    raise ProviderError(
-                        "INSERT Runtime Error: {}".format(inserted["first_error"])
-                    )
-                    return False
-                return inserted
-            except ReqlRuntimeError as err:
-                error = "INSERT Runtime Error: {}".format(str(err))
-                raise ProviderError(error)
                 return False
-            except ReqlNonExistenceError:
-                raise ProviderError("Object {} doesnt exists".format(table))
-                return False
-            # finally:
-            #    return await self._engine.table(table).sync().run(self._connection)
-        else:
-            return False
+            return inserted
+        except ReqlNonExistenceError as err:
+            raise NoDataFound(
+                f"RethinkDB: Object {tablename} doesn't exists : {err!s}"
+            )
+        except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
+            raise ProviderError(
+                f"RethinkDB: INSERT Runtime Error: {err!s}"
+            )
+        except Exception as err:
+            raise ProviderError(
+                f'Unexpected RethinkDB INSERT Error: {err!s}'
+            )
 
-    async def replace(self, table, id, data):
+    async def replace(self, tablename, id, data):
         """
         replace
              replace a record (insert, update or delete)
         -----
         """
-        if self._connection:
-            try:
-                self._result = (
-                    await self._engine.table(table)
-                    .get(id)
-                    .replace(data)
-                    .run(self._connection)
+        try:
+            replaced = (
+                await self._engine.table(tablename)
+                .get(id)
+                .replace(data)
+                .run(self._connection)
+            )
+            if replaced["errors"] > 0:
+                raise ProviderError(
+                    "REPLACE Runtime Error: {}".format(
+                        self._result["first_error"])
                 )
-                if self._result["errors"] > 0:
-                    raise ProviderError(
-                        "REPLACE Runtime Error: {}".format(self._result["first_error"])
-                    )
-                    return False
-                return self._result
-            except ReqlRuntimeError as err:
-                error = "REPLACE Runtime Error: {}".format(str(err))
-                raise ProviderError(error)
                 return False
-            except ReqlNonExistenceError:
-                raise ProviderError("Object {} doesnt exists".format(table))
-                return False
-        else:
-            return False
+            return replaced
+        except ReqlNonExistenceError as err:
+            raise NoDataFound(
+                f"RethinkDB: Object {tablename} doesn't exists : {err!s}"
+            )
+        except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
+            raise ProviderError(
+                f"RethinkDB: REPLACE Runtime Error: {err!s}"
+            )
+        except Exception as err:
+            raise ProviderError(
+                f'Unexpected RethinkDB REPLACE Error: {err!s}'
+            )
 
-    async def update(self, table, data, id=None, filter={}):
+    async def update(self, tablename, data, id=None, filter={}):
         """
         update
              update a record based on filter match
         -----
         """
-        if self._connection:
-            if id:
-                try:
-                    self._result = (
-                        await self._engine.table(table)
-                        .get(id)
-                        .update(data)
-                        .run(self._connection)
-                    )
-                    # self._result = await self._engine.table(table).get(id).update(data).run(self._connection)
-                    return self._result
-                except ReqlRuntimeError as err:
-                    error = "UPDATE Runtime Error: {}".format(str(err))
-                    raise ProviderError(error)
-                    return False
-                except ReqlNonExistenceError:
-                    raise ProviderError("Object {} doesnt exists".format(table))
-                    return False
-            elif type(filter) == dict and len(filter) > 0:
-                try:
-                    self._result = (
-                        await self._engine.table(table)
-                        .filter(filter)
-                        .update(data, return_changes=False)
-                        .run(self._connection)
-                    )
-                    # self._result = await self._engine.table(table).filter(filter).update(data).run(self._connection)
-                    return self._result
-                except ReqlRuntimeError as err:
-                    error = "REPLACE Runtime Error: {}".format(str(err))
-                    raise ProviderError(error)
-                    return False
-                except ReqlNonExistenceError:
-                    raise ProviderError("Object {} doesnt exists".format(table))
-                    return False
-            else:
-                # update all documents in table
-                return (
-                    await self._engine.table(table).update(data).run(self._connection)
-                )
+        if id:
+            sentence = self._engine.table(tablename).get(id).update(data)
+        elif type(filter) == dict and len(filter) > 0:
+            sentence = self._engine.table(tablename).filter(
+                filter).update(data, return_changes=False)
         else:
-            return False
+            # update all documents in table
+            sentence = self._engine.table(
+                tablename
+            ).update(data)
+        try:
+            self._result = (await sentence.run(self._connection))
+            return self._result
+        except ReqlRuntimeError as err:
+            raise ProviderError(f"UPDATE Runtime Error: {err!s}")
+        except ReqlNonExistenceError:
+            raise ProviderError(
+                f"Object {tablename} doesn't exists"
+            )
+        except Exception as err:
+            raise ProviderError(
+                f'Unexpected RethinkDB REPLACE Error: {err!s}'
+            )
 
-    async def literal(self, table, id, data):
+    async def literal(self, tablename, id, data):
         """
         literal
             replace a field with another
         """
-        if self._connection:
-            try:
-                self._result = (
-                    await self._engine.table(table)
-                    .get(id)
-                    .update({field: r.literal(data).run(self._connection)})
-                )
-                return self._result
-            except ReqlRuntimeError as err:
-                error = "Literal Runtime Error: {}".format(str(err))
-                raise ProviderError(error)
-                return False
-            except ReqlNonExistenceError:
-                raise ProviderError("Object {} doesnt exists".format(table))
-                return False
-        else:
-            return False
+        try:
+            self._result = (
+                await self._engine.table(tablename)
+                .get(id)
+                .update({field: r.literal(data).run(self._connection)})
+            )
+            return self._result
+        except ReqlRuntimeError as err:
+            raise ProviderError(f"LITERAL Runtime Error: {err!s}")
+        except ReqlNonExistenceError:
+            raise ProviderError(
+                f"LITERAL: Object {tablename} doesn't exists"
+            )
+        except Exception as err:
+            raise ProviderError(
+                f'Unexpected RethinkDB LITERAL Error: {err!s}'
+            )
 
-    async def update_conditions(self, table, data, filter={}, fieldname="filterdate"):
+    async def update_conditions(
+                self,
+                tablename,
+                data,
+                filter={},
+                fieldname="filterdate"
+            ):
         """
         update_conditions
              update a record based on a fieldname
         -----
         """
-        if self._connection:
-            try:
-                self._result = (
-                    await self._engine.table(table)
-                    .filter(~self._engine.row.has_fields(fieldname))
-                    .filter(filter)
-                    .update(data)
-                    .run(self._connection)
-                )
-                return self._result
-            except ReqlRuntimeError as err:
-                error = "Update Conditions Error: {}".format(str(err))
-                raise ProviderError(error)
-                return False
-            except ReqlNonExistenceError:
-                raise ProviderError("Object {} doesnt exists".format(table))
-                return False
-        else:
-            return False
+        try:
+            self._result = (
+                await self._engine.table(tablename)
+                .filter(~self._engine.row.has_fields(fieldname))
+                .filter(filter)
+                .update(data)
+                .run(self._connection)
+            )
+            return self._result
+        except ReqlRuntimeError as err:
+            raise ProviderError(f"UPDATE Runtime Error: {err!s}")
+        except ReqlNonExistenceError:
+            raise ProviderError(
+                f"UPDATE: Object {tablename} doesn't exists"
+            )
+        except Exception as err:
+            raise ProviderError(
+                f'Unexpected RethinkDB UPDATE Error: {err!s}'
+            )
 
     async def delete(self, table, id=None, filter={}, changes=True):
         """
@@ -687,93 +839,112 @@ class rethink(BaseProvider):
              delete a record based on id or filter search
         -----
         """
-        if not table:
-            raise EmptyStatement("Rethink: Table name is an empty string")
-
-        if self._connection:
-            if id:
-                try:
-                    self._result = (
-                        await self._engine.table(table)
-                        .get(id)
-                        .delete(return_changes=changes)
-                        .run(self._connection)
-                    )
-                    return self._result
-                except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
-                    raise ProviderError(err)
-                    return False
-            elif isinstance(filter, dict):
-                try:
-                    self._result = (
-                        await self._engine.table(table)
-                        .filter(filter)
-                        .delete(return_changes=changes)
-                        .run(self._connection)
-                    )
-                    return self._result
-                except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
-                    raise ProviderError(err)
-                    return False
-            else:
-                # delete all documents in table
-                return (
-                    await self._engine.table(table)
-                    .delete(return_changes=changes)
-                    .run(self._connection)
-                )
+        if id:
+            sentence = self._engine.table(table).get(
+                id).delete(return_changes=changes)
+        elif isinstance(filter, dict):
+            sentence = self._engine.table(table).filter(
+                filter).delete(return_changes=changes)
         else:
-            return False
+            sentence = self._engine.table(table).delete(return_changes=changes)
+        try:
+            self._result = (await sentence.run(self._connection))
+            return self._result
+        except ReqlRuntimeError as err:
+            raise ProviderError(f"DELETE Runtime Error: {err!s}")
+        except ReqlNonExistenceError:
+            raise ProviderError(
+                f"DELETE: Object {tablename} doesn't exists"
+            )
+        except Exception as err:
+            raise ProviderError(
+                f'Unexpected RethinkDB DELETE Error: {err!s}'
+            )
 
-    async def between(self, table, min=None, max=None, idx=""):
+    async def between(self, tablename, min=None, max=None, idx=""):
         """
         between
              Get all documents between two keys
         -----
         """
-        if not table:
-            raise EmptyStatement("Rethink: Table name is an empty string")
-
-        if self._connection:
-            error = None
-            if min:
-                m = min
-            else:
-                m = self._engine.minval
-            if max:
-                mx = max
-            else:
-                mx = self._engine.maxval
-            try:
-                if idx:
-                    cursor = (
-                        await self._engine.table(table)
-                        .order_by(index=idx)
-                        .between(m, mx, index=idx)
-                        .run(self._connection)
-                    )
-                else:
-                    cursor = (
-                        await self._engine.table(table)
-                        .between(m, mx)
-                        .run(self._connection)
-                    )
-                data = []
-                while await cursor.fetch_next():
-                    item = await cursor.next()
-                    data.append(item)
-                if data:
-                    self._result = data
-                else:
-                    raise NoDataFound(message="Empty Result", code=404)
-            except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
-                error = str(err)
-                raise ProviderError(err)
-                return False
-            finally:
-                return [self._result, error]
+        self._result = None
+        await self.valid_operation(tablename)
+        error = None
+        if min:
+            m = min
         else:
-            return None
+            m = self._engine.minval
+        if max:
+            mx = max
+        else:
+            mx = self._engine.maxval
+        try:
+            if idx:
+                cursor = (
+                    await self._engine.table(tablename)
+                    .order_by(index=idx)
+                    .between(m, mx, index=idx)
+                    .run(self._connection)
+                )
+            else:
+                cursor = (
+                    await self._engine.table(tablename)
+                    .between(m, mx)
+                    .run(self._connection)
+                )
+            data = []
+            while await cursor.fetch_next():
+                item = await cursor.next()
+                data.append(item)
+            if data:
+                self._result = data
+            else:
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Row Result on {tablename!s}",
+                    code=404
+                )
+        except ReqlNonExistenceError as err:
+            error = f"Missing (non existence) on {tablename}: {err!s}"
+            raise NoDataFound(error)
+        except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
+            error = f"RethinkDB Runtime Error: {err!s}"
+            raise ProviderError(error)
+        except Exception as err:
+            error = f'Unexpected RethinkDB Error: {err!s}'
+            raise ProviderError(error)
+        finally:
+            return await self._serializer(self._result, error)
+
+    """
+    Cursors:
+    """
+
+    def cursor(self, tablename, filter=None):
+        """
+        cursor
+            get all rows from a table, returning a Cursor.
+        -----
+        """
+        error = None
+        self._result = None
+        try:
+            if not filter:
+                cursor = self._engine.db(self._db).table(tablename)
+            else:
+                cursor = self._engine.db(self._db).table(
+                    tablename).filter(filter)
+            return self.__cursor__(
+                provider=self,
+                sentence=cursor
+            )
+        except (ReqlNonExistenceError, ReqlRuntimeError) as err:
+            raise NoDataFound(f"Query Runtime Error: {err!s}")
+        except ReqlResourceLimitError as err:
+            raise ProviderError(message=f"Query Limit Error: {err!s}")
+        except ReqlOpIndeterminateError as err:
+            raise ProviderError(message=f"Query Runtime Error: {err!s}")
+        except (rethinkdb.errors.ReqlPermissionError, Exception) as err:
+            raise ProviderError(message=err)
 
     """
     Infraestructure for Functions, creating filter conditions
@@ -896,7 +1067,7 @@ class rethink(BaseProvider):
                 try:
                     get_index = hierarchy.index(filter_sorted.pop())
                     # print(get_index)
-                    selected = hierarchy[get_index + 1 :]
+                    selected = hierarchy[get_index + 1:]
                 except (KeyError, IndexError):
                     selected = []
                 try:
@@ -904,7 +1075,8 @@ class rethink(BaseProvider):
                         # print('null all conditions below selection')
                         if selected:
                             for n in selected:
-                                result = result.and_(self._engine.row[n].eq(None))
+                                result = result.and_(
+                                    self._engine.row[n].eq(None))
                         else:
                             if get_filter:
                                 last = get_filter.pop(0)
@@ -920,39 +1092,46 @@ class rethink(BaseProvider):
                                     )
                             else:
                                 last = hierarchy.pop(0)
-                                result = result.and_(self._engine.row[last].eq(None))
+                                result = result.and_(
+                                    self._engine.row[last].eq(None))
                 except (KeyError, ValueError):
                     pass
                 try:
                     if self.qry_options["select_child"] == "true":
                         try:
                             child = selected.pop(0)
-                            result = result.and_(self._engine.row[child].ne(None))
+                            result = result.and_(
+                                self._engine.row[child].ne(None))
                             # _where[child] = '!null'
                             for n in selected:
-                                result = result.and_(self._engine.row[n].eq(None))
+                                result = result.and_(
+                                    self._engine.row[n].eq(None))
                             return result
                         except (ValueError, IndexError):
                             if get_filter:
                                 pass
                             else:
                                 child = hierarchy.pop(0)
-                                result = result.and_(self._engine.row[child].ne(None))
+                                result = result.and_(
+                                    self._engine.row[child].ne(None))
                                 # _where[child] = '!null'
                                 for n in hierarchy:
                                     # _where[n] = 'null'
-                                    result = result.and_(self._engine.row[n].eq(None))
+                                    result = result.and_(
+                                        self._engine.row[n].eq(None))
                 except (KeyError, ValueError):
                     pass
                 try:
                     if self.qry_options["select_stores"] == "true":
                         try:
                             last = selected.pop()
-                            result = result.and_(self._engine.row[last].ne(None))
+                            result = result.and_(
+                                self._engine.row[last].ne(None))
                             return result
                         except (ValueError, IndexError):
                             last = hierarchy.pop()
-                            result = result.and_(self._engine.row[last].ne(None))
+                            result = result.and_(
+                                self._engine.row[last].ne(None))
                 except (KeyError, ValueError):
                     pass
         return result
@@ -969,7 +1148,8 @@ class rethink(BaseProvider):
                 )
                 return self._result
             except ReqlNonExistenceError as err:
-                raise ReqlNonExistenceError("Empty Result: {}".format(str(err)))
+                raise ReqlNonExistenceError(
+                    "Empty Result: {}".format(str(err)))
             except ReqlRuntimeError as err:
                 raise ReqlRuntimeError(str(err))
             except Exception as err:
@@ -985,7 +1165,8 @@ class rethink(BaseProvider):
             conditions = {**self.conditions}
         if self.where:
             conditions.update(self.where)
-        conditions.update((x, None) for (x, y) in conditions.items() if y == "null")
+        conditions.update((x, None)
+                          for (x, y) in conditions.items() if y == "null")
         try:
             if conditions["filterdate"] == "CURRENT_DATE":
                 conditions["filterdate"] = today(mask="%Y-%m-%d")
@@ -1016,7 +1197,8 @@ class rethink(BaseProvider):
         if self.where:
             conditions.update(self.where)
 
-        conditions.update((x, None) for (x, y) in conditions.items() if y == "null")
+        conditions.update((x, None)
+                          for (x, y) in conditions.items() if y == "null")
 
         print("RT CONDITIONS {}".format(conditions))
 
@@ -1084,7 +1266,8 @@ class rethink(BaseProvider):
                         )
                     elif value.startswith("["):
                         # between
-                        result = result.and_(self._engine.row[key].between(10, 20))
+                        result = result.and_(
+                            self._engine.row[key].between(10, 20))
                     else:
                         result = result.and_(self._engine.row[key].eq(value))
                 else:
@@ -1145,9 +1328,3 @@ class rethink(BaseProvider):
                     self._result = data
             finally:
                 return self._result
-
-
-"""
-Registering this Provider
-"""
-registerProvider(rethink)

@@ -1,9 +1,6 @@
 import pytest
-from asyncdb import AsyncDB, AsyncPool
+from asyncdb import AsyncDB
 import asyncio
-import asyncpg
-from io import BytesIO
-from pathlib import Path
 
 @pytest.fixture
 def event_loop():
@@ -13,6 +10,8 @@ def event_loop():
     loop.close()
 
 
+DRIVER='cassandra'
+VERSION = '4.0.1'
 PARAMS = {
     "host": "127.0.0.1",
     "port": "9042",
@@ -21,7 +20,6 @@ PARAMS = {
     "database": 'library'
 }
 
-DRIVER='cassandra'
 
 @pytest.fixture
 async def conn(event_loop):
@@ -49,7 +47,7 @@ async def test_connect(driver, event_loop):
     result, error = await db.test_connection()
     pytest.assume(type(result) == list)
     row = result[0]
-    pytest.assume(row['release_version'] == '3.11.8')
+    pytest.assume(row['release_version'] == VERSION)
     await db.close()
     pytest.assume(db.is_connected() is False)
 
