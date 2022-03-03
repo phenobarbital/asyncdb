@@ -300,15 +300,18 @@ class pgPool(BasePool):
                 raise ProviderError("Release Error: {}".format(str(err)))
             try:
                 if gracefully:
+                    loop = asyncio.get_running_loop()
+                    if not loop:
+                        loop = asyncio.get_event_loop()
                     await asyncio.wait_for(
                         self._pool.expire_connections(),
                         timeout=timeout,
-                        loop=self._loop
+                        loop=loop
                     )
                     await asyncio.wait_for(
                         self._pool.close(),
                         timeout=timeout,
-                        loop=self._loop
+                        loop=loop
                     )
                 # # until end, close the pool correctly:
                 self._pool.terminate()
