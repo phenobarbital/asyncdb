@@ -38,7 +38,7 @@ setup(
         "Environment :: Web Environment",
         "Topic :: Software Development :: Build Tools",
         "Topic :: Software Development :: Libraries :: Python Modules",
-        "Topic :: Software Development :: Libraries :: Database Connectors",
+        "Topic :: Database :: Front-Ends",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Framework :: AsyncIO",
