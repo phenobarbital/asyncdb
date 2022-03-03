@@ -40,7 +40,7 @@ setup(
     setup_requires=[
         "wheel==0.37.0",
         "Cython==0.29.28",
-        "numpy==1.21.1",
+        "numpy==1.22.2",
         "asyncio==3.4.3",
         "cchardet==2.1.7",
         'cryptography==3.4.7',
@@ -53,7 +53,7 @@ setup(
         "numpy==1.22.2",
         "cryptography==3.4.7",
         "aiohttp==3.8.1",
-        "asyncpg==0.24.0",
+        "asyncpg==0.25.0",
         "uvloop==0.16.0",
         "asyncio==3.4.3",
         "cchardet==2.1.7",
