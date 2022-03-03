@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
-
+import os
 import asyncio
 import json
 import time
 from datetime import datetime
 import logging
 from pymssql import _mssql
-
+from typing import (
+    List,
+    Dict,
+    Optional,
+    Iterable,
+    Any
+)
 from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
@@ -16,16 +22,12 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from asyncdb.providers import (
-    BaseProvider,
-    registerProvider,
-)
 from asyncdb.utils import (
     EnumEncoder,
     SafeDict,
 )
-
-from asyncdb.providers.sql import SQLProvider, baseCursor
+from .sql import SQLProvider, SQLCursor
+from .interfaces import DBCursorBackend
 
 types_map = {
     1: 'string',
@@ -38,44 +40,40 @@ types_map = {
 }
 
 
-class mssqlCursor(baseCursor):
-    _connection = None
-
-    async def __aenter__(self) -> "mssqlCursor":
-        if not self._connection:
-            await self.connection()
-        self._cursor = await self._connection.cursor(self._sentence, self._params)
-        return self
+class mssqlCursor(SQLCursor):
+    """ MS SQL Server Cursor. """
+    pass
 
 
-class mssql(SQLProvider):
+class mssql(SQLProvider, DBCursorBackend):
     """mssql.
 
     Microsoft SQL Server using low-level _mssql Protocol
     """
 
-    _provider = "sqlserver"
-    _dsn = ""
+    _provider = "mssql"
     _syntax = "sql"
     _test_query = "SELECT 1 as one"
-    _parameters = ()
-    _initialized_on = None
-    _query_raw = "SELECT {fields} FROM {table} {where_cond}"
-    _timeout: int = 30
-    _version: str = None
-    application_name = "Navigator"
     _charset: str = "UTF8"
-    _server_settings: dict = []
 
-    def __init__(self, loop=None, pool=None, params={}, **kwargs):
-        super(mssql, self).__init__(loop=loop, params=params, **kwargs)
-        asyncio.set_event_loop(self._loop)
+    def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
+        self._dsn = ''
+        self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
+        self._version: str = None
+        self.application_name = os.getenv('APP_NAME', "NAV")
+        self._server_settings: dict = []
+        self._connected: bool = False
+        super(mssql, self).__init__(
+            loop=loop,
+            params=params,
+            **kwargs
+        )
         try:
-            if "host" in self._params:
-                self._params["server"] = "{}:{}".format(
-                    self._params["host"], self._params["port"]
+            if "host" in self.params:
+                self.params["server"] = "{}:{}".format(
+                    self.params["host"], self.params["port"]
                 )
-                del self._params["host"]
+                del self.params["host"]
         except Exception as err:
             pass
         if "server_settings" in kwargs:
@@ -83,9 +81,6 @@ class mssql(SQLProvider):
         if "application_name" in self._server_settings:
             self.application_name = self._server_settings["application_name"]
             del self._server_settings["application_name"]
-
-    def create_dsn(self, params):
-        pass
 
     async def close(self):
         """
@@ -107,6 +102,8 @@ class mssql(SQLProvider):
             self._connection = None
             self._connected = False
 
+    disconnect = close
+
     async def connection(self):
         """
         Get a connection
@@ -114,12 +111,12 @@ class mssql(SQLProvider):
         self._connection = None
         self._connected = False
         try:
-            self._params["appname"] = self.application_name
-            self._params["charset"] = self._charset.upper()
-            self._params["tds_version"] = "7.3"
+            self.params["appname"] = self.application_name
+            self.params["charset"] = self._charset.upper()
+            self.params["tds_version"] = "7.3"
             if self._server_settings:
-                self._params["conn_properties"] = self._server_settings
-            self._connection = _mssql.connect(**self._params)
+                self.params["conn_properties"] = self._server_settings
+            self._connection = _mssql.connect(**self.params)
             if self._connection.connected:
                 self._connected = True
                 self._initialized_on = time.time()
@@ -127,27 +124,13 @@ class mssql(SQLProvider):
             print(err)
             self._connection = None
             self._cursor = None
-            raise ProviderError("connection Error, Terminated: {}".format(str(err)))
+            raise ProviderError(
+                "connection Error, Terminated: {}".format(str(err)))
         finally:
             return self
 
     def use(self, dbname: str = ""):
         self._connection.select_db(dbname)
-
-    """
-    Async Context magic Methods
-    """
-
-    async def __aenter__(self):
-        if not self._connection:
-            await self.connection()
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb):
-        try:
-            await self.close()
-        except Exception as err:
-            print(err)
 
     @property
     async def identity(self):
@@ -157,13 +140,15 @@ class mssql(SQLProvider):
         """
         Test Connnection.
         """
+        error = None
         if self._test_query is None:
             raise NotImplementedError()
         try:
-            print(self._test_query)
-            return await self.fetchone(self._test_query)
+            result = await self.fetchone(self._test_query)
         except Exception as err:
-            raise ProviderError(message=str(err), code=0)
+            error = str(err)
+        finally:
+            return [result, error]
 
     async def execute(self, sentence="", params: list = []):
         """
@@ -194,21 +179,21 @@ class mssql(SQLProvider):
         finally:
             return [self._result, error]
 
-    async def executemany(self, sentence="", params: list = []):
+    async def execute_many(self, sentence="", params: list = []):
         """
         Execute multiple sentences
         """
         return await self.execute(sentence, params)
+
+    executemany = execute_many
 
     async def query(self, sentence="", params: list = []):
         """
         Making a Query and return result
         """
         error = None
-        if not sentence:
-            raise EmptyStatement("Error: Empty Sentence")
-        if not self._connection:
-            await self.connection()
+        self._result = None
+        await self.valid_operation(sentence)
         try:
             self._connection.execute_query(sentence, params)
             self._result = self._connection
@@ -229,24 +214,17 @@ class mssql(SQLProvider):
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
         finally:
-            print(error)
-            return [self._result, error]
+            return await self._serializer(self._result, error)
 
     async def queryrow(self, sentence="", params: list = []):
-        return await self.fetchone(sentence, params)
-
-    async def fetchone(self, sentence="", params: list = []):
         error = None
-        if not sentence:
-            raise EmptyStatement("Error: Empty Sentence")
-        if not self._connection:
-            await self.connection()
+        self._result = None
+        await self.valid_operation(sentence)
         try:
-            startTime = datetime.now()
             self._result = self._connection.execute_row(sentence, params)
             if not self._result:
-                raise NoDataFound("SQL Server: No Data was Found")
-                return [None, "SQL Server: No Data was Found"]
+                # raise NoDataFound("SQL Server: No Data was Found")
+                return [None, NoDataFound("SQL Server: No Data was Found")]
         except _mssql.MSSQLDatabaseException as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -257,20 +235,67 @@ class mssql(SQLProvider):
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
         finally:
-            self._generated = datetime.now() - startTime
-            return [self._result, error]
+            return await self._serializer(self._result, error)
 
-    async def fetchall(self, sentence="", params: list = []):
-        return await self.query(sentence, params)
+    async def fetch_one(self, sentence="", params: list = []):
+        error = None
+        self._result = None
+        await self.valid_operation(sentence)
+        try:
+            self._result = self._connection.execute_row(sentence, params)
+            if not self._result:
+                # raise NoDataFound("SQL Server: No Data was Found")
+                return [None, NoDataFound("SQL Server: No Data was Found")]
+        except _mssql.MSSQLDatabaseException as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
+        except RuntimeError as err:
+            error = "Runtime Error: {}".format(str(err))
+            raise ProviderError(error)
+        except Exception as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
+        finally:
+            return self._result
+
+    fetchone = fetch_one
+
+    async def fetch_all(self, sentence="", params: list = []):
+        """
+        Making a Query and return result
+        """
+        error = None
+        self._result = None
+        await self.valid_operation(sentence)
+        try:
+            self._connection.execute_query(sentence, params)
+            self._result = self._connection
+        except (_mssql.MSSQLDatabaseException) as err:
+            print(err)
+            error = "Database Error: {}".format(str(err))
+            raise ProviderError(error)
+        except pymssql.Warning as warn:
+            logging.warning(f"SQL Server Warning: {warn!s}")
+            error = warn
+        except (pymssql.StandardError, pymssql.Error) as err:
+            error = "SQL Server Error: {}".format(str(err))
+            raise ProviderError(error)
+        except RuntimeError as err:
+            error = "Runtime Error: {}".format(str(err))
+            raise ProviderError(error)
+        except Exception as err:
+            error = "Error on Query: {}".format(str(err))
+            raise Exception(error)
+        finally:
+            return self._result
+
+    fetchall = fetch_all
 
     async def fetch_scalar(self, sentence="", params: list = []):
         error = None
-        if not sentence:
-            raise EmptyStatement("Error: Empty Sentence")
-        if not self._connection:
-            await self.connection()
+        self._result = None
+        await self.valid_operation(sentence)
         try:
-            startTime = datetime.now()
             self._result = self._connection.execute_scalar(sentence, params)
             if not self._result:
                 raise NoDataFound("SQL Server: No Data was Found")
@@ -285,11 +310,79 @@ class mssql(SQLProvider):
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
         finally:
-            self._generated = datetime.now() - startTime
             return [self._result, error]
 
+    fetchval = fetch_scalar
 
-"""
-Registering this Provider
-"""
-registerProvider(mssql)
+    """
+    Model Logic:
+    """
+
+    async def column_info(self, tablename: str, schema: str = None):
+        """Column Info.
+
+        Get Meta information about a table (column name, data type and PK).
+        Useful to build a DataModel from Querying database.
+        Parameters:
+        @tablename: str The name of the table (including schema).
+        """
+        if schema:
+            table = f"{schema}.{tablename}"
+        else:
+            table = tablename
+        sql = f"SELECT a.attname AS name, a.atttypid::regtype AS type, \
+        format_type(a.atttypid, a.atttypmod) as format_type, a.attnotnull::boolean as notnull, \
+        coalesce((SELECT true FROM pg_index i WHERE i.indrelid = a.attrelid \
+        AND i.indrelid = a.attrelid AND a.attnum = any(i.indkey) \
+        AND i.indisprimary), false) as is_primary \
+        FROM pg_attribute a WHERE a.attrelid = '{tablename!s}'::regclass \
+        AND a.attnum > 0 AND NOT a.attisdropped ORDER BY a.attnum"
+        if not self._connection:
+            await self.connection()
+        try:
+            colinfo = await self._connection.fetch(sql)
+            return colinfo
+        except Exception as err:
+            self._logger.exception(f"Wrong Table information {tablename!s}")
+
+    """
+    DDL Information.
+    """
+    async def create(
+        self,
+        object: str = 'table',
+        name: str = '',
+        fields: Optional[List] = None
+    ) -> bool:
+        """
+        Create is a generic method for Database Objects Creation.
+        """
+        if object == 'table':
+            sql = "CREATE TABLE {name}({columns});"
+            columns = ", ".join(["{name} {type}".format(**e) for e in fields])
+            sql = sql.format(name=name, columns=columns)
+            try:
+                result = await self._connection.execute(sql)
+                if result:
+                    await self._connection.commit()
+                    return True
+                else:
+                    return False
+            except Exception as err:
+                raise ProviderError(f"Error in Object Creation: {err!s}")
+        else:
+            raise RuntimeError(f'SQLite: invalid Object type {object!s}')
+
+    def tables(self, schema: str = "") -> Iterable[Any]:
+        raise NotImplementedError
+
+    def table(self, tablename: str = "") -> Iterable[Any]:
+        raise NotImplementedError
+
+    def use(self, tablename: str):
+        raise NotImplementedError(
+            'AsyncPg Error: There is no Database in SQLite'
+        )
+
+    def prepare(self):
+        pass

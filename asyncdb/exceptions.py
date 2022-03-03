@@ -1,15 +1,29 @@
 import asyncio
 import logging
-from typing import Any
+from typing import (
+    Any, Tuple
+)
 
 
-# from pprint import pprint
-async def shutdown(loop, signal=None):
+def _handle_done_tasks(
+            task: asyncio.Task,
+            logger: logging.Logger,
+            *args: Tuple[Any, ...]
+) -> Any:
+    try:
+        return task.result()
+    except asyncio.CancelledError:
+        pass  # Task cancellation should not be logged as an error.
+    except Exception as err:  # pylint: disable=broad-except
+        logger.exception(f"Exception raised by Task {task}, error: {err}", *args)
+
+
+async def shutdown(loop: asyncio.AbstractEventLoop, signal: Any = None):
     """Cleanup tasks tied to the service's shutdown."""
     if signal:
         logging.info(f"Received exit signal {signal.name}...")
     else:
-        logging.warning(f"Shutting NOT via signal")
+        logging.warning("Shutting NOT via signal")
     logging.info("Closing all connections")
     try:
         tasks = [
@@ -17,20 +31,20 @@ async def shutdown(loop, signal=None):
             for task in asyncio.all_tasks()
             if task is not asyncio.current_task() and not task.done()
         ]
-        # [task.cancel() for task in tasks]
-        logging.info(f"Cancelling {len(tasks)} outstanding tasks")
-        await asyncio.gather(*tasks, return_exceptions=True)
+        [task.cancel() for task in tasks]
+        logging.warning(f"Cancelling {len(tasks)} outstanding tasks")
+        await asyncio.gather(*tasks, loop=loop, return_exceptions=True)
+        logging.warning('Asyncio Shutdown: Done graceful shutdown of subtasks')
     except asyncio.CancelledError:
         print("All Tasks has been canceled")
     except Exception as err:
         print("Asyncio Generic Error", err)
     finally:
         loop.stop()
-        # loop.close()
 
 
-def default_exception_handler(loop, context: Any):
-    logging.info(f"Exception Handler Caught: {context!s}")
+def default_exception_handler(loop: asyncio.AbstractEventLoop, context: Any):
+    logging.info(f"AsyncDB Exception Handler Caught: {context!s}")
     # first, handle with default handler
     if isinstance(context, Exception):
         # is a basic exception
@@ -38,7 +52,7 @@ def default_exception_handler(loop, context: Any):
         raise type(context)
     else:
         loop.default_exception_handler(context)
-        if not "exception" in context:
+        if "exception" not in context:
             try:
                 task = context.get("task", context["future"])
             except KeyError:
@@ -52,67 +66,53 @@ def default_exception_handler(loop, context: Any):
             msg = context.get("exception", context["message"])
             exception = type(task.exception())
             try:
-                logging.exception(f"{exception.__name__!s}*{msg}* over task {task}")
+                logging.exception(
+                    f"{exception.__name__!s}*{msg}* over task {task}")
                 raise exception(msg)
             except Exception as err:
                 logging.exception(err)
-            # finally:
-            #     loop.stop()
-            #     logging.info("Successfully shutdown the AsyncDB Loop.")
-                # loop.close()
 
 
-def _handle_done_tasks(task: asyncio.Task) -> Any:
-    try:
-        return task.result()
-    except asyncio.CancelledError:
-        pass  # Task cancellation should not be logged as an error.
-    except Exception as err:
-        logging.exception(f"Exception raised by Task {task}, error: {err}")
-
-
-class asyncDBException(Exception):
+class AsyncDBException(Exception):
     """Base class for other exceptions"""
 
     code: int = 0
+    message: str = ''
 
-    def __init__(self, message: str, *args, code: int = None, **kwargs):
-        super(asyncDBException, self).__init__()
+    def __init__(self, *args: object, message: str = '', code: int = None) -> None:
         self.args = (
             message,
             code,
+            *args
         )
         self.message = message
-        if code:
-            self.code = code
+        self.code = code
+        super(AsyncDBException, self).__init__(message)
 
     def __repr__(self):
         return f"{__name__}(message={self.message})"
 
     def __str__(self):
-        return f"{self.message}"
+        return f"{__name__}: {self.message}"
 
     def get(self):
         return self.message
 
 
-class ProviderError(asyncDBException):
+class ProviderError(AsyncDBException):
     """Database Provider Error"""
 
-    def __init__(self, message: str, *args, code: int = None, **kwargs):
-        asyncDBException.__init__(self, message, code, *args, **kwargs)
 
-
-class DataError(asyncDBException, ValueError):
+class DataError(AsyncDBException, ValueError):
     """An error caused by invalid query input."""
 
 
-class NotSupported(asyncDBException):
+class NotSupported(AsyncDBException):
     """Not Supported functionality"""
 
 
 class UninitializedError(ProviderError):
-    """Exception when provider cant be initialized"""
+    """Exception when provider cannot be initialized"""
 
 
 class ConnectionTimeout(ProviderError):
@@ -129,16 +129,16 @@ class TooManyConnections(ProviderError):
     """Too Many Connections"""
 
 
-class EmptyStatement(asyncDBException):
+class EmptyStatement(AsyncDBException):
     """Raise when no Statement was found"""
 
 
 class UnknownPropertyError(ProviderError):
-    """Raise when invalid property was provide"""
+    """Raise when invalid property was provided"""
 
 
 class StatementError(ProviderError):
-    """Raise when an Statement Error"""
+    """Raise when statement Error"""
 
 
 class ConditionsError(ProviderError):
