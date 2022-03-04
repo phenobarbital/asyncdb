@@ -91,6 +91,7 @@ setup(
         "pgpy==0.5.3",
         "aiobotocore==2.1.1",
         "botocore==1.23.24",
+        "boto3==1.20.24",
         "xlrd==2.0.1",
         "bs4==0.0.1",
         "beautifulsoup4>=4.10.0",
