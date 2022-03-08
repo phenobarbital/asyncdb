@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import types
 import logging
+import inspect
 import traceback
 import rapidjson as to_json
 from dataclasses import Field as ff
@@ -447,7 +448,7 @@ class Model(metaclass=ModelMeta):
                 # default is a function:
                 try:
                     setattr(self, name, field.default())
-                except TypeError:
+                except TypeError as err:
                     logging.warning(f'Error Calling Value on {field} with name {name}')
                     setattr(self, name, None)
             # first check: data type hint
@@ -907,7 +908,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def make_model(cls, name: str, schema: str = "public", fields: list = []):
-        cls = make_dataclass(name, fields, bases=(Model,))
+        parent = inspect.getmro(cls)
+        cls = make_dataclass(name, fields, bases=(parent[0],))
         m = Meta()
         m.name = name
         m.schema = schema
@@ -945,7 +947,8 @@ class Model(metaclass=ModelMeta):
                 except KeyError:
                     dtype = str
                 fields.append((column["name"], dtype, col))
-        cls = make_dataclass(name, fields, bases=(Model,))
+        parent = inspect.getmro(cls)
+        cls = make_dataclass(name, fields, bases=(parent[0],))
         m = Meta()
         m.name = name
         m.schema = schema
