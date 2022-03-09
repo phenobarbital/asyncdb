@@ -87,6 +87,10 @@ class Record(MutableMapping):
             return self._row[key]
         except (KeyError, TypeError):
             return False
+        
+    def __setitem__(self, key: Union[str, int], value: Any) -> Any:
+        # optional processing here
+        super(Record, self).__setitem__(key, value)
 
     def __getattr__(self, attr: str) -> Any:
         """
@@ -105,6 +109,12 @@ class Record(MutableMapping):
                 )
         else:
             return False
+
+    def __setattr__(self, key: Union[str, int], value: Any) -> None:
+        try:
+            super(Record, self).__setattr__(key, value)
+        except AttributeError:
+            self._row[key] = value
 
     def __iter__(self) -> Iterator:
         for value in self._row:
