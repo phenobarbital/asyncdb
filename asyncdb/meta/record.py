@@ -3,7 +3,7 @@ Record Object.
 
 Physical representation of a row in a class-based object.
 """
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from typing import (
     Any,
     List,
@@ -13,7 +13,7 @@ from typing import (
 )
 
 
-class Record(Mapping):
+class Record(MutableMapping):
     """
     Record.
         Class for Record object
