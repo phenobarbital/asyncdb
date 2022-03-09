@@ -39,6 +39,7 @@ from asyncdb.utils.encoders import DefaultEncoder
 from asyncdb.utils import module_exists
 from asyncdb.providers.interfaces import ConnectionBackend
 
+
 @dataclass
 class ValidationError:
     """
@@ -414,20 +415,23 @@ class Model(metaclass=ModelMeta):
                     new_val = f.type(**value)
                     setattr(self, f.name, new_val)
             elif isinstance(value, list):
-                sub_type = f.type.__args__[0]
-                if is_dataclass(sub_type):
-                    # for every item
-                    items = []
-                    for item in value:
-                        try:
-                            if isinstance(item, dict):
-                                items.append(sub_type(**item))
-                            else:
-                                items.append(item)
-                        except Exception as err:
-                            logging.exception(err)
-                            continue
-                    setattr(self, f.name, items)
+                try:
+                    sub_type = f.type.__args__[0]
+                    if is_dataclass(sub_type):
+                        # for every item
+                        items = []
+                        for item in value:
+                            try:
+                                if isinstance(item, dict):
+                                    items.append(sub_type(**item))
+                                else:
+                                    items.append(item)
+                            except Exception as err:
+                                logging.exception(err)
+                                continue
+                        setattr(self, f.name, items)
+                except AttributeError:
+                    setattr(self, f.name, value)
             else:
                 continue
         try:
@@ -449,7 +453,8 @@ class Model(metaclass=ModelMeta):
                 try:
                     setattr(self, name, field.default())
                 except TypeError as err:
-                    logging.warning(f'Error Calling Value on {field} with name {name}')
+                    logging.warning(
+                        f'Error Calling Value on {field} with name {name}')
                     setattr(self, name, None)
             # first check: data type hint
             val_type = type(val)
@@ -538,17 +543,17 @@ class Model(metaclass=ModelMeta):
 
     def create_field(self, name: str, value: Any) -> None:
         """create_field.
-        create a new Field on Model (when strict is False).  
+        create a new Field on Model (when strict is False).
         Args:
             name (str): name of the field
             value (Any): value to be assigned.
-        """  
+        """
         f = Field(required=False, default=value)
         f.name = name
         f.type = type(value)
         self.__columns__[name] = f
         setattr(self, name, value)
-        
+
     def set(self, name: str, value: Any) -> None:
         """set.
         Alias for Create Field.

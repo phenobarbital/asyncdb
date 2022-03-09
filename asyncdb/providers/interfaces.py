@@ -495,14 +495,32 @@ class CursorBackend(ABC):
         )
         return self
 
+    def __enter__(self) -> "CursorBackend":
+        self._cursor = self._connection.cursor()
+        self._cursor.execute(
+            self._sentence,
+            self._params
+        )
+        return self
+
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         try:
             return await self._provider.close()
         except Exception as err:
             logging.exception(err)
 
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        try:
+            return self._provider.close()
+        except Exception as err:
+            logging.exception(err)
+
     def __aiter__(self) -> "CursorBackend":
         """The cursor is also an async iterator."""
+        return self
+    
+    def __iter__(self) -> "CursorBackend":
+        """The cursor iterator."""
         return self
 
     async def __anext__(self):
@@ -513,10 +531,13 @@ class CursorBackend(ABC):
         else:
             raise StopAsyncIteration
 
-    #
-    # @abstractmethod
-    # async def execute(sentence: Any, params: Optional[Dict] = None) -> Any:
-    #     pass
+    def __next__(self):
+        """Use `cursor.fetchrow()` to provide an iterable."""
+        row = self._cursor.fetchone()
+        if row is not None:
+            return row
+        else:
+            raise StopAsyncIteration
 
     """
     Cursor Methods.
