@@ -68,7 +68,7 @@ def default_exception_handler(loop: asyncio.AbstractEventLoop, context: Any):
             try:
                 logging.exception(
                     f"{exception.__name__!s}*{msg}* over task {task}")
-                raise exception(msg)
+                raise exception()
             except Exception as err:
                 logging.exception(err)
 
