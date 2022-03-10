@@ -608,13 +608,13 @@ class pg(SQLProvider, DBCursorBackend):
         finally:
             return [self._prepared, error]
 
-    async def query(self, sentence: Union[str, List], **kwargs):
+    async def query(self, sentence: Union[str, List], *args):
         self._result = None
         error = None
         await self.valid_operation(sentence)
         try:
             self.start_timing()
-            self._result = await self._connection.fetch(sentence)
+            self._result = await self._connection.fetch(sentence, *args)
             if not self._result:
                 return [None, "Data was not found"]
         except RuntimeError as err:
@@ -636,7 +636,7 @@ class pg(SQLProvider, DBCursorBackend):
             self.generated_at()
             return await self._serializer(self._result, error)
 
-    async def queryrow(self, sentence=""):
+    async def queryrow(self, sentence: str, *args):
         self._result = None
         error = None
         await self.valid_operation(sentence)
@@ -644,7 +644,7 @@ class pg(SQLProvider, DBCursorBackend):
             stmt = await self._connection.prepare(sentence)
             self._attributes = stmt.get_attributes()
             self._columns = [a.name for a in self._attributes]
-            self._result = await stmt.fetchrow()
+            self._result = await stmt.fetchrow(*args)
         except RuntimeError as err:
             error = "Query Row Runtime Error: {}".format(str(err))
             raise ProviderError(error)
@@ -674,7 +674,7 @@ class pg(SQLProvider, DBCursorBackend):
         self.start_timing()
         await self.valid_operation(sentence)
         try:
-            result = await self._connection.execute(sentence)
+            result = await self._connection.execute(sentence, *args)
         except InterfaceWarning as err:
             error = "Interface Warning: {}".format(str(err))
             raise ProviderError(error)
@@ -705,49 +705,68 @@ class pg(SQLProvider, DBCursorBackend):
 
     executemany = execute_many
 
-    async def fetch_all(self, sentence: str = ""):
+    async def fetch_all(self, sentence: str, *args):
         self._result = None
         await self.valid_operation(sentence)
         try:
             self.start_timing()
-            self._result = await self._connection.fetch(sentence)
+            stmt = await self._connection.prepare(sentence)
+            self._attributes = stmt.get_attributes()
+            self._columns = [a.name for a in self._attributes]
+            # self._result = await self._connection.fetch(sentence)
+            self._result = await stmt.fetch(*args)
             if not self._result:
                 return []
-        except RuntimeError as err:
-            raise ProviderError(f"Sentence Error: {err}")
-        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
-            raise StatementError(f"Sentence Error: {err}")
         except (
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
             raise StatementError(f"Invalid Statement Error: {err}")
+        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
+            raise StatementError(f"Sentence Error: {err}")
+        except RuntimeError as err:
+            raise ProviderError(f"Sentence Error: {err}")
         except Exception as err:
             raise Exception(f"Error on Query: {err}")
         finally:
             self.generated_at()
             return self._result
 
-    async def fetch_one(self, sentence: str = ""):
-        self._result = None
+    async def fetch_one(self, sentence: str, *args):
+        result = None
         await self.valid_operation(sentence)
         try:
-            stmt = await self._connection.prepare(sentence)
-            self._attributes = stmt.get_attributes()
-            self._columns = [a.name for a in self._attributes]
-            self._result = await stmt.fetchrow()
-        except RuntimeError as err:
-            raise ProviderError(f"Sentence Error: {err}")
-        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
-            raise StatementError(f"Sentence Error: {err}")
+            result = await self._connection.fetchrow(sentence, *args)
         except (
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
             raise StatementError(f"Invalid Statement Error: {err}")
+        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
+            raise StatementError(f"Sentence Error: {err}")
+        except RuntimeError as err:
+            raise ProviderError(f"Sentence Error: {err}")
         except Exception as err:
             raise Exception(f"Error on Query: {err}")
-        return self._result
+        return result
+
+    async def fetchval(self, sentence: str, column: int = 0, *args):
+        result = None
+        await self.valid_operation(sentence)
+        try:
+            result = await self._connection.fetchval(sentence, column=column, *args)
+        except (
+            asyncpg.exceptions.InvalidSQLStatementNameError,
+            asyncpg.exceptions.UndefinedTableError,
+        ) as err:
+            raise StatementError(f"Invalid Statement Error: {err}")
+        except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
+            raise StatementError(f"Sentence Error: {err}")
+        except RuntimeError as err:
+            raise ProviderError(f"Sentence Error: {err}")
+        except Exception as err:
+            raise Exception(f"Error on Query: {err}")
+        return result
 
     """
     Transaction Context
