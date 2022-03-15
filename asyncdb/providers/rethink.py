@@ -261,22 +261,14 @@ class rethink(InitProvider, DBCursorBackend):
         """
         CreateIndex
               create and index into a field or multiple fields
+              --- r.table('comments').index_create('post_and_date', [r.row["post_id"], r.row["date"]]).run(conn)
         """
         if self._connection:
             if table in await self._engine.db(self._db).table_list().run(
                 self._connection
             ):
                 # check for a single index
-                if field:
-                    try:
-                        return (
-                            await self._engine.table(table)
-                            .index_create(field, multi=multi)
-                            .run(self._connection)
-                        )
-                    except ReqlOpFailedError as err:
-                        raise ProviderError(message=err, code=503)
-                elif type(fields) == list and len(fields) > 0:
+                if type(fields) == list and len(fields) > 0:
                     idx = []
                     for field in fields:
                         idx.append(self._engine.row(field))
@@ -288,8 +280,19 @@ class rethink(InitProvider, DBCursorBackend):
                         )
                     except (ReqlDriverError, ReqlRuntimeError):
                         return False
+                else:
+                    try:
+                        return (
+                            await self._engine.table(table)
+                            .index_create(field, multi=multi)
+                            .run(self._connection)
+                        )
+                    except ReqlOpFailedError as err:
+                        raise ProviderError(message=err, code=503)
             else:
                 return False
+            
+    create_index = createindex
 
     async def create_table(self, table: str, pk: Union[str, List] = None):
         """
