@@ -691,7 +691,7 @@ class rethink(InitProvider, DBCursorBackend):
         finally:
             return await self._serializer(self._result, error)
 
-    async def insert(self, table: str, data: Dict, on_conflict: str = 'replace'):
+    async def insert(self, table: str, data: Dict, on_conflict: str = 'replace', changes: bool = True):
         """
         insert
              create a record (insert)
@@ -700,7 +700,7 @@ class rethink(InitProvider, DBCursorBackend):
         try:
             inserted = (
                 await self._engine.table(table)
-                .insert(data, conflict=on_conflict)
+                .insert(data, conflict=on_conflict, durability="soft", return_changes=changes)
                 .run(self._connection)
             )
             if inserted["errors"] > 0:
@@ -733,7 +733,7 @@ class rethink(InitProvider, DBCursorBackend):
             replaced = (
                 await self._engine.table(table)
                 .get(id)
-                .replace(data)
+                .replace(data, durability="soft")
                 .run(self._connection)
             )
             if replaced["errors"] > 0:
@@ -765,12 +765,12 @@ class rethink(InitProvider, DBCursorBackend):
             sentence = self._engine.table(table).get(id).update(data)
         elif type(filter) == dict and len(filter) > 0:
             sentence = self._engine.table(table).filter(
-                filter).update(data, return_changes=False)
+                filter).update(data, return_changes=False, durability="soft")
         else:
             # update all documents in table
             sentence = self._engine.table(
                 table
-            ).update(data)
+            ).update(data, durability="soft", return_changes=False)
         try:
             self._result = (await sentence.run(self._connection))
             return self._result
@@ -830,7 +830,7 @@ class rethink(InitProvider, DBCursorBackend):
                 .filter(~self._engine.row.has_fields(field)
                 )
                 .filter(filter)
-                .update(data)
+                .update(data, durability="soft", return_changes=False)
                 .run(self._connection)
             )
             return self._result
@@ -859,7 +859,7 @@ class rethink(InitProvider, DBCursorBackend):
         """
         if id:
             sentence = self._engine.table(table).get(
-                id).delete(return_changes=changes)
+                id).delete(return_changes=changes, durability='soft')
         elif isinstance(filter, dict):
             sentence = self._engine.table(table).filter(
                 filter).delete(return_changes=changes)
