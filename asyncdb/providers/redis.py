@@ -349,7 +349,7 @@ class redis(BaseProvider):
             await self._connection.setex(key, time, value)
         except TypeError:
             raise ProviderError(
-                "Redis: wrong Expiration timestamp: {}".format(str(timestamp))
+                "Redis: wrong Expiration timestamp: {}".format(str(timeout))
             )
         except (aioredis.RedisError, aioredis.exceptions.ConnectionError) as err:
             raise ProviderError("Redis SetEx Error: {}".format(str(err)))
