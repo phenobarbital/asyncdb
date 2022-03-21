@@ -34,7 +34,7 @@ from asyncdb.utils.types import (
     MODEL_TYPES,
     JSON_TYPES
 )
-from asyncdb.exceptions import NoDataFound
+from asyncdb.exceptions import NoDataFound, ProviderError, StatementError
 from asyncdb.utils.encoders import DefaultEncoder
 from asyncdb.utils import module_exists
 from asyncdb.providers.interfaces import ConnectionBackend
@@ -627,6 +627,8 @@ class Model(metaclass=ModelMeta):
                     model=self, fields=self.columns()
                 )
                 return result
+            except (StatementError, ProviderError):
+                raise
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
@@ -647,6 +649,8 @@ class Model(metaclass=ModelMeta):
                     model=self, connection=conn, fields=self.columns()
                 )
                 return result
+            except (StatementError, ProviderError):
+                raise
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
@@ -670,6 +674,8 @@ class Model(metaclass=ModelMeta):
                     **kwargs
                 )
                 return result
+            except (StatementError, ProviderError):
+                raise
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
@@ -696,8 +702,10 @@ class Model(metaclass=ModelMeta):
                             self.Meta.name, kwargs
                         )
                     )
-            except NoDataFound as err:
-                raise NoDataFound(err)
+            except NoDataFound:
+                raise
+            except (StatementError, ProviderError):
+                raise
             except AttributeError as err:
                 raise Exception(
                     "Error on get {}: {}".format(self.Meta.name, err))
@@ -726,8 +734,10 @@ class Model(metaclass=ModelMeta):
                         "No Data on {} with condition {}".format(
                             self.Meta.name, kwargs)
                     )
-            except NoDataFound as err:
-                raise NoDataFound(err)
+            except NoDataFound:
+                raise
+            except (StatementError, ProviderError):
+                raise
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
@@ -751,8 +761,10 @@ class Model(metaclass=ModelMeta):
                         "No Data on {} with condition {}".format(
                             self.Meta.name, kwargs)
                     )
-            except NoDataFound as err:
-                raise NoDataFound(err)
+            except NoDataFound:
+                raise
+            except (StatementError, ProviderError):
+                raise
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
@@ -778,6 +790,8 @@ class Model(metaclass=ModelMeta):
                 )
                 if result:
                     return [cls(**dict(r)) for r in result]
+            except (StatementError, ProviderError):
+                raise
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
@@ -795,6 +809,8 @@ class Model(metaclass=ModelMeta):
                     model=cls, conditions=conditions, **kwargs
                 )
                 return result
+            except (StatementError, ProviderError):
+                raise
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
@@ -814,6 +830,8 @@ class Model(metaclass=ModelMeta):
                     return [cls(**dict(r)) for r in result]
                 else:
                     return []
+            except (StatementError, ProviderError):
+                raise
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception(
@@ -837,8 +855,10 @@ class Model(metaclass=ModelMeta):
                     return [cls(**dict(r)) for r in result]
                 else:
                     return []
-            except NoDataFound as err:
-                raise NoDataFound(err)
+            except NoDataFound:
+                raise
+            except (StatementError, ProviderError):
+                raise
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
@@ -865,6 +885,8 @@ class Model(metaclass=ModelMeta):
             except AttributeError as err:
                 raise Exception(
                     "Error on get {}: {}".format(cls.Meta.name, err))
+            except (StatementError, ProviderError):
+                raise
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception(
@@ -879,6 +901,8 @@ class Model(metaclass=ModelMeta):
             try:
                 result = await cls.Meta.connection.mdl_all(model=cls, **kwargs)
                 return [cls(**dict(row)) for row in result]
+            except (StatementError, ProviderError):
+                raise
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception(
