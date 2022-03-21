@@ -62,15 +62,18 @@ def default_exception_handler(loop: asyncio.AbstractEventLoop, context: Any):
             logging.exception(f"Exception raised by Task {task}, Error: {msg}")
             raise Exception(f"{msg}: task: {task}")
         if not isinstance(context["exception"], asyncio.CancelledError):
-            task = context.get("task", context["future"])
-            msg = context.get("exception", context["message"])
-            exception = type(task.exception())
             try:
-                logging.exception(
-                    f"{exception.__name__!s}*{msg}* over task {task}")
-                raise exception()
-            except Exception as err:
-                logging.exception(err)
+                task = context.get("task", context["future"])
+                msg = context.get("exception", context["message"])
+                exception = type(task.exception())
+                try:
+                    logging.exception(
+                        f"{exception.__name__!s}*{msg}* over task {task}")
+                    raise exception()
+                except Exception as err:
+                    logging.exception(err)
+            except KeyError:
+                logging.exception(context, stack_info=True)
 
 
 class AsyncDBException(Exception):
