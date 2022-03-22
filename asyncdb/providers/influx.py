@@ -170,7 +170,9 @@ class influx(InitProvider, ConnectionDSNBackend):
             self._connection = None
             self._cursor = None
             logging.exception(err)
-            raise ProviderError("InfluxDB connection Error: {}".format(str(err)))
+            raise ProviderError(
+                message="InfluxDB connection Error: {}".format(str(err))
+            )
         finally:
             return self
         
@@ -186,10 +188,12 @@ class influx(InitProvider, ConnectionDSNBackend):
                 except Exception as err:
                     self._connection = None
                     raise ProviderError(
-                        "InfluxDB: Connection Error, Terminated: {}".format(str(err))
+                        message="InfluxDB: Connection Error, Terminated: {}".format(str(err))
                     )
         except Exception as err:
-            raise ProviderError("InfluxDB: Close Error: {}".format(str(err)))
+            raise ProviderError(
+                message="InfluxDB: Close Error: {}".format(str(err))
+            )
         finally:
             self._connection = None
             self._connected = False
@@ -274,7 +278,9 @@ class influx(InitProvider, ConnectionDSNBackend):
             rules = BucketRetentionRules(type=btype, every_seconds=expiration, **kwgars)
             created = buckets_api.create_bucket(bucket_name=bucket, retention_rules=rules, org=self._org)
         except Exception as err:
-            raise ProviderError("Error creating Bucket {}".format(err))
+            raise ProviderError(
+                message="Error creating Bucket {}".format(err)
+            )
             
     create_database = create_bucket
 
@@ -324,7 +330,7 @@ class influx(InitProvider, ConnectionDSNBackend):
             return result
         except RuntimeError as err:
             error = "InfluxDB: Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "InfluxDB: Error on Write: {}".format(str(err))
             raise Exception(error)
@@ -356,7 +362,7 @@ class influx(InitProvider, ConnectionDSNBackend):
             raise
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -387,7 +393,7 @@ class influx(InitProvider, ConnectionDSNBackend):
             raise
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)

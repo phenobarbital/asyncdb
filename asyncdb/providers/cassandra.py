@@ -95,7 +95,7 @@ class cassandra(InitProvider):
                     self._cluster.shutdown()
                     self._connection = None
                     raise ProviderError(
-                        "Connection Error, Terminated: {}".format(str(err))
+                        message="Connection Error, Terminated: {}".format(str(err))
                     )
         except Exception as err:
             raise ProviderError("Close Error: {}".format(str(err)))
@@ -196,7 +196,7 @@ class cassandra(InitProvider):
             try:
                 self._connection = self._cluster.connect(keyspace=keyspace)
             except NoHostAvailable:
-                raise ProviderError('Not able to connect to any of the Cassandra contact points')
+                raise ProviderError(message='Not able to connect to any of the Cassandra contact points')
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
@@ -210,7 +210,7 @@ class cassandra(InitProvider):
             logging.exception(f"connection Error, Terminated: {err}")
             self._connection = None
             self._cursor = None
-            raise ProviderError("connection Error, Terminated: {}".format(str(err)))
+            raise ProviderError(message="connection Error, Terminated: {}".format(str(err)))
         finally:
             return self
 
@@ -256,7 +256,7 @@ class cassandra(InitProvider):
                 self._prepared.consistency_level = ConsistencyLevel.ALL
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -301,7 +301,7 @@ class cassandra(InitProvider):
             raise
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -325,7 +325,7 @@ class cassandra(InitProvider):
             raise
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -352,7 +352,7 @@ class cassandra(InitProvider):
             raise
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query Row: {}".format(str(err))
             raise Exception(error)
@@ -374,7 +374,7 @@ class cassandra(InitProvider):
             raise
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query Row: {}".format(str(err))
             raise Exception(error)

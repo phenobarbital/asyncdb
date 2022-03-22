@@ -649,7 +649,9 @@ class Model(metaclass=ModelMeta):
                     model=self, connection=conn, fields=self.columns()
                 )
                 return result
-            except (StatementError, ProviderError):
+            except ProviderError:
+                raise
+            except StatementError:
                 raise
             except Exception as err:
                 logging.debug(traceback.format_exc())
@@ -674,7 +676,9 @@ class Model(metaclass=ModelMeta):
                     **kwargs
                 )
                 return result
-            except (StatementError, ProviderError):
+            except StatementError:
+                raise
+            except ProviderError:
                 raise
             except Exception as err:
                 logging.debug(traceback.format_exc())

@@ -23,7 +23,7 @@ class dummy(BaseProvider):
             super(dummy, self).__init__(params=params, **kwargs)
             self._logger.debug(" My params are: {}".format(params))
         except Exception as err:
-            raise ProviderError(str(err), errcode=500)
+            raise ProviderError(message=str(err), errcode=500)
 
     async def prepare(self):
         pass

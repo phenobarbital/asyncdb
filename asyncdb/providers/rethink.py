@@ -364,7 +364,7 @@ class rethink(InitProvider, DBCursorBackend):
             future.set_result(list)
             if not table in [x for x in lists]:
                 error = "Table {} not exists in database".format(table)
-                raise ProviderError(error)
+                raise ProviderError(message=error)
             return (
                 await self._engine.db(self._db).table_drop(table).run(self._connection)
             )
@@ -608,10 +608,10 @@ class rethink(InitProvider, DBCursorBackend):
             raise NoDataFound(error)
         except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
             error = f"RethinkDB Runtime Error: {err!s}"
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = f'Unexpected RethinkDB Error: {err!s}'
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return await self._serializer(self._result, error)
 
@@ -654,10 +654,10 @@ class rethink(InitProvider, DBCursorBackend):
             raise NoDataFound(error)
         except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
             error = f"RethinkDB Runtime Error: {err!s}"
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = f'Unexpected RethinkDB Error: {err!s}'
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return await self._serializer(self._result, error)
 
@@ -687,10 +687,10 @@ class rethink(InitProvider, DBCursorBackend):
             raise NoDataFound(error)
         except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
             error = f"RethinkDB Runtime Error: {err!s}"
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = f'Unexpected RethinkDB Error: {err!s}'
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return await self._serializer(self._result, error)
 
@@ -935,10 +935,10 @@ class rethink(InitProvider, DBCursorBackend):
             raise NoDataFound(error)
         except (ReqlRuntimeError, ReqlRuntimeError, ReqlError) as err:
             error = f"RethinkDB Runtime Error: {err!s}"
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = f'Unexpected RethinkDB Error: {err!s}'
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return await self._serializer(self._result, error)
 

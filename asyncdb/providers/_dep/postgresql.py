@@ -226,10 +226,10 @@ class postgresql(SQLProvider, Thread):
                 self._result = [dict(row.items()) for row in rows]
         except (DatabaseError, OperationalError) as err:
             error = "Query Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Query Error, Terminated: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return [self._result, error]
 
@@ -248,10 +248,10 @@ class postgresql(SQLProvider, Thread):
                 self._result = dict(row)
         except (DatabaseError, OperationalError) as err:
             error = "Query Row Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Query Row Error, Terminated: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return [self._result, error]
 
@@ -271,10 +271,10 @@ class postgresql(SQLProvider, Thread):
             self._result = result
         except (DatabaseError, OperationalError) as err:
             error = "Execute Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Execute Error, Terminated: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return [self._result, error]
 

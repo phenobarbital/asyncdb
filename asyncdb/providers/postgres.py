@@ -324,7 +324,7 @@ class postgres(threading.Thread, SQLProvider):
             self._prepared = stmt
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
             raise StatementError(error)
@@ -349,7 +349,7 @@ class postgres(threading.Thread, SQLProvider):
             self._columns = [a.name for a in stmt.get_attributes()]
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
             raise StatementError(error)
@@ -381,7 +381,7 @@ class postgres(threading.Thread, SQLProvider):
                 return [None, "Data was not found"]
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence Error: {}".format(str(err))
             raise StatementError(error)
@@ -414,7 +414,7 @@ class postgres(threading.Thread, SQLProvider):
             self._result = await stmt.fetchrow()
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
             raise StatementError(error)
@@ -449,7 +449,7 @@ class postgres(threading.Thread, SQLProvider):
             return [self._result, None]
         except InterfaceWarning as err:
             self._error = "Interface Warning: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             self._error = "Error on Execute: {}".format(str(err))
         finally:
@@ -474,7 +474,7 @@ class postgres(threading.Thread, SQLProvider):
             return [True, None]
         except InterfaceWarning as err:
             self._error = "Interface Warning: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             self._error = "Error on Execute: {}".format(str(err))
         finally:
@@ -600,7 +600,7 @@ class postgres(threading.Thread, SQLProvider):
                     result=result, columns=self._columns)
         except RuntimeError as err:
             self._error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             self._error = "Sentence Error: {}".format(str(err))
             raise StatementError(error)

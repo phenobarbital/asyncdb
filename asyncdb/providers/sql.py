@@ -63,7 +63,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                 )
         except Exception as err:
             raise ProviderError(
-                f"{__name__!s}: Closing Error: {err!s}"
+                message=f"{__name__!s}: Closing Error: {err!s}"
             )
         finally:
             self._connection = None
@@ -182,7 +182,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             print(traceback.format_exc())
             raise ProviderError(
-                "Error on Insert over table {}: {}".format(
+                message="Error on Insert over table {}: {}".format(
                     model.Meta.name, err)
             )
 
@@ -252,10 +252,10 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                 if result:
                     results.append(result)
             except asyncpg.exceptions.UniqueViolationError as err:
-                raise StatementError("Constraint Error: {}".format(err))
+                raise StatementError(message="Constraint Error: {}".format(err))
             except Exception as err:
                 print(traceback.format_exc())
-                raise ProviderError("Error Bulk Insert {}: {}".format(table, err))
+                raise ProviderError(message="Error Bulk Insert {}: {}".format(table, err))
         else:
             return results
 
@@ -290,7 +290,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             print(traceback.format_exc())
             raise ProviderError(
-                "Error on Deleting table {}: {}".format(model.Meta.name, err)
+                message="Error on Deleting table {}: {}".format(model.Meta.name, err)
             )
 
     async def mdl_filter(self, model: "Model", **kwargs):
@@ -323,7 +323,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                "Error on Insert over table {}: {}".format(
+                message="Error on Insert over table {}: {}".format(
                     model.Meta.name, err)
             )
 
@@ -343,7 +343,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                "Error on Insert over table {}: {}".format(
+                message="Error on Insert over table {}: {}".format(
                     model.Meta.name, err)
             )
 
@@ -377,7 +377,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                "Error on Get One over table {}: {}".format(
+                message="Error on Get One over table {}: {}".format(
                     model.Meta.name, err)
             )
 
@@ -432,7 +432,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                "Error on UPDATE over table {}: {}".format(
+                message="Error on UPDATE over table {}: {}".format(
                     model.Meta.name, err)
             )
 
@@ -462,7 +462,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                "Error on SELECT over {}: {}".format(
+                message="Error on SELECT over {}: {}".format(
                     model.Meta.name, err)
             )
 
@@ -486,7 +486,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                "Error on SELECT ALL over {}: {}".format(
+                message="Error on SELECT ALL over {}: {}".format(
                     model.Meta.name, err)
             )
 
@@ -516,7 +516,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                "Error on Get One over table {}: {}".format(
+                message="Error on Get One over table {}: {}".format(
                     model.Meta.name, err)
             )
 
@@ -553,7 +553,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                "Error on Delete over table {}: {}".format(
+                message="Error on Delete over table {}: {}".format(
                     model.Meta.name, err)
             )
         return result
@@ -621,12 +621,11 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                 return model
         except asyncpg.exceptions.UniqueViolationError as err:
             raise StatementError(
-                "Constraint Error: {err!r}"
+                traceback.format_exc(),
+                message="Constraint Error: {err!r}",
             )
         except Exception as err:
             raise ProviderError(
-                "Error on Insert over table {}: {}".format(
-                    model.Meta.name, err),
-                exc_info=True,
-                message=traceback.format_exc()
+                traceback.format_exc(),
+                message=f"Error on Insert over table {model.Meta.name}: {err!s}"
             )
