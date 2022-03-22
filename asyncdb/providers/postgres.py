@@ -327,13 +327,13 @@ class postgres(threading.Thread, SQLProvider):
             raise ProviderError(message=error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except (
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
             error = "Invalid Statement Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except Exception as err:
             error = "Error on Query Row: {}".format(str(err))
             raise Exception(error)
@@ -352,13 +352,13 @@ class postgres(threading.Thread, SQLProvider):
             raise ProviderError(message=error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except (
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
             error = "Invalid Statement Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except Exception as err:
             error = "Error on Query Row: {}".format(str(err))
             raise Exception(error)
@@ -384,13 +384,13 @@ class postgres(threading.Thread, SQLProvider):
             raise ProviderError(message=error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except (
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
             error = "Invalid Statement Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -417,13 +417,13 @@ class postgres(threading.Thread, SQLProvider):
             raise ProviderError(message=error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence on Query Row Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except (
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
             error = "Invalid Statement Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except Exception as err:
             error = "Error on Query Row: {}".format(str(err))
             raise Exception(error)
@@ -603,13 +603,13 @@ class postgres(threading.Thread, SQLProvider):
             raise ProviderError(message=error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             self._error = "Sentence Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except (
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
             self._error = "Invalid Statement Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except Exception as err:
             self._error = "Error on Query: {}".format(str(err))
             raise Exception(error)

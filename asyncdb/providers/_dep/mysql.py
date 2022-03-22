@@ -301,7 +301,7 @@ class mysql(BaseProvider):
                     self._columns = []
             except RuntimeError as err:
                 error = "Prepare Runtime Error: {}".format(str(err))
-                raise StatementError(error)
+                raise StatementError(message=error)
             except Exception as err:
                 error = "Unknown Error: {}".format(str(err))
                 raise ProviderError(message=error)

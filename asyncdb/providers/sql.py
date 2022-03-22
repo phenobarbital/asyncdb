@@ -216,7 +216,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     else:
                         if field.required is True:
                             raise StatementError(
-                                f"Missing Required Field: {col}"
+                                message=f"Missing Required Field: {col}"
                             )
                 else:
                     try:
