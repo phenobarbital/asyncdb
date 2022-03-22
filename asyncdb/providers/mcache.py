@@ -56,9 +56,13 @@ class mcache(InitProvider):
                 behaviors=self._behaviors
             )
         except (pylibmc.Error) as err:
-            raise ProviderError("Connection Error: {}".format(str(err)))
+            raise ProviderError(
+                message="Connection Error: {}".format(str(err))
+            )
         except Exception as err:
-            raise ProviderError("Unknown Memcache Error: {}".format(str(err)))
+            raise ProviderError(
+                message="Unknown Memcache Error: {}".format(str(err))
+            )
             return False
         # is connected
         if self._connection:

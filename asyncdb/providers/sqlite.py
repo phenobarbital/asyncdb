@@ -120,7 +120,7 @@ class sqlite(SQLProvider, DBCursorBackend):
                 return (None, NoDataFound)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             try:
                 await self._cursor.close()
@@ -143,7 +143,7 @@ class sqlite(SQLProvider, DBCursorBackend):
                 return (None, NoDataFound)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             await self._cursor.close()
             return await self._serializer(self._result, error)
@@ -160,7 +160,7 @@ class sqlite(SQLProvider, DBCursorBackend):
                 raise NoDataFound()
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             await self._cursor.close()
             return self._result
@@ -180,7 +180,7 @@ class sqlite(SQLProvider, DBCursorBackend):
                 raise NoDataFound
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             await self._cursor.close()
             return self._result
@@ -203,7 +203,7 @@ class sqlite(SQLProvider, DBCursorBackend):
                 raise NoDataFound()
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             await self._cursor.close()
             return self._result
@@ -225,7 +225,7 @@ class sqlite(SQLProvider, DBCursorBackend):
                 await self._connection.commit()
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return (result, error)
 
@@ -242,7 +242,7 @@ class sqlite(SQLProvider, DBCursorBackend):
                 await self._connection.commit()
         except Exception as err:
             error = f"Error on SQLite Query: {err!s}"
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return (result, error)
 
@@ -299,7 +299,7 @@ class sqlite(SQLProvider, DBCursorBackend):
                 raise NoDataFound()
         except Exception as err:
             error = f"Error Getting Columns: {err!s}"
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return self._columns
 

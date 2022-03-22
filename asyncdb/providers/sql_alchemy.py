@@ -244,10 +244,10 @@ class sql_alchemy(SQLProvider, DBCursorBackend):
                     self._result = rows
         except (DatabaseError, OperationalError) as err:
             error = "Query Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Query Error, Terminated: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             self.generated_at()
             return [self._result, error]
@@ -274,10 +274,10 @@ class sql_alchemy(SQLProvider, DBCursorBackend):
                     self._result = row
         except (DatabaseError, OperationalError) as err:
             error = "Query Row Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Query Row Error, Terminated: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return [self._result, error]
         
@@ -301,10 +301,10 @@ class sql_alchemy(SQLProvider, DBCursorBackend):
                     result = rows
         except (DatabaseError, OperationalError) as err:
             error = "Query Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Query Error, Terminated: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             self.generated_at()
             return result
@@ -330,10 +330,10 @@ class sql_alchemy(SQLProvider, DBCursorBackend):
                     result = row
         except (DatabaseError, OperationalError) as err:
             error = "Query Row Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Query Row Error, Terminated: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return result
         
@@ -353,10 +353,10 @@ class sql_alchemy(SQLProvider, DBCursorBackend):
             self._result = result
         except (DatabaseError, OperationalError) as err:
             error = "Execute Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Exception Error on Execute: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return [self._result, error]
 
@@ -372,10 +372,10 @@ class sql_alchemy(SQLProvider, DBCursorBackend):
             self._result = result
         except (DatabaseError, OperationalError) as err:
             error = "Execute Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Exception Error on Execute: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             return [self._result, error]
         
@@ -409,7 +409,7 @@ class sql_alchemy(SQLProvider, DBCursorBackend):
                 pass
             except (SQLAlchemyError, DatabaseError, OperationalError) as err:
                 error = "Exception Error on Transaction: {}".format(str(err))
-                raise ProviderError(error)
+                raise ProviderError(message=error)
             finally:
                 self._transaction = None
 

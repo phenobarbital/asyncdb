@@ -48,7 +48,7 @@ class sqlserverCursor(SQLCursor):
         except (pymssql.StandardError, pymssql.Error) as err:
             print(err)
             error = "SQL Server Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             print(err)
             raise
@@ -116,7 +116,7 @@ class sqlserver(mssql):
             error = warn
         except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         return self
 
     async def execute(self, sentence="", params: dict = {}):
@@ -139,10 +139,10 @@ class sqlserver(mssql):
             error = warn
         except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -173,10 +173,10 @@ class sqlserver(mssql):
             error = warn
         except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -205,10 +205,10 @@ class sqlserver(mssql):
                 return [None, "SQL Server: No Data was Found"]
         except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -239,10 +239,10 @@ class sqlserver(mssql):
                 return [None, "SQL Server: No Data was Found"]
         except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -265,7 +265,7 @@ class sqlserver(mssql):
                 return [None, "SQL Server: No Data was Found"]
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -287,7 +287,7 @@ class sqlserver(mssql):
                 return [None, "SQL Server: No Data was Found"]
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -311,7 +311,7 @@ class sqlserver(mssql):
                 raise NoDataFound("SQL Server: No Data was Found")
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -334,7 +334,7 @@ class sqlserver(mssql):
                 return [None, "SQL Server: No Data was Found"]
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)

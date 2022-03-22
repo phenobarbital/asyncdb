@@ -5,6 +5,7 @@ import json
 import time
 from datetime import datetime
 import logging
+import pymssql
 from pymssql import _mssql
 from typing import (
     List,
@@ -94,10 +95,12 @@ class mssql(SQLProvider, DBCursorBackend):
                 except Exception as err:
                     self._connection = None
                     raise ProviderError(
-                        "Connection Error, Terminated: {}".format(str(err))
+                        message="Connection Error, Terminated: {}".format(str(err))
                     )
         except Exception as err:
-            raise ProviderError("Close Error: {}".format(str(err)))
+            raise ProviderError(
+                message="Close Error: {}".format(str(err))
+            )
         finally:
             self._connection = None
             self._connected = False
@@ -125,7 +128,8 @@ class mssql(SQLProvider, DBCursorBackend):
             self._connection = None
             self._cursor = None
             raise ProviderError(
-                "connection Error, Terminated: {}".format(str(err)))
+                message="connection Error, Terminated: {}".format(str(err))
+            )
         finally:
             return self
 
@@ -163,16 +167,16 @@ class mssql(SQLProvider, DBCursorBackend):
             self._result = self._connection.execute_non_query(sentence, params)
         except (_mssql.MSSQLDatabaseException) as err:
             error = "Database Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
         except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -200,16 +204,16 @@ class mssql(SQLProvider, DBCursorBackend):
         except (_mssql.MSSQLDatabaseException) as err:
             print(err)
             error = "Database Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
         except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -230,7 +234,7 @@ class mssql(SQLProvider, DBCursorBackend):
             raise Exception(error)
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -251,7 +255,7 @@ class mssql(SQLProvider, DBCursorBackend):
             raise Exception(error)
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -273,16 +277,16 @@ class mssql(SQLProvider, DBCursorBackend):
         except (_mssql.MSSQLDatabaseException) as err:
             print(err)
             error = "Database Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
         except (pymssql.StandardError, pymssql.Error) as err:
             error = "SQL Server Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -305,7 +309,7 @@ class mssql(SQLProvider, DBCursorBackend):
             raise Exception(error)
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -369,7 +373,9 @@ class mssql(SQLProvider, DBCursorBackend):
                 else:
                     return False
             except Exception as err:
-                raise ProviderError(f"Error in Object Creation: {err!s}")
+                raise ProviderError(
+                    message=f"Error in Object Creation: {err!s}"
+                )
         else:
             raise RuntimeError(f'SQLite: invalid Object type {object!s}')
 

@@ -304,7 +304,7 @@ class mysql(BaseProvider):
                 raise StatementError(error)
             except Exception as err:
                 error = "Unknown Error: {}".format(str(err))
-                raise ProviderError(error)
+                raise ProviderError(message=error)
         finally:
             return [self._prepared, error]
 
@@ -324,7 +324,7 @@ class mysql(BaseProvider):
                 return [None, "Mysql: No Data was Found"]
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -346,7 +346,7 @@ class mysql(BaseProvider):
             self._result = await self.fetchone()
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query Row: {}".format(str(err))
             raise Exception(error)

@@ -94,10 +94,10 @@ class odbc(SQLProvider):
                 return [None, NoDataFound]
         except pyodbc.Error as err:
             error = "ODBC: Query Error: {}".format(err)
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             await self._cursor.close()
             return [self._result, error]
@@ -116,7 +116,7 @@ class odbc(SQLProvider):
                 raise NoDataFound
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             await self._cursor.close()
             return self._result
@@ -134,10 +134,10 @@ class odbc(SQLProvider):
                 raise NoDataFound
         except pyodbc.ProgrammingError as err:
             error = "ODBC Query Error: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             await self._cursor.close()
             return self._result
@@ -157,7 +157,7 @@ class odbc(SQLProvider):
                 return [None, NoDataFound]
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             await self._cursor.close()
             return [self._result, error]
@@ -175,7 +175,7 @@ class odbc(SQLProvider):
                 raise NoDataFound
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             await self._cursor.close()
             return self._result
@@ -195,7 +195,7 @@ class odbc(SQLProvider):
                 await self._connection.commit()
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             await self._cursor.close()
             return [result, error]
@@ -210,7 +210,7 @@ class odbc(SQLProvider):
                 await self._connection.commit()
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(error)
+            raise ProviderError(message=error)
         finally:
             await self._cursor.close()
             return [result, error]
