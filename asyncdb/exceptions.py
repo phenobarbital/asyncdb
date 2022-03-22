@@ -93,7 +93,7 @@ class AsyncDBException(Exception):
         super(AsyncDBException, self).__init__(message)
 
     def __repr__(self):
-        return f"{__name__}(message={self.message})"
+        return f"{__name__}({self.args!r})"
 
     def __str__(self):
         return f"{__name__}: {self.message}"

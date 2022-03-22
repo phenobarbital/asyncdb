@@ -622,7 +622,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except asyncpg.exceptions.UniqueViolationError as err:
             raise StatementError(
                 traceback.format_exc(),
-                message="Constraint Error: {err!r}",
+                message=f"Constraint Error: {err!r}",
             )
         except Exception as err:
             raise ProviderError(
