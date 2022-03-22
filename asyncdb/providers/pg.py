@@ -608,16 +608,16 @@ class pg(SQLProvider, DBCursorBackend):
                 self._columns = []
         except FatalPostgresError as err:
             error = "Fatal Runtime Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except PostgresSyntaxError as err:
             error = "Sentence Syntax Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except PostgresError as err:
             error = "PostgreSQL Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except RuntimeError as err:
             error = "Prepare Runtime Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except Exception as err:
             error = "Unknown Error: {}".format(str(err))
             raise ProviderError(message=error)
@@ -638,13 +638,13 @@ class pg(SQLProvider, DBCursorBackend):
             raise ProviderError(message=error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Sentence Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except (
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
             error = "Invalid Statement Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -666,14 +666,14 @@ class pg(SQLProvider, DBCursorBackend):
             raise ProviderError(message=error)
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
             error = "Statement Error: {}".format(str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except (
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
             error = "Invalid Statement Error: {}".format(str(err))
             self._loop.call_exception_handler(err)
-            raise StatementError(error)
+            raise StatementError(message=error)
         except Exception as err:
             error = "Query Row Error: {}".format(str(err))
             self._loop.call_exception_handler(err)
@@ -757,11 +757,17 @@ class pg(SQLProvider, DBCursorBackend):
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
-            raise StatementError(f"Invalid Statement Error: {err}")
+            raise StatementError(
+                message=f"Invalid Statement Error: {err}"
+            )
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
-            raise StatementError(f"Sentence Error: {err}")
+            raise StatementError(
+                message=f"Sentence Error: {err}"
+            )
         except RuntimeError as err:
-            raise ProviderError(f"Sentence Error: {err}")
+            raise ProviderError(
+                message=f"Sentence Error: {err}"
+            )
         except Exception as err:
             raise Exception(f"Error on Query: {err}")
         return result
@@ -775,11 +781,17 @@ class pg(SQLProvider, DBCursorBackend):
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
         ) as err:
-            raise StatementError(f"Invalid Statement Error: {err}")
+            raise StatementError(
+                message=f"Invalid Statement Error: {err}"
+            )
         except (PostgresSyntaxError, UndefinedColumnError, PostgresError) as err:
-            raise StatementError(f"Sentence Error: {err}")
+            raise StatementError(
+                message=f"Sentence Error: {err}"
+            )
         except RuntimeError as err:
-            raise ProviderError(f"Sentence Error: {err}")
+            raise ProviderError(
+                message=f"Sentence Error: {err}"
+            )
         except Exception as err:
             raise Exception(f"Error on Query: {err}")
         return result
@@ -879,7 +891,7 @@ class pg(SQLProvider, DBCursorBackend):
             return result
         except asyncpg.exceptions.UndefinedTableError:
             error = "Error on Copy, Table doesnt exists: {}".format(str(table))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except (
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
@@ -887,7 +899,7 @@ class pg(SQLProvider, DBCursorBackend):
             error = "Error on Copy, Invalid Statement Error: {}".format(
                 str(err))
             self._loop.call_exception_handler(err)
-            raise StatementError(error)
+            raise StatementError(message=error)
         except Exception as err:
             error = "Error on Table Copy: {}".format(str(err))
             raise Exception(error)
@@ -917,7 +929,7 @@ class pg(SQLProvider, DBCursorBackend):
             return result
         except asyncpg.exceptions.UndefinedTableError:
             error = "Error on Copy, Table doesnt exists: {}".format(str(table))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except (
             asyncpg.exceptions.InvalidSQLStatementNameError,
             asyncpg.exceptions.UndefinedTableError,
@@ -925,7 +937,7 @@ class pg(SQLProvider, DBCursorBackend):
             error = "Error on Copy, Invalid Statement Error: {}".format(
                 str(err))
             self._loop.call_exception_handler(err)
-            raise StatementError(error)
+            raise StatementError(message=error)
         except Exception as err:
             error = "Error on Table Copy: {}".format(str(err))
             raise Exception(error)
@@ -952,11 +964,11 @@ class pg(SQLProvider, DBCursorBackend):
             error = "Error on Copy: {}, Table doesnt exists: {}".format(
                 str(err), str(table)
             )
-            raise StatementError(error)
+            raise StatementError(message=error)
         except (InvalidSQLStatementNameError, UndefinedColumnError) as err:
             error = "Error on Copy, Invalid Statement Error: {}".format(
                 str(err))
-            raise StatementError(error)
+            raise StatementError(message=error)
         except asyncpg.exceptions.UniqueViolationError as err:
             error = "Error on Copy, Constraint Violated: {}".format(str(err))
             raise DataError(error)
