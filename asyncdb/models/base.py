@@ -649,9 +649,9 @@ class Model(metaclass=ModelMeta):
                     model=self, connection=conn, fields=self.columns()
                 )
                 return result
-            except ProviderError:
+            except StatementError as err:
                 raise
-            except StatementError:
+            except ProviderError:
                 raise
             except Exception as err:
                 logging.debug(traceback.format_exc())
