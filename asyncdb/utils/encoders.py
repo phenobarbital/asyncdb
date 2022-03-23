@@ -116,7 +116,10 @@ class DefaultEncoder(JSONEncoder):
         elif isinstance(obj, Decimal):
             return str(obj)
         elif hasattr(obj, "isoformat"):
-            return obj.isoformat()
+            try:
+                return obj.isoformat()
+            except TypeError:
+                return None
         elif isinstance(obj, asyncpg.Range):
             return [obj.lower, obj.upper]
         else:
