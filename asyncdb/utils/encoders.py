@@ -108,9 +108,10 @@ class DefaultEncoder(JSONEncoder):
                 return str(obj.value)
         elif isinstance(obj, uuid.UUID):
             try:
+                if uobj := uuid.UUID(obj, version=4):
+                    return str(uobj)
+            except ValueError:
                 return str(obj)
-            except Exception as e:
-                return obj.hex
         elif isinstance(obj, decimal.Decimal):
             return float(obj)
         elif isinstance(obj, Decimal):
