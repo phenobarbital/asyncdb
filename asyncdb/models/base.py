@@ -7,6 +7,7 @@ import types
 import logging
 import inspect
 import traceback
+import operator
 import rapidjson as to_json
 from dataclasses import Field as ff
 from dataclasses import (
@@ -26,7 +27,8 @@ from typing import (
     Dict,
     Optional,
     Union,
-    Any
+    Any,
+    Iterable
 )
 from asyncdb.utils import Msg
 from asyncdb.utils.types import (
