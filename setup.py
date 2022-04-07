@@ -71,7 +71,7 @@ setup(
         "jinja2==3.0.3",
         "jsonpath-rw==1.4.0",
         "jsonpath-rw-ext==1.2.2",
-        "dateparser==1.0.0",
+        "dateparser==1.1.1",
         "rapidjson==1.0.0",
         'yarl==1.7.2',
         'wrapt==1.11.2',

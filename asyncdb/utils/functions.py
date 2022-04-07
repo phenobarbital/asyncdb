@@ -12,7 +12,7 @@ from datetime import (
     timedelta,
 )
 from typing import Callable
-
+import re
 import dateparser
 import dateutil.parser
 import pytz
@@ -219,10 +219,8 @@ def to_date(value, mask="%Y-%m-%d %H:%M:%S", tz=None):
             result = datetime.datetime.strptime(str(value), mask)
             if tz is not None:
                 result = result.replace(tzinfo=pytz.timezone(tz))
-            # print('to_date 2', value, result)
             return result
         except Exception:
-            # print('to_date 3', 'dateparser')
             return dateparser.parse(str(value), languages=["en", "es"])
 
 
