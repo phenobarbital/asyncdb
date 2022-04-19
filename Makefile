@@ -9,7 +9,8 @@ setup:
 dev:
 	flit install --symlink
 
-release: lint test clean
+release:
+	lint test clean
 	flit publish
 
 format:

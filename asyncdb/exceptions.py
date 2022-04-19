@@ -31,9 +31,9 @@ async def shutdown(loop: asyncio.AbstractEventLoop, signal: Any = None):
             for task in asyncio.all_tasks()
             if task is not asyncio.current_task() and not task.done()
         ]
-        [task.cancel() for task in tasks]
+        status = [task.cancel() for task in tasks]
         logging.warning(f"Cancelling {len(tasks)} outstanding tasks")
-        await asyncio.gather(*tasks, loop=loop, return_exceptions=True)
+        await asyncio.gather(*tasks, return_exceptions=True)
         logging.warning('Asyncio Shutdown: Done graceful shutdown of subtasks')
     except asyncio.CancelledError:
         print("All Tasks has been canceled")
@@ -90,7 +90,7 @@ class AsyncDBException(Exception):
         )
         self.message = message
         self.code = code
-        super(AsyncDBException, self).__init__(message)
+        super().__init__(message)
 
     def __repr__(self):
         return f"{__name__}({self.args!r})"
