@@ -38,7 +38,7 @@ async def shutdown(loop: asyncio.AbstractEventLoop, signal: Any = None):
     except asyncio.CancelledError:
         print("All Tasks has been canceled")
     except Exception as err:
-        print("Asyncio Generic Error", err)
+        print("Asyncio Generic Error: ", err)
     finally:
         loop.stop()
 
@@ -48,7 +48,7 @@ def default_exception_handler(loop: asyncio.AbstractEventLoop, context: Any):
     # first, handle with default handler
     if isinstance(context, Exception):
         # is a basic exception
-        logging.exception(f"Exception {context!s}")
+        logging.exception(f"Exception {context!s}", stack_info=True)
         raise type(context)
     else:
         loop.default_exception_handler(context)
