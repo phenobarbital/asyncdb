@@ -71,7 +71,6 @@ setup(
         "jinja2==3.0.3",
         "jsonpath-rw==1.4.0",
         "jsonpath-rw-ext==1.2.2",
-        "dateparser==1.1.1",
         "rapidjson==1.0.0",
         'yarl==1.7.2',
         'wrapt==1.11.2',
@@ -103,8 +102,7 @@ setup(
         "pandas==1.4.1",
         "dask==2022.2.0",
         "datatable==1.0.0",
-        "polars==0.8.10",
-        "py-polars==0.8.10",
+        "polars==0.13.23",
         "pyarrow==4.0.1",
         "connectorx==0.2.3",
         "openpyxl==3.0.9",
@@ -124,7 +122,8 @@ setup(
         "scales==1.0.9",
         "cassandra-driver==3.25.0",
         "influxdb-client==1.26.0",
-        "rx==3.2.0"
+        "rx==3.2.0",
+        "dateparser==1.1.1",
     ],
     tests_require=[
         'pytest>=6.0.0',
