@@ -6,7 +6,8 @@ setup:
 	pip install wheel==0.37.0
 	pip install -e .
 
-dev:
+develop:
+	pip install -Ur docs/requirements-dev.txt
 	flit install --symlink
 
 release:
@@ -20,9 +21,6 @@ lint:
 	python -m pylint --rcfile .pylint asyncdb/*.py
 	python -m pylint --rcfile .pylint asyncdb/utils/*.py
 	python -m black --check asyncdb
-
-setup_dev:
-	python -m pip install -Ur docs/requirements-dev.txt
 
 test:
 	python -m coverage run -m asyncdb.tests
