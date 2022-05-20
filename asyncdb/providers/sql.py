@@ -256,10 +256,9 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             except Exception as err:
                 print(traceback.format_exc())
                 raise ProviderError(message="Error Bulk Insert {}: {}".format(table, err))
-        else:
-            return results
+        return results
 
-    async def mdl_delete(self, model: "Model", conditions: dict, **kwargs):
+    async def mdl_delete(self, model: "Model", conditions: Dict, **kwargs):
         """
         Deleting some records and returned.
         """
@@ -323,7 +322,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                message="Error on Insert over table {}: {}".format(
+                message="Error FILTER: over table {}: {}".format(
                     model.Meta.name, err)
             )
 
@@ -335,7 +334,11 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             table = f"{model.Meta.schema}.{model.Meta.name}"
         except Exception:
             table = model.__name__
-        sql = f"SELECT * FROM {table}"
+        if 'fields' in kwargs:
+            columns = ','.join(kwargs['fields'])
+        else:
+            columns = '*'
+        sql = f"SELECT {columns} FROM {table}"
         try:
             # prepared, error = await self.prepare(sql)
             result = await self._connection.fetch(sql)
@@ -343,8 +346,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                message="Error on Insert over table {}: {}".format(
-                    model.Meta.name, err)
+                f"Error: Model All over {model.Meta.name}: {err}"
             )
 
     async def mdl_get(self, model: "Model", **kwargs):
@@ -377,14 +379,13 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                message="Error on Get One over table {}: {}".format(
-                    model.Meta.name, err)
+                f"Error on Get One over table {model.Meta.name}: {err}"
             )
 
     """
     Instance-based Dataclass Methods.
     """
-    async def model_save(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_save(self, model: "Model", fields: Dict = None, **kwargs):
         """
         Updating a Model object based on primary Key or conditions
         TODO: check if row doesnt exists, then, insert
@@ -432,11 +433,10 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                message="Error on UPDATE over table {}: {}".format(
-                    model.Meta.name, err)
+                f"Error on UPDATE over table {model.Meta.name}: {err}"
             )
 
-    async def model_select(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_select(self, model: "Model", fields: Dict = None, **kwargs):
         cols = []
         source = {}
         try:
@@ -466,19 +466,21 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     model.Meta.name, err)
             )
 
-    async def model_all(self, model: "Model", fields: Dict = {}):
+    async def model_all(self, model: "Model", fields: Dict = None):
         cols = []
-        source = {}
         try:
             table = f"{model.Meta.schema}.{model.Meta.name}"
         except Exception:
             table = model.__name__
-        for name, field in fields.items():
-            column = field.name
-            datatype = field.type
-            value = getattr(model, field.name)
-            cols.append(column)
-        columns = ", ".join(cols)
+        if fields:
+            for name, field in fields.items():
+                column = field.name
+                datatype = field.type
+                value = getattr(model, field.name)
+                cols.append(column)
+            columns = ", ".join(cols)
+        else:
+            columns = "*"
         sql = f"SELECT {columns} FROM {table}"
         logging.debug(sql)
         try:
@@ -486,27 +488,29 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                message="Error on SELECT ALL over {}: {}".format(
-                    model.Meta.name, err)
+                f"Error on SELECT ALL over {model.Meta.name}: {err}"
             )
 
-    async def model_get(self, model: "Model", fields: Dict = {}, **kwargs):
+    async def model_get(self, model: "Model", fields: Dict = None, **kwargs):
         try:
             table = f"{model.Meta.schema}.{model.Meta.name}"
         except Exception:
             table = model.__name__
         pk = {}
         cols = []
-        for name, field in fields.items():
-            value = getattr(model, field.name)
-            column = field.name
-            cols.append(column)
-            try:
-                if field.primary_key is True:
-                    pk[column] = value
-            except AttributeError:
-                pass
-        columns = ", ".join(cols)
+        if fields:
+            for name, field in fields.items():
+                value = getattr(model, field.name)
+                column = field.name
+                cols.append(column)
+                try:
+                    if field.primary_key is True:
+                        pk[column] = value
+                except AttributeError:
+                    pass
+            columns = ", ".join(cols)
+        else:
+            columns = "*"
         arguments = {**pk, **kwargs}
         condition = self._where(fields=fields, **arguments)
         # migration of where to prepared statement
@@ -516,14 +520,13 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                message="Error on Get One over table {}: {}".format(
-                    model.Meta.name, err)
+                f"Error on Get One over table {model.Meta.name}: {err}"
             )
 
     async def model_delete(
                 self,
                 model: "Model",
-                fields: Dict = {},
+                fields: Dict,
                 connection: Any = None,
                 **kwargs
             ):
@@ -536,7 +539,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception:
             table = model.__name__
         pk = {}
-        for name, field in fields.items():
+        for _, field in fields.items():
             column = field.name
             datatype = field.type
             value = Entity.toSQL(getattr(model, field.name), datatype)
@@ -550,18 +553,19 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         sql = sql.format_map(SafeDict(condition=condition))
         try:
             result, error = await connection.execute(sql)
+            if error:
+                logging.error(error)
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                message="Error on Delete over table {}: {}".format(
-                    model.Meta.name, err)
+                f"Error on Delete over table {model.Meta.name}: {err}"
             )
         return result
 
     async def model_insert(
                 self,
                 model: "Model",
-                fields: Dict = {},
+                fields: Dict,
                 connection: Any = None,
                 **kwargs
             ):
@@ -577,7 +581,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         source = []
         pk = []
         n = 1
-        for name, field in fields.items():
+        for _, field in fields.items():
             column = field.name
             datatype = field.type
             # dbtype = field.get_dbtype()
@@ -605,19 +609,22 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             if field.primary_key is True:
                 pk.append(column)
         try:
-            primary = "RETURNING {}".format(",".join(pk)) if pk else ""
+            # primary = "RETURNING {}".format(",".join(pk)) if pk else ""
+            primary = "RETURNING *"
             columns = ",".join(cols)
             values = ",".join(["${}".format(a) for a in range(1, n)])
             insert = f"INSERT INTO {table} ({columns}) VALUES({values}) {primary}"
             # print(insert)
             logging.debug(f"INSERT: {insert}")
             stmt, error = await connection.prepare(insert)
+            if error:
+                logging.error(error)
             result = await stmt.fetchrow(*source, timeout=2)
             logging.debug(stmt.get_statusmsg())
             if result:
                 # setting the values dynamically from returning
-                for f in pk:
-                    setattr(model, f, result[f])
+                for f, val in result.items():
+                    setattr(model, f, val)
                 return model
         except asyncpg.exceptions.UniqueViolationError as err:
             raise StatementError(

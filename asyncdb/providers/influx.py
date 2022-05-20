@@ -3,7 +3,6 @@ import asyncio
 import json
 import time
 import logging
-from datetime import datetime
 import pandas
 from influxdb_client import InfluxDBClient, ApiClient, DBRPsService, Point, Dialect, WriteOptions, BucketRetentionRules
 from influxdb_client.client.write_api import ASYNCHRONOUS, SYNCHRONOUS, PointSettings
@@ -16,7 +15,6 @@ from typing import (
     Any,
     List,
     Dict,
-    Optional,
     Union,
     Tuple
 )
@@ -30,10 +28,6 @@ from asyncdb.exceptions import (
     TooManyConnections,
 )
 from asyncdb.providers.base import InitProvider
-from asyncdb.utils import (
-    EnumEncoder,
-    SafeDict,
-)
 from .interfaces import (
     ConnectionDSNBackend
 )
@@ -51,7 +45,6 @@ class WriteCallback(object):
     def retry(self, conf: Tuple[str, str, str], data: str, exception: InfluxDBError):
         """Retryable error."""
         logging.error(f"Retryable error occurs for batch: {conf}, data: {data} retry: {exception}")
-
 
 class influx(InitProvider, ConnectionDSNBackend):
     _provider = "influxdb"
@@ -119,7 +112,6 @@ class influx(InitProvider, ConnectionDSNBackend):
         self._callback = WriteCallback
         # dialect for export to csv
         self._dialect = Dialect(header=True, delimiter=",", comment_prefix="#", annotations=[], date_time_format="RFC3339")
-        
 
     async def connection(self):
         """
@@ -137,7 +129,7 @@ class influx(InitProvider, ConnectionDSNBackend):
                     "enable_gzip": True,
                     "debug": self._debug,
                     "org": self._org
-                }    
+                }
                 if self._dsn:
                     print("URL ", self._dsn)
                     params['url'] = self._dsn
@@ -171,11 +163,11 @@ class influx(InitProvider, ConnectionDSNBackend):
             self._cursor = None
             logging.exception(err)
             raise ProviderError(
-                message="InfluxDB connection Error: {}".format(str(err))
+                message=f"InfluxDB connection Error: {err!s}"
             )
         finally:
             return self
-        
+
     async def close(self):
         """
         Closing a Connection
@@ -188,11 +180,11 @@ class influx(InitProvider, ConnectionDSNBackend):
                 except Exception as err:
                     self._connection = None
                     raise ProviderError(
-                        message="InfluxDB: Connection Error, Terminated: {}".format(str(err))
+                        message=f"InfluxDB: Connection Error, Terminated: {err!s}"
                     )
         except Exception as err:
             raise ProviderError(
-                message="InfluxDB: Close Error: {}".format(str(err))
+                message=f"InfluxDB: Close Error: {err!s}"
             )
         finally:
             self._connection = None
@@ -208,7 +200,7 @@ class influx(InitProvider, ConnectionDSNBackend):
                 error = err
             finally:
                 return [result, error]
-            
+
     def api_client(self):
         return self._client
 
@@ -221,7 +213,7 @@ class influx(InitProvider, ConnectionDSNBackend):
         """
         # return self._connection.get_list_database()
         return self._connection.ping()
-    
+
     async def health(self):
         """health.
 
@@ -229,17 +221,17 @@ class influx(InitProvider, ConnectionDSNBackend):
             HealthCheck: a class with Health information of the instance
         """
         return self._connection.health()
-    
+
     @property
     def organization(self):
         """Organization Name.
         """
         return self._org
-    
+
     @organization.setter
     def organization(self, org):
         self._org = org
-        
+
     def settings(self, config: Dict):
         """settings.
             Set Default Tags for every measurement.
@@ -249,10 +241,10 @@ class influx(InitProvider, ConnectionDSNBackend):
         self._settings = PointSettings(
             **config
         )
-        
+
     def set_callback(self, callback: WriteCallback):
         """SetCallback.
-        
+
         Set the current Callback for Writes.
 
         Args:
@@ -267,7 +259,7 @@ class influx(InitProvider, ConnectionDSNBackend):
             dict: version information.
         """
         return self._version if self._version is not None else self._connection.version()
-    
+
     async def list_buckets(self):
         buckets_api = self._connection.buckets_api()
         return buckets_api.find_buckets().buckets
@@ -281,7 +273,7 @@ class influx(InitProvider, ConnectionDSNBackend):
             raise ProviderError(
                 message="Error creating Bucket {}".format(err)
             )
-            
+
     create_database = create_bucket
 
     async def use(self, database: str):
@@ -323,17 +315,17 @@ class influx(InitProvider, ConnectionDSNBackend):
                         record_tag_keys = tag_keys,
                         record_field_keys = field_keys,
                         **time_keys
-                    )  
+                    )
                 else:
                     rst = writer.write(bucket=bucket, org=self._org, record=data)
                 result = rst.get()
             return result
         except RuntimeError as err:
-            error = "InfluxDB: Runtime Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise ProviderError(
+                f"InfluxDB: Runtime Error: {err!s}"
+            )
         except Exception as err:
-            error = "InfluxDB: Error on Write: {}".format(str(err))
-            raise Exception(error)
+            raise Exception(f"InfluxDB: Error on Write: {err!s}")
 
     save = write
 
@@ -369,9 +361,9 @@ class influx(InitProvider, ConnectionDSNBackend):
         finally:
             self.generated_at()
             return await self._serializer(self._result, error)
-        
+
     queryrow = query
-        
+
     async def fetch_all(self, sentence: str, *args, params: Dict = None):
         await self.valid_operation(sentence)
         try:
@@ -397,7 +389,7 @@ class influx(InitProvider, ConnectionDSNBackend):
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
-        
+
     fetch_one = fetch_all
 
     async def execute(self, sentence: str, method: str = "GET", **kwargs):
@@ -425,7 +417,7 @@ class influx(InitProvider, ConnectionDSNBackend):
             raise [None, error]
         finally:
             return [result, error]
-        
+
     async def execute_many(self, sentence: Union[str, Any], method: str = "GET", **kwargs):
         """Execute many transactions at once.
 
@@ -439,6 +431,6 @@ class influx(InitProvider, ConnectionDSNBackend):
           get column information about a table
         """
         raise NotImplementedError
-    
+
     def prepare(self, sentence: str, *args, **kwargs):
         raise NotImplementedError
