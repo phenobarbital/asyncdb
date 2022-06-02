@@ -597,12 +597,21 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     )
             else:
                 value = val
-            if field.required is False and value is None or value == "None":
+            required = field.required()
+            if required is False and value is None or value == "None":
                 default = field.default
                 if callable(default):
                     value = default()
                 else:
                     continue
+            elif required is True and value is None or value == "None":
+                if 'db_default' in field.metadata:
+                    # field get a default value from database
+                    continue
+                else:
+                    raise ProviderError(
+                        f"Field {column} required and value is null over {model.Meta.name}"
+                    )
             source.append(value)
             cols.append(column)
             n += 1
