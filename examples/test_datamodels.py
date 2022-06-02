@@ -73,17 +73,17 @@ async def get_user(age):
 async def new_user():
     Msg('Inserting and deleting a user: ', 'DEBUG')
     data = {
-        "firstname": 'Román',
+        "firstname": 'Guillermo',
         "lastname": 'Lara',
-        "name": 'Román Antonio Lara',
-        "age": 48,
+        "name": 'Guillermo Daniel',
+        "age": 18,
        "contacts": [Contact(**{"account": "email", "value": "jlara@gmail.com"}), Contact(**{"account": "email", "value": "jlara@trocglobal.com"})]
     }
     u = User(**data)
     await u.insert()
-    print(u.json())
+    print('USER JSON: ', u.json())
     # also, we can deleting as well
-    await u.delete()
+    # await u.delete()
 
 async def get_all_users():
     users = await User.all()

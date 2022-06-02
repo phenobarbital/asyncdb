@@ -456,7 +456,7 @@ class Model(metaclass=ModelMeta):
                     setattr(self, name, field.default())
                 except TypeError as err:
                     logging.warning(
-                        f'Error Calling Value on {field} with name {name}')
+                        f'Missing *Column* declaration {field} with name {name}')
                     setattr(self, name, None)
             # first check: data type hint
             val_type = type(val)
