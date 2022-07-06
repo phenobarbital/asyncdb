@@ -585,7 +585,10 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             column = field.name
             datatype = field.type
             # dbtype = field.get_dbtype()
-            val = getattr(model, field.name)
+            try:
+                val = getattr(model, field.name)
+            except AttributeError:
+                continue
             if is_dataclass(datatype) and val is not None:
                 if isinstance(val, list):
                     value = json.loads(
