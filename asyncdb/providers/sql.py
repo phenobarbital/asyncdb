@@ -172,6 +172,8 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                         column, Entity.escapeLiteral(value, datatype))
                 )
         set_fields = ", ".join(source)
+        if _filter is None:
+            _filter = {}
         condition = self._where(fields, **_filter)
         columns = ", ".join(cols)
         sql = f"UPDATE {table} SET {set_fields} {condition}"
@@ -280,6 +282,8 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     "{} = {}".format(
                         column, Entity.escapeLiteral(value, datatype))
                 )
+        if _filter is None:
+            _filter = {}
         condition = self._where(fields, **_filter)
         sql = f"DELETE FROM {table} {condition}"
         logging.debug(sql)
