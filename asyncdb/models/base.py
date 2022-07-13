@@ -720,7 +720,7 @@ class Model(metaclass=ModelMeta):
                 raise Exception(
                     "Error on get {}: {}".format(self.Meta.name, err))
 
-    get = fetch
+    # get = fetch
 
     async def select(self, **kwargs):
         """
@@ -749,7 +749,7 @@ class Model(metaclass=ModelMeta):
                 raise Exception(
                     "Error on filter {}: {}".format(self.Meta.name, err))
 
-    async def all(self, **kwargs):
+    async def fetch_all(self, **kwargs):
         """
         Need to return all rows as a ***collection*** of nested DataClasses
         """
@@ -764,8 +764,7 @@ class Model(metaclass=ModelMeta):
                     return [self.__class__(**dict(r)) for r in result]
                 else:
                     raise NoDataFound(
-                        "No Data on {} with condition {}".format(
-                            self.Meta.name, kwargs)
+                        f"No Data on {self.Meta.name} with condition {kwargs}"
                     )
             except NoDataFound:
                 raise
@@ -774,7 +773,8 @@ class Model(metaclass=ModelMeta):
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
-                    "Error on filter {}: {}".format(self.Meta.name, err))
+                    f"Error on filter {self.Meta.name}: {err}"
+                )
 
     """
     Class-based methods for Dataclasses.
@@ -801,18 +801,18 @@ class Model(metaclass=ModelMeta):
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
-                    "Error Updating Table {}: {}".format(cls.Meta.name, err)
-                )
+                    f"Error Updating Table {cls.Meta.name}: {err}"
+                ) from err
 
     @classmethod
-    async def remove(cls, conditions: dict = {}, **kwargs):
+    async def remove(cls, _filter: Dict = None, **kwargs):
         if not cls.Meta.connection:
             cls.get_connection(cls)
         async with await cls.Meta.connection.connection() as conn:
             result = []
             try:
                 result = await cls.Meta.connection.mdl_delete(
-                    model=cls, conditions=conditions, **kwargs
+                    model=cls, _filter=_filter, **kwargs
                 )
                 return result
             except (StatementError, ProviderError):
@@ -820,17 +820,17 @@ class Model(metaclass=ModelMeta):
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
-                    "Error Deleting Table {}: {}".format(cls.Meta.name, err)
+                    f"Error Deleting Table {cls.Meta.name}: {err}"
                 )
 
     @classmethod
-    async def update(cls, conditions: dict = {}, **kwargs):
+    async def update(cls, _filter: Dict = None, **kwargs):
         if not cls.Meta.connection:
             cls.get_connection(cls)
         async with await cls.Meta.connection.connection() as conn:
             try:
                 result = await cls.Meta.connection.mdl_update(
-                    model=cls, conditions=conditions, **kwargs
+                    model=cls, _filter=_filter, **kwargs
                 )
                 if result:
                     return [cls(**dict(r)) for r in result]
@@ -841,7 +841,7 @@ class Model(metaclass=ModelMeta):
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception(
-                    "Error Updating Table {}: {}".format(cls.Meta.name, err)
+                    f"Error Updating Table {cls.Meta.name}: {err}"
                 )
 
     @classmethod
@@ -868,7 +868,8 @@ class Model(metaclass=ModelMeta):
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
-                    "Error on filter {}: {}".format(cls.Meta.name, err))
+                    f"Error on filter {cls.Meta.name}: {err}"
+                )
 
     @classmethod
     async def get(cls, **kwargs):
@@ -890,13 +891,15 @@ class Model(metaclass=ModelMeta):
                     message=f"Data not found over {cls.Meta.name!s}")
             except AttributeError as err:
                 raise Exception(
-                    "Error on get {}: {}".format(cls.Meta.name, err))
+                    f"Error on get {cls.Meta.name}: {err}"
+                )
             except (StatementError, ProviderError):
                 raise
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception(
-                    "Error on get {}: {}".format(cls.Meta.name, err))
+                    f"Error on get {cls.Meta.name}: {err}"
+                )
 
     # get all data
     @classmethod
@@ -912,8 +915,7 @@ class Model(metaclass=ModelMeta):
             except Exception as err:
                 print(traceback.format_exc())
                 raise Exception(
-                    "Error on query_all over table {}: {}".format(
-                        cls.Meta.name, err)
+                    f"Error on query_all over table {cls.Meta.name}: {err}"
                 )
     """
     Class-based methods for dataclass creation, model creation.
@@ -942,22 +944,22 @@ class Model(metaclass=ModelMeta):
         return result
 
     @classmethod
-    def make_model(cls, name: str, schema: str = "public", fields: list = []):
+    def make_model(cls, name: str, schema: str = "public", fields: List = None):
         parent = inspect.getmro(cls)
-        cls = make_dataclass(name, fields, bases=(parent[0],))
+        obj = make_dataclass(name, fields, bases=(parent[0],))
         m = Meta()
         m.name = name
         m.schema = schema
         m.app_label = schema
-        cls.Meta = m
-        return cls
+        obj.Meta = m
+        return obj
 
     @classmethod
     async def makeModel(
         cls,
         name: str,
         schema: str = "public",
-        fields: list = [],
+        fields: List = None,
         db: "ConnectionBackend" = None,
     ):
         """
@@ -965,7 +967,7 @@ class Model(metaclass=ModelMeta):
 
         Making a model from field tuples, a JSON schema or a Table.
         """
-        tablename = "{}.{}".format(schema, name)
+        tablename = f"{schema}.{name}"
         if not fields:  # we need to look in to it.
             colinfo = await db.column_info(tablename)
             fields = []
@@ -983,15 +985,15 @@ class Model(metaclass=ModelMeta):
                     dtype = str
                 fields.append((column["name"], dtype, col))
         parent = inspect.getmro(cls)
-        cls = make_dataclass(name, fields, bases=(parent[0],))
+        obj = make_dataclass(name, fields, bases=(parent[0],))
         m = Meta()
         m.name = name
         m.schema = schema
         m.app_label = schema
         m.connection = db
         m.frozen = False
-        cls.Meta = m
-        return cls
+        obj.Meta = m
+        return obj
 
     Meta = Meta
     Meta = Meta
