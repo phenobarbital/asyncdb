@@ -109,6 +109,8 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         Re-think functionality for parsing where conditions.
         """
         result = ""
+        if not fields:
+            fields = {}
         if not where:
             return result
         elif type(where) == str:
@@ -148,7 +150,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         else:
             return result
 
-    async def mdl_update(self, model: "Model", conditions: dict, **kwargs):
+    async def mdl_update(self, model: "Model", _filter: Dict, **kwargs):
         """
         Updating some records and returned.
         """
@@ -159,7 +161,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         source = []
         cols = []
         fields = model.columns(model)
-        for name, field in fields.items():
+        for _, field in fields.items():
             column = field.name
             datatype = field.type
             cols.append(column)
@@ -170,7 +172,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                         column, Entity.escapeLiteral(value, datatype))
                 )
         set_fields = ", ".join(source)
-        condition = self._where(fields, **conditions)
+        condition = self._where(fields, **_filter)
         columns = ", ".join(cols)
         sql = f"UPDATE {table} SET {set_fields} {condition}"
         logging.debug(f'UPDATE SQL: {sql}')
@@ -182,8 +184,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             print(traceback.format_exc())
             raise ProviderError(
-                message="Error on Insert over table {}: {}".format(
-                    model.Meta.name, err)
+                f"Error on Insert over table {model.Meta.name}: {err}"
             )
 
     async def mdl_create(self, model: "Model", rows: list):
@@ -258,7 +259,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                 raise ProviderError(message="Error Bulk Insert {}: {}".format(table, err))
         return results
 
-    async def mdl_delete(self, model: "Model", conditions: Dict, **kwargs):
+    async def mdl_delete(self, model: "Model", _filter: Dict, **kwargs):
         """
         Deleting some records and returned.
         """
@@ -269,7 +270,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         source = []
         cols = []
         fields = model.columns(model)
-        for name, field in fields.items():
+        for _, field in fields.items():
             column = field.name
             datatype = field.type
             cols.append(column)
@@ -279,7 +280,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                     "{} = {}".format(
                         column, Entity.escapeLiteral(value, datatype))
                 )
-        condition = self._where(fields, **conditions)
+        condition = self._where(fields, **_filter)
         sql = f"DELETE FROM {table} {condition}"
         logging.debug(sql)
         try:
@@ -289,7 +290,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             print(traceback.format_exc())
             raise ProviderError(
-                message="Error on Deleting table {}: {}".format(model.Meta.name, err)
+                f"Error on Deleting table {model.Meta.name}: {err}"
             )
 
     async def mdl_filter(self, model: "Model", **kwargs):
@@ -303,7 +304,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             table = f"{model.Meta.schema}.{model.Meta.name}"
         except Exception:
             table = model.__name__
-        for name, field in fields.items():
+        for _, field in fields.items():
             column = field.name
             datatype = field.type
             cols.append(column)
@@ -322,8 +323,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                message="Error FILTER: over table {}: {}".format(
-                    model.Meta.name, err)
+                f"Error FILTER: over table {model.Meta.name}: {err}"
             )
 
     async def mdl_all(self, model: "Model", **kwargs):
@@ -360,7 +360,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         pk = {}
         cols = []
         fields = model.columns(model)
-        for name, field in fields.items():
+        for _, field in fields.items():
             val = getattr(model, field.name)
             column = field.name
             datatype = field.type
@@ -462,8 +462,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         except Exception as err:
             logging.debug(traceback.format_exc())
             raise ProviderError(
-                message="Error on SELECT over {}: {}".format(
-                    model.Meta.name, err)
+                f"Error on SELECT over {model.Meta.name}: {err}"
             )
 
     async def model_all(self, model: "Model", fields: Dict = None):
