@@ -3,7 +3,6 @@ venv:
 	echo 'run `source .venv/bin/activate` to start develop asyncDB'
 
 setup:
-	pip install wheel==0.37.0
 	pip install -e .
 
 develop:
