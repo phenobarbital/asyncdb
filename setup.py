@@ -80,7 +80,7 @@ setup(
         "charset-normalizer>=2.0.7",
         "et-xmlfile>=1.1.0",
         "ciso8601==2.2.0",
-        "iso8601==0.1.13",
+        "iso8601==1.0.2",
         "async-timeout==4.0.2",
         "aiopg==1.3.3",
         "tabulate==0.8.7",
