@@ -22,7 +22,7 @@ PARAMS = {
 }
 
 
-@pytest.fixture
+@pytest_asyncio.fixture()
 async def conn(event_loop):
     db = AsyncDB(DRIVER, dsn=DSN, loop=event_loop)
     await db.connection()
@@ -30,7 +30,7 @@ async def conn(event_loop):
     await db.close()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture()
 async def pooler(event_loop):
     args = {
         "timeout": 36000,
@@ -39,6 +39,7 @@ async def pooler(event_loop):
         }
     }
     pool = AsyncPool(DRIVER, dsn=DSN, loop=event_loop, **args)
+    print(pool, type(pool))
     await pool.connect()
     yield pool
     await pool.wait_close(gracefully=True, timeout=10)
