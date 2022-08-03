@@ -50,7 +50,7 @@ setup(
     setup_requires=[
         "wheel==0.37.1",
         "Cython==0.29.32",
-        "numpy==1.22.2",
+        "numpy==1.23.1",
         "asyncio==3.4.3",
         "cchardet==2.1.7",
         "cpython==0.0.6"
