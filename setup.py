@@ -104,7 +104,7 @@ setup(
         "polars==0.13.23",
         "pyarrow==4.0.1",
         "connectorx==0.2.3",
-        "openpyxl==3.0.9",
+        "openpyxl==3.0.10",
         "pymssql==2.2.1",
         "pymongo>=3.12.1",
         "motor==2.5.1",
