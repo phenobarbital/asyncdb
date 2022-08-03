@@ -67,7 +67,7 @@ setup(
         "asyncio==3.4.3",
         "cchardet==2.1.7",
         "objectpath==0.6.1",
-        "jinja2==3.0.3",
+        "jinja2==3.1.2",
         "jsonpath-rw==1.4.0",
         "jsonpath-rw-ext==1.2.2",
         "rapidjson==1.0.0",
