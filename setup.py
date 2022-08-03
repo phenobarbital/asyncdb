@@ -108,7 +108,7 @@ setup(
         "pymssql==2.2.1",
         "pymongo>=3.12.1",
         "motor==2.5.1",
-        "elasticsearch[async]==7.15.1",
+        "elasticsearch[async]==8.3.3",
         "hiredis==2.0.0",
         "aiomcache==0.7.0",
         "aiosqlite>=0.15.0",
