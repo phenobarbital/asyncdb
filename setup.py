@@ -113,7 +113,7 @@ setup(
         "aiomcache==0.7.0",
         "aiosqlite>=0.15.0",
         "asyncio_redis>=0.16.0",
-        "sqlalchemy==1.4.32",
+        "sqlalchemy==1.4.40",
         # "sqlalchemy-aio==0.16.0",
         "aioodbc==0.3.3",
         "pyodbc==4.0.30",
