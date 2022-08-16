@@ -4,11 +4,11 @@ import json
 import time
 import logging
 import pandas
-from influxdb_client import InfluxDBClient, ApiClient, DBRPsService, Point, Dialect, WriteOptions, BucketRetentionRules
-from influxdb_client.client.write_api import ASYNCHRONOUS, SYNCHRONOUS, PointSettings
+from influxdb_client import InfluxDBClient, Dialect, BucketRetentionRules
+from influxdb_client.client.write_api import ASYNCHRONOUS, PointSettings
 from influxdb_client.client.exceptions import InfluxDBError
 from influxdb_client.client.flux_table import FluxStructureEncoder
-from influxdb_client.rest import RESTResponse
+from influxdb_client.rest import _BaseRESTClient
 from dataclasses import is_dataclass, asdict
 from functools import partial
 from typing import (
@@ -268,7 +268,13 @@ class influx(InitProvider, ConnectionDSNBackend):
         try:
             buckets_api = self._connection.buckets_api()
             rules = BucketRetentionRules(type=btype, every_seconds=expiration, **kwgars)
-            created = buckets_api.create_bucket(bucket_name=bucket, retention_rules=rules, org=self._org)
+            print('ORG ', self._org)
+            created = buckets_api.create_bucket(
+                    bucket_name=bucket,
+                    retention_rules=rules,
+                    org=self._org
+            )
+            print(created)
         except Exception as err:
             raise ProviderError(
                 message="Error creating Bucket {}".format(err)
@@ -405,7 +411,7 @@ class influx(InitProvider, ConnectionDSNBackend):
             print(rst, type(rst), str(rst))
             rst = self._client.request(url=self._dsn + sentence, method=method, **kwargs)
             print(rst, type(rst), str(rst))
-            if isinstance(rst, RESTResponse):
+            if isinstance(rst, _BaseRESTClient):
                 try:
                     result = json.loads(rst.data)
                 except ValueError:

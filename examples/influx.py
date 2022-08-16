@@ -8,9 +8,11 @@ asyncio.set_event_loop(loop)
 params = {
     "host": "127.0.0.1",
     "port": "8086",
-    "database": 'testdb',
-    "user": "influxdata",
-    "password": "12345678"
+    "user": "troc_pgdata",
+    "password": "12345678",
+    "org": "navigator",
+    "bucket": "navigator",
+    "token": "qroJLmcrjM-IsDhxz-nR_NIoUxpjAgDz9AuXJJlTnikCIr70CNa_IxXlO5BID4LVrpHHCjzzeSr_UZab5ON_9A=="
 }
 
 DRIVER='influx'
