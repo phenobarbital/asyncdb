@@ -99,7 +99,7 @@ setup(
         "rethinkdb==2.4.8",
         "lxml>=4.6.2",
         "pandas==1.4.1",
-        "dask==2022.2.0",
+        "dask==2022.8.1",
         "datatable==1.0.0",
         "polars==0.13.23",
         "pyarrow==4.0.1",
