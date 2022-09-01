@@ -98,7 +98,7 @@ setup(
         "aioredis==2.0.1",
         "rethinkdb==2.4.8",
         "lxml>=4.6.2",
-        "pandas==1.4.1",
+        "pandas==1.4.4",
         "dask==2022.2.0",
         "datatable==1.0.0",
         "polars==0.13.23",
