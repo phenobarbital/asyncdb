@@ -101,7 +101,7 @@ setup(
         "pandas==1.4.1",
         "dask==2022.2.0",
         "datatable==1.0.0",
-        "polars==0.13.23",
+        "polars==0.14.8",
         "pyarrow==4.0.1",
         "connectorx==0.2.3",
         "openpyxl==3.0.9",
