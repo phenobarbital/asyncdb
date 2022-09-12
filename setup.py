@@ -59,7 +59,7 @@ setup(
         "wheel==0.37.1",
         "cpython==0.0.6",
         "Cython==0.29.32",
-        "numpy==1.23.1",
+        "numpy==1.23.3",
         "cryptography==37.0.4",
         "aiohttp==3.8.1",
         "asyncpg==0.26.0",
