@@ -5,27 +5,30 @@ import binascii
 import builtins
 import datetime
 import hashlib
+import logging
+import importlib
 import os
 import time
+import uuid
+from decimal import Decimal
 from datetime import (
     date,
     timedelta,
+    timezone
 )
 from typing import Callable
 import re
 import dateparser
-import dateutil.parser
 import pytz
 import redis
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
-import logging
-import importlib
+
 
 CACHE_HOST = os.getenv("CACHEHOST", default="localhost")
-CACHE_PORT = os.getenv("CACHEPORT", default=6379)
-CACHE_URL = "redis://{}:{}".format(CACHE_HOST, CACHE_PORT)
-CACHE_DB = os.getenv("QUERYSET_DB", default=0)
+CACHE_PORT = os.getenv("CACHEPORT", default="6379")
+CACHE_URL = f"redis://{CACHE_HOST}:{CACHE_PORT}"
+CACHE_DB = os.getenv("QUERYSET_DB", default="0")
 QUERY_VARIABLES = f"redis://{CACHE_HOST}:{CACHE_PORT}/{CACHE_DB}"
 
 CACHEDB = redis.StrictRedis.from_url(QUERY_VARIABLES)
@@ -67,13 +70,11 @@ def get_hash(value):
 
 
 def truncate_decimal(value):
-    head, sep, tail = value.partition(".")
+    head, _, _ = value.partition(".")
     return head
 
 
-"""
-Date-time Functions
-"""
+### Date-time Functions
 
 
 # date utilities
@@ -97,14 +98,14 @@ def a_visit():
     return timezone.now() + timezone.timedelta(minutes=30)
 
 
-def due_date():
-    return timezone.now() + timezone.timedelta(days=1)
+def due_date(days: int = 1):
+    return datetime.datetime.now() + timedelta(days=days)
 
 
 def year(value):
     if value:
         try:
-            newdate = dateutil.parser.parse(value)
+            newdate = parser.parse(value)
             # dt = datetime.datetime.strptime(newdate.strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S')
             return newdate.date().year
         except ValueError:
@@ -125,7 +126,7 @@ def get_last_week_date(mask="%Y-%m-%d"):
 def month(value):
     if value:
         try:
-            newdate = dateutil.parser.parse(value)
+            newdate = parser.parse(value)
             return newdate.date().month
         except ValueError:
             dt = value[:-4]
@@ -147,23 +148,8 @@ def now():
     return datetime.datetime.now()
 
 
-def due_date(days=1):
-    return datetime.datetime.now() + timedelta(days=days)
-
-
 def yesterday():
     return (datetime.datetime.now() - timedelta(1)).strftime("%Y-%m-%d")
-
-
-def isdate(value):
-    try:
-        parser.parse(value)
-        return True
-    except ValueError:
-        return False
-
-
-is_date = isdate
 
 
 def first_dow(mask="%Y-%m-%d"):
@@ -186,9 +172,7 @@ def to_midnight(value, mask="%Y-%m-%d"):
     return midnight.strftime(mask)
 
 
-"""
-Formatting Functions
-"""
+### Formatting Functions
 
 
 def format_date(value="2019-01-01", mask="%Y-%m-%d %H:%M:%S"):
@@ -206,8 +190,7 @@ def format_date(value="2019-01-01", mask="%Y-%m-%d %H:%M:%S"):
             return d.strftime(mask)
         except (TypeError, ValueError) as err:
             print(err)
-            raise ValueError(err)
-            return None
+            raise ValueError(err) from err
 
 
 def to_date(value, mask="%Y-%m-%d %H:%M:%S", tz=None):
@@ -282,9 +265,7 @@ def extract_string(value, exp=r"_((\d+)_(\d+))_", group=1, parsedate=False):
         return result
 
 
-"""
-Validation and data-type functions
-"""
+### Validation and data-type functions
 
 
 def isdate(value):
@@ -294,6 +275,7 @@ def isdate(value):
     except ValueError:
         return False
 
+is_date = isdate
 
 def isinteger(value):
     try:
@@ -444,9 +426,8 @@ def get_program_date(value, yesterday: bool = False, *args):
             return opt
 
 
-"""
-Module Loading
-"""
+### Module Loading
+
 
 
 def module_exists(module_name, classpath):
@@ -526,7 +507,7 @@ class Msg(object):
             coloring = colors.reset
         print(coloring + message, colors.reset)
 
-    def __call__(self, message: str = "", level: str = "INFO", *args, **kwargs):
+    def __call__(self, message: str, *args, level: str = "INFO", **kwargs):
         if level == "INFO" or level == "info":
             coloring = colors.bold + colors.fg.green
         elif level == "DEBUG" or level == "debug":

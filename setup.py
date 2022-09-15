@@ -14,11 +14,11 @@ def get_path(filename):
 
 
 def readme():
-    with open(get_path('README.md')) as readme:
-        return readme.read()
+    with open(get_path('README.md'), encoding='utf-8') as rd:
+        return rd.read()
 
 
-with open(get_path('asyncdb/version.py')) as meta:
+with open(get_path('asyncdb/version.py'), encoding='utf-8') as meta:
     exec(meta.read())
 
 setup(
@@ -50,16 +50,14 @@ setup(
     setup_requires=[
         "wheel==0.37.1",
         "Cython==0.29.32",
-        "numpy==1.22.2",
+        "numpy==1.23.23",
         "asyncio==3.4.3",
-        "cchardet==2.1.7",
-        "cpython==0.0.6"
+        "cchardet==2.1.7"
     ],
     install_requires=[
         "wheel==0.37.1",
-        "cpython==0.0.6",
         "Cython==0.29.32",
-        "numpy==1.23.1",
+        "numpy==1.23.3",
         "cryptography==37.0.4",
         "aiohttp==3.8.1",
         "asyncpg==0.26.0",
@@ -70,10 +68,8 @@ setup(
         "jinja2==3.0.3",
         "jsonpath-rw==1.4.0",
         "jsonpath-rw-ext==1.2.2",
-        "rapidjson==1.0.0",
         'yarl==1.7.2',
         'wrapt==1.14.1',
-        "python-rapidjson>=1.5",
         'typing_extensions==4.3.0',
         'urllib3==1.26.11',
         "async-generator==1.10",
@@ -124,6 +120,7 @@ setup(
         "influxdb-client==1.31.0",
         "rx==3.2.0",
         "dateparser==1.1.1",
+        "python-datamodel>=0.0.12"
     ],
     tests_require=[
         'pytest>=6.0.0',

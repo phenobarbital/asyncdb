@@ -223,9 +223,7 @@ def Column(
 def _dc_method_setattr(
             self,
             name: str,
-            value: Any,
-            *args,
-            **kwargs
+            value: Any
         ) -> None:
     """
     _dc_method_setattr.
@@ -410,12 +408,13 @@ class Model(metaclass=ModelMeta):
         Fill fields with function-factory or calling validations
         """
         # checking if an attribute is already a dataclass:
-        for name, f in self.__columns__.items():
+        for _, f in self.__columns__.items():
             value = getattr(self, f.name)
+            key = f.name
             if is_dataclass(f.type):
                 if isinstance(value, dict):
                     new_val = f.type(**value)
-                    setattr(self, f.name, new_val)
+                    setattr(self, key, new_val)
             elif isinstance(value, list):
                 try:
                     sub_type = f.type.__args__[0]
