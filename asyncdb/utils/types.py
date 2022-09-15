@@ -1,6 +1,4 @@
 import uuid
-import json
-import numpy as np
 from decimal import Decimal
 from typing import (
     Dict,
@@ -8,11 +6,13 @@ from typing import (
 )
 import datetime
 import collections
+import json
+import numpy as np
 from asyncdb.utils.encoders import (
     BaseEncoder
 )
 
-DB_TYPES: Dict = {
+DB_TYPES: dict = {
     bool: "boolean",
     int: "integer",
     np.int64: "bigint",
@@ -26,12 +26,10 @@ DB_TYPES: Dict = {
     datetime.time: "time",
     datetime.timedelta: "timestamp without time zone",
     uuid.UUID: "uuid",
-    dict: "jsonb",
-    Dict: "jsonb",
-    List: "jsonb",
+    dict: "jsonb"
 }
 
-MODEL_TYPES = {
+MODEL_TYPES: dict = {
     "boolean": bool,
     "integer": int,
     "bigint": np.int64,
@@ -58,7 +56,7 @@ MODEL_TYPES = {
     "inet": str,
 }
 
-JSON_TYPES = {
+JSON_TYPES: dict = {
     bool: "boolean",
     int: "integer",
     np.int64: "integer",
@@ -66,7 +64,6 @@ JSON_TYPES = {
     str: "string",
     bytes: "byte",
     list: "list",
-    List: "list",
     Decimal: "decimal",
     datetime.date: "date",
     datetime.datetime: "datetime",

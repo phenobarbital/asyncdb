@@ -29,7 +29,7 @@ The main goal of AsyncDB is using asyncio-based technologies.
 
 Currently AsyncDB supports the following databases:
 
-* PostgreSQL (requires asyncpg and aiopg)
+* PostgreSQL (requires asyncpg or aiopg)
 * SQLite (requires aiosqlite)
 * mySQL (requires aiomysql)
 * SQLAlchemy (requires sqlalchemy_aio)
@@ -38,9 +38,10 @@ Currently AsyncDB supports the following databases:
 * Memcache (requires aiomcache)
 * MS SQL Server (non-asyncio using freeTDS and pymssql)
 * Apache Cassandra
+* InfluxDB using influxdb
 * CouchBase (WIP: using aiocouch)
 * MongoDB (WIP: using motor)
-* InfluxDB (WIP: using influxdb)
+
 
 #### Future work: ####
 
@@ -60,4 +61,4 @@ Please have a look at the Contribution Guide
 
 ### License ###
 
-AsyncDB is copyright of Jesus Lara (https://phenobarbital.info) and is dual-licensed under BSD and Apache 2.0 licenses. I am providing code in this repository under an open source licenses, remember, this is my personal repository; the license that you receive is from me and not from my employeer.
+AsyncDB is copyright of Jesus Lara (https://phenobarbital.info) and is licensed under BSD. I am providing code in this repository under an open source licenses, remember, this is my personal repository; the license that you receive is from me and not from my employeer.

@@ -3,16 +3,13 @@ Recordset.
 
 Sequence of Records.
 """
-from collections.abc import Sequence
+from collections.abc import Sequence, Iterator
 from typing import (
     Any,
-    List,
-    Dict,
-    Iterator,
     Union
 )
-from .record import Record
 from cassandra.cluster import ResultSet
+from .record import Record
 
 
 class Recordset(Sequence):
@@ -23,7 +20,7 @@ class Recordset(Sequence):
       params:
           result: any resultset
     """
-    def __init__(self, result: Any, columns: List = []):
+    def __init__(self, result: Any, columns: list = None):
         self._columns = columns
         self._result = result
         self._idx = 0
@@ -42,11 +39,11 @@ class Recordset(Sequence):
                 cols = result[0].keys()
             return cls(result, columns = cols)
         except Exception as err:
-            raise ValueError(f"Recordset: Invalid data set {err}")
+            raise ValueError(
+                f"Recordset: Invalid data set {err}"
+            ) from err
 
-    """
-     Section: Simple magic methods
-    """
+### Section: Simple magic methods
     def __getitem__(self, key: Union[int, str]):
         if isinstance(key, int):
             if key >= len(self._result):
