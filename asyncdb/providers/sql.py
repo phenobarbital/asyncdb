@@ -6,15 +6,15 @@ Abstract class covering all major functionalities for Relational SQL-based datab
 import asyncio
 import logging
 import traceback
-import asyncpg
+from dataclasses import is_dataclass, asdict, _MISSING_TYPE
 import json
+import asyncpg
 from asyncdb.utils.functions import (
     SafeDict
 )
 from asyncdb.utils.types import Entity
 from asyncdb.utils.encoders import BaseEncoder
 from asyncdb.exceptions import StatementError, ProviderError, EmptyStatement
-from dataclasses import is_dataclass, asdict
 from typing import (
     Any,
     List,
@@ -22,6 +22,7 @@ from typing import (
 )
 from .base import BaseDBProvider, ModelBackend, BaseCursor
 from asyncdb.models import Model
+import orjson
 
 
 class SQLCursor(BaseCursor):
@@ -507,8 +508,9 @@ class SQLProvider(BaseDBProvider, ModelBackend):
                 column = field.name
                 cols.append(column)
                 try:
-                    if field.primary_key is True:
-                        pk[column] = value
+                    if hasattr(field, 'primary_key'):
+                        if field.primary_key is True:
+                            pk[column] = value
                 except AttributeError:
                     pass
             columns = ", ".join(cols)
@@ -529,7 +531,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
     async def model_delete(
                 self,
                 model: "Model",
-                fields: Dict,
+                fields: dict,
                 connection: Any = None,
                 **kwargs
             ):
@@ -546,8 +548,9 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             column = field.name
             datatype = field.type
             value = Entity.toSQL(getattr(model, field.name), datatype)
-            if field.primary_key is True:
-                pk[column] = value
+            if hasattr(field, 'primary_key'):
+                if field.primary_key is True:
+                    pk[column] = value
         # TODO: work in an "update, delete, insert" functions on
         # asyncdb to abstract data-insertion
         sql = "DELETE FROM {table} {condition}"
@@ -568,7 +571,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
     async def model_insert(
                 self,
                 model: "Model",
-                fields: Dict,
+                fields: dict,
                 connection: Any = None,
                 **kwargs
             ):
@@ -578,7 +581,7 @@ class SQLProvider(BaseDBProvider, ModelBackend):
         # TODO: option for returning more fields than PK in returning
         try:
             table = f"{model.Meta.schema}.{model.Meta.name}"
-        except Exception:
+        except AttributeError:
             table = model.__name__
         cols = []
         source = []
@@ -593,7 +596,9 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             except AttributeError:
                 continue
             if is_dataclass(datatype) and val is not None:
-                if isinstance(val, list):
+                if val == _MISSING_TYPE:
+                    value = None
+                elif isinstance(val, list):
                     value = json.loads(
                         json.dumps([asdict(d) for d in val], cls=BaseEncoder)
                     )
@@ -621,15 +626,15 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             source.append(value)
             cols.append(column)
             n += 1
-            if field.primary_key is True:
-                pk.append(column)
+            if hasattr(field, 'primary_key'):
+                if field.primary_key is True:
+                    pk.append(column)
         try:
             # primary = "RETURNING {}".format(",".join(pk)) if pk else ""
             primary = "RETURNING *"
             columns = ",".join(cols)
             values = ",".join(["${}".format(a) for a in range(1, n)])
             insert = f"INSERT INTO {table} ({columns}) VALUES({values}) {primary}"
-            # print(insert)
             logging.debug(f"INSERT: {insert}")
             stmt, error = await connection.prepare(insert)
             if error:
@@ -645,9 +650,9 @@ class SQLProvider(BaseDBProvider, ModelBackend):
             raise StatementError(
                 traceback.format_exc(),
                 message=f"Constraint Error: {err!r}",
-            )
+            ) from err
         except Exception as err:
             raise ProviderError(
                 traceback.format_exc(),
                 message=f"Error on Insert over table {model.Meta.name}: {err!s}"
-            )
+            ) from err
