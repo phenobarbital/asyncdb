@@ -18,13 +18,13 @@ class Record(MutableMapping):
       params:
           row: any resultset
     """
-    __slots__ = '_row', '_columns'
+    __slots__ = '_row', '_columns, _record'
 
     def __init__(self, row: Any, columns: list = None):
         self._row = row
         self._columns = columns
 
-    def result(self, key):
+    def result(self, key: Union[str, Any]) -> Any:
         if self._row:
             try:
                 return self._row[key]
@@ -53,7 +53,6 @@ class Record(MutableMapping):
     def items(self) -> zip:  # type: ignore
         return zip(self._columns, self._row)
 
-    @property
     def keys(self) -> list:
         return self._columns
 
@@ -83,8 +82,9 @@ class Record(MutableMapping):
         except (KeyError, TypeError):
             return False
 
-    def __setitem__(self, key: Union[str, int], value: Any) -> Any:
+    def __setitem__(self, key: Union[str, Any], value: Any) -> None:
         # optional processing here
+        self._row[key] = value
         super(Record, self).__setitem__(key, value)
 
     def __getattr__(self, attr: str) -> Any:

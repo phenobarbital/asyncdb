@@ -53,7 +53,7 @@ setup(
     setup_requires=[
         "wheel==0.37.1",
         "Cython==0.29.32",
-        "numpy==1.23.23",
+        "numpy==1.23.3",
         "asyncio==3.4.3",
         "cchardet==2.1.7"
     ],
@@ -64,7 +64,7 @@ setup(
         "cryptography==37.0.4",
         "aiohttp==3.8.1",
         "asyncpg==0.26.0",
-        "uvloop==0.16.0",
+        "uvloop==0.17.0",
         "asyncio==3.4.3",
         "cchardet==2.1.7",
         "pandas==1.4.4",
@@ -125,6 +125,7 @@ setup(
             "botocore==1.24.21",
             "boto3==1.21.21",
             "aiobotocore==2.3.4",
+
         ],
         "cassandra": [
             "cassandra-driver==3.25.0",

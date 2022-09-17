@@ -1,8 +1,8 @@
 import uuid
 import asyncio
 from datetime import datetime
-from datamodel import BaseModel
-from asyncdb.models import Model, Column
+from datamodel import BaseModel, Column
+from asyncdb.models import Model
 from asyncdb import AsyncDB
 from asyncdb.utils import Msg
 

@@ -7,7 +7,8 @@ and work with Data in the same way, no matter which is the DB Backend.
 
 AsyncDB Models are based on python Dataclasses and type annotations.
 """
-from .base import Field, Column, Model
+from datamodel import Field, Column
+from .base import Model
 
 
 __all__ = ['Field', 'Column', 'Model', ]
