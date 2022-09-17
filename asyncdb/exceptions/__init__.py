@@ -17,4 +17,20 @@ from .exceptions import (
 from .handlers import default_exception_handler, handle_done_tasks, shutdown
 
 
-__all__ = ('default_exception_handler', 'handle_done_tasks', 'shutdown', 'ProviderError', )
+__all__ = (
+    'default_exception_handler',
+    'handle_done_tasks',
+    'shutdown',
+    'ProviderError',
+    'DriverError',
+    'DataError',
+    'NotSupported',
+    'UninitializedError',
+    'ConnectionTimeout',
+    'NoDataFound',
+    'TooManyConnections',
+    'EmptyStatement',
+    'UnknownPropertyError',
+    'StatementError',
+    'ConditionsError'
+)
