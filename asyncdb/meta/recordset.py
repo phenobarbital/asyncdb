@@ -68,6 +68,8 @@ class Recordset(Sequence):
     def __next__(self):
         """
         Next: next object from iterator
+        :returns: a Record object.
+        :raises StopIteration: when end is reached.
         """
         if self._idx < len(self._result):
             row = self._result[self._idx]

@@ -5,23 +5,19 @@ from __future__ import annotations
 import logging
 import inspect
 import traceback
-from dataclasses import Field as ff
 from dataclasses import (
     is_dataclass,
     make_dataclass,
 )
-from decimal import Decimal
 from collections.abc import Callable
 from typing import (
     Dict,
     Optional,
     Union
 )
-from datamodel import Field as ff
-from datamodel import BaseModel
+from datamodel import BaseModel, Field
 from datamodel.base import Meta
 from datamodel.types import (
-    DB_TYPES,
     MODEL_TYPES
 )
 from asyncdb.utils import Msg
@@ -32,86 +28,6 @@ from asyncdb.exceptions import (
 )
 from asyncdb.utils import module_exists
 from asyncdb.providers.interfaces import ConnectionBackend
-
-class Field(ff):
-    """Field.
-
-    description: Extending basic "Field" adding DB attributes.
-    """
-    __slots__ = (
-        'name',
-        'type',
-        'description',
-        'default',
-        'default_factory',
-        '_default_factory',
-        '_default', # Private: default value
-        'repr',
-        'hash',
-        'init',
-        'compare',
-        'metadata',
-        '_meta',
-        '_field_type',  # Private: not to be used by user code.
-        '_required',
-        '_nullable',
-        '_primary',
-        '_dbtype'
-    )
-    def __init__(
-        self,
-        primary_key: Optional[bool] = False,
-        default: Optional[Callable] = None,
-        nullable: bool = True,
-        required: bool = False,
-        factory: Optional[Callable] = None,
-        min: Union[int, float, Decimal] = None,
-        max: Union[int, float, Decimal] = None,
-        validator: Optional[Union[Callable, None]] = None,
-        db_type: str = None,
-        **kwargs,
-    ):
-        self._primary = primary_key
-        self._dbtype = db_type
-        super(Field, self).__init__(
-            default=default,
-            nullable=nullable,
-            required=required,
-            factory=factory,
-            min=min,
-            max=max,
-            validator=validator,
-            **kwargs
-        )
-
-    def get_dbtype(self):
-        return self._dbtype
-
-    def db_type(self):
-        if self._dbtype is not None:
-            if self._dbtype == "array":
-                t = DB_TYPES[self.type]
-                return f"{t}[]"
-            else:
-                return self._dbtype
-        else:
-            return DB_TYPES[self.type]
-
-    @property
-    def primary_key(self):
-        return self._primary
-
-
-def Column(
-    primary_key: Optional[bool] = False,
-    db_type: str = None,
-    **kwargs,
-):
-    return Field(
-        primary_key=primary_key,
-        db_type=db_type,
-        **kwargs,
-    )
 
 
 class Model(BaseModel):
