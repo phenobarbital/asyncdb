@@ -4,19 +4,17 @@ Basic Interfaces for every kind of Database Connector.
 import asyncio
 import logging
 import importlib
-from collections.abc import Sequence
+from collections.abc import Sequence, Iterable
 from abc import (
     ABC,
     abstractmethod,
 )
 from typing import (
-    List,
-    Dict,
     Any,
     Optional,
-    Iterable,
     Union
 )
+from asyncdb.meta import Record, Recordset
 from asyncdb.exceptions import (
     default_exception_handler,
     ProviderError,
@@ -33,9 +31,9 @@ class PoolBackend(ABC):
 
     def __init__(
             self,
-            dsn: str = '',
+            dsn: str = None,
             loop: asyncio.AbstractEventLoop = None,
-            params: Dict[Any, Any] = None,
+            params: dict[Any] = None,
             **kwargs
     ) -> None:
         self._pool = None
@@ -49,6 +47,7 @@ class PoolBackend(ABC):
             self._max_queries = 300
         self._connection = None
         self._connected = False
+        self._dsn = dsn
         if loop:
             self._loop = loop
             asyncio.set_event_loop(self._loop)
@@ -63,12 +62,12 @@ class PoolBackend(ABC):
             default_exception_handler
         )
         try:
-            self._DEBUG = bool(params["DEBUG"])
+            self._debug = bool(params["DEBUG"])
         except (TypeError, KeyError):
             try:
-                self._DEBUG = kwargs["debug"]
+                self._debug = kwargs["debug"]
             except KeyError:
-                self._DEBUG = False
+                self._debug = False
         try:
             self._timeout = kwargs["timeout"]
         except KeyError:
@@ -83,17 +82,17 @@ class PoolBackend(ABC):
 
     @abstractmethod
     async def connect(self) -> "PoolBackend":
-        pass
+        raise NotImplementedError()  # pragma: no cover
 
     @abstractmethod
     async def disconnect(self, timeout: int = 5) -> None:
-        pass
+        raise NotImplementedError()  # pragma: no cover
 
     close = disconnect
 
     @abstractmethod
-    async def acquire(self) -> None:
-        pass
+    async def acquire(self) -> "ConnectionBackend":
+        raise NotImplementedError()  # pragma: no cover
 
     @abstractmethod
     async def release(
@@ -101,9 +100,9 @@ class PoolBackend(ABC):
         connection: "ConnectionBackend" = None,
         timeout: int = 10
     ) -> None:
-        pass
+        raise NotImplementedError()  # pragma: no cover
 
-    """ Magic Methods """
+### Magic Methods
     async def __aenter__(self) -> "PoolBackend":
         if not self._pool:
             await self.connect()
@@ -138,8 +137,10 @@ class PoolBackend(ABC):
     engine = get_connection
 
     def is_closed(self):
-        logging.debug(f"Connection closed on: {self._pool}")
-        return not self._connected
+        if not self._connected:
+            logging.debug(f"Connection closed on: {self._pool}")
+            return True
+        return False
 
     @classmethod
     def driver(cls):
@@ -160,7 +161,7 @@ class ConnectionBackend(ABC):
     def __init__(
             self,
             loop: asyncio.AbstractEventLoop = None,
-            params: Dict[Any, Any] = Any,
+            params: dict[Any] = Any,
             **kwargs
     ) -> None:
         self._connection = None
@@ -192,12 +193,12 @@ class ConnectionBackend(ABC):
             default_exception_handler
         )
         try:
-            self._DEBUG = bool(params["DEBUG"])
+            self._debug = bool(params["DEBUG"])
         except KeyError:
             try:
-                self._DEBUG = kwargs["debug"]
+                self._debug = kwargs["debug"]
             except KeyError:
-                self._DEBUG = False
+                self._debug = False
         try:
             self._timeout = kwargs["timeout"]
         except KeyError:
@@ -210,16 +211,18 @@ class ConnectionBackend(ABC):
             raise
 
     @abstractmethod
-    async def connection(self):
-        pass
+    async def connection(self) -> Any:
+        raise NotImplementedError()  # pragma: no cover
 
     @abstractmethod
     async def close(self, timeout: int = 10):
-        pass
+        raise NotImplementedError()  # pragma: no cover
 
     def is_closed(self):
-        logging.debug(f"Connection closed on: {self._connection}")
-        return not self._connected
+        if not self._connected:
+            logging.debug(f"Connection closed on: {self._pool}")
+            return True
+        return False
 
     # Properties
     @classmethod
@@ -246,6 +249,10 @@ class ConnectionBackend(ABC):
 
     engine = get_connection
 
+    @property
+    def raw_connection(self) -> Any:
+        return self._connection
+
     def generated_at(self):
         return self._generated
 
@@ -257,10 +264,8 @@ class ConnectionBackend(ABC):
     def dialect(cls):
         return cls._syntax
 
-    """
-    Async Context magic Methods
-    """
-    async def __aenter__(self):
+### Async Context magic Methods
+    async def __aenter__(self) -> "ConnectionBackend":
         if not self._connection:
             await self.connection()
         return self
@@ -270,8 +275,8 @@ class ConnectionBackend(ABC):
         try:
             await self.close()
         except Exception as err:
-            print(err)
-            pass
+            self._logger.exception(f'Closing Error: {err}')
+            raise
 
 
 class ConnectionDSNBackend(ABC):
@@ -282,9 +287,8 @@ class ConnectionDSNBackend(ABC):
 
     def __init__(
             self,
-            dsn: str = '',
-            params: Dict[Any, Any] = None,
-            **kwargs
+            dsn: str = None,
+            params: dict[Any] = None
     ) -> None:
         if dsn:
             self._dsn = dsn
@@ -295,16 +299,17 @@ class ConnectionDSNBackend(ABC):
         except (TypeError, AttributeError, ValueError):
             self._params = {}
 
-    def create_dsn(self, params: Dict):
+    def create_dsn(self, params: dict):
         try:
             if params:
                 return self._dsn.format(**params)
             else:
                 return None
-        except Exception as err:
-            print(err)
+        except TypeError as err:
             self._logger.exception(err)
-            return None
+            raise ProviderError(
+                f"Error creating DSN connection: {err}"
+            ) from err
 
     def get_dsn(self):
         return self._dsn
@@ -312,7 +317,7 @@ class ConnectionDSNBackend(ABC):
 
 class TransactionBackend(ABC):
     """
-    Interface for Drivers Support transactions.
+    Interface for Drivers with Transaction Support.
     """
 
     def __init__(self):
@@ -320,14 +325,14 @@ class TransactionBackend(ABC):
         self._transaction = None
 
     @abstractmethod
-    async def transaction(self, options: Dict[Any, Any]):
+    async def transaction(self, options: dict[Any]) -> Any:
         """
         Getting a Transaction Object.
         """
-        pass
+        raise NotImplementedError()  # pragma: no cover
 
     async def transaction_start(
-        self, options: Dict[Any, Any]
+        self, options: dict
     ) -> None:
         """
         Starts a Transaction.
@@ -350,18 +355,13 @@ class DatabaseBackend(ABC):
     _test_query: Optional[Any] = None
 
     def __init__(
-            self,
-            *args,
-            **kwargs
+            self
     ) -> None:
-        self._columns: List[Any] = []
+        self._columns: list = []
         self._attributes = None
-        self._result: List[Any] = []
+        self._result: list = []
         self._prepared: Any = None
 
-    """
-    Properties
-    """
     @property
     def columns(self):
         return self._columns
@@ -386,53 +386,63 @@ class DatabaseBackend(ABC):
             return await self.query(self._test_query, **kwargs)
         except Exception as err:
             raise ProviderError(
-                message=str(err), code=0
-            )
+                message=str(err)
+            ) from err
 
     @abstractmethod
     async def use(self, database: str) -> None:
         """
         Change the current Database.
         """
-        pass
+        raise NotImplementedError()  # pragma: no cover
 
     @abstractmethod
-    async def execute(self, sentence: Any = None, *args) -> Optional[Any]:
+    async def execute(self, sentence: Any, *args, **kwargs) -> Optional[Any]:
         """
         Execute a sentence
         """
-        pass
+        raise NotImplementedError()  # pragma: no cover
 
     @abstractmethod
     async def execute_many(
             self,
-            sentence: Union[str, List],
+            sentence: list,
             *args
     ) -> Optional[Any]:
         """
         Execute many sentences at once.
         """
-        pass
-
-    # executemany = execute_many
 
     @abstractmethod
-    async def query(self, sentence: Union[str, List], **kwargs):
+    async def query(self, sentence: Union[str, list], **kwargs) -> Optional[Recordset]:
+        """queryrow.
+
+        Making a Query and returns a resultset.
+        Args:
+            sentence (Union[str, list]): sentence(s) to be executed.
+            kwargs: Optional attributes to query.
+
+        Returns:
+            Optional[Record]: Returns a Resultset
         """
-        Making a Query and return result
-        """
-        pass
 
     @abstractmethod
-    async def queryrow(self, sentence: Union[str, List]):
-        pass
+    async def queryrow(self, sentence: Union[str, list]) -> Optional[Record]:
+        """queryrow.
+
+        Returns a single row of a query sentence.
+        Args:
+            sentence (Union[str, list]): sentence to be executed.
+
+        Returns:
+            Optional[Record]: Return one single row of a query.
+        """
 
     @abstractmethod
-    async def prepare(self, sentence: Any = None):
+    async def prepare(self, sentence: Union[str, list]) -> Any:
         """
-        Prepare a statement.
+        Making Prepared statement.
         """
-        pass
 
     def prepared_statement(self):
         return self._prepared
@@ -441,7 +451,7 @@ class DatabaseBackend(ABC):
         return self._attributes
 
     @abstractmethod
-    async def fetch_all(self, sentence: str, **kwargs) -> List[Sequence]:
+    async def fetch_all(self, sentence: str, **kwargs) -> list[Sequence]:
         pass
 
     @abstractmethod
@@ -449,11 +459,10 @@ class DatabaseBackend(ABC):
             self,
             sentence: str,
             number: int = None
-    ) -> Optional[Dict]:
+    ) -> Optional[dict]:
         """
         Fetch only one record, optional getting an offset using "number".
         """
-        pass
 
     async def fetch_val(
         self, sentence: str, column: Any = None, number: int = None
@@ -474,8 +483,9 @@ class CursorBackend(ABC):
         self,
         provider: Any,
         sentence: str,
-        result: Optional[List] = None,
+        result: Optional[Any] = None,
         parameters: Iterable[Any] = None,
+        **kwargs
     ):
         # self._cursor = None
         self._provider = provider
@@ -483,10 +493,9 @@ class CursorBackend(ABC):
         self._sentence = sentence
         self._params = parameters
         self._connection = self._provider.engine()
+        self._kwargs = kwargs
 
-    """
-    Magic Context Methods for Cursors.
-    """
+### Magic Context Methods for Cursors.
     async def __aenter__(self) -> "CursorBackend":
         self._cursor = await self._connection.cursor()
         await self._cursor.execute(
@@ -506,25 +515,30 @@ class CursorBackend(ABC):
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         try:
             return await self._provider.close()
-        except Exception as err:
+        except ProviderError as err:
             logging.exception(err)
+            raise
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         try:
             return self._provider.close()
-        except Exception as err:
+        except ProviderError as err:
             logging.exception(err)
+            raise
 
     def __aiter__(self) -> "CursorBackend":
         """The cursor is also an async iterator."""
         return self
-    
+
     def __iter__(self) -> "CursorBackend":
         """The cursor iterator."""
         return self
 
     async def __anext__(self):
-        """Use `cursor.fetchrow()` to provide an async iterable."""
+        """Use `cursor.fetchrow()` to provide an async iterable.
+
+            raise: StopAsyncIteration when done.
+        """
         row = await self._cursor.fetchone()
         if row is not None:
             return row
@@ -532,24 +546,24 @@ class CursorBackend(ABC):
             raise StopAsyncIteration
 
     def __next__(self):
-        """Use `cursor.fetchrow()` to provide an iterable."""
+        """Use `cursor.fetchrow()` to provide an iterable.
+
+            raise: StopAsyncIteration when done.
+        """
         row = self._cursor.fetchone()
         if row is not None:
             return row
         else:
             raise StopAsyncIteration
 
-    """
-    Cursor Methods.
-    """
-
-    async def fetch_one(self) -> Optional[Dict]:
+### Cursor Methods.
+    async def fetch_one(self) -> Optional[Sequence]:
         return await self._cursor.fetchone()
 
-    async def fetch_many(self, size: int = None) -> Iterable[List]:
+    async def fetch_many(self, size: int = None) -> Iterable[Sequence]:
         return await self._cursor.fetch(size)
 
-    async def fetch_all(self) -> Iterable[List]:
+    async def fetch_all(self) -> Iterable[Sequence]:
         return await self._cursor.fetchall()
 
 
@@ -560,13 +574,11 @@ class DBCursorBackend(ABC):
     _provider: str = "base"
 
     def __init__(
-            self,
-            *args,
-            **kwargs
+        self
     ) -> None:
-        self._columns: List[Any] = []
+        self._columns: list = []
         self._attributes = None
-        self._result: List[Any] = []
+        self._result: Iterable[Any] = None
         self._prepared: Any = None
         self._cursor: Optional[Any] = None
         try:
@@ -575,21 +587,20 @@ class DBCursorBackend(ABC):
             cursor = f"{self._provider}Cursor"
             module = importlib.import_module(cls, package="providers")
             self.__cursor__ = getattr(module, cursor)
-        except (ImportError, Exception) as err:
-            print(err)
+        except (ImportError) as err:
             logging.exception(f"Error Loading Cursor Class: {err}")
             self.__cursor__ = None
 
     def cursor(
-                    self,
-                    sentence: str,
-                    params: Iterable[Any] = None,
-                    **kwargs
+        self,
+        sentence: Union[str, any],
+        params: Iterable[Any] = None,
+        **kwargs
     ) -> Optional["DBCursorBackend"]:
         """ Returns an iterable Cursor Object """
         if not sentence:
             raise EmptyStatement(
-                f"{__name__!s} Error: Cannot use an empty sentence"
+                f"{__name__!s} Error: Cannot use an empty Sentence."
             )
         if params is None:
             params = []
@@ -597,20 +608,28 @@ class DBCursorBackend(ABC):
             return self.__cursor__(
                 provider=self,
                 sentence=sentence,
-                parameters=params
+                parameters=params,
+                **kwargs
             )
+        except (TypeError, AttributeError, ValueError):
+            raise
         except Exception as err:
             logging.exception(err)
-            return None
+            raise
 
-    """
-    Cursor Iterator Context
-    """
-
+### Cursor Iterator Context
     def __aiter__(self):
         return self
 
-    async def __anext__(self):
+    async def __anext__(self) -> Optional[Record]:
+        """_summary_
+
+        Raises:
+            StopAsyncIteration: raised when end is reached.
+
+        Returns:
+            _type_: Single record for iteration.
+        """
         data = await self._cursor.fetchrow()
         if data is not None:
             return data

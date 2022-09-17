@@ -6,7 +6,8 @@ See:
 https://github.com/phenobarbital/asyncdb
 """
 from os import path
-from setuptools import find_packages, setup
+from setuptools import find_packages, setup, Extension
+from Cython.Build import cythonize
 
 
 def get_path(filename):
@@ -20,6 +21,18 @@ def readme():
 
 with open(get_path('asyncdb/version.py'), encoding='utf-8') as meta:
     exec(meta.read())
+
+
+COMPILE_ARGS = ["-O2"]
+
+extensions = [
+    Extension(
+        name='asyncdb.exceptions.exceptions',
+        sources=['asyncdb/exceptions/exceptions.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c"
+    )
+]
 
 setup(
     name="asyncdb",
@@ -203,6 +216,7 @@ setup(
         'pytest-assume==2.4.2'
     ],
     test_suite='tests',
+    ext_modules=cythonize(extensions),
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/asyncdb",
         "Funding": "https://paypal.me/phenobarbital",
