@@ -214,37 +214,49 @@ class ModelBackend(ABC):
         """
 
     @abstractmethod
-    async def model_select(self, model: Model, fields: dict = None, **kwargs):
+    async def _filter_(self, model: Model, *args, **kwargs):
+        """
+        Filter a Model using Fields.
+        """
+
+    @abstractmethod
+    async def _select_(self, model: Model, *args, **kwargs):
+        """
+        Get a query from Model.
+        """
+
+    @abstractmethod
+    async def _all_(self, model: Model, *args):
         """
         Get queries with model.
         """
 
     @abstractmethod
-    async def model_all(self, model: Model, fields: dict = None):
-        """
-        Get queries with model.
-        """
-
-    @abstractmethod
-    async def model_get(self, model: Model, fields: dict = None, **kwargs):
+    async def _get_(self, model: Model, *args, **kwargs):
         """
         Get one row from model.
         """
 
     @abstractmethod
-    async def model_delete(self, model: Model, fields: dict = None, **kwargs):
+    async def _delete_(self, model: Model, *args, **kwargs):
         """
         delete a row from model.
         """
 
     @abstractmethod
-    async def model_save(self, model: Model, fields: dict = None, **kwargs):
+    async def _update_(self, model: Model, *args, **kwargs):
         """
-        save a row from model.
+        Updating a row in a Model.
         """
 
     @abstractmethod
-    async def model_insert(self, model: Model, fields: dict = None, **kwargs):
+    async def _save_(self, model: Model, *args, **kwargs):
+        """
+        Save a row in a Model, using Insert-or-Update methodology.
+        """
+
+    @abstractmethod
+    async def _insert_(self, model: Model, *args, **kwargs):
         """
         insert a row from model.
         """
