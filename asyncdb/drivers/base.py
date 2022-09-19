@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 import asyncio
-from datetime import datetime
 from abc import (
     ABC,
     abstractmethod,
 )
 from typing import (
     Optional,
-    Any,
-    Dict
+    Any
 )
 from collections.abc import Callable, Iterable
 from asyncdb.exceptions import EmptyStatement
+from asyncdb.models import Model
 from asyncdb.interfaces import (
     PoolBackend,
     ConnectionDSNBackend,
@@ -33,8 +32,7 @@ class BasePool(PoolBackend, ConnectionDSNBackend):
         ConnectionDSNBackend.__init__(
             self,
             dsn=dsn,
-            params=params,
-            **kwargs
+            params=params
         )
         PoolBackend.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
 
@@ -59,10 +57,10 @@ class BasePool(PoolBackend, ConnectionDSNBackend):
         """
 
 
-class InitProvider(ConnectionBackend, DatabaseBackend, ABC):
+class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
     """
-    InitProvider
-        Abstract Class for Connections
+    InitDriver
+        Abstract Class for Simple Connections.
     ----
     """
     _provider: str = "init"
@@ -74,8 +72,6 @@ class InitProvider(ConnectionBackend, DatabaseBackend, ABC):
             params = {}
         self._pool = None
         self._max_connections = 4
-        self._generated = None
-        self._starttime = None
         self._parameters = ()
         # noinspection PyTypeChecker
         self._serializer: OutputFactory = None
@@ -83,31 +79,17 @@ class InitProvider(ConnectionBackend, DatabaseBackend, ABC):
         self._connected: bool = False
         self._connection = None
         ConnectionBackend.__init__(self, loop=loop, params=params, **kwargs)
-        DatabaseBackend.__init__(self, params=params, **kwargs)
+        DatabaseBackend.__init__(self)
         self._initialized_on = None
         # always starts output format to native:
         self.output_format('native')
 
-    def start_timing(self):
-        self._starttime = datetime.now()
-
-    def generated_at(self):
-        self._generated = datetime.now() - self._starttime
-        return self._generated
-
-    def last_duration(self):
-        return self._generated
-
-    def set_connection(self, connection):
-        self._connection = connection
-
-    """
-    Formats:
-     - row_format: run before query
-     - output: runs in the return (serialization) of data
-    """
-
     def row_format(self, frmt: str = 'native'):
+        """
+        Formats:
+        - row_format: run before query
+        - output: runs in the return (serialization) of data
+        """
         self._row_format = frmt
 
     async def output(self, result, error):
@@ -115,7 +97,7 @@ class InitProvider(ConnectionBackend, DatabaseBackend, ABC):
         self._result = result
         return [result, error]
 
-    def output_format(self, frmt: str = 'native', *args, **kwargs):
+    def output_format(self, *args, frmt: str = 'native', **kwargs):
         self._serializer = OutputFactory(self, frmt, *args, **kwargs)
 
     async def valid_operation(self, sentence: Any):
@@ -127,9 +109,9 @@ class InitProvider(ConnectionBackend, DatabaseBackend, ABC):
             await self.connection()
 
 
-class BaseProvider(InitProvider, ConnectionDSNBackend, ABC):
+class BaseDriver(InitDriver, ConnectionDSNBackend, ABC):
     """
-    BaseProvider
+    BaseDriver
         Abstract Class for DB Connection
     ----
     """
@@ -138,7 +120,7 @@ class BaseProvider(InitProvider, ConnectionDSNBackend, ABC):
     init_func: Optional[Callable] = None
 
     def __init__(self, dsn="", loop=None, params: dict = None, **kwargs):
-        InitProvider.__init__(
+        InitDriver.__init__(
             self,
             loop=loop,
             params=params,
@@ -147,24 +129,27 @@ class BaseProvider(InitProvider, ConnectionDSNBackend, ABC):
         ConnectionDSNBackend.__init__(
             self,
             dsn=dsn,
-            params=params,
-            **kwargs
+            params=params
         )
         # always starts output format to native:
         self.output_format('native')
 
 
-class BaseDBProvider(BaseProvider):
+class BaseDBDriver(BaseDriver):
     """
     Interface for more DB-oriented connections.
     """
     @abstractmethod
     def tables(self, schema: str = "") -> Iterable[Any]:
-        pass
+        """tables.
+        Getting a list of tables in schema.
+        """
 
     @abstractmethod
     def table(self, tablename: str = "") -> Iterable[Any]:
-        pass
+        """table.
+        Getting table structure in schema.
+        """
 
     @abstractmethod
     async def column_info(
@@ -173,9 +158,8 @@ class BaseDBProvider(BaseProvider):
             schema: str = ''
     ) -> Iterable[Any]:
         """
-        Getting Column info from an existing Table in Provider.
+        Getting Column info from an existing Table in Driver.
         """
-        pass
 
 
 class BaseCursor(CursorBackend):
@@ -184,7 +168,7 @@ class BaseCursor(CursorBackend):
 
     Iterable Object for Cursor-Like functionality
     """
-    _provider: BaseProvider
+    _provider: BaseDriver
 
 
 class ModelBackend(ABC):
@@ -192,89 +176,75 @@ class ModelBackend(ABC):
     Interface for Backends with Dataclass-based Models Support.
     """
 
-    """
-    Class-based Methods.
-    """
+## Class-based Methods.
     @abstractmethod
-    async def mdl_create(self, model: "Model", rows: list):
+    async def mdl_create(self, model: Model, rows: list):
         """
         Create all records based on a dataset and return result.
         """
-        pass
 
     @abstractmethod
-    async def mdl_delete(self, model: "Model", conditions: dict, **kwargs):
+    async def mdl_delete(self, model: Model, conditions: dict, **kwargs):
         """
         Deleting some records using Model.
         """
-        pass
 
     @abstractmethod
-    async def mdl_update(self, model: "Model", conditions: dict, **kwargs):
+    async def mdl_update(self, model: Model, conditions: dict, **kwargs):
         """
         Updating records using Model.
         """
-        pass
 
     @abstractmethod
-    async def mdl_filter(self, model: "Model", **kwargs):
+    async def mdl_filter(self, model: Model, **kwargs):
         """
         Filter a Model based on some criteria.
         """
-        pass
 
     @abstractmethod
-    async def mdl_all(self, model: "Model", **kwargs):
+    async def mdl_all(self, model: Model, **kwargs):
         """
         Get all records on a Model.
         """
-        pass
 
     @abstractmethod
-    async def mdl_get(self, model: "Model", **kwargs):
+    async def mdl_get(self, model: Model, **kwargs):
         """
         Get one single record from Model.
         """
-        pass
 
     @abstractmethod
-    async def model_select(self, model: "Model", fields: Dict = None, **kwargs):
+    async def model_select(self, model: Model, fields: dict = None, **kwargs):
         """
         Get queries with model.
         """
-        pass
 
     @abstractmethod
-    async def model_all(self, model: "Model", fields: Dict = None):
+    async def model_all(self, model: Model, fields: dict = None):
         """
         Get queries with model.
         """
-        pass
 
     @abstractmethod
-    async def model_get(self, model: "Model", fields: Dict = None, **kwargs):
+    async def model_get(self, model: Model, fields: dict = None, **kwargs):
         """
         Get one row from model.
         """
-        pass
 
     @abstractmethod
-    async def model_delete(self, model: "Model", fields: Dict = None, **kwargs):
+    async def model_delete(self, model: Model, fields: dict = None, **kwargs):
         """
         delete a row from model.
         """
-        pass
 
     @abstractmethod
-    async def model_save(self, model: "Model", fields: Dict = None, **kwargs):
+    async def model_save(self, model: Model, fields: dict = None, **kwargs):
         """
         save a row from model.
         """
-        pass
 
     @abstractmethod
-    async def model_insert(self, model: "Model", fields: Dict = None, **kwargs):
+    async def model_insert(self, model: Model, fields: dict = None, **kwargs):
         """
         insert a row from model.
         """
-        pass
