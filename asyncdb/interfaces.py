@@ -14,8 +14,8 @@ from typing import (
     Optional,
     Union
 )
-from asyncdb.meta import Record, Recordset
-from asyncdb.exceptions import (
+from .meta import Record, Recordset
+from .exceptions import (
     default_exception_handler,
     ProviderError,
     EmptyStatement
