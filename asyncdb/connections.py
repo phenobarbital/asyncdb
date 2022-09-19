@@ -1,5 +1,4 @@
 import logging
-from collections.abc import Callable
 from .exceptions import (
     ProviderError
 )
@@ -13,26 +12,18 @@ class AsyncPool:
        Base class for Asyncio-based DB Pools.
        Factory interface for Pool-based connectors.
     """
-
-    _provider: Callable = None
-    _name: str = ""
-
-    def __new__(cls, provider: str = "dummy", **kwargs) -> PoolBackend:
-        cls._name = provider
-        classpath = f"asyncdb.drivers.{provider}"
-        pool = f"{provider}Pool"
+    def __new__(cls, driver: str = "dummy", **kwargs) -> PoolBackend:
+        classpath = f"asyncdb.drivers.{driver}"
+        pool = f"{driver}Pool"
         try:
-            obj = module_exists(pool, classpath)
-            if obj:
-                cls._provider = obj(**kwargs)
-                return cls._provider
-            else:
-                raise ProviderError(
-                    message=f"Cannot Load Backend Pool: {pool}"
-                )
+            mdl = module_exists(pool, classpath)
+            obj = mdl(**kwargs)
+            return obj
         except Exception as err:
             logging.exception(err)
-            raise
+            raise ProviderError(
+                message=f"Cannot Load Backend Pool: {pool}"
+            ) from err
 
 
 class AsyncDB:
@@ -40,21 +31,14 @@ class AsyncDB:
 
     Factory Proxy Interface for Database Providers.
     """
-    _provider: Callable = None
-    _name: str = ""
-
-    def __new__(cls, provider: str = "dummy", **kwargs) -> ConnectionBackend:
-        cls._name = provider
-        classpath = f"asyncdb.drivers.{provider}"
+    def __new__(cls, driver: str = "dummy", **kwargs) -> ConnectionBackend:
+        classpath = f"asyncdb.drivers.{driver}"
         try:
-            obj = module_exists(cls._name, classpath)
-            if obj:
-                cls._provider = obj(**kwargs)
-                return cls._provider
-            else:
-                raise ProviderError(
-                    message=f"Cannot Load Backend {provider}"
-                )
+            mdl = module_exists(cls._name, classpath)
+            obj = mdl(**kwargs)
+            return obj
         except Exception as err:
             logging.exception(err)
-            raise
+            raise ProviderError(
+                message=f"Cannot Load Backend {driver}"
+            ) from err

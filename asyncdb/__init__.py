@@ -8,10 +8,6 @@ import uvloop
 from .version import (
     __title__, __description__, __version__, __author__, __author_email__
 )
-#from .providers import (
-#    InitProvider,
-#    BaseProvider
-#)
 from .connections import AsyncPool, AsyncDB
 
 __all__ = ("AsyncPool", "AsyncDB", )
