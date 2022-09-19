@@ -9,26 +9,21 @@ from dataclasses import (
     is_dataclass,
     make_dataclass,
 )
-from collections.abc import Callable
 from typing import (
-    Dict,
-    Optional,
-    Union
+    Dict
 )
+from collections.abc import Awaitable
 from datamodel import BaseModel, Field
 from datamodel.base import Meta
 from datamodel.types import (
     MODEL_TYPES
 )
-from asyncdb.utils import Msg
+from asyncdb.utils.modules import module_exists
 from asyncdb.exceptions import (
     NoDataFound,
     ProviderError,
     StatementError
 )
-from asyncdb.utils import module_exists
-from asyncdb.providers.interfaces import ConnectionBackend
-
 
 class Model(BaseModel):
     """
@@ -36,7 +31,7 @@ class Model(BaseModel):
 
     DataModel representing connection to databases.
     """
-    def set_connection(self, connection: ConnectionBackend) -> None:
+    def set_connection(self, connection: Awaitable) -> None:
         """
         Manually Set the connection of Dataclass.
         """
@@ -47,17 +42,16 @@ class Model(BaseModel):
                 f"{err}"
             ) from err
 
-    def get_connection(self) -> ConnectionBackend:
+    def get_connection(self) -> Awaitable:
         """get_connection.
         Getting a database connection and driver based on parameters
         """
-        Msg(':: Getting Connection ::', 'DEBUG')
         if self.Meta.datasource:
             # TODO: making a connection using a DataSource.
             pass
         elif self.Meta.driver:
             driver = self.Meta.driver
-            provider = f"asyncdb.providers.{driver}"
+            provider = f"asyncdb.drivers.{driver}"
             try:
                 obj = module_exists(driver, provider)
             except Exception as err:

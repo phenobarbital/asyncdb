@@ -1,17 +1,12 @@
 # -*- coding: utf-8 -*-
 """AsyncDB.
 
-Asyncio-based database connectors for NAV.
+Asyncio-based database connectors.
 """
-import asyncio
-import uvloop
 from .version import (
     __title__, __description__, __version__, __author__, __author_email__
 )
-from .connections import AsyncPool, AsyncDB
+from .connections import AsyncDB, AsyncPool
 
-__all__ = ("AsyncPool", "AsyncDB", )
 
-# install uvloop and set as default loop for asyncio.
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-uvloop.install()
+__all__ = ('AsyncDB', 'AsyncPool', )

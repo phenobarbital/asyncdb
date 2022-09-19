@@ -3,7 +3,7 @@ Basic Interfaces for every kind of Database Connector.
 """
 import asyncio
 import logging
-import importlib
+from importlib import import_module
 from collections.abc import Sequence, Iterable, Callable
 from datetime import datetime
 from abc import (
@@ -21,7 +21,7 @@ from .exceptions import (
     ProviderError,
     EmptyStatement
 )
-
+from .models import Model
 
 class PoolBackend(ABC):
     """
@@ -222,6 +222,9 @@ class ConnectionBackend(ABC):
     @abstractmethod
     async def close(self, timeout: int = 10):
         raise NotImplementedError()  # pragma: no cover
+
+    async def disconnect(self) -> None:
+        await self.close()
 
     def is_closed(self):
         if not self._connected:
@@ -597,7 +600,7 @@ class DBCursorBackend(ABC):
             # dynamic loading of Cursor Class
             cls = f"asyncdb.providers.{self._provider}"
             cursor = f"{self._provider}Cursor"
-            module = importlib.import_module(cls, package="providers")
+            module = import_module(cls, package="providers")
             self.__cursor__ = getattr(module, cursor)
         except (ImportError) as err:
             logging.exception(f"Error Loading Cursor Class: {err}")
@@ -647,3 +650,93 @@ class DBCursorBackend(ABC):
             return data
         else:
             raise StopAsyncIteration
+
+class ModelBackend(ABC):
+    """
+    Interface for Backends with Dataclass-based Models Support.
+    """
+
+## Class-based Methods.
+    @abstractmethod
+    async def mdl_create(self, model: Model, rows: list):
+        """
+        Create all records based on a dataset and return result.
+        """
+
+    @abstractmethod
+    async def mdl_delete(self, model: Model, conditions: dict, **kwargs):
+        """
+        Deleting some records using Model.
+        """
+
+    @abstractmethod
+    async def mdl_update(self, model: Model, conditions: dict, **kwargs):
+        """
+        Updating records using Model.
+        """
+
+    @abstractmethod
+    async def mdl_filter(self, model: Model, **kwargs):
+        """
+        Filter a Model based on some criteria.
+        """
+
+    @abstractmethod
+    async def mdl_all(self, model: Model, **kwargs):
+        """
+        Get all records on a Model.
+        """
+
+    @abstractmethod
+    async def mdl_get(self, model: Model, **kwargs):
+        """
+        Get one single record from Model.
+        """
+
+    @abstractmethod
+    async def _filter_(self, model: Model, *args, **kwargs):
+        """
+        Filter a Model using Fields.
+        """
+
+    @abstractmethod
+    async def _select_(self, model: Model, *args, **kwargs):
+        """
+        Get a query from Model.
+        """
+
+    @abstractmethod
+    async def _all_(self, model: Model, *args):
+        """
+        Get queries with model.
+        """
+
+    @abstractmethod
+    async def _get_(self, model: Model, *args, **kwargs):
+        """
+        Get one row from model.
+        """
+
+    @abstractmethod
+    async def _delete_(self, model: Model, *args, **kwargs):
+        """
+        delete a row from model.
+        """
+
+    @abstractmethod
+    async def _update_(self, model: Model, *args, **kwargs):
+        """
+        Updating a row in a Model.
+        """
+
+    @abstractmethod
+    async def _save_(self, model: Model, *args, **kwargs):
+        """
+        Save a row in a Model, using Insert-or-Update methodology.
+        """
+
+    @abstractmethod
+    async def _insert_(self, model: Model, *args, **kwargs):
+        """
+        insert a row from model.
+        """

@@ -3,7 +3,9 @@ import logging
 from typing import (
     Any
 )
+import uvloop
 
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 def handle_done_tasks(task: asyncio.Task, logger: logging.Logger, *args) -> Any:
     try:
@@ -16,7 +18,7 @@ def handle_done_tasks(task: asyncio.Task, logger: logging.Logger, *args) -> Any:
         )
 
 
-async def shutdown(loop: asyncio.AbstractEventLoop, signal: Any = None):
+async def shutdown(loop: asyncio.AbstractEventLoop, signal = None):
     """Cleanup tasks tied to the service's shutdown."""
     if signal:
         logging.info(
@@ -48,7 +50,7 @@ async def shutdown(loop: asyncio.AbstractEventLoop, signal: Any = None):
         loop.stop()
 
 
-def default_exception_handler(loop: asyncio.AbstractEventLoop, context: Any):
+def default_exception_handler(loop: asyncio.AbstractEventLoop, context):
     logging.info(
         f"Asyncio Exception Handler Caught: {context!s}"
     )
