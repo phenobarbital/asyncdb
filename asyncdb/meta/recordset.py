@@ -8,7 +8,6 @@ from typing import (
     Any,
     Union
 )
-from cassandra.cluster import ResultSet
 from .record import Record
 
 
@@ -34,9 +33,10 @@ class Recordset(Sequence):
     def from_result(cls, result: Iterator) -> "Recordset":
         cols = []
         try:
-            if isinstance(result, ResultSet):
-                cols = result.one().keys
-                result = list(result)
+            if hasattr(result, 'one'): # Cassandra Resulset
+                if callable(result.one):
+                    cols = result.one().keys
+                    result = list(result)
             else:
                 cols = result[0].keys()
             return cls(result, columns = cols)
