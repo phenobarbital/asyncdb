@@ -4,7 +4,8 @@ Basic Interfaces for every kind of Database Connector.
 import asyncio
 import logging
 import importlib
-from collections.abc import Sequence, Iterable
+from collections.abc import Sequence, Iterable, Callable
+from datetime import datetime
 from abc import (
     ABC,
     abstractmethod,
@@ -164,10 +165,11 @@ class ConnectionBackend(ABC):
             params: dict[Any] = Any,
             **kwargs
     ) -> None:
-        self._connection = None
-        self._connected = False
+        self._connection: Callable = None
+        self._connected: bool = False
         self._cursor = None
-        self._generated = None
+        self._generated: datetime = None
+        self._starttime: datetime = None
         self._pool = None
         try:
             self._encoding = kwargs["encoding"]
@@ -214,6 +216,9 @@ class ConnectionBackend(ABC):
     async def connection(self) -> Any:
         raise NotImplementedError()  # pragma: no cover
 
+    def set_connection(self, connection):
+        self._connection = connection
+
     @abstractmethod
     async def close(self, timeout: int = 10):
         raise NotImplementedError()  # pragma: no cover
@@ -253,7 +258,14 @@ class ConnectionBackend(ABC):
     def raw_connection(self) -> Any:
         return self._connection
 
+    def start_timing(self):
+        self._starttime = datetime.now()
+
     def generated_at(self):
+        self._generated = datetime.now() - self._starttime
+        return self._generated
+
+    def last_duration(self):
         return self._generated
 
     @classmethod
