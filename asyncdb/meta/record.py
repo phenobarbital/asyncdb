@@ -18,7 +18,7 @@ class Record(MutableMapping):
       params:
           row: any resultset
     """
-    __slots__ = '_row', '_columns, _record'
+    __slots__ = ('_row', '_columns')
 
     def __init__(self, row: Any, columns: list = None):
         self._row = row

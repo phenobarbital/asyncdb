@@ -1,9 +1,10 @@
 import logging
 from collections.abc import Callable
 from .exceptions import (
-    AsyncDBException,
+    ProviderError
 )
 from .utils import module_exists
+from .interfaces import PoolBackend, ConnectionBackend
 
 
 class AsyncPool:
@@ -16,18 +17,18 @@ class AsyncPool:
     _provider: Callable = None
     _name: str = ""
 
-    def __new__(cls, provider: str = "dummy", **kwargs) -> Callable:
+    def __new__(cls, provider: str = "dummy", **kwargs) -> PoolBackend:
         cls._name = provider
-        classpath = "asyncdb.providers.{provider}".format(provider=cls._name)
-        pool = "{}Pool".format(cls._name)
+        classpath = f"asyncdb.drivers.{provider}"
+        pool = f"{provider}Pool"
         try:
             obj = module_exists(pool, classpath)
             if obj:
                 cls._provider = obj(**kwargs)
                 return cls._provider
             else:
-                raise AsyncDBException(
-                    message="Cannot Load Pool provider {}".format(pool)
+                raise ProviderError(
+                    message=f"Cannot Load Backend Pool: {pool}"
                 )
         except Exception as err:
             logging.exception(err)
@@ -42,17 +43,17 @@ class AsyncDB:
     _provider: Callable = None
     _name: str = ""
 
-    def __new__(cls, provider: str = "dummy", **kwargs) -> Callable:
+    def __new__(cls, provider: str = "dummy", **kwargs) -> ConnectionBackend:
         cls._name = provider
-        classpath = "asyncdb.providers.{provider}".format(provider=cls._name)
+        classpath = f"asyncdb.drivers.{provider}"
         try:
             obj = module_exists(cls._name, classpath)
             if obj:
                 cls._provider = obj(**kwargs)
                 return cls._provider
             else:
-                raise AsyncDBException(
-                    message="Cannot Load provider {}".format(cls._name)
+                raise ProviderError(
+                    message=f"Cannot Load Backend {provider}"
                 )
         except Exception as err:
             logging.exception(err)

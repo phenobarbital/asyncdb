@@ -20,6 +20,8 @@ class Recordset(Sequence):
       params:
           result: any resultset
     """
+    __slots__ = ('_idx', '_columns', '_result')
+
     def __init__(self, result: Any, columns: list = None):
         self._columns = columns
         self._result = result

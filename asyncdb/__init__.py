@@ -12,9 +12,9 @@ from .version import (
 #    InitProvider,
 #    BaseProvider
 #)
-# from .connections import AsyncPool, AsyncDB
+from .connections import AsyncPool, AsyncDB
 
-# __all__ = ["InitProvider", "BaseProvider", "AsyncPool", "AsyncDB", ]
+__all__ = ("AsyncPool", "AsyncDB", )
 
 # install uvloop and set as default loop for asyncio.
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
