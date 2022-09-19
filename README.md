@@ -83,6 +83,10 @@ And that's it!, we are using the same methods on all drivers, maintaining a cons
 
 * Prometheus
 
+### Output Support ###
+
+With Output Support results can be returned into a wide-range of variants:
+
 ### Contribution guidelines ###
 
 Please have a look at the Contribution Guide
