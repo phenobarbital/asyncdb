@@ -2,7 +2,7 @@ import logging
 from .exceptions import (
     ProviderError
 )
-from .utils import module_exists
+from .utils.modules import module_exists
 from .interfaces import PoolBackend, ConnectionBackend
 
 

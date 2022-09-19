@@ -5,82 +5,23 @@ from typing import (
     List
 )
 import datetime
-import collections
+from collections.abc import Sequence, int64
 import json
-import numpy as np
+from numpy import ndarray
 from asyncdb.utils.encoders import (
     BaseEncoder
 )
 
-DB_TYPES: dict = {
-    bool: "boolean",
-    int: "integer",
-    np.int64: "bigint",
-    float: "float",
-    str: "character varying",
-    bytes: "byte",
-    list: "Array",
-    Decimal: "numeric",
-    datetime.date: "date",
-    datetime.datetime: "timestamp without time zone",
-    datetime.time: "time",
-    datetime.timedelta: "timestamp without time zone",
-    uuid.UUID: "uuid",
-    dict: "jsonb"
-}
-
-MODEL_TYPES: dict = {
-    "boolean": bool,
-    "integer": int,
-    "bigint": np.int64,
-    "float": float,
-    "character varying": str,
-    "string": str,
-    "varchar": str,
-    "byte": bytes,
-    "bytea": bytes,
-    "Array": list,
-    "hstore": dict,
-    "character varying[]": list,
-    "numeric": Decimal,
-    "date": datetime.date,
-    "timestamp with time zone": datetime.datetime,
-    "time": datetime.time,
-    "timestamp without time zone": datetime.datetime,
-    "uuid": uuid.UUID,
-    "json": dict,
-    "jsonb": dict,
-    "text": str,
-    "serial": int,
-    "bigserial": int,
-    "inet": str,
-}
-
-JSON_TYPES: dict = {
-    bool: "boolean",
-    int: "integer",
-    np.int64: "integer",
-    float: "float",
-    str: "string",
-    bytes: "byte",
-    list: "list",
-    Decimal: "decimal",
-    datetime.date: "date",
-    datetime.datetime: "datetime",
-    datetime.time: "time",
-    datetime.timedelta: "timedelta",
-    uuid.UUID: "uuid",
-}
-
+# TODO: migrate encoder to Cython
 
 class Entity:
     @classmethod
-    def number(cls, type):
-        return type in (int, np.int64, float, Decimal, bytes, bool)
+    def number(cls, _type):
+        return _type in (int, int64, float, Decimal, bytes, bool)
 
     @classmethod
-    def string(cls, type):
-        return type in (
+    def string(cls, _type):
+        return _type in (
             str,
             datetime.datetime,
             datetime.time,
@@ -89,19 +30,19 @@ class Entity:
         )
 
     @classmethod
-    def is_date(cls, type):
-        return type in (datetime.datetime, datetime.time, datetime.timedelta)
+    def is_date(cls, _type):
+        return _type in (datetime.datetime, datetime.time, datetime.timedelta)
 
     @classmethod
     def is_array(cls, t):
         return isinstance(t,
                           (list, List, Dict, dict,
-                           collections.Sequence, np.ndarray)
+                           Sequence, ndarray)
                           )
 
     @classmethod
-    def is_bool(cls, type):
-        return isinstance(type, bool)
+    def is_bool(cls, _type):
+        return isinstance(_type, bool)
 
     @classmethod
     def escapeLiteral(cls, value, ftype, dbtype: str = None):

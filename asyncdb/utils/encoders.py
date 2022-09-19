@@ -5,8 +5,8 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from dataclasses import _MISSING_TYPE, MISSING
-import asyncpg
-import numpy as np
+from asyncpg import Range
+from numpy import ndarray
 import orjson
 
 class DateEncoder(json.JSONEncoder):
@@ -43,7 +43,7 @@ class NpEncoder(json.JSONEncoder):
 
 class IntRangeEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, asyncpg.Range):
+        if isinstance(o, Range):
             up = o.upper
             if isinstance(o.upper, int):
                 up = o.upper - 1  # discrete representation
@@ -55,7 +55,7 @@ class IntRangeEncoder(json.JSONEncoder):
 
 class pgRangeEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, asyncpg.Range):
+        if isinstance(o, Range):
             return [o.lower, o.upper]
         else:
             return str(object=o)

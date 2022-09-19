@@ -9,8 +9,8 @@ from typing import (
     Any
 )
 from collections.abc import Callable, Iterable
+import uvloop
 from asyncdb.exceptions import EmptyStatement
-from asyncdb.models import Model
 from asyncdb.interfaces import (
     PoolBackend,
     ConnectionDSNBackend,
@@ -19,6 +19,10 @@ from asyncdb.interfaces import (
     CursorBackend
 )
 from .outputs import OutputFactory
+
+# install uvloop and set as default loop for asyncio.
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+uvloop.install()
 
 
 class BasePool(PoolBackend, ConnectionDSNBackend):
@@ -169,94 +173,3 @@ class BaseCursor(CursorBackend):
     Iterable Object for Cursor-Like functionality
     """
     _provider: BaseDriver
-
-
-class ModelBackend(ABC):
-    """
-    Interface for Backends with Dataclass-based Models Support.
-    """
-
-## Class-based Methods.
-    @abstractmethod
-    async def mdl_create(self, model: Model, rows: list):
-        """
-        Create all records based on a dataset and return result.
-        """
-
-    @abstractmethod
-    async def mdl_delete(self, model: Model, conditions: dict, **kwargs):
-        """
-        Deleting some records using Model.
-        """
-
-    @abstractmethod
-    async def mdl_update(self, model: Model, conditions: dict, **kwargs):
-        """
-        Updating records using Model.
-        """
-
-    @abstractmethod
-    async def mdl_filter(self, model: Model, **kwargs):
-        """
-        Filter a Model based on some criteria.
-        """
-
-    @abstractmethod
-    async def mdl_all(self, model: Model, **kwargs):
-        """
-        Get all records on a Model.
-        """
-
-    @abstractmethod
-    async def mdl_get(self, model: Model, **kwargs):
-        """
-        Get one single record from Model.
-        """
-
-    @abstractmethod
-    async def _filter_(self, model: Model, *args, **kwargs):
-        """
-        Filter a Model using Fields.
-        """
-
-    @abstractmethod
-    async def _select_(self, model: Model, *args, **kwargs):
-        """
-        Get a query from Model.
-        """
-
-    @abstractmethod
-    async def _all_(self, model: Model, *args):
-        """
-        Get queries with model.
-        """
-
-    @abstractmethod
-    async def _get_(self, model: Model, *args, **kwargs):
-        """
-        Get one row from model.
-        """
-
-    @abstractmethod
-    async def _delete_(self, model: Model, *args, **kwargs):
-        """
-        delete a row from model.
-        """
-
-    @abstractmethod
-    async def _update_(self, model: Model, *args, **kwargs):
-        """
-        Updating a row in a Model.
-        """
-
-    @abstractmethod
-    async def _save_(self, model: Model, *args, **kwargs):
-        """
-        Save a row in a Model, using Insert-or-Update methodology.
-        """
-
-    @abstractmethod
-    async def _insert_(self, model: Model, *args, **kwargs):
-        """
-        insert a row from model.
-        """
