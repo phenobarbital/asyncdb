@@ -101,8 +101,8 @@ class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
         self._result = result
         return [result, error]
 
-    def output_format(self, *args, frmt: str = 'native', **kwargs):
-        self._serializer = OutputFactory(self, frmt, *args, **kwargs)
+    def output_format(self, frmt: str = 'native', *args, **kwargs):
+        self._serializer = OutputFactory(self, frmt=frmt, *args, **kwargs)
 
     async def valid_operation(self, sentence: Any):
         if not sentence:

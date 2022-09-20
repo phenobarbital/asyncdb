@@ -59,7 +59,7 @@ class Recordset(Sequence):
             raise TypeError(f"Recordset: Invalid request {key!s}")
 
     def __repr__(self) -> str:
-        return f"<Recordset {self._result!r}>"
+        return f"<Recordset {self._columns!r}>"
 
     def __len__(self) -> int:
         return len(self._result)

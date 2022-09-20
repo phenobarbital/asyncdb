@@ -54,8 +54,8 @@ class dummy(BaseDriver):
     async def query(self, sentence="", **kwargs):
         error = None
         print(f"Running Query: {sentence}")
-        result = ([], error)
-        return result
+        result = [{'col1': [1, 2], 'col2': [3, 4], 'col3': [5, 6]}]
+        return await self._serializer(result, error)
 
     fetch_all = query
 
@@ -64,14 +64,14 @@ class dummy(BaseDriver):
         data = []
         error = None
         result = [data, error]
-        return result
+        return await self._serializer(result, error)
 
     execute_many = execute
 
     async def queryrow(self, sentence=""):
         error = None
         print(f"Running Row {sentence}")
-        result = ({"row": []}, error)
-        return result
+        result = {'col1': [1, 2], 'col2': [3, 4], 'col3': [5, 6]}
+        return await self._serializer(result, error)
 
     fetch_one = queryrow
