@@ -1,13 +1,12 @@
 import uuid
 from decimal import Decimal
 from typing import (
-    Dict,
-    List
+    Dict
 )
 import datetime
-from collections.abc import Sequence, int64
+from collections.abc import Sequence
 import json
-from numpy import ndarray
+from numpy import int64, ndarray
 from asyncdb.utils.encoders import (
     BaseEncoder
 )
@@ -35,10 +34,7 @@ class Entity:
 
     @classmethod
     def is_array(cls, t):
-        return isinstance(t,
-                          (list, List, Dict, dict,
-                           Sequence, ndarray)
-                          )
+        return isinstance(t,(list, dict, Sequence, ndarray))
 
     @classmethod
     def is_bool(cls, _type):

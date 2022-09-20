@@ -8,6 +8,8 @@ import traceback
 from dataclasses import (
     is_dataclass,
     make_dataclass,
+    _MISSING_TYPE,
+    MISSING
 )
 from typing import (
     Dict
@@ -22,8 +24,19 @@ from asyncdb.utils.modules import module_exists
 from asyncdb.exceptions import (
     NoDataFound,
     ProviderError,
-    StatementError
+    StatementError,
+    ConnectionMissing
 )
+
+def is_missing(value):
+    if value == _MISSING_TYPE:
+        return True
+    elif value == MISSING:
+        return True
+    elif isinstance(value, _MISSING_TYPE):
+        return True
+    else:
+        return False
 
 class Model(BaseModel):
     """
@@ -106,6 +119,77 @@ class Model(BaseModel):
             ) from err
 
 ### Instance method for Dataclasses.
+    async def insert(self):
+        """
+        Insert a new Dataclass Model to Database.
+        """
+        if not self.Meta.connection:
+            self.get_connection()
+        if not self.Meta.connection.is_connected():
+            await self.Meta.connection.connection()
+        result = None
+        try:
+            result = await self.Meta.connection._insert_(
+                model=self, _connection=self.Meta.connection
+            )
+            return result
+        except StatementError:
+            raise
+        except ProviderError:
+            raise
+        except Exception as err:
+            logging.debug(traceback.format_exc())
+            raise Exception(
+                f"Error on INSERT {self.Meta.name}: {err}"
+            ) from err
+
+    async def update(self):
+        """
+        Saving a Dataclass Model to Database.
+        """
+        if not self.Meta.connection:
+            self.get_connection()
+        if not self.Meta.connection.is_connected():
+            await self.Meta.connection.connection()
+        result = None
+        try:
+            result = await self.Meta.connection._update_(
+                model=self, _connection=self.Meta.connection
+            )
+            return result
+        except ProviderError:
+            raise
+        except Exception as err:
+            logging.debug(traceback.format_exc())
+            raise Exception(
+                f"Error on UPDATE {self.Meta.name}: {err}"
+            ) from err
+
+    async def delete(self, **kwargs):
+        """
+        Deleting a row Model based on Primary Key
+        """
+        if not self.Meta.connection:
+            self.get_connection()
+        if not self.Meta.connection.is_connected():
+            await self.Meta.connection.connection()
+        result = None
+        try:
+            result = await self.Meta.connection._delete_(
+                model=self,
+                **kwargs
+            )
+            return result
+        except StatementError:
+            raise
+        except ProviderError:
+            raise
+        except Exception as err:
+            logging.debug(traceback.format_exc())
+            raise Exception(
+                f"Error on DELETE {self.Meta.name}: {err}"
+            ) from err
+
     async def save(self):
         """
         Saving a Dataclass Model to Database.
@@ -114,7 +198,7 @@ class Model(BaseModel):
             self.get_connection()
         async with await self.Meta.connection.connection() as conn:
             try:
-                result = await self.Meta.connection.model_save(
+                result = await self.Meta.connection._save_(
                     model=self, fields=self.columns()
                 )
                 return result
@@ -123,59 +207,8 @@ class Model(BaseModel):
             except Exception as err:
                 logging.debug(traceback.format_exc())
                 raise Exception(
-                    f"Error on Insert over table {self.Meta.name}: {err}"
+                    f"Error on SAVE {self.Meta.name}: {err}"
                 ) from err
-
-    async def insert(self):
-        """
-        Insert a new Dataclass Model to Database.
-        """
-        if not self.Meta.connection:
-            self.get_connection()
-        result = None
-        async with await self.Meta.connection.connection() as conn:
-            try:
-                result = await self.Meta.connection.model_insert(
-                    model=self, connection=conn, fields=self.columns()
-                )
-                return result
-            except StatementError:
-                raise
-            except ProviderError:
-                raise
-            except Exception as err:
-                logging.debug(traceback.format_exc())
-                raise Exception(
-                    "Error on Insert over table {}: {}".format(
-                        self.Meta.name, err)
-                )
-
-    async def delete(self, **kwargs):
-        """
-        Deleting a row Model based on Primary Key
-        """
-        if not self.Meta.connection:
-            self.get_connection()
-        result = None
-        async with await self.Meta.connection.connection() as conn:
-            try:
-                result = await self.Meta.connection.model_delete(
-                    model=self,
-                    fields=self.columns(),
-                    connection=conn,
-                    **kwargs
-                )
-                return result
-            except StatementError:
-                raise
-            except ProviderError:
-                raise
-            except Exception as err:
-                logging.debug(traceback.format_exc())
-                raise Exception(
-                    "Error on Insert over table {}: {}".format(
-                        self.Meta.name, err)
-                )
 
     async def fetch(self, **kwargs):
         """
@@ -310,7 +343,7 @@ class Model(BaseModel):
                 )
 
     @classmethod
-    async def update(cls, _filter: Dict = None, **kwargs):
+    async def _update(cls, _filter: Dict = None, **kwargs):
         if not cls.Meta.connection:
             cls.get_connection(cls)
         async with await cls.Meta.connection.connection() as conn:
@@ -387,24 +420,27 @@ class Model(BaseModel):
                     f"Error on get {cls.Meta.name}: {err}"
                 )
 
-    # get all data
+    # get all data of a model
     @classmethod
     async def all(cls, **kwargs):
         if not cls.Meta.connection:
-            cls.get_connection(cls)
-        async with await cls.Meta.connection.connection() as conn:
-            try:
-                result = await cls.Meta.connection.mdl_all(model=cls, **kwargs)
-                return [cls(**dict(row)) for row in result]
-            except StatementError:
-                raise
-            except ProviderError:
-                raise
-            except Exception as err:
-                print(traceback.format_exc())
-                raise Exception(
-                    f"Error on query_all over table {cls.Meta.name}: {err}"
-                ) from err
+            raise ConnectionMissing(
+                f"Missing Connection for Model: {cls}"
+            )
+        try:
+            result = await cls.Meta.connection._all_(
+                model=cls, **kwargs
+            )
+            return [cls(**dict(row)) for row in result]
+        except StatementError:
+            raise
+        except ProviderError:
+            raise
+        except Exception as err:
+            print(traceback.format_exc())
+            raise Exception(
+                f"Error on query_all over table {cls.Meta.name}: {err}"
+            ) from err
 
     @classmethod
     async def makeModel(

@@ -3,6 +3,64 @@ from pprint import pprint
 
 from asyncdb import AsyncDB
 from asyncdb.exceptions import default_exception_handler
+from asyncdb.models import Model, Column
+
+
+class Airport(Model):
+    iata: str = Column(primary_key=True)
+    city: str
+    country: str
+    class Meta:
+        name: str = 'airports'
+
+async def test_model(db):
+    async with await db.connection() as conn:
+        table = """
+            CREATE TABLE airports (
+             iata text PRIMARY KEY,
+             city text,
+             country text
+            )
+        """
+        result = await conn.execute(table)
+        # test insertion
+        Airport.Meta.set_connection(conn) # set the connection
+        data = {
+            "iata": 'MAD',
+            "city": 'Medrid',
+            "country": 'Spain'
+        }
+        airport = Airport(**data)
+        # airport.set_connection(conn)
+        result = await airport.insert()
+        print('INSERT: ', result)
+        # test Update:
+        result.city = 'Madrid'
+        result = await result.update()
+        print('UPDATE: ', result)
+        # test Delete:
+        result = await result.delete()
+        print('DELETE: ', result)
+        # test Upsert (insert or update)
+        data = [
+            ("ORD", "Chicago", "United States"),
+            ("JFK", "New York City", "United States"),
+            ("CDG", "Paris", "France"),
+            ("LHR", "London", "United Kingdom"),
+            ("DME", "Moscow", "Russia"),
+            ("SVO", "Moscow", "Russia"),
+        ]
+        for air in data:
+            airport = Airport(*air)
+            result = await airport.insert()
+            print('INSERT: ', result)
+        # test query (all)
+        print(' === ITERATE OVER ALL === ')
+        airports = await Airport.all()
+        for airport in airports:
+            print(airport)
+        # test query (get one)
+        # test query (get many)
 
 
 async def connect(db):
@@ -26,9 +84,9 @@ async def connect(db):
             print(row)
         table = """
             CREATE TABLE airports (
-            iata text PRIMARY KEY,
-            city text,
-            country text
+             iata text PRIMARY KEY,
+             city text,
+             country text
             )
         """
         await conn.execute(table)
@@ -66,3 +124,4 @@ if __name__ == "__main__":
     loop.set_exception_handler(default_exception_handler)
     driver = AsyncDB("sqlite", params={"database": ":memory:"}, loop=loop)
     asyncio.run(connect(driver))
+    asyncio.run(test_model(driver))
