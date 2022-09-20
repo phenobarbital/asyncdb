@@ -20,6 +20,8 @@ async def connect(db):
         print(": Executing Insert of many entries: ")
         await conn.execute_many(many, examples)
         result, error = await conn.query("SELECT * FROM tests")
+        if error:
+            print(error)
         for row in result:
             print(row)
         table = """

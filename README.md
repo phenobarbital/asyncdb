@@ -79,6 +79,15 @@ async with await db.connection() as conn:
 ```
 And that's it!, we are using the same methods on all drivers, maintaining a consistent interface between all of them, facilitating the re-use of the same code for different databases.
 
+Every Driver has a simple name to call it:
+* pg: AsyncPG (PostgreSQL)
+* postgres: aiopg (PostgreSQL)
+* mysql: aiomysql (mySQL)
+* influx: influxdb (InfluxDB)
+* redis: aioredis (Redis)
+* mcache: aiomcache (Memcache)
+* odbc: aiodbc (ODBC)
+
 #### Future work: ####
 
 * Prometheus
@@ -115,10 +124,10 @@ Currently AsyncDB supports the following Output Formats:
 * Pandas (a pandas Dataframe)
 * Datatable (Dt Dataframe)
 * Dataclass (exporting data to a dataclass with -optionally- passing Dataclass instance)
+* PySpark Dataframe
 
 And others to come:
 * Apache Arrow (using pyarrow)
-* PySpark Dataframe
 * Polars (Using Python polars)
 * Dask Dataframe
 

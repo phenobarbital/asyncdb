@@ -7,11 +7,10 @@ class OutputFormat(ABC):
     """
 
     @abstractmethod
-    async def serialize(self, *args, **kwargs):
+    async def serialize(self, result, error, *args, **kwargs):
         """
         Making the serialization
         """
-        pass
 
     async def __call__(self, result, error, *args, **kwargs):
         return await self.serialize(result, error, *args, **kwargs)

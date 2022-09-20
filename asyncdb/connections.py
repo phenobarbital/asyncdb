@@ -34,7 +34,7 @@ class AsyncDB:
     def __new__(cls, driver: str = "dummy", **kwargs) -> ConnectionBackend:
         classpath = f"asyncdb.drivers.{driver}"
         try:
-            mdl = module_exists(cls._name, classpath)
+            mdl = module_exists(driver, classpath)
             obj = mdl(**kwargs)
             return obj
         except Exception as err:
