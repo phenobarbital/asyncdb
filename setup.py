@@ -101,6 +101,10 @@ setup(
             "polars==0.14.11",
             "pyarrow==4.0.1",
             "connectorx==0.3.0",
+            "pyspark==3.3.0"
+        ],
+        "pyspark": [
+            "pyspark==3.3.0"
         ],
         "sqlite": [
             "aiosqlite>=0.15.0",
@@ -206,7 +210,8 @@ setup(
             "aiocouch==2.2.2",
             "asyncmy==0.2.5",
             "mysqlclient==2.1.1",
-            "aiomysql==0.1.1"
+            "aiomysql==0.1.1",
+            "pyspark==3.3.0"
         ]
     },
     tests_require=[

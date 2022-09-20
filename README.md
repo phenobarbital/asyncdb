@@ -87,6 +87,41 @@ And that's it!, we are using the same methods on all drivers, maintaining a cons
 
 With Output Support results can be returned into a wide-range of variants:
 
+```python
+from datamodel import BaseModel
+
+class Point(BaseModel):
+    col1: list
+    col2: list
+    col3: list
+
+db = AsyncDB('pg', dsn='postgres://user:password@localhost:5432/database')
+async with await d.connection() as conn:
+    # changing output format to Pandas:
+    conn.output_format('pandas')  # change output format to pandas
+    result, error = await conn.query('SELECT * FROM test')
+    conn.output_format('csv')  # change output format to CSV
+    result, _ = await conn.query('SELECT TEST')
+    conn.output_format('dataclass', model=Point)  # change output format to Dataclass Model
+    result, _ = await conn.query('SELECT * FROM test')
+```
+
+Currently AsyncDB supports the following Output Formats:
+
+* CSV (comma-separated or parametrized)
+* JSON (using orjson)
+* iterable (returns a generator)
+* Recordset (Internal meta-Object for list of Records)
+* Pandas (a pandas Dataframe)
+* Datatable (Dt Dataframe)
+* Dataclass (exporting data to a dataclass with -optionally- passing Dataclass instance)
+
+And others to come:
+* Apache Arrow (using pyarrow)
+* PySpark Dataframe
+* Polars (Using Python polars)
+* Dask Dataframe
+
 ### Contribution guidelines ###
 
 Please have a look at the Contribution Guide
