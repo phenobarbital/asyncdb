@@ -25,6 +25,9 @@ async def db():
         conn.output_format('dataclass', model=Point)  # change output format to Iterable
         result, _ = await conn.query('SELECT TEST')
         print(result)
+        conn.output_format('pyspark')  # change output format to Iterable
+        result, _ = await conn.query('SELECT TEST')
+        print(result)
 
 if __name__ == '__main__':
     asyncio.run(db())
