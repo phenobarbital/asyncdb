@@ -33,6 +33,10 @@ class DriverError(AsyncDBException):
     """Connection Driver Error.
     """
 
+class ConnectionMissing(AsyncDBException):
+    """Error when a Connection is missing or wrong.
+    """
+
 class DataError(ValueError):
     """An error caused by invalid query input."""
 

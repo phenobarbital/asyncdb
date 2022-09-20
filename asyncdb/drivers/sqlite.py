@@ -3,6 +3,8 @@ import time
 import asyncio
 from typing import (
     Any,
+    Dict,
+    List,
     Optional,
     Union
 )
@@ -12,7 +14,9 @@ from asyncdb.exceptions import (
     NoDataFound,
     ProviderError
 )
-from asyncdb.interfaces import DBCursorBackend
+from asyncdb.interfaces import DBCursorBackend, ModelBackend
+from asyncdb.models import Model, Field, is_dataclass, is_missing
+from asyncdb.utils.types import Entity
 from .sql import SQLDriver, SQLCursor
 
 
@@ -31,7 +35,7 @@ class sqliteCursor(SQLCursor):
         return self
 
 
-class sqlite(SQLDriver, DBCursorBackend):
+class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
     _provider: str = 'sqlite'
     _syntax: str = 'sql'
     _dsn: str = "{database}"
@@ -108,7 +112,7 @@ class sqlite(SQLDriver, DBCursorBackend):
         else:
             self._connection.row_factory = None
 
-    async def query(self, sentence: Any = None) -> Any:
+    async def query(self, sentence: Any, **kwargs) -> Any:
         """
         Getting a Query from Database
         """
@@ -116,7 +120,7 @@ class sqlite(SQLDriver, DBCursorBackend):
         cursor = None
         await self.valid_operation(sentence)
         try:
-            cursor = await self._connection.execute(sentence)
+            cursor = await self._connection.execute(sentence, parameters=kwargs)
             self._result = await cursor.fetchall()
             if not self._result:
                 return (None, NoDataFound())
@@ -241,7 +245,7 @@ class sqlite(SQLDriver, DBCursorBackend):
     fetchone = fetch_one
     fetchrow = fetch_one
 
-    async def execute(self, sentence: Any, *args) -> Optional[Any]:
+    async def execute(self, sentence: Any, *args, **kwargs) -> Optional[Any]:
         """Execute a transaction
         get a SQL sentence and execute
         returns: results of the execution
@@ -250,7 +254,7 @@ class sqlite(SQLDriver, DBCursorBackend):
         result = None
         await self.valid_operation(sentence)
         try:
-            result = await self._connection.execute(sentence, *args)
+            result = await self._connection.execute(sentence, parameters=kwargs)
             if result:
                 await self._connection.commit()
         except Exception as err:
@@ -302,7 +306,7 @@ class sqlite(SQLDriver, DBCursorBackend):
     def table(self, tablename: str = "") -> Iterable[Any]:
         raise NotImplementedError()  # pragma: no cover
 
-    def use(self, tablename: str):
+    async def use(self, database: str):
         raise NotImplementedError(
             'SQLite Error: There is no Database in SQLite'
         )
@@ -367,3 +371,230 @@ class sqlite(SQLDriver, DBCursorBackend):
             raise RuntimeError(
                 f'SQLite: invalid Object type {object!s}'
             )
+
+## ModelBackend Methods
+    async def _insert_(self, model: Model, *args, **kwargs):
+        """
+        insert a row from model.
+        """
+        try:
+            table = f"{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        cols = []
+        source = []
+        _filter = {}
+        n = 1
+        fields = model.columns()
+        for name, field in fields.items():
+            try:
+                val = getattr(model, field.name)
+            except AttributeError:
+                continue
+            ## getting the value of column:
+            value = self._get_value(field, val)
+            column = field.name
+            # validating required field
+            try:
+                required = field.required()
+            except AttributeError:
+                required = False
+            if required is False and value is None or value == "None":
+                default = field.default
+                if callable(default):
+                    value = default()
+                else:
+                    continue
+            elif required is True and value is None or value == "None":
+                if 'db_default' in field.metadata:
+                    # field get a default value from database
+                    continue
+                else:
+                    raise ValueError(
+                        f"Field {name} is required and value is null over {model.Meta.name}"
+                    )
+            source.append(value)
+            cols.append(column)
+            n += 1
+            if pk:=self._get_attribute(field, value, attr='primary_key'):
+                _filter[column] = pk
+        try:
+            columns = ",".join(cols)
+            values = ",".join(["?" for a in range(1, n)])
+            insert = f"INSERT INTO {table}({columns}) VALUES({values})"
+            self._logger.debug(f"INSERT: {insert}")
+            cursor = await self._connection.execute(insert, parameters=source)
+            await self._connection.commit()
+            condition = self._where(fields, **_filter)
+            get = f"SELECT * FROM {table} {condition}"
+            self._connection.row_factory = lambda c, r: dict(
+                zip([col[0] for col in c.description], r)
+            )
+            cursor = await self._connection.execute(get)
+            result = await cursor.fetchone()
+            if result:
+                for f, val in result.items():
+                    setattr(model, f, val)
+                return model
+        except Exception as err:
+            raise ProviderError(
+                message=f"Error on Insert over table {model.Meta.name}: {err!s}"
+            ) from err
+
+    async def _delete_(self, model: Model, *args, **kwargs):
+        """
+        delete a row from model.
+        """
+        try:
+            table = f"{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        source = []
+        _filter = {}
+        n = 1
+        fields = model.columns()
+        for _, field in fields.items():
+            try:
+                val = getattr(model, field.name)
+            except AttributeError:
+                continue
+            ## getting the value of column:
+            value = self._get_value(field, val)
+            column = field.name
+            source.append(
+                value
+            )
+            n += 1
+            if pk:=self._get_attribute(field, value, attr='primary_key'):
+                _filter[column] = pk
+        try:
+            condition = self._where(fields, **_filter)
+            _delete = f"DELETE FROM {table} {condition};"
+            self._logger.debug(f'DELETE: {_delete}')
+            cursor = await self._connection.execute(_delete)
+            await self._connection.commit()
+            return f'DELETE {cursor.rowcount}: {_filter!s}'
+        except Exception as err:
+            raise ProviderError(
+                message=f"Error on Insert over table {model.Meta.name}: {err!s}"
+            ) from err
+
+    async def _update_(self, model: Model, *args, **kwargs):
+        """
+        Updating a row in a Model.
+        TODO: How to update when if primary key changed.
+        Alternatives: Saving *dirty* status and previous value on dict
+        """
+        try:
+            table = f"{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        cols = []
+        source = []
+        _filter = {}
+        n = 1
+        fields = model.columns()
+        for name, field in fields.items():
+            try:
+                val = getattr(model, field.name)
+            except AttributeError:
+                continue
+            ## getting the value of column:
+            value = self._get_value(field, val)
+            column = field.name
+            # validating required field
+            try:
+                required = field.required()
+            except AttributeError:
+                required = False
+            if required is False and value is None or value == "None":
+                default = field.default
+                if callable(default):
+                    value = default()
+                else:
+                    continue
+            elif required is True and value is None or value == "None":
+                if 'db_default' in field.metadata:
+                    # field get a default value from database
+                    continue
+                else:
+                    raise ValueError(
+                        f"Field {name} is required and value is null over {model.Meta.name}"
+                    )
+            source.append(
+                value
+            )
+            cols.append(
+                f"{column} = ?"
+            )
+            n += 1
+            if pk:=self._get_attribute(field, value, attr='primary_key'):
+                _filter[column] = pk
+        try:
+            set_fields = ", ".join(cols)
+            condition = self._where(fields, **_filter)
+            _update = f"UPDATE {table} SET {set_fields} {condition}"
+            self._logger.debug(f'UPDATE: {_update}')
+            cursor = await self._connection.execute(_update, parameters=source)
+            await self._connection.commit()
+            get = f"SELECT * FROM {table} {condition}"
+            self._connection.row_factory = lambda c, r: dict(
+                zip([col[0] for col in c.description], r)
+            )
+            cursor = await self._connection.execute(get)
+            result = await cursor.fetchone()
+            if result:
+                for f, val in result.items():
+                    setattr(model, f, val)
+                return model
+        except Exception as err:
+            raise ProviderError(
+                message=f"Error on Insert over table {model.Meta.name}: {err!s}"
+            ) from err
+
+    async def _save_(self, model: Model, *args, **kwargs):
+        """
+        Save a row in a Model, using Insert-or-Update methodology.
+        """
+
+    async def where(self, model: Model, *args, **kwargs):
+        """
+        Filter a Model using a WHERE condition.
+        """
+
+    async def _filter_(self, model: Model, *args, **kwargs):
+        """
+        Filter a Model using Fields.
+        """
+
+    async def _select_(self, model: Model, *args, **kwargs):
+        """
+        Get a query from Model.
+        """
+
+    async def _get_(self, model: Model, *args, **kwargs):
+        """
+        Get one row from model.
+        """
+
+    async def _all_(self, model: Model, *args, **kwargs):
+        """
+        Get all rows on a Model.
+        """
+        try:
+            table = f"{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        if 'fields' in kwargs:
+            columns = ','.join(kwargs['fields'])
+        else:
+            columns = '*'
+        _all = f"SELECT {columns} FROM {table}"
+        try:
+            cursor = await self._connection.execute(_all)
+            result = await cursor.fetchall()
+            return result
+        except Exception as e:
+            raise ProviderError(
+                f"Error: Model All over {table}: {e}"
+            ) from e

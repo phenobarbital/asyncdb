@@ -3,6 +3,7 @@ Basic Interfaces for every kind of Database Connector.
 """
 import asyncio
 import logging
+import inspect
 from importlib import import_module
 from collections.abc import Sequence, Iterable, Callable
 from datetime import datetime
@@ -12,6 +13,7 @@ from abc import (
 )
 from typing import (
     Any,
+    List,
     Optional,
     Union
 )
@@ -21,7 +23,9 @@ from .exceptions import (
     ProviderError,
     EmptyStatement
 )
-from .models import Model
+
+from .models import Model, Field, is_missing, is_dataclass
+from .utils.types import Entity
 
 class PoolBackend(ABC):
     """
@@ -659,41 +663,47 @@ class ModelBackend(ABC):
     Interface for Backends with Dataclass-based Models Support.
     """
 
-## Class-based Methods.
-    @abstractmethod
-    async def mdl_create(self, model: Model, rows: list):
-        """
-        Create all records based on a dataset and return result.
-        """
+# ## Class-based Methods.
+#     @abstractmethod
+#     async def mdl_create(self, model: Model, rows: list):
+#         """
+#         Create all records based on a dataset and return result.
+#         """
+
+#     @abstractmethod
+#     async def mdl_delete(self, model: Model, conditions: dict, **kwargs):
+#         """
+#         Deleting some records using Model.
+#         """
+
+#     @abstractmethod
+#     async def mdl_update(self, model: Model, conditions: dict, **kwargs):
+#         """
+#         Updating records using Model.
+#         """
+
+#     @abstractmethod
+#     async def mdl_filter(self, model: Model, **kwargs):
+#         """
+#         Filter a Model based on some criteria.
+#         """
+
+#     @abstractmethod
+#     async def mdl_all(self, model: Model, **kwargs):
+#         """
+#         Get all records on a Model.
+#         """
+
+#     @abstractmethod
+#     async def mdl_get(self, model: Model, **kwargs):
+#         """
+#         Get one single record from Model.
+#         """
 
     @abstractmethod
-    async def mdl_delete(self, model: Model, conditions: dict, **kwargs):
+    async def where(self, model: Model, *args, **kwargs):
         """
-        Deleting some records using Model.
-        """
-
-    @abstractmethod
-    async def mdl_update(self, model: Model, conditions: dict, **kwargs):
-        """
-        Updating records using Model.
-        """
-
-    @abstractmethod
-    async def mdl_filter(self, model: Model, **kwargs):
-        """
-        Filter a Model based on some criteria.
-        """
-
-    @abstractmethod
-    async def mdl_all(self, model: Model, **kwargs):
-        """
-        Get all records on a Model.
-        """
-
-    @abstractmethod
-    async def mdl_get(self, model: Model, **kwargs):
-        """
-        Get one single record from Model.
+        Filter a Model using a WHERE condition.
         """
 
     @abstractmethod
@@ -743,3 +753,74 @@ class ModelBackend(ABC):
         """
         insert a row from model.
         """
+
+## Aux Methods:
+    def _get_value(self, field: Field, value: Any) -> Any:
+        datatype = field.type
+        new_val = None
+        if is_dataclass(datatype) and value is not None:
+            if is_missing(value):
+                new_val = None
+            else:
+                new_val = value
+        if inspect.isclass(datatype) and value is None:
+            if callable(datatype):
+                try:
+                    new_val = datatype()
+                except (TypeError, ValueError, AttributeError):
+                    self._logger.error('Error Calling {datatype} in Field {field}')
+                    new_val = None
+        else:
+            new_val = value
+        return new_val
+
+    def _get_attribute(self, field: Field, value: Any, attr: str = 'primary_key') -> Any:
+        if hasattr(field, attr):
+            datatype = field.type
+            if field.primary_key is True:
+                value = Entity.toSQL(value, datatype)
+                return value
+        return None
+
+    def _where(self, fields: dict[Field], **where):
+        """
+        TODO: add conditions for BETWEEN, NOT NULL, NULL, etc
+        Re-think functionality for parsing where conditions.
+        """
+        result = ""
+        if not fields:
+            fields = {}
+        if not where:
+            return result
+        elif isinstance(where, dict):
+            _cond = []
+            for key, value in where.items():
+                f = fields[key]
+                datatype = f.type
+                if value is None or value == "null" or value == "NULL":
+                    _cond.append(f"{key} is NULL")
+                elif value == "!null" or value == "!NULL":
+                    _cond.append(f"{key} is NOT NULL")
+                elif isinstance(value, bool):
+                    val = str(value)
+                    _cond.append(f"{key} is {value}")
+                elif isinstance(datatype, (list, List)):
+                    val = ", ".join(
+                        map(str, [Entity.escapeLiteral(v, type(v)) for v in value])
+                    )
+                    _cond.append(
+                        f"ARRAY[{val}]<@ {key}::character varying[]")
+                elif Entity.is_array(datatype):
+                    val = ", ".join(
+                        map(str, [Entity.escapeLiteral(v, type(v)) for v in value])
+                    )
+                    _cond.append(f"{key} IN ({val})")
+                else:
+                    # is an scalar value
+                    val = Entity.escapeLiteral(value, datatype)
+                    _cond.append(f"{key}={val}")
+            _and = " AND ".join(_cond)
+            result = f"\nWHERE {_and}"
+            return result
+        else:
+            return result
