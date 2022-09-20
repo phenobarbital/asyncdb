@@ -25,7 +25,7 @@ async def db():
         conn.output_format('dataclass', model=Point)  # change output format to Iterable
         result, _ = await conn.query('SELECT TEST')
         print(result)
-        conn.output_format('pyspark')  # change output format to Iterable
+        conn.output_format('pyspark')  # change output format to a PySpark Dataframe
         result, _ = await conn.query('SELECT TEST')
         print(result)
 

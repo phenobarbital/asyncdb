@@ -220,11 +220,8 @@ class ConnectionBackend(ABC):
         self._connection = connection
 
     @abstractmethod
-    async def close(self, timeout: int = 10):
+    async def close(self, timeout: int = 10) -> None:
         raise NotImplementedError()  # pragma: no cover
-
-    async def disconnect(self) -> None:
-        await self.close()
 
     def is_closed(self):
         if not self._connected:
@@ -598,13 +595,17 @@ class DBCursorBackend(ABC):
         self._cursor: Optional[Any] = None
         try:
             # dynamic loading of Cursor Class
-            cls = f"asyncdb.providers.{self._provider}"
+            cls = f"asyncdb.drivers.{self._provider}"
             cursor = f"{self._provider}Cursor"
-            module = import_module(cls, package="providers")
+            module = import_module(cls, package="drivers")
             self.__cursor__ = getattr(module, cursor)
+        except ModuleNotFoundError as e:
+            logging.exception(f"Error Loading Cursor Class: {e}")
+            self.__cursor__ = None
         except (ImportError) as err:
             logging.exception(f"Error Loading Cursor Class: {err}")
             self.__cursor__ = None
+
 
     def cursor(
         self,
@@ -626,8 +627,10 @@ class DBCursorBackend(ABC):
                 parameters=params,
                 **kwargs
             )
-        except (TypeError, AttributeError, ValueError):
-            raise
+        except (TypeError, AttributeError, ValueError) as e:
+            raise TypeError(
+                f"{__name__}: No support for Cursors."
+            ) from e
         except Exception as err:
             logging.exception(err)
             raise

@@ -105,6 +105,10 @@ class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
         self._serializer = OutputFactory(self, frmt=frmt, *args, **kwargs)
 
     async def valid_operation(self, sentence: Any):
+        """
+        Returns if is a valid operation.
+        TODO: add some validations.
+        """
         if not sentence:
             raise EmptyStatement(
                 f"{__name__!s} Error: cannot use an empty sentence"
@@ -121,7 +125,7 @@ class BaseDriver(InitDriver, ConnectionDSNBackend, ABC):
     """
     _provider: str = "base"
     _syntax: str = "base"  # can use QueryParser for parsing SQL queries
-    init_func: Optional[Callable] = None
+    init_func: Callable = None
 
     def __init__(self, dsn="", loop=None, params: dict = None, **kwargs):
         InitDriver.__init__(
