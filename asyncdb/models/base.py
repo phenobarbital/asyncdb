@@ -456,6 +456,7 @@ class Model(BaseModel):
         columns = cls.columns(cls).items()
         if dialect == "sql" or dialect == "SQL":
             # TODO: using lexers to different types of SQL
+            # re-direct creation to backend driver.
             # And db_types to translate dataclass types to DB types.
             doc = f"CREATE TABLE IF NOT EXISTS {schema}.{table} (\n"
             cols = []

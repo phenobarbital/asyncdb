@@ -4,7 +4,7 @@ import polars as polar
 from .base import OutputFormat
 
 
-class PolarFormat(OutputFormat):
+class polarsFormat(OutputFormat):
     """
     Returns a PyPolars Dataframe from a Resultset
     """

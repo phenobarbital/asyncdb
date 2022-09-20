@@ -1,5 +1,4 @@
-import json
-from asyncdb.utils.encoders import BaseEncoder
+from asyncdb.utils.encoders import DefaultEncoder
 from .base import OutputFormat
 
 
@@ -7,6 +6,8 @@ class jsonFormat(OutputFormat):
     """
     Most Basic Definition of Format.
     """
+    _encoder = DefaultEncoder()
+
     async def serialize(self, result, error, *args, **kwargs):
         dump = [dict(r) for r in result]
-        return (json.dumps(dump, cls=BaseEncoder), error)
+        return (self._encoder.dumps(dump), error)

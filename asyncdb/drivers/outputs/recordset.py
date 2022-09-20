@@ -16,7 +16,7 @@ class recordsetFormat(OutputFormat):
         self._result = None
         try:
             self._result = Recordset.from_result(result)
-        except Exception as err:
+        except (TypeError, ValueError, AttributeError) as err:
             logging.exception(
                 f'Recordset Serialization Error: {err}',
                 stack_info=True
