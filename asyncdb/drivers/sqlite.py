@@ -7,7 +7,6 @@ from typing import (
     Union
 )
 from collections.abc import Sequence, Iterable
-from datamodel.exceptions import ValidationError
 import aiosqlite
 from asyncdb.exceptions import (
     NoDataFound,
@@ -373,22 +372,22 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             )
 
 ## ModelBackend Methods
-    async def _insert_(self, model: Model, *args, **kwargs):
+    async def _insert_(self, _model: Model, **kwargs):
         """
         insert a row from model.
         """
         try:
-            table = f"{model.Meta.name}"
+            table = f"{_model.Meta.name}"
         except AttributeError:
-            table = model.__name__
+            table = _model.__name__
         cols = []
         source = []
         _filter = {}
         n = 1
-        fields = model.columns()
+        fields = _model.columns()
         for name, field in fields.items():
             try:
-                val = getattr(model, field.name)
+                val = getattr(_model, field.name)
             except AttributeError:
                 continue
             ## getting the value of column:
@@ -411,7 +410,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                     continue
                 else:
                     raise ValueError(
-                        f"Field {name} is required and value is null over {model.Meta.name}"
+                        f"Field {name} is required and value is null over {_model.Meta.name}"
                     )
             source.append(value)
             cols.append(column)
@@ -434,28 +433,28 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             result = await cursor.fetchone()
             if result:
                 for f, val in result.items():
-                    setattr(model, f, val)
-                return model
+                    setattr(_model, f, val)
+                return _model
         except Exception as err:
             raise ProviderError(
-                message=f"Error on Insert over table {model.Meta.name}: {err!s}"
+                message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
-    async def _delete_(self, model: Model, *args, **kwargs):
+    async def _delete_(self, _model: Model, **kwargs):
         """
         delete a row from model.
         """
         try:
-            table = f"{model.Meta.name}"
+            table = f"{_model.Meta.name}"
         except AttributeError:
-            table = model.__name__
+            table = _model.__name__
         source = []
         _filter = {}
         n = 1
-        fields = model.columns()
+        fields = _model.columns()
         for _, field in fields.items():
             try:
-                val = getattr(model, field.name)
+                val = getattr(_model, field.name)
             except AttributeError:
                 continue
             ## getting the value of column:
@@ -476,27 +475,27 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             return f'DELETE {cursor.rowcount}: {_filter!s}'
         except Exception as err:
             raise ProviderError(
-                message=f"Error on Insert over table {model.Meta.name}: {err!s}"
+                message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
-    async def _update_(self, model: Model, *args, **kwargs):
+    async def _update_(self, _model: Model, **kwargs):
         """
         Updating a row in a Model.
         TODO: How to update when if primary key changed.
         Alternatives: Saving *dirty* status and previous value on dict
         """
         try:
-            table = f"{model.Meta.name}"
+            table = f"{_model.Meta.name}"
         except AttributeError:
-            table = model.__name__
+            table = _model.__name__
         cols = []
         source = []
         _filter = {}
         n = 1
-        fields = model.columns()
+        fields = _model.columns()
         for name, field in fields.items():
             try:
-                val = getattr(model, field.name)
+                val = getattr(_model, field.name)
             except AttributeError:
                 continue
             ## getting the value of column:
@@ -519,7 +518,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                     continue
                 else:
                     raise ValueError(
-                        f"Field {name} is required and value is null over {model.Meta.name}"
+                        f"Field {name} is required and value is null over {_model.Meta.name}"
                     )
             source.append(
                 value
@@ -545,11 +544,11 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             result = await cursor.fetchone()
             if result:
                 for f, val in result.items():
-                    setattr(model, f, val)
-                return model
+                    setattr(_model, f, val)
+                return _model
         except Exception as err:
             raise ProviderError(
-                message=f"Error on Insert over table {model.Meta.name}: {err!s}"
+                message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
     async def _save_(self, model: Model, *args, **kwargs):
@@ -557,15 +556,15 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
         Save a row in a Model, using Insert-or-Update methodology.
         """
 
-    async def _fetch_(self, model: Model, **kwargs):
+    async def _fetch_(self, _model: Model, **kwargs):
         """
         Returns one Row using Model.
         """
         try:
-            table = f"{model.Meta.name}"
+            table = f"{_model.Meta.name}"
         except AttributeError:
-            table = model.__name__
-        fields = model.columns()
+            table = _model.__name__
+        fields = _model.columns()
         _filter = {}
         for name, field in fields.items():
             if name in kwargs:
@@ -588,15 +587,15 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 f"Error: Model Fetch over {table}: {e}"
             ) from e
 
-    async def _filter_(self, model: Model, *args, **kwargs):
+    async def _filter_(self, _model: Model, *args, **kwargs):
         """
         Filter a Model using Fields.
         """
         try:
-            table = f"{model.Meta.name}"
+            table = f"{_model.Meta.name}"
         except AttributeError:
-            table = model.__name__
-        fields = model.columns(model)
+            table = _model.__name__
+        fields = _model.columns(_model)
         _filter = {}
         if args:
             columns = ','.join(args)
@@ -628,7 +627,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
         Get a query from Model.
         """
         try:
-            model = kwargs['model']
+            model = kwargs['_model']
         except KeyError as e:
             raise ProviderError(
                 f'Missing Model for SELECT {kwargs!s}'
@@ -655,15 +654,15 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 f"Error: Model SELECT over {table}: {e}"
             ) from e
 
-    async def _get_(self, model: Model, *args, **kwargs):
+    async def _get_(self, _model: Model, *args, **kwargs):
         """
         Get one row from model.
         """
         try:
-            table = f"{model.Meta.name}"
+            table = f"{_model.Meta.name}"
         except AttributeError:
-            table = model.__name__
-        fields = model.columns(model)
+            table = _model.__name__
+        fields = _model.columns(_model)
         _filter = {}
         if args:
             columns = ','.join(args)
@@ -690,14 +689,14 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 f"Error: Model GET over {table}: {e}"
             ) from e
 
-    async def _all_(self, model: Model, *args, **kwargs):
+    async def _all_(self, _model: Model, *args, **kwargs):
         """
         Get all rows on a Model.
         """
         try:
-            table = f"{model.Meta.name}"
+            table = f"{_model.Meta.name}"
         except AttributeError:
-            table = model.__name__
+            table = _model.__name__
         if 'fields' in kwargs:
             columns = ','.join(kwargs['fields'])
         else:
@@ -712,15 +711,15 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 f"Error: Model All over {table}: {e}"
             ) from e
 
-    async def _remove_(self, model: Model, **kwargs):
+    async def _remove_(self, _model: Model, **kwargs):
         """
         Deleting some records using Model.
         """
         try:
-            table = f"{model.Meta.name}"
+            table = f"{_model.Meta.name}"
         except AttributeError:
-            table = model.__name__
-        fields = model.columns(model)
+            table = _model.__name__
+        fields = _model.columns(_model)
         _filter = {}
         for name, field in fields.items():
             datatype = field.type
@@ -737,7 +736,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             return f'DELETE {cursor.rowcount}: {_filter!s}'
         except Exception as err:
             raise ProviderError(
-                message=f"Error on Insert over table {model.Meta.name}: {err!s}"
+                message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
 
@@ -746,7 +745,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
         Updating records using Model.
         """
         try:
-            model = kwargs['model']
+            model = kwargs['_model']
         except KeyError as e:
             raise ProviderError(
                 f'Missing Model for SELECT {kwargs!s}'

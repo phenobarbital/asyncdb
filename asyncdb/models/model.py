@@ -119,7 +119,7 @@ class Model(BaseModel):
             ) from err
 
 ### Instance method for Dataclasses.
-    async def insert(self):
+    async def insert(self, **kwargs):
         """
         Insert a new Dataclass Model to Database.
         """
@@ -130,7 +130,7 @@ class Model(BaseModel):
         result = None
         try:
             result = await self.Meta.connection._insert_(
-                model=self, _connection=self.Meta.connection
+                _model=self, **kwargs
             )
             return result
         except StatementError:
@@ -143,7 +143,7 @@ class Model(BaseModel):
                 f"Error on INSERT {self.Meta.name}: {err}"
             ) from err
 
-    async def update(self):
+    async def update(self, **kwargs):
         """
         Saving a Dataclass Model to Database.
         """
@@ -154,7 +154,7 @@ class Model(BaseModel):
         result = None
         try:
             result = await self.Meta.connection._update_(
-                model=self, _connection=self.Meta.connection
+                _model=self, **kwargs
             )
             return result
         except ProviderError:
@@ -176,7 +176,7 @@ class Model(BaseModel):
         result = None
         try:
             result = await self.Meta.connection._delete_(
-                model=self,
+                _model=self,
                 **kwargs
             )
             return result
@@ -190,7 +190,7 @@ class Model(BaseModel):
                 f"Error on DELETE {self.Meta.name}: {err}"
             ) from err
 
-    async def save(self):
+    async def save(self, **kwargs):
         """
         Saving a Dataclass Model to Database.
         """
@@ -199,7 +199,7 @@ class Model(BaseModel):
         async with await self.Meta.connection.connection() as conn:
             try:
                 result = await self.Meta.connection._save_(
-                    model=self, fields=self.columns()
+                    _model=self, **kwargs
                 )
                 return result
             except ProviderError:
@@ -220,7 +220,7 @@ class Model(BaseModel):
             await self.Meta.connection.connection()
         try:
             result = await self.Meta.connection._fetch_(
-                model=self,
+                _model=self,
                 **kwargs
             )
             if result:
@@ -257,7 +257,7 @@ class Model(BaseModel):
         cls.Meta.connection.output_format('native')
         try:
             result = await cls.Meta.connection._create_(
-                model=cls,
+                _model=cls,
                 rows=records
             )
             if result:
@@ -283,7 +283,7 @@ class Model(BaseModel):
         result = []
         try:
             result = await cls.Meta.connection._remove_(
-                model=cls, **kwargs
+                _model=cls, **kwargs
             )
             return result
         except (AttributeError, StatementError) as err:
@@ -306,7 +306,7 @@ class Model(BaseModel):
             )
         try:
             result = await cls.Meta.connection._updating_(
-                model=cls, _filter=_filter, *args, **kwargs
+                _model=cls, _filter=_filter, *args, **kwargs
             )
             if result:
                 return result
@@ -338,7 +338,7 @@ class Model(BaseModel):
         result = []
         try:
             result = await cls.Meta.connection._select_(
-                model=cls, *args, **kwargs
+                _model=cls, *args, **kwargs
             )
             if result:
                 return [cls(**dict(r)) for r in result]
@@ -370,7 +370,7 @@ class Model(BaseModel):
         result = []
         try:
             result = await cls.Meta.connection._filter_(
-                model=cls, *args, **kwargs
+                _model=cls, *args, **kwargs
             )
             if result:
                 return [cls(**dict(r)) for r in result]
@@ -401,7 +401,7 @@ class Model(BaseModel):
             )
         try:
             result = await cls.Meta.connection._get_(
-                model=cls, **kwargs
+                _model=cls, **kwargs
             )
             if result:
                 return cls(**dict(result))
@@ -436,7 +436,7 @@ class Model(BaseModel):
             )
         try:
             result = await cls.Meta.connection._all_(
-                model=cls, **kwargs
+                _model=cls, **kwargs
             )
             return [cls(**dict(row)) for row in result]
         except StatementError:
