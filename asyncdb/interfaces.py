@@ -701,9 +701,9 @@ class ModelBackend(ABC):
 #         """
 
     @abstractmethod
-    async def where(self, model: Model, *args, **kwargs):
+    async def _fetch_(self, model: Model, *args, **kwargs):
         """
-        Filter a Model using a WHERE condition.
+        Returns one row from Model.
         """
 
     @abstractmethod
