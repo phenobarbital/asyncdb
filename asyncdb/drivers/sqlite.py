@@ -3,8 +3,6 @@ import time
 import asyncio
 from typing import (
     Any,
-    Dict,
-    List,
     Optional,
     Union
 )
@@ -15,7 +13,7 @@ from asyncdb.exceptions import (
     ProviderError
 )
 from asyncdb.interfaces import DBCursorBackend, ModelBackend
-from asyncdb.models import Model, Field, is_dataclass, is_missing
+from asyncdb.models import Model
 from asyncdb.utils.types import Entity
 from .sql import SQLDriver, SQLCursor
 
@@ -50,7 +48,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
         SQLDriver.__init__(self, dsn, loop, params, **kwargs)
         DBCursorBackend.__init__(self)
 
-    async def prepare(self):
+    async def prepare(self, sentence: Union[str, list]) -> Any:
         "Ignoring prepared sentences on SQLite"
         raise NotImplementedError()  # pragma: no cover
 
@@ -218,7 +216,8 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
 
     async def fetch_one(
             self,
-            sentence: str
+            sentence: str,
+            number: int = None
     ) -> Optional[dict]:
         """
         aliases for queryrow, but without error support
@@ -557,25 +556,138 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
         Save a row in a Model, using Insert-or-Update methodology.
         """
 
-    async def where(self, model: Model, *args, **kwargs):
+    async def _fetch_(self, model: Model, **kwargs):
         """
-        Filter a Model using a WHERE condition.
+        Returns one Row using Model.
         """
+        try:
+            table = f"{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        fields = model.columns()
+        _filter = {}
+        for name, field in fields.items():
+            if name in kwargs:
+                try:
+                    val = kwargs[name]
+                except AttributeError:
+                    continue
+                ## getting the value of column:
+                datatype = field.type
+                value = Entity.toSQL(val, datatype)
+                _filter[name] = value
+        condition = self._where(fields, **_filter)
+        _get = f"SELECT * FROM {table} {condition}"
+        try:
+            cursor = await self._connection.execute(_get)
+            result = await cursor.fetchone()
+            return result
+        except Exception as e:
+            raise ProviderError(
+                f"Error: Model Fetch over {table}: {e}"
+            ) from e
 
     async def _filter_(self, model: Model, *args, **kwargs):
         """
         Filter a Model using Fields.
         """
+        try:
+            table = f"{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        fields = model.columns(model)
+        _filter = {}
+        if args:
+            columns = ','.join(args)
+        else:
+            columns = '*'
+        for name, field in fields.items():
+            if name in kwargs:
+                try:
+                    val = kwargs[name]
+                except AttributeError:
+                    continue
+                ## getting the value of column:
+                datatype = field.type
+                value = Entity.toSQL(val, datatype)
+                _filter[name] = value
+        condition = self._where(fields, **_filter)
+        _get = f"SELECT {columns} FROM {table} {condition}"
+        try:
+            cursor = await self._connection.execute(_get)
+            result = await cursor.fetchall()
+            return result
+        except Exception as e:
+            raise ProviderError(
+                f"Error: Model GET over {table}: {e}"
+            ) from e
 
-    async def _select_(self, model: Model, *args, **kwargs):
+    async def _select_(self, *args, **kwargs):
         """
         Get a query from Model.
         """
+        try:
+            model = kwargs['model']
+        except KeyError as e:
+            raise ProviderError(
+                f'Missing Model for SELECT {kwargs!s}'
+            ) from e
+        try:
+            table = f"{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        if args:
+            condition = '{}'.join(args)
+        else:
+            condition = None
+        if 'fields' in kwargs:
+            columns = ','.join(kwargs['fields'])
+        else:
+            columns = '*'
+        _get = f"SELECT {columns} FROM {table} {condition}"
+        try:
+            cursor = await self._connection.execute(_get)
+            result = await cursor.fetchall()
+            return result
+        except Exception as e:
+            raise ProviderError(
+                f"Error: Model SELECT over {table}: {e}"
+            ) from e
 
     async def _get_(self, model: Model, *args, **kwargs):
         """
         Get one row from model.
         """
+        try:
+            table = f"{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        fields = model.columns(model)
+        _filter = {}
+        if args:
+            columns = ','.join(args)
+        else:
+            columns = '*'
+        for name, field in fields.items():
+            if name in kwargs:
+                try:
+                    val = kwargs[name]
+                except AttributeError:
+                    continue
+                ## getting the value of column:
+                datatype = field.type
+                value = Entity.toSQL(val, datatype)
+                _filter[name] = value
+        condition = self._where(fields, **_filter)
+        _get = f"SELECT {columns} FROM {table} {condition}"
+        try:
+            cursor = await self._connection.execute(_get)
+            result = await cursor.fetchone()
+            return result
+        except Exception as e:
+            raise ProviderError(
+                f"Error: Model GET over {table}: {e}"
+            ) from e
 
     async def _all_(self, model: Model, *args, **kwargs):
         """

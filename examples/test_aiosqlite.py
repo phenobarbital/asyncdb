@@ -38,8 +38,11 @@ async def test_model(db):
         result.city = 'Madrid'
         result = await result.update()
         print('UPDATE: ', result)
+        # test get (returns other row replacing current)
+        madrid = await result.fetch(city='Madrid')
+        print('MADRID IS: ', madrid)
         # test Delete:
-        result = await result.delete()
+        result = await madrid.delete()
         print('DELETE: ', result)
         # test Upsert (insert or update)
         data = [
@@ -60,8 +63,20 @@ async def test_model(db):
         for airport in airports:
             print(airport)
         # test query (get one)
+        print('= Test One: = ')
+        paris = await Airport.get(city='Paris')
+        print('Paris: ', paris)
         # test query (get many)
-
+        print(' == Test Many ==')
+        moscow = await Airport.filter(city='Moscow')
+        for airport in moscow:
+            print(airport)
+        # test query SELECT
+        print('== Test Query SELECT =')
+        us = await Airport.select("WHERE country = 'United States'")
+        for airport in us:
+            print(airport)
+        # at end: bulk insert, bulk update and bulk remove
 
 async def connect(db):
     async with await db.connection() as conn:

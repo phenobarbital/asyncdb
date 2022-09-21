@@ -216,86 +216,35 @@ class Model(BaseModel):
         """
         if not self.Meta.connection:
             self.get_connection()
-        async with await self.Meta.connection.connection() as conn:
-            try:
-                result = await self.Meta.connection.model_get(
-                    model=self, fields=self.columns(), **kwargs
+        if not self.Meta.connection.is_connected():
+            await self.Meta.connection.connection()
+        try:
+            result = await self.Meta.connection._fetch_(
+                model=self,
+                **kwargs
+            )
+            if result:
+                for f, val in result.items():
+                    setattr(self, f, val)
+                return self
+            else:
+                raise NoDataFound(
+                    f"{self.Meta.name}: Data Not found"
                 )
-                if result:
-                    return self.__class__(**dict(result))
-                else:
-                    raise NoDataFound(
-                        "{} object with condition {} Not Found!".format(
-                            self.Meta.name, kwargs
-                        )
-                    )
-            except NoDataFound:
-                raise
-            except (StatementError, ProviderError):
-                raise
-            except AttributeError as err:
-                raise Exception(
-                    "Error on get {}: {}".format(self.Meta.name, err))
-            except Exception as err:
-                logging.debug(traceback.format_exc())
-                raise Exception(
-                    "Error on get {}: {}".format(self.Meta.name, err))
+        except NoDataFound:
+            raise
+        except (AttributeError, StatementError) as err:
+            raise StatementError(
+                f"Error on Attribute {self.Meta.name}: {err}"
+            ) from err
+        except ProviderError:
+            raise
+        except Exception as err:
+            logging.debug(traceback.format_exc())
+            raise Exception(
+                f"Error on get {self.Meta.name}: {err}"
+            ) from err
 
-    # get = fetch
-
-    async def select(self, **kwargs):
-        """
-        Need to return a ***collection*** of nested DataClasses
-        """
-        if not self.Meta.connection:
-            self.get_connection()
-        async with await self.Meta.connection.connection() as conn:
-            try:
-                result = await self.Meta.connection.model_select(
-                    model=self, fields=self.columns(), **kwargs
-                )
-                if result:
-                    return [self.__class__(**dict(r)) for r in result]
-                else:
-                    raise NoDataFound(
-                        "No Data on {} with condition {}".format(
-                            self.Meta.name, kwargs)
-                    )
-            except NoDataFound:
-                raise
-            except (StatementError, ProviderError):
-                raise
-            except Exception as err:
-                logging.debug(traceback.format_exc())
-                raise Exception(
-                    "Error on filter {}: {}".format(self.Meta.name, err))
-
-    async def fetch_all(self, **kwargs):
-        """
-        Need to return all rows as a ***collection*** of nested DataClasses
-        """
-        if not self.Meta.connection:
-            self.get_connection()
-        async with await self.Meta.connection.connection() as conn:
-            try:
-                result = await self.Meta.connection.model_all(
-                    model=self, fields=self.columns()
-                )
-                if result:
-                    return [self.__class__(**dict(r)) for r in result]
-                else:
-                    raise NoDataFound(
-                        f"No Data on {self.Meta.name} with condition {kwargs}"
-                    )
-            except NoDataFound:
-                raise
-            except (StatementError, ProviderError):
-                raise
-            except Exception as err:
-                logging.debug(traceback.format_exc())
-                raise Exception(
-                    f"Error on filter {self.Meta.name}: {err}"
-                )
 
 ### Class-based methods for Dataclasses.
     @classmethod
@@ -342,53 +291,92 @@ class Model(BaseModel):
                     f"Error Deleting Table {cls.Meta.name}: {err}"
                 )
 
-    @classmethod
-    async def _update(cls, _filter: Dict = None, **kwargs):
-        if not cls.Meta.connection:
-            cls.get_connection(cls)
-        async with await cls.Meta.connection.connection() as conn:
-            try:
-                result = await cls.Meta.connection.mdl_update(
-                    model=cls, _filter=_filter, **kwargs
-                )
-                if result:
-                    return [cls(**dict(r)) for r in result]
-                else:
-                    return []
-            except (StatementError, ProviderError):
-                raise
-            except Exception as err:
-                print(traceback.format_exc())
-                raise Exception(
-                    f"Error Updating Table {cls.Meta.name}: {err}"
-                )
+    # @classmethod
+    # async def _update(cls, _filter: Dict = None, **kwargs):
+    #     if not cls.Meta.connection:
+    #         cls.get_connection(cls)
+    #     async with await cls.Meta.connection.connection() as conn:
+    #         try:
+    #             result = await cls.Meta.connection.mdl_update(
+    #                 model=cls, _filter=_filter, **kwargs
+    #             )
+    #             if result:
+    #                 return [cls(**dict(r)) for r in result]
+    #             else:
+    #                 return []
+    #         except (StatementError, ProviderError):
+    #             raise
+    #         except Exception as err:
+    #             print(traceback.format_exc())
+    #             raise Exception(
+    #                 f"Error Updating Table {cls.Meta.name}: {err}"
+    #             )
+
 
     @classmethod
-    async def filter(cls, **kwargs):
+    async def select(cls, *args, **kwargs):
+        """Select.
+        passing a where condition directly to model.
+        :raises ProviderError, Exception
+        """
+        if not cls.Meta.connection:
+            raise ConnectionMissing(
+                f"Missing Connection for Model: {cls}"
+            )
+        result = []
+        try:
+            result = await cls.Meta.connection._select_(
+                model=cls, *args, **kwargs
+            )
+            if result:
+                return [cls(**dict(r)) for r in result]
+            else:
+                return []
+        except NoDataFound:
+            raise
+        except (AttributeError, StatementError) as err:
+            raise StatementError(
+                f"Error on Attribute {cls.Meta.name}: {err}"
+            ) from err
+        except ProviderError:
+            raise
+        except Exception as err:
+            logging.debug(traceback.format_exc())
+            raise Exception(
+                f"Error on Select {cls.Meta.name}: {err}"
+            ) from err
+
+    @classmethod
+    async def filter(cls, *args, **kwargs):
         """
         Need to return a ***collection*** of nested DataClasses
         """
         if not cls.Meta.connection:
-            cls.get_connection(cls)
-        async with await cls.Meta.connection.connection() as conn:
-            result = []
-            try:
-                result = await cls.Meta.connection.mdl_filter(
-                    model=cls, **kwargs
-                )
-                if result:
-                    return [cls(**dict(r)) for r in result]
-                else:
-                    return []
-            except NoDataFound:
-                raise
-            except (StatementError, ProviderError):
-                raise
-            except Exception as err:
-                logging.debug(traceback.format_exc())
-                raise Exception(
-                    f"Error on filter {cls.Meta.name}: {err}"
-                )
+            raise ConnectionMissing(
+                f"Missing Connection for Model: {cls}"
+            )
+        result = []
+        try:
+            result = await cls.Meta.connection._filter_(
+                model=cls, *args, **kwargs
+            )
+            if result:
+                return [cls(**dict(r)) for r in result]
+            else:
+                return []
+        except NoDataFound:
+            raise
+        except (AttributeError, StatementError) as err:
+            raise StatementError(
+                f"Error on Attribute {cls.Meta.name}: {err}"
+            ) from err
+        except ProviderError:
+            raise
+        except Exception as err:
+            logging.debug(traceback.format_exc())
+            raise Exception(
+                f"Error on filter {cls.Meta.name}: {err}"
+            ) from err
 
     @classmethod
     async def get(cls, **kwargs):
@@ -396,29 +384,36 @@ class Model(BaseModel):
         Return a new single record based on filter criteria
         """
         if not cls.Meta.connection:
-            cls.get_connection(cls)
-        async with await cls.Meta.connection.connection() as conn:
-            try:
-                result = await cls.Meta.connection.mdl_get(model=cls, **kwargs)
-                if result:
-                    return cls(**dict(result))
-                else:
-                    raise NoDataFound(
-                        message=f"Data not found over {cls.Meta.name!s}")
-            except NoDataFound:
+            raise ConnectionMissing(
+                f"Missing Connection for Model: {cls}"
+            )
+        try:
+            result = await cls.Meta.connection._get_(
+                model=cls, **kwargs
+            )
+            if result:
+                return cls(**dict(result))
+            else:
                 raise NoDataFound(
-                    message=f"Data not found over {cls.Meta.name!s}")
-            except AttributeError as err:
-                raise Exception(
-                    f"Error on get {cls.Meta.name}: {err}"
+                    message=f"Data not found over {cls.Meta.name!s}"
                 )
-            except (StatementError, ProviderError):
-                raise
-            except Exception as err:
-                print(traceback.format_exc())
-                raise Exception(
-                    f"Error on get {cls.Meta.name}: {err}"
-                )
+        except NoDataFound as e:
+            raise NoDataFound(
+                message=f"Data not found over {cls.Meta.name!s}"
+            ) from e
+        except AttributeError as err:
+            raise StatementError(
+                f"Error on Attribute {cls.Meta.name}: {err}"
+            ) from err
+        except (StatementError, ProviderError) as err:
+            raise ProviderError(
+                f"Error on get {cls.Meta.name}: {err}"
+            ) from err
+        except Exception as err:
+            print(traceback.format_exc())
+            raise Exception(
+                f"Error on get {cls.Meta.name}: {err}"
+            ) from err
 
     # get all data of a model
     @classmethod
@@ -448,7 +443,7 @@ class Model(BaseModel):
         name: str,
         schema: str = "public",
         fields: list = None,
-        db: "ConnectionBackend" = None,
+        db: Awaitable = None,
     ):
         """
         Make Model.
