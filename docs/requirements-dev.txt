@@ -1,7 +1,7 @@
 aiounittest==1.4.2
 black==22.6.0
 codecov==2.1.12
-coverage[toml]==6.4.2
+coverage[toml]==6.4.4
 flit==3.7.1
 lint==1.2.1
 mypy==0.971
