@@ -122,7 +122,7 @@ setup(
             "objectpath==0.6.1",
         ],
         "rethinkdb": [
-            "rethinkdb==2.4.8",
+            "rethinkdb==2.4.9",
         ],
         "postgres": [
             "aiopg==1.3.3",
@@ -190,7 +190,7 @@ setup(
             "hiredis==2.0.0",
             "objectpath==0.6.1",
             "asyncpg==0.26.0",
-            "rethinkdb==2.4.8",
+            "rethinkdb==2.4.9",
             "aiopg==1.3.3",
             "psycopg2-binary>=2.9.1",
             "botocore==1.24.21",
