@@ -123,9 +123,9 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
                 self._initialized_on = time.time()
         except jpype.JException as ex:
             print(ex.stacktrace())
-            raise DriverError(
+            self._logger(
                 f"Driver {self._classname} Error: {ex}"
-            ) from ex
+            )
         except TypeError as e:
             raise DriverError(
                 f"Driver {self._classname} was not found: {e}"
