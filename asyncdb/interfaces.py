@@ -17,6 +17,8 @@ from typing import (
     Optional,
     Union
 )
+from functools import partial
+from concurrent.futures import ThreadPoolExecutor
 from datamodel.exceptions import ValidationError
 from .meta import Record, Recordset
 from .exceptions import (
@@ -33,6 +35,7 @@ class PoolBackend(ABC):
     """
     _provider: str = "base"
     _syntax: str = ''  # Used by QueryParser for parsing queries
+    _init_func: Optional[Callable] = None
 
     def __init__(
             self,
@@ -162,6 +165,7 @@ class ConnectionBackend(ABC):
     """
     _provider: str = "base"
     _syntax: str = ''  # Used by QueryParser for parsing queries
+    _init_func: Optional[Callable] = None # a function called when connection is made
 
     def __init__(
             self,
@@ -175,6 +179,7 @@ class ConnectionBackend(ABC):
         self._generated: datetime = None
         self._starttime: datetime = None
         self._pool = None
+        self._executor = None
         try:
             self._encoding = kwargs["encoding"]
         except KeyError:
@@ -191,8 +196,8 @@ class ConnectionBackend(ABC):
             self._loop = loop
         else:
             self._loop = asyncio.get_event_loop()
-        if self._loop.is_closed():
-            self._loop = asyncio.get_running_loop()
+        # if self._loop.is_closed():
+        #     self._loop = asyncio.get_running_loop()
         asyncio.set_event_loop(self._loop)
         # exception handler
         self._loop.set_exception_handler(
@@ -294,6 +299,24 @@ class ConnectionBackend(ABC):
             self._logger.exception(f'Closing Error: {err}')
             raise
 
+    def get_executor(self, max_workers: int = 2) -> Any:
+        return ThreadPoolExecutor(max_workers=max_workers)
+
+    async def _thread_func(self, fn, *args, executor: Any = None, **kwargs):
+        """_execute.
+
+        Returns a future to be executed into a Thread Pool.
+        """
+        loop = asyncio.get_event_loop()
+        func = partial(fn, *args, **kwargs)
+        if not executor:
+            executor = self._executor
+        try:
+            fut = loop.run_in_executor(executor, func)
+            return await fut
+        except Exception as e:
+            self._logger.exception(e, stack_info=True)
+            raise
 
 class ConnectionDSNBackend(ABC):
     """
@@ -474,7 +497,7 @@ class DatabaseBackend(ABC):
     async def fetch_one(
             self,
             sentence: str,
-            number: int = None
+            **kwargs
     ) -> Optional[dict]:
         """
         Fetch only one record, optional getting an offset using "number".
@@ -486,7 +509,7 @@ class DatabaseBackend(ABC):
         """
         Fetch the value of a Column in a record.
         """
-        row = await self.fetch_one(sentence, number)
+        row = await self.fetch_many(sentence, number)
         return None if row is None else row[column]
 
 
@@ -787,7 +810,7 @@ class ModelBackend(ABC):
     def _where(self, fields: dict[Field], **where):
         """
         TODO: add conditions for BETWEEN, NOT NULL, NULL, etc
-        Re-think functionality for parsing where conditions.
+           Re-think functionality for parsing where conditions.
         """
         result = ""
         if not fields:

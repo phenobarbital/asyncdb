@@ -13,14 +13,29 @@ class Airport(Model):
 
 async def test_model(driver):
     cPrint('Testing Model')
+    async with await driver.connect() as conn:
+        print(f'Is Connected: {conn.is_connected()}')
+    await driver.close()
 
 async def test_connect(driver):
     cPrint('Testing Connection')
     async with await driver.connect() as conn:
         print(f'Is Connected: {conn.is_connected()}')
-
-async def test_data(driver):
-    cPrint('Testing Data Management')
+        result, error = await conn.test_connection()
+        print(result, error)
+        users = "SELECT * FROM users;"
+        result, error = await conn.query(users)
+        if error:
+            print('ERROR: ', error)
+        else:
+            for user in result:
+                print(user)
+        # fetch One:
+        jesus = "SELECT * FROM users where firstname='Jesus' and lastname = 'Lara'"
+        cPrint('Getting only one Row', level='DEBUG')
+        result, error = await conn.queryrow(jesus)
+        print(result)
+    await driver.close()
 
 sqlserver = {
     "driver": "sqlserver",
@@ -46,7 +61,7 @@ postgresql = {
     "port": 5432,
     "database": "navigator_dev",
     "jar": [
-            ABS_PATH.joinpath('bin', 'jar', 'postgresql-42.5.0.jar'),
+        ABS_PATH.joinpath('bin', 'jar', 'postgresql-42.5.0.jar'),
     ]
 }
 
@@ -58,7 +73,7 @@ mysql = {
     "port": 3306,
     "database": "navigator_dev",
     "jar": [
-            ABS_PATH.joinpath('bin', 'jar', 'mysql-connector-java-8.0.30.jar'),
+        ABS_PATH.joinpath('bin', 'jar', 'mysql-connector-java-8.0.30.jar'),
     ]
 }
 
@@ -70,7 +85,7 @@ cassandra = {
     "password": 'cassandra',
     "database": 'navigator',
     "jar": [
-            ABS_PATH.joinpath('bin', 'jar', 'CassandraJDBC4.jar'),
+        ABS_PATH.joinpath('bin', 'jar', 'CassandraJDBC4.jar'),
     ]
 }
 
@@ -82,14 +97,17 @@ oracle = {
     "password": 'oracle',
     "database": 'xe',
     "jar": [
-            ABS_PATH.joinpath('bin', 'jar', 'ojdbc8.jar'),
+        ABS_PATH.joinpath('bin', 'jar', 'ojdbc8.jar'),
     ]
 }
 
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    driver = AsyncDB("jdbc", params=cassandra, loop=loop)
-    asyncio.run(test_connect(driver))
-    asyncio.run(test_data(driver))
-    asyncio.run(test_model(driver))
+    try:
+        driver = AsyncDB("jdbc", params=postgresql, loop=loop)
+        loop.run_until_complete(test_connect(driver))
+        # loop.run_until_complete(test_data(driver))
+        # asyncio.run(test_model(driver))
+    finally:
+        loop.close()

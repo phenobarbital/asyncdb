@@ -6,13 +6,15 @@ from typing import (
     Any
 )
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import PurePath
+from functools import partial
 import jaydebeapi
 import jpype
 from asyncdb.exceptions import (
     DriverError,
-    ProviderError
+    ProviderError,
+    NoDataFound
 )
 from asyncdb import ABS_PATH
 from asyncdb.models import Model
@@ -91,6 +93,17 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         "Ignoring prepared sentences on JDBC"
         raise NotImplementedError()  # pragma: no cover
 
+    def start_jvm(self):
+        if jpype.isJVMStarted():
+            return
+        jpype.startJVM(jpype.getDefaultJVMPath(), interrupt=False)
+        # jpype.startJVM(classpath=str(
+        #     ABS_PATH.joinpath('bin', 'jar')),
+        #     interrupt=False,
+        #     ignoreUnrecognized=True,
+        #     convertStrings=True
+        # )
+
     async def connection(self):
         """connection.
 
@@ -99,28 +112,33 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         self._connection = None
         self._connected = False
         try:
-            if jpype.isJVMStarted() and not jpype.isThreadAttachedToJVM():
-                jpype.attachThreadToJVM()
-                jpype.java.lang.Thread.currentThread().setContextClassLoader(
-                    jpype.java.lang.ClassLoader.getSystemClassLoader()
-                )
+            # self.start_jvm()
+            # if jpype.isJVMStarted() and not jpype.isThreadAttachedToJVM():
+            #     jpype.attachThreadToJVM()
+            #     jpype.java.lang.Thread.currentThread().setContextClassLoader(
+            #         jpype.java.lang.ClassLoader.getSystemClassLoader()
+            #     )
             if 'options' in self._params:
                 options = ";".join({f'{k}={v}' for k,v in self._params['options'].items()})
                 self._dsn = f"{self._dsn};{options}"
             user = self._params['user']
             password = self._params ['password']
-            self._connection = jaydebeapi.connect(
-                self._classname,
-                self._dsn,
+            # print(self._classname, self._dsn, self._file_jar)
+            self._executor = self.get_executor(max_workers=10)
+            self._connection = await self._thread_func(
+                jaydebeapi.connect, self._classname, self._dsn,
                 driver_args=[user,password],
-                jars=self._file_jar
-            )
-            print(
-                f'{self._provider}: Connected at {self._params["driver"]}:{self._params["host"]}'
+                jars=self._file_jar,
+                executor=self._executor
             )
             if self._connection:
+                print(
+                    f'{self._provider}: Connected at {self._params["driver"]}:{self._params["host"]}'
+                )
                 self._connected = True
                 self._initialized_on = time.time()
+                if self._init_func is not None and callable(self._init_func):
+                    await self._init_func(self._connection)
         except jpype.JException as ex:
             print(ex.stacktrace())
             self._logger(
@@ -141,8 +159,17 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
 
     async def close(self, timeout: int = 10) -> None:
         try:
-            self._connection.close()
+            if self._connection:
+                close = self._thread_func(self._connection.close)
+                await asyncio.wait_for(close, timeout)
+                print(
+                    f'{self._provider}: Closed connection to {self._params["driver"]}:{self._params["host"]}'
+                )
+            self._connected = False
+            self._connection = None
+            # jpype.shutdownJVM()
         except Exception as e:
+            print(e)
             self._logger.exception(e, stack_info=True)
             raise ProviderError(
                 f"JDBC Closing Error: {e!s}"
@@ -150,33 +177,222 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
 
     disconnect = close
 
-    async def get_columns(self):
-        return {"id": "value"}
+    def get_columns(self):
+        return self._columns
 
-    async def query(self, sentence="", **kwargs):
+    async def _query(self, sentence, cursor: Any, fetch: Any, *args, **kwargs) -> Iterable:
+        loop = asyncio.get_event_loop()
+        def _execute(sentence, cursor, fetch, *args, **kwargs):
+            cursor.execute(sentence, *args, **kwargs)
+            self._columns = tuple([d[0] for d in cursor.description])
+            return fetch()
+        func = partial(_execute, sentence, cursor, fetch, *args, **kwargs)
+        try:
+            fut = loop.run_in_executor(self._executor, func)
+            return await fut
+        except Exception as e:
+            self._logger.exception(e, stack_info=True)
+            raise
+
+    async def _execute(self, sentence, cursor: Any, *args, **kwargs) -> Iterable:
+        loop = asyncio.get_event_loop()
+        def _execute(sentence, cursor, *args, **kwargs):
+            cursor.execute(sentence, *args, **kwargs)
+            self._connection.commit()
+            return self.rowcount
+        func = partial(_execute, sentence, cursor, *args, **kwargs)
+        try:
+            fut = loop.run_in_executor(self._executor, func)
+            return await fut
+        except Exception as e:
+            self._logger.exception(e, stack_info=True)
+            raise
+
+    async def query(self, sentence: str, **kwargs):
         error = None
-        print(f"Running Query: {sentence}")
-        result = [{'col1': [1, 2], 'col2': [3, 4], 'col3': [5, 6]}]
-        return await self._serializer(result, error)
+        cursor = None
+        await self.valid_operation(sentence)
+        try:
+            cursor = await self._thread_func(
+                self._connection.cursor
+            )
+            rows = await self._query(
+                    sentence, cursor, cursor.fetchall, **kwargs
+            )
+            self._result = [dict(zip(self._columns, row)) for row in rows]
+            if not self._result:
+                return (None, NoDataFound())
+            return await self._serializer(self._result, error)
+        except Exception as err:
+            error = f"JDBC Error on Query: {err}"
+            raise ProviderError(
+                message=error
+            ) from err
+        finally:
+            try:
+                cursor.close()
+            except (ValueError, TypeError, RuntimeError) as err:
+                self._logger.exception(err)
 
-    fetch_all = query
+    async def fetch_all(self, sentence: str, **kwargs) -> Iterable:
+        cursor = None
+        result = None
+        await self.valid_operation(sentence)
+        try:
+            cursor = await self._thread_func(
+                self._connection.cursor
+            )
+            result = await self._query(
+                    sentence, cursor, cursor.fetchall, **kwargs
+            )
+            if not result:
+                return NoDataFound()
+            return [dict(zip(self._columns, row)) for row in result]
+        except Exception as err:
+            raise ProviderError(
+                message=f"JDBC Error on Query: {err}"
+            ) from err
+        finally:
+            try:
+                cursor.close()
+            except (ValueError, TypeError, RuntimeError) as err:
+                self._logger.exception(err)
 
-    async def execute(self, sentence: str, *args, **kwargs):
-        print(f"Execute Query {sentence}")
-        data = []
+    async def queryrow(self, sentence: str, **kwargs):
         error = None
-        result = [data, error]
-        return await self._serializer(result, error)
+        cursor = None
+        await self.valid_operation(sentence)
+        try:
+            cursor = await self._thread_func(
+                self._connection.cursor
+            )
+            row = await self._query(
+                    sentence, cursor, cursor.fetchone, **kwargs
+            )
+            self._result = dict(zip(self._columns, row))
+            if not self._result:
+                return (None, NoDataFound())
+            return await self._serializer(self._result, error)
+        except Exception as err:
+            error = f"JDBC Error on Query: {err}"
+            raise ProviderError(
+                message=error
+            ) from err
+        finally:
+            try:
+                cursor.close()
+            except (ValueError, TypeError, RuntimeError) as err:
+                print(err)
+                self._logger.exception(err)
 
-    execute_many = execute
-
-    async def queryrow(self, sentence=""):
+    async def fetch_one(self, sentence: str, **kwargs) -> Iterable[Any]:
         error = None
-        print(f"Running Row {sentence}")
-        result = {'col1': [1, 2], 'col2': [3, 4], 'col3': [5, 6]}
-        return await self._serializer(result, error)
+        cursor = None
+        result = None
+        await self.valid_operation(sentence)
+        try:
+            cursor = await self._thread_func(
+                self._connection.cursor
+            )
+            row = await self._query(
+                    sentence, cursor, cursor.fetchone, **kwargs
+            )
+            result = dict(zip(self._columns, row))
+            if not result:
+                return NoDataFound()
+            return result
+        except Exception as err:
+            error = f"JDBC Error on Query: {err}"
+            raise ProviderError(
+                message=error
+            ) from err
+        finally:
+            try:
+                cursor.close()
+            except (ValueError, TypeError, RuntimeError) as err:
+                self._logger.exception(err)
 
-    fetch_one = queryrow
+    async def fetch_many(self, sentence: str, size: int = None, **kwargs) -> Iterable[Any]:
+        error = None
+        cursor = None
+        result = None
+        await self.valid_operation(sentence)
+        try:
+            cursor = await self._thread_func(
+                self._connection.cursor
+            )
+            rows = await self._query(
+                    sentence, cursor, cursor.fetchmany, size=size, **kwargs
+            )
+            result = [dict(zip(self._columns, row)) for row in rows]
+            if not result:
+                return NoDataFound()
+            return result
+        except Exception as err:
+            error = f"JDBC Error on Query: {err}"
+            raise ProviderError(
+                message=error
+            ) from err
+        finally:
+            try:
+                cursor.close()
+            except (ValueError, TypeError, RuntimeError) as err:
+                self._logger.exception(err)
+
+    async def execute(self, sentence: str, *args, **kwargs) -> Union[None, Sequence]:
+        cursor = None
+        result = None
+        await self.valid_operation(sentence)
+        try:
+            cursor = await self._thread_func(
+                self._connection.cursor
+            )
+            result = await self._execute(
+                    sentence, cursor, *args, **kwargs
+            )
+            return result
+        except Exception as err:
+            raise ProviderError(
+                message=f"JDBC Error on Execute: {err}"
+            ) from err
+        finally:
+            try:
+                cursor.close()
+            except (ValueError, TypeError, RuntimeError) as err:
+                self._logger.exception(err)
+
+    async def execute_many(self, sentence: Union[str, list], *args, **kwargs) -> Union[None, Sequence]:
+        cursor = None
+        result = None
+        await self.valid_operation(sentence)
+        try:
+            cursor = await self._thread_func(
+                self._connection.cursor
+            )
+            if isinstance(sentence, list):
+                results = []
+                for st in sentence:
+                    result = await self._execute(
+                        st, cursor, *args, **kwargs
+                    )
+                    results.append(st)
+                return results
+            else:
+                result = await self._execute(
+                        sentence, cursor, *args, **kwargs
+                    )
+                return result
+        except Exception as err:
+            raise ProviderError(
+                message=f"JDBC Error on Execute: {err}"
+            ) from err
+        finally:
+            try:
+                cursor.close()
+            except (ValueError, TypeError, RuntimeError) as err:
+                self._logger.exception(err)
+
+    executemany = execute_many
 
     def tables(self, schema: str = "") -> Iterable[Any]:
         raise NotImplementedError()  # pragma: no cover
