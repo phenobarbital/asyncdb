@@ -155,6 +155,9 @@ setup(
             "aioodbc==0.3.3",
             "pyodbc==4.0.30",
         ],
+        "jdbc": [
+            "JayDeBeApi==1.2.3"
+        ],
         "sqlalchemy": [
             "sqlalchemy==1.4.41",
         ],
@@ -200,6 +203,7 @@ setup(
             "influxdb==5.3.1",
             "influxdb-client==1.31.0",
             "aioodbc==0.3.3",
+            "JayDeBeApi==1.2.3",
             "pyodbc==4.0.34",
             "sqlalchemy==1.4.41",
             "elasticsearch[async]==8.4.2",

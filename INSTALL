@@ -2,3 +2,8 @@ gcc python3.9-dev python3.9-venv libmemcached-dev zlib1g-dev build-essential lib
 sudo apt install python3-cassandra
 # For MySQL is required:
 sudo apt-get install python3-dev default-libmysqlclient-dev build-essential
+###  For JDBC is required:
+sudo apt install openjdk-17-jre java-package
+# adding the keys certs
+export JAVA_HOME=/usr/lib/jvm/default-java
+keytool -list -trustcacerts -keystore "$JAVA_HOME/lib/security/cacerts"
