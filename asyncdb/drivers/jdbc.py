@@ -1,42 +1,28 @@
-#!/usr/bin/env python3
-import time
+"""Dummy Driver.
+"""
 import asyncio
 from typing import (
-    Any,
-    Optional,
-    Union
+    Union,
+    Any
 )
-from collections.abc import Sequence, Iterable
-import aiosqlite
+import time
+from collections.abc import Iterable
+from pathlib import PurePath
+import jaydebeapi
+import jpype
 from asyncdb.exceptions import (
-    NoDataFound,
+    DriverError,
     ProviderError
 )
-from asyncdb.interfaces import DBCursorBackend, ModelBackend
+from asyncdb import ABS_PATH
 from asyncdb.models import Model
 from asyncdb.utils.types import Entity
-from .sql import SQLDriver, SQLCursor
+from asyncdb.interfaces import DatabaseBackend, ModelBackend
+from .sql import SQLDriver
 
-
-
-class sqliteCursor(SQLCursor):
-    """
-    Cursor Object for SQLite.
-    """
-    _provider: "sqlite"
-    _connection: aiosqlite.Connection = None
-
-    async def __aenter__(self) -> "sqliteCursor":
-        self._cursor = await self._connection.execute(
-            self._sentence, self._params
-        )
-        return self
-
-
-class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
-    _provider: str = 'sqlite'
-    _syntax: str = 'sql'
-    _dsn: str = "{database}"
+class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
+    _provider = "JDBC"
+    _syntax = "sql"
 
     def __init__(
             self,
@@ -45,259 +31,152 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             params: dict = None,
             **kwargs
     ) -> None:
+        self._test_query = "SELECT 1"
+        self._file_jar, self._classname = self.get_classdriver(params)
         SQLDriver.__init__(self, dsn, loop, params, **kwargs)
-        DBCursorBackend.__init__(self)
+        DatabaseBackend.__init__(self)
+
+
+    def get_classdriver(self, params):
+        driver = params['driver']
+        if driver == 'sqlserver':
+            classdriver = "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+            self._dsn = 'jdbc:{driver}://{host}:{port};DatabaseName={database}'
+        elif driver == 'postgresql':
+            classdriver = "org.postgresql.Driver"
+            self._dsn = 'jdbc:{driver}://{host}:{port}/{database}'
+        elif driver == 'sybase':
+            classdriver = "com.sybase.jdbc4.jdbc.SybDriver"
+            self._dsn = 'jdbc:{driver}://{host}:{port}/{database}'
+        elif driver == 'mysql':
+            classdriver = "com.mysql.cj.jdbc.Driver"
+            self._dsn = 'jdbc:{driver}://{host}:{port}/{database}'
+        elif driver == 'oracle':
+            classdriver = "oracle.jdbc.driver.OracleDriver"
+            self._dsn = 'jdbc:oracle:thin:{user}/{password}@//{host}:{port}/{database}'
+        elif driver == 'azure':
+            classdriver = "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+            self._dsn = 'jdbc:sqlserver://{host}:{port};database={database};encrypt=true;trustServerCertificate=true;hostNameInCertificate=*.database.windows.net;loginTimeout=30;Authentication=ActiveDirectoryIntegrated'
+            msal = ABS_PATH.joinpath('bin', 'jar', 'msal4j-1.11.1.jar')
+            params['jar'].append(msal)
+        elif driver == 'cassandra':
+            classdriver = "com.simba.cassandra.jdbc4.Driver"
+            self._dsn = 'jdbc:cassandra://{host}:{port}/{database}'
+        else:
+            self._dsn = 'jdbc:{driver}://{host}:{port}/{database}'
+            try:
+                classdriver = params['class']
+            except KeyError as e:
+                raise DriverError(
+                    f'JDBC Error: a class Driver need to be declared for {self._dsn}'
+                ) from e
+        # checking for JAR file
+        file = params['jar']
+        files = []
+        if isinstance(file, (str, PurePath)):
+            file = [file]
+        elif not isinstance(file, list):
+            raise ValueError(
+                f"Invalid type of Jar Filenames: {file}"
+            )
+        for f in file:
+            if not f.exists():
+                raise DriverError(
+                    f"JDBC: Invalid or missing binary JDBC driver: {f}"
+                )
+            files.append(str(f))
+        return (files, classdriver)
 
     async def prepare(self, sentence: Union[str, list]) -> Any:
-        "Ignoring prepared sentences on SQLite"
+        "Ignoring prepared sentences on JDBC"
         raise NotImplementedError()  # pragma: no cover
 
-    async def __aenter__(self) -> Any:
-        if not self._connection:
-            await self.connection()
-        return self
+    async def connection(self):
+        """connection.
 
-    async def connection(self, **kwargs):
-        """
-        Get a connection
+        Get a JDBC connection.
         """
         self._connection = None
         self._connected = False
         try:
-            self._connection = await aiosqlite.connect(
-                database=self._dsn, **kwargs
+            if jpype.isJVMStarted() and not jpype.isThreadAttachedToJVM():
+                jpype.attachThreadToJVM()
+                jpype.java.lang.Thread.currentThread().setContextClassLoader(
+                    jpype.java.lang.ClassLoader.getSystemClassLoader()
+                )
+            if 'options' in self._params:
+                options = ";".join({f'{k}={v}' for k,v in self._params['options'].items()})
+                self._dsn = f"{self._dsn};{options}"
+            user = self._params['user']
+            password = self._params ['password']
+            self._connection = jaydebeapi.connect(
+                self._classname,
+                self._dsn,
+                driver_args=[user,password],
+                jars=self._file_jar
+            )
+            print(
+                f'{self._provider}: Connected at {self._params["driver"]}:{self._params["host"]}'
             )
             if self._connection:
-                # if callable(self.init_func):
-                #     try:
-                #         await self.init_func(
-                #             self._connection
-                #         )
-                #     except RuntimeError as err:
-                #         self._logger.exception(
-                #             f"Error on Init Connection: {err!s}"
-                #         )
                 self._connected = True
                 self._initialized_on = time.time()
-            return self
-        except aiosqlite.OperationalError as e:
-            raise ProviderError(
-                f"Unable to Open Database: {self._dsn}, {e}"
-            ) from e
-        except aiosqlite.DatabaseError as e:
-            raise ProviderError(
-                f"Database Connection Error: {e!s}"
-            ) from e
-        except aiosqlite.Error as e:
-            raise ProviderError(
-                f"SQLite Internal Error: {e!s}"
+        except jpype.JException as ex:
+            print(ex.stacktrace())
+            raise DriverError(
+                f"Driver {self._classname} Error: {ex}"
+            ) from ex
+        except TypeError as e:
+            raise DriverError(
+                f"Driver {self._classname} was not found: {e}"
             ) from e
         except Exception as e:
             self._logger.exception(e, stack_info=True)
             raise ProviderError(
-                f"SQLite Unknown Error: {e!s}"
+                f"JDBC Unknown Error: {e!s}"
             ) from e
+        return self
 
     connect = connection
 
-    async def valid_operation(self, sentence: Any):
-        await super(sqlite, self).valid_operation(sentence)
-        if self._row_format == 'iterable':
-            # converting to a dictionary
-            self._connection.row_factory = lambda c, r: dict(
-                zip([col[0] for col in c.description], r)
-            )
-        else:
-            self._connection.row_factory = None
-
-    async def query(self, sentence: Any, **kwargs) -> Any:
-        """
-        Getting a Query from Database
-        """
-        error = None
-        cursor = None
-        await self.valid_operation(sentence)
+    async def close(self, timeout: int = 10) -> None:
         try:
-            cursor = await self._connection.execute(sentence, parameters=kwargs)
-            self._result = await cursor.fetchall()
-            if not self._result:
-                return (None, NoDataFound())
-        except Exception as err:
-            error = f"SQLite Error on Query: {err}"
-            raise ProviderError(
-                message=error
-            ) from err
-        finally:
-            try:
-                await cursor.close()
-            except (ValueError, TypeError, RuntimeError) as err:
-                self._logger.exception(err)
-            return await self._serializer(self._result, error)
-
-    async def queryrow(self, sentence: Any = None) -> Iterable[Any]:
-        """
-        Getting a single Row from Database
-        """
-        error = None
-        cursor = None
-        await self.valid_operation(sentence)
-        try:
-            self._connection.row_factory = lambda c, r: dict(
-                zip([col[0] for col in c.description], r)
-            )
-            cursor = await self._connection.execute(sentence)
-            self._result = await cursor.fetchone()
-            if not self._result:
-                return (None, NoDataFound())
+            self._connection.close()
         except Exception as e:
-            error = f"Error on Query: {e}"
+            self._logger.exception(e, stack_info=True)
             raise ProviderError(
-                message=error
+                f"JDBC Closing Error: {e!s}"
             ) from e
-        finally:
-            try:
-                await cursor.close()
-            except (ValueError, TypeError, RuntimeError) as err:
-                self._logger.exception(err)
-            return await self._serializer(self._result, error)
 
-    async def fetch_all(self, sentence: str, **kwargs) -> Sequence:
-        """
-        Alias for Query, but without error Support.
-        """
-        cursor = None
-        await self.valid_operation(sentence)
-        try:
-            cursor = await self._connection.execute(sentence, parameters=kwargs)
-            self._result = await cursor.fetchall()
-            if not self._result:
-                raise NoDataFound(
-                    "SQLite Fetch All: Data Not Found"
-                )
-        except Exception as e:
-            error = f"Error on Fetch: {e}"
-            raise ProviderError(
-                message=error
-            ) from e
-        finally:
-            try:
-                await cursor.close()
-            except (ValueError, TypeError, RuntimeError) as err:
-                self._logger.exception(err)
-            return self._result
+    disconnect = close
 
-    # alias to be compatible with aiosqlite methods.
-    fetchall = fetch_all
+    async def get_columns(self):
+        return {"id": "value"}
 
-    async def fetch_many(self, sentence: str, size: int = None):
-        """
-        Aliases for query, without error support
-        """
-        await self.valid_operation(sentence)
-        cursor = None
-        try:
-            cursor = await self._connection.execute(sentence)
-            self._result = await cursor.fetchmany(size)
-            if not self._result:
-                raise NoDataFound()
-        except Exception as err:
-            error = "Error on Query: {err}"
-            raise ProviderError(
-                message=error
-            ) from err
-        finally:
-            try:
-                await cursor.close()
-            except (ValueError, TypeError, RuntimeError) as err:
-                self._logger.exception(err)
-            return self._result
-
-    fetchmany = fetch_many
-
-    async def fetch_one(
-            self,
-            sentence: str,
-            number: int = None
-    ) -> Optional[dict]:
-        """
-        aliases for queryrow, but without error support
-        """
-        await self.valid_operation(sentence)
-        cursor = None
-        try:
-            cursor = await self._connection.execute(sentence)
-            self._result = await cursor.fetchone()
-            if not self._result:
-                raise NoDataFound()
-        except Exception as err:
-            error = "Error on Query: {err}"
-            raise ProviderError(
-                message=error
-            ) from err
-        finally:
-            try:
-                await cursor.close()
-            except (ValueError, TypeError, RuntimeError) as err:
-                self._logger.exception(err)
-            return self._result
-
-    fetchone = fetch_one
-    fetchrow = fetch_one
-
-    async def execute(self, sentence: Any, *args, **kwargs) -> Optional[Any]:
-        """Execute a transaction
-        get a SQL sentence and execute
-        returns: results of the execution
-        """
+    async def query(self, sentence="", **kwargs):
         error = None
-        result = None
-        await self.valid_operation(sentence)
-        try:
-            result = await self._connection.execute(sentence, parameters=kwargs)
-            if result:
-                await self._connection.commit()
-        except Exception as err:
-            error = "Error on Execute: {err}"
-            raise ProviderError(
-                message=error
-            ) from err
-        finally:
-            return (result, error)
+        print(f"Running Query: {sentence}")
+        result = [{'col1': [1, 2], 'col2': [3, 4], 'col3': [5, 6]}]
+        return await self._serializer(result, error)
 
-    async def execute_many(
-            self,
-            sentence: Union[str, list],
-            *args
-    ) -> Optional[Any]:
+    fetch_all = query
+
+    async def execute(self, sentence: str, *args, **kwargs):
+        print(f"Execute Query {sentence}")
+        data = []
         error = None
-        await self.valid_operation(sentence)
-        try:
-            result = await self._connection.executemany(sentence, *args)
-            if result:
-                await self._connection.commit()
-        except Exception as err:
-            error = "Error on Execute Many: {err}"
-            raise ProviderError(
-                message=error
-            ) from err
-        finally:
-            return (result, error)
+        result = [data, error]
+        return await self._serializer(result, error)
 
-    executemany = execute_many
+    execute_many = execute
 
-    async def fetch(
-                    self,
-                    sentence: str,
-                    parameters: Iterable[Any] = None
-            ) -> Iterable:
-        """Helper to create a cursor and execute the given query."""
-        await self.valid_operation(sentence)
-        if parameters is None:
-            parameters = []
-        result = await self._connection.execute(
-            sentence, parameters
-        )
-        return result
+    async def queryrow(self, sentence=""):
+        error = None
+        print(f"Running Row {sentence}")
+        result = {'col1': [1, 2], 'col2': [3, 4], 'col3': [5, 6]}
+        return await self._serializer(result, error)
+
+    fetch_one = queryrow
 
     def tables(self, schema: str = "") -> Iterable[Any]:
         raise NotImplementedError()  # pragma: no cover
@@ -309,67 +188,6 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
         raise NotImplementedError(
             'SQLite Error: There is no Database in SQLite'
         )
-
-    async def column_info(
-            self,
-            table: str,
-            **kwargs
-    ) -> Iterable[Any]:
-        """
-        Getting Column info from an existing Table in Provider.
-        """
-        try:
-            self._connection.row_factory = lambda c, r: dict(
-                zip([col[0] for col in c.description], r))
-            cursor = await self._connection.execute(
-                f'PRAGMA table_info({table});', parameters=kwargs
-            )
-            cols = await cursor.fetchall()
-            self._columns = []
-            for col in cols:
-                d = {
-                    "name": col['name'],
-                    "type": col['type']
-                }
-                self._columns.append(d)
-            if not self._columns:
-                raise NoDataFound()
-        except Exception as err:
-            error = "Error on Column Info: {err}"
-            raise ProviderError(
-                message=error
-            ) from err
-        finally:
-            return self._columns
-
-    async def create(
-        self,
-        obj: str = 'table',
-        name: str = '',
-        fields: Optional[list] = None
-    ) -> bool:
-        """
-        Create is a generic method for Database Objects Creation.
-        """
-        if obj == 'table':
-            sql = "CREATE TABLE {name} ({columns});"
-            columns = ", ".join(["{name} {type}".format(**e) for e in fields])
-            sql = sql.format(name=name, columns=columns)
-            try:
-                result = await self._connection.execute(sql)
-                if result:
-                    await self._connection.commit()
-                    return True
-                else:
-                    return False
-            except Exception as err:
-                raise ProviderError(
-                    f"Error in Object Creation: {err!s}"
-                ) from err
-        else:
-            raise RuntimeError(
-                f'SQLite: invalid Object type {object!s}'
-            )
 
 ## ModelBackend Methods
     async def _insert_(self, _model: Model, **kwargs):
