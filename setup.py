@@ -96,7 +96,7 @@ setup(
         "pylibmc==1.6.1",
         "redis==4.3.4",
         "aioredis==2.0.1",
-        "rethinkdb==2.4.8",
+        "rethinkdb==2.4.9",
         "lxml>=4.6.2",
         "pandas==1.5.0",
         "dask==2022.2.0",
