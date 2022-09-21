@@ -664,21 +664,21 @@ class ModelBackend(ABC):
     """
 
 # ## Class-based Methods.
-    async def _create_(self, model: Model, rows: list):
+    async def _create_(self, _model: Model, rows: list):
         """
         Create all records based on a dataset and return result.
         """
         try:
-            table = f"{model.Meta.name}"
+            table = f"{_model.Meta.name}"
         except AttributeError:
-            table = model.__name__
+            table = _model.__name__
         results = []
         for row in rows:
             try:
-                record = model(**row)
+                record = _model(**row)
             except (ValueError, ValidationError) as e:
                 raise ValueError(
-                    f"Invalid Row for Model {model}: {e}"
+                    f"Invalid Row for Model {_model}: {e}"
                 ) from e
             if record:
                 try:
@@ -691,67 +691,67 @@ class ModelBackend(ABC):
         return results
 
     @abstractmethod
-    async def _remove_(self, model: Model, _filter: dict, **kwargs):
+    async def _remove_(self, _model: Model, **kwargs):
         """
         Deleting some records using Model.
         """
 
     @abstractmethod
-    async def _updating_(self, model: Model, conditions: dict, **kwargs):
+    async def _updating_(self, _model: Model, *args, _filter: dict = None, **kwargs):
         """
         Updating records using Model.
         """
 
     @abstractmethod
-    async def _fetch_(self, model: Model, *args, **kwargs):
+    async def _fetch_(self, _model: Model, *args, **kwargs):
         """
         Returns one row from Model.
         """
 
     @abstractmethod
-    async def _filter_(self, model: Model, *args, **kwargs):
+    async def _filter_(self, _model: Model, *args, **kwargs):
         """
         Filter a Model using Fields.
         """
 
     @abstractmethod
-    async def _select_(self, model: Model, *args, **kwargs):
+    async def _select_(self, _model: Model, *args, **kwargs):
         """
         Get a query from Model.
         """
 
     @abstractmethod
-    async def _all_(self, model: Model, *args):
+    async def _all_(self, _model: Model, *args):
         """
         Get queries with model.
         """
 
     @abstractmethod
-    async def _get_(self, model: Model, *args, **kwargs):
+    async def _get_(self, _model: Model, *args, **kwargs):
         """
         Get one row from model.
         """
 
     @abstractmethod
-    async def _delete_(self, model: Model, *args, **kwargs):
+    async def _delete_(self, _model: Model, **kwargs):
         """
         delete a row from model.
         """
 
     @abstractmethod
-    async def _update_(self, model: Model, *args, **kwargs):
+    async def _update_(self, _model: Model, **kwargs):
         """
         Updating a row in a Model.
         """
 
     @abstractmethod
-    async def _save_(self, model: Model, *args, **kwargs):
+    async def _save_(self, _model: Model, **kwargs):
         """
         Save a row in a Model, using Insert-or-Update methodology.
         """
 
     @abstractmethod
-    async def _insert_(self, model: Model, *args, **kwargs):
+    async def _insert_(self, _model: Model, **kwargs):
         """
         insert a row from model.
         """
