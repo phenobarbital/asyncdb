@@ -77,6 +77,31 @@ async def test_model(db):
         for airport in us:
             print(airport)
         # at end: bulk insert, bulk update and bulk remove
+        data = [
+            {"iata": "AEP", "city": "Buenos Aires", "country": "Argentina"},
+            {"iata": "ADL", "city": "Adelaide", "country": "Australia"},
+            {"iata": "BSB", "city": "Brasilia", "country": "Brasil"},
+            {"iata": "GRU", "city": "Sao Paulo", "country": "Brasil"},
+            {"iata": "CCS", "city": "Caracas", "country": "Venezuela"},
+        ]
+        new_airports = await Airport.create(data)
+        for airport in new_airports:
+            print(airport)
+        print('== Removing Many == ')
+        deleted = await Airport.remove(country='Russia')
+        print(deleted)
+        # Updating many
+        print('== Updating Many ==')
+        updated_airports = await Airport.updating(_filter={"country": 'Brasil'}, country='Brazil')
+        print(updated_airports)
+        for airport in updated_airports:
+            print(airport)
+        updated = {
+            "country": 'Venezuela'
+        }
+        updated_airports = await Airport.updating(updated, iata='BBM')
+        for airport in updated_airports:
+            print(airport)
 
 async def connect(db):
     async with await db.connection() as conn:

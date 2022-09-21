@@ -7,6 +7,7 @@ from typing import (
     Union
 )
 from collections.abc import Sequence, Iterable
+from datamodel.exceptions import ValidationError
 import aiosqlite
 from asyncdb.exceptions import (
     NoDataFound,
@@ -710,3 +711,92 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             raise ProviderError(
                 f"Error: Model All over {table}: {e}"
             ) from e
+
+    async def _remove_(self, model: Model, **kwargs):
+        """
+        Deleting some records using Model.
+        """
+        try:
+            table = f"{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        fields = model.columns(model)
+        _filter = {}
+        for name, field in fields.items():
+            datatype = field.type
+            if name in kwargs:
+                val = kwargs[name]
+                value = Entity.toSQL(val, datatype)
+                _filter[name] = value
+        condition = self._where(fields, **_filter)
+        _delete = f"DELETE FROM {table} {condition}"
+        try:
+            self._logger.debug(f'DELETE: {_delete}')
+            cursor = await self._connection.execute(_delete)
+            await self._connection.commit()
+            return f'DELETE {cursor.rowcount}: {_filter!s}'
+        except Exception as err:
+            raise ProviderError(
+                message=f"Error on Insert over table {model.Meta.name}: {err!s}"
+            ) from err
+
+
+    async def _updating_(self, *args, _filter: dict = None, **kwargs):
+        """
+        Updating records using Model.
+        """
+        try:
+            model = kwargs['model']
+        except KeyError as e:
+            raise ProviderError(
+                f'Missing Model for SELECT {kwargs!s}'
+            ) from e
+        try:
+            table = f"{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        try:
+            table = f"{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        fields = model.columns(model)
+        if _filter is None:
+            if args:
+                _filter = args[0]
+        cols = []
+        source = []
+        new_cond = {}
+        for name, field in fields.items():
+            try:
+                val = kwargs[name]
+            except (KeyError, AttributeError):
+                continue
+            ## getting the value of column:
+            value = self._get_value(field, val)
+            source.append(value)
+            if name in _filter:
+                new_cond[name] = value
+            cols.append(
+                f"{name} = ?"
+            )
+        try:
+            set_fields = ", ".join(cols)
+            condition = self._where(fields, **_filter)
+            _update = f"UPDATE {table} SET {set_fields} {condition}"
+            self._logger.debug(f'UPDATE: {_update}')
+            cursor = await self._connection.execute(_update, parameters=source)
+            await self._connection.commit()
+            print(f'UPDATE {cursor.rowcount}: {_filter!s}')
+            new_conditions = {**_filter, **new_cond}
+            condition = self._where(fields, **new_conditions)
+            get = f"SELECT * FROM {table} {condition}"
+            self._connection.row_factory = lambda c, r: dict(
+                zip([col[0] for col in c.description], r)
+            )
+            cursor = await self._connection.execute(get)
+            result = await cursor.fetchall()
+            return [model(**dict(r)) for r in result]
+        except Exception as err:
+            raise ProviderError(
+                message=f"Error on Insert over table {model.Meta.name}: {err!s}"
+            ) from err
