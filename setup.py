@@ -105,7 +105,7 @@ setup(
         "pyarrow==4.0.1",
         "connectorx==0.2.3",
         "openpyxl==3.0.9",
-        "pymssql==2.2.1",
+        "pymssql==2.2.5",
         "pymongo>=3.12.1",
         "motor==2.5.1",
         "elasticsearch[async]==8.4.2",
