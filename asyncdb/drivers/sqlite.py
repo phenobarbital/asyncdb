@@ -68,15 +68,15 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 database=self._dsn, **kwargs
             )
             if self._connection:
-                # if callable(self.init_func):
-                #     try:
-                #         await self.init_func(
-                #             self._connection
-                #         )
-                #     except RuntimeError as err:
-                #         self._logger.exception(
-                #             f"Error on Init Connection: {err!s}"
-                #         )
+                if self._init_func is not None and callable(self._init_func):
+                    try:
+                        await self._init_func(
+                            self._connection
+                        )
+                    except RuntimeError as err:
+                        self._logger.exception(
+                            f"Error on Init Connection: {err!s}"
+                        )
                 self._connected = True
                 self._initialized_on = time.time()
             return self
@@ -217,7 +217,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
     async def fetch_one(
             self,
             sentence: str,
-            number: int = None
+            **kwargs
     ) -> Optional[dict]:
         """
         aliases for queryrow, but without error support
@@ -225,7 +225,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
         await self.valid_operation(sentence)
         cursor = None
         try:
-            cursor = await self._connection.execute(sentence)
+            cursor = await self._connection.execute(sentence, **kwargs)
             self._result = await cursor.fetchone()
             if not self._result:
                 raise NoDataFound()

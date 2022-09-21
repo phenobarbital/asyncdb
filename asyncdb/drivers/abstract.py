@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+import sys
 import asyncio
+import traceback
 from abc import (
     ABC,
     abstractmethod,
@@ -30,8 +32,6 @@ class BasePool(PoolBackend, ConnectionDSNBackend):
 
     Abstract Class to create Pool-based database connectors.
     """
-    init_func: Optional[Callable] = None
-
     def __init__(self, dsn: str = "", loop=None, params: dict = None, **kwargs):
         ConnectionDSNBackend.__init__(
             self,
@@ -69,7 +69,6 @@ class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
     """
     _provider: str = "init"
     _syntax: str = "init"  # can use QueryParser for parsing SQL queries
-    init_func: Optional[Callable] = None
 
     def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
         if params is None:
@@ -87,6 +86,8 @@ class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
         self._initialized_on = None
         # always starts output format to native:
         self.output_format('native')
+        if self._loop.get_debug():
+            self._source_traceback = traceback.extract_stack(sys._getframe(1))
 
     def row_format(self, frmt: str = 'native'):
         """
@@ -116,7 +117,6 @@ class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
         if not self._connection:
             await self.connection()
 
-
 class BaseDriver(InitDriver, ConnectionDSNBackend, ABC):
     """
     BaseDriver
@@ -125,7 +125,6 @@ class BaseDriver(InitDriver, ConnectionDSNBackend, ABC):
     """
     _provider: str = "base"
     _syntax: str = "base"  # can use QueryParser for parsing SQL queries
-    init_func: Optional[Callable] = None
 
     def __init__(self, dsn="", loop=None, params: dict = None, **kwargs):
         InitDriver.__init__(
