@@ -248,69 +248,81 @@ class Model(BaseModel):
 
 ### Class-based methods for Dataclasses.
     @classmethod
-    async def create(cls, records):
+    async def create(cls, records: list):
         if not cls.Meta.connection:
-            cls.get_connection(cls)
-        async with await cls.Meta.connection.connection() as conn:
-            try:
-                # working always with native format:
-                cls.Meta.connection.output_format('native')
-            except Exception:
-                pass
-            try:
-                result = await cls.Meta.connection.mdl_create(
-                    model=cls,
-                    rows=records
-                )
-                if result:
-                    return [cls(**dict(r)) for r in result]
-            except (StatementError, ProviderError):
-                raise
-            except Exception as err:
-                logging.debug(traceback.format_exc())
-                raise Exception(
-                    f"Error Updating Table {cls.Meta.name}: {err}"
-                ) from err
+            raise ConnectionMissing(
+                f"Missing Connection for Model: {cls}"
+            )
+        # working always with native format:
+        cls.Meta.connection.output_format('native')
+        try:
+            result = await cls.Meta.connection._create_(
+                model=cls,
+                rows=records
+            )
+            if result:
+                return result
+        except (AttributeError, StatementError) as err:
+            raise StatementError(
+                f"Error on Attribute {cls.Meta.name}: {err}"
+            ) from err
+        except ProviderError:
+            raise
+        except Exception as err:
+            logging.debug(traceback.format_exc())
+            raise Exception(
+                f"Error Updating Table {cls.Meta.name}: {err}"
+            ) from err
 
     @classmethod
-    async def remove(cls, _filter: Dict = None, **kwargs):
+    async def remove(cls, **kwargs):
         if not cls.Meta.connection:
-            cls.get_connection(cls)
-        async with await cls.Meta.connection.connection() as conn:
-            result = []
-            try:
-                result = await cls.Meta.connection.mdl_delete(
-                    model=cls, _filter=_filter, **kwargs
-                )
-                return result
-            except (StatementError, ProviderError):
-                raise
-            except Exception as err:
-                logging.debug(traceback.format_exc())
-                raise Exception(
-                    f"Error Deleting Table {cls.Meta.name}: {err}"
-                )
+            raise ConnectionMissing(
+                f"Missing Connection for Model: {cls}"
+            )
+        result = []
+        try:
+            result = await cls.Meta.connection._remove_(
+                model=cls, **kwargs
+            )
+            return result
+        except (AttributeError, StatementError) as err:
+            raise StatementError(
+                f"Error on Attribute {cls.Meta.name}: {err}"
+            ) from err
+        except ProviderError:
+            raise
+        except Exception as err:
+            logging.debug(traceback.format_exc())
+            raise Exception(
+                f"Error Deleting Table {cls.Meta.name}: {err}"
+            ) from err
 
-    # @classmethod
-    # async def _update(cls, _filter: Dict = None, **kwargs):
-    #     if not cls.Meta.connection:
-    #         cls.get_connection(cls)
-    #     async with await cls.Meta.connection.connection() as conn:
-    #         try:
-    #             result = await cls.Meta.connection.mdl_update(
-    #                 model=cls, _filter=_filter, **kwargs
-    #             )
-    #             if result:
-    #                 return [cls(**dict(r)) for r in result]
-    #             else:
-    #                 return []
-    #         except (StatementError, ProviderError):
-    #             raise
-    #         except Exception as err:
-    #             print(traceback.format_exc())
-    #             raise Exception(
-    #                 f"Error Updating Table {cls.Meta.name}: {err}"
-    #             )
+    @classmethod
+    async def updating(cls, *args, _filter: dict = None, **kwargs):
+        if not cls.Meta.connection:
+            raise ConnectionMissing(
+                f"Missing Connection for Model: {cls}"
+            )
+        try:
+            result = await cls.Meta.connection._updating_(
+                model=cls, _filter=_filter, *args, **kwargs
+            )
+            if result:
+                return result
+            else:
+                return []
+        except (AttributeError, StatementError) as err:
+            raise StatementError(
+                f"Error on Attribute {cls.Meta.name}: {err}"
+            ) from err
+        except ProviderError:
+            raise
+        except Exception as err:
+            print(traceback.format_exc())
+            raise Exception(
+                f"Error Updating Table {cls.Meta.name}: {err}"
+            ) from err
 
 
     @classmethod

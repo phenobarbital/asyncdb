@@ -17,13 +17,13 @@ from typing import (
     Optional,
     Union
 )
+from datamodel.exceptions import ValidationError
 from .meta import Record, Recordset
 from .exceptions import (
     default_exception_handler,
     ProviderError,
     EmptyStatement
 )
-
 from .models import Model, Field, is_missing, is_dataclass
 from .utils.types import Entity
 
@@ -664,41 +664,43 @@ class ModelBackend(ABC):
     """
 
 # ## Class-based Methods.
-#     @abstractmethod
-#     async def mdl_create(self, model: Model, rows: list):
-#         """
-#         Create all records based on a dataset and return result.
-#         """
+    async def _create_(self, model: Model, rows: list):
+        """
+        Create all records based on a dataset and return result.
+        """
+        try:
+            table = f"{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        results = []
+        for row in rows:
+            try:
+                record = model(**row)
+            except (ValueError, ValidationError) as e:
+                raise ValueError(
+                    f"Invalid Row for Model {model}: {e}"
+                ) from e
+            if record:
+                try:
+                    result = await record.insert()
+                    results.append(result)
+                except Exception as e:
+                    raise ProviderError(
+                        f"Error on Creation {table}: {e}"
+                    ) from e
+        return results
 
-#     @abstractmethod
-#     async def mdl_delete(self, model: Model, conditions: dict, **kwargs):
-#         """
-#         Deleting some records using Model.
-#         """
+    @abstractmethod
+    async def _remove_(self, model: Model, _filter: dict, **kwargs):
+        """
+        Deleting some records using Model.
+        """
 
-#     @abstractmethod
-#     async def mdl_update(self, model: Model, conditions: dict, **kwargs):
-#         """
-#         Updating records using Model.
-#         """
-
-#     @abstractmethod
-#     async def mdl_filter(self, model: Model, **kwargs):
-#         """
-#         Filter a Model based on some criteria.
-#         """
-
-#     @abstractmethod
-#     async def mdl_all(self, model: Model, **kwargs):
-#         """
-#         Get all records on a Model.
-#         """
-
-#     @abstractmethod
-#     async def mdl_get(self, model: Model, **kwargs):
-#         """
-#         Get one single record from Model.
-#         """
+    @abstractmethod
+    async def _updating_(self, model: Model, conditions: dict, **kwargs):
+        """
+        Updating records using Model.
+        """
 
     @abstractmethod
     async def _fetch_(self, model: Model, *args, **kwargs):
