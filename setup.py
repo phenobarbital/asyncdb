@@ -80,7 +80,7 @@ setup(
         "uvloop==0.17.0",
         "asyncio==3.4.3",
         "cchardet==2.1.7",
-        "pandas==1.4.4",
+        "pandas==1.5.0",
         "xlrd==2.0.1",
         "openpyxl==3.0.10",
         "lz4==4.0.0",
@@ -96,7 +96,7 @@ setup(
     ],
     extras_require = {
         "dataframe": [
-            "dask==2022.2.0",
+            "dask==2022.9.1",
             "datatable==1.0.0",
             "polars==0.14.11",
             "pyarrow==4.0.1",
@@ -175,7 +175,7 @@ setup(
             "aiocouch==2.2.2"
         ],
         "all": [
-            "dask==2022.2.0",
+            "dask==2022.9.1",
             "datatable==1.0.0",
             "polars==0.14.11",
             "pyarrow==4.0.1",
@@ -200,9 +200,9 @@ setup(
             "influxdb==5.3.1",
             "influxdb-client==1.31.0",
             "aioodbc==0.3.3",
-            "pyodbc==4.0.30",
+            "pyodbc==4.0.34",
             "sqlalchemy==1.4.41",
-            "elasticsearch[async]==7.15.1",
+            "elasticsearch[async]==8.4.2",
             "pymongo==4.2.0",
             "motor==3.0.0",
             "pymssql==2.2.5",
