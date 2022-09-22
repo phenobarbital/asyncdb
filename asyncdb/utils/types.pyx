@@ -9,8 +9,12 @@ from typing import (
 from collections.abc import Sequence
 from decimal import Decimal
 from numpy import int64, ndarray
+from datetime import timezone
 from cpython cimport datetime
+from zoneinfo import ZoneInfo
 from uuid import UUID
+from dateutil.parser import parse, ParserError
+
 
 
 cpdef object strtobool (str val):
@@ -30,7 +34,74 @@ cpdef object strtobool (str val):
             f"invalid truth value for {val}"
         )
 
+
+cpdef datetime.date to_date(object value, str mask = "%Y-%m-%d %H:%M:%S", str tz = None):
+    if isinstance(value, datetime.datetime):
+        return value
+    else:
+        try:
+            result = datetime.datetime.strptime(str(value), mask)
+            if tz is not None:
+                zone = ZoneInfo(key=tz)
+                result = result.replace(tzinfo=zone)
+            return result
+        except (TypeError, ValueError, AttributeError):
+            return parse(str(value))
+
+
+cpdef datetime.time to_time(object value, str mask = "%H:%M:%S"):
+    if value == 0:
+        return datetime.datetime.now().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+    if isinstance(value, datetime.time):
+        return value
+    elif isinstance(value, datetime.datetime):
+        return value.time()
+    else:
+        if len(str(value)) < 6:
+            value = str(value).zfill(6)
+        try:
+            return datetime.datetime.strptime(str(value), mask)
+        except ValueError:
+            return datetime.datetime.strptime(str(value), "%H:%M:%S")
+
+
+cpdef datetime.datetime to_datetime(object value, str mask = "%Y-%m-%d %H:%M:%S"):
+    if isinstance(value, datetime.datetime):
+        return value
+    elif isinstance(value, list):
+        dt = to_date(value[0], mask=mask[0])
+        mt = to_time(value[1], mask=mask[1]).time()
+        return datetime.datetime.combine(dt, mt)
+    else:
+        if value is None:
+            return datetime.datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+        else:
+            return datetime.datetime.strptime(str(value), mask)
+
+
+cpdef datetime.datetime epoch_to_date(object value, str tz = None):
+    if value is None:
+        return None
+    if len(str(value)) == 10:
+        s = value
+    elif len(str(value)) == 19:
+        s = value / 1e9
+    else:
+        s, _ = divmod(value, 1000.0)
+    if tz is not None:
+        zone = ZoneInfo(key=tz)
+    else:
+        zone = timezone.utc
+    return datetime.datetime.fromtimestamp(s, zone)
+
 cdef class Entity:
+    """Entity.
+    Used to convert entities (string, number, dates) to appropiated string on SQL queries.
+    """
     @classmethod
     def is_number(cls, _type):
         return _type in (int, int64, float, Decimal, bytes, bool)
