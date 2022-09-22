@@ -71,7 +71,7 @@ setup(
         "jsonpath-rw==1.4.0",
         "jsonpath-rw-ext==1.2.2",
         "rapidjson==1.0.0",
-        'yarl==1.7.2',
+        'yarl==1.8.1',
         'wrapt==1.14.1',
         "python-rapidjson>=1.5",
         'typing_extensions==4.3.0',
