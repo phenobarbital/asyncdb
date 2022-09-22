@@ -18,7 +18,7 @@ from typing import (
     Union
 )
 from functools import partial
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from datamodel.exceptions import ValidationError
 from .meta import Record, Recordset
 from .exceptions import (
@@ -294,13 +294,18 @@ class ConnectionBackend(ABC):
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         # clean up anything you need to clean up
         try:
-            await self.close()
+            await asyncio.wait_for(self.close(), timeout=5)
         except Exception as err:
             self._logger.exception(f'Closing Error: {err}')
             raise
 
-    def get_executor(self, max_workers: int = 2) -> Any:
-        return ThreadPoolExecutor(max_workers=max_workers)
+    def get_executor(self, executor = 'thread', max_workers: int = 2) -> Any:
+        if executor == 'thread':
+            return ThreadPoolExecutor(max_workers=max_workers)
+        elif executor == 'process':
+            return ProcessPoolExecutor(max_workers=max_workers)
+        else:
+            return None
 
     async def _thread_func(self, fn, *args, executor: Any = None, **kwargs):
         """_execute.
