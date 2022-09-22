@@ -15,7 +15,6 @@ async def test_model(driver):
     cPrint('Testing Model')
     async with await driver.connect() as conn:
         print(f'Is Connected: {conn.is_connected()}')
-    await driver.close()
 
 async def test_connect(driver):
     cPrint('Testing Connection')
@@ -61,8 +60,9 @@ postgresql = {
     "port": 5432,
     "database": "navigator_dev",
     "jar": [
-        ABS_PATH.joinpath('bin', 'jar', 'postgresql-42.5.0.jar'),
-    ]
+        ABS_PATH.joinpath('bin', 'jar', 'postgresql-42.5.0.jar')
+    ],
+    "classpath": ABS_PATH.joinpath('bin', 'jar')
 }
 
 mysql = {
@@ -98,7 +98,8 @@ oracle = {
     "database": 'xe',
     "jar": [
         ABS_PATH.joinpath('bin', 'jar', 'ojdbc8.jar'),
-    ]
+    ],
+    "classpath": ABS_PATH.joinpath('bin', 'jar')
 }
 
 
@@ -107,7 +108,9 @@ if __name__ == "__main__":
     try:
         driver = AsyncDB("jdbc", params=postgresql, loop=loop)
         loop.run_until_complete(test_connect(driver))
-        # loop.run_until_complete(test_data(driver))
-        # asyncio.run(test_model(driver))
+        d = AsyncDB("jdbc", params=mysql, loop=loop)
+        loop.run_until_complete(test_model(d))
+        o = AsyncDB("jdbc", params=oracle, loop=loop)
+        asyncio.run(test_model(o))
     finally:
-        loop.close()
+        loop.stop()

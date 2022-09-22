@@ -1,5 +1,6 @@
 """Dummy Driver.
 """
+import os
 import asyncio
 from typing import (
     Union,
@@ -93,16 +94,25 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         "Ignoring prepared sentences on JDBC"
         raise NotImplementedError()  # pragma: no cover
 
-    def start_jvm(self):
+    def start_jvm(self, jarpath):
         if jpype.isJVMStarted():
             return
-        jpype.startJVM(jpype.getDefaultJVMPath(), interrupt=False)
-        # jpype.startJVM(classpath=str(
-        #     ABS_PATH.joinpath('bin', 'jar')),
-        #     interrupt=False,
-        #     ignoreUnrecognized=True,
-        #     convertStrings=True
-        # )
+        _jvmArgs = ["-ea"] # enable assertions
+        if 'classpath' in self._params:
+            classpath = f"{self._params['classpath']}/*"
+        else:
+            classpath = None
+            path = ';'.join(jarpath)
+            _jvmArgs.append("-Djava.class.path=" + path)
+        _jvmArgs.append("-Xmx12000m")
+        _jvmArgs.append('-Dfile.encoding=UTF8')
+        jpype.startJVM(
+            jvmpath=jpype.getDefaultJVMPath(),
+            classpath = [classpath],
+            *_jvmArgs,
+            interrupt=True,
+            convertStrings=True
+        )
 
     async def connection(self):
         """connection.
@@ -112,19 +122,19 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         self._connection = None
         self._connected = False
         try:
-            # self.start_jvm()
-            # if jpype.isJVMStarted() and not jpype.isThreadAttachedToJVM():
-            #     jpype.attachThreadToJVM()
-            #     jpype.java.lang.Thread.currentThread().setContextClassLoader(
-            #         jpype.java.lang.ClassLoader.getSystemClassLoader()
-            #     )
+            print('JVM started: ', jpype.isJVMStarted())
+            self.start_jvm(self._file_jar)
+            if jpype.isJVMStarted() and not jpype.isThreadAttachedToJVM():
+                jpype.attachThreadToJVM()
+                jpype.java.lang.Thread.currentThread().setContextClassLoader(
+                    jpype.java.lang.ClassLoader.getSystemClassLoader()
+                )
             if 'options' in self._params:
                 options = ";".join({f'{k}={v}' for k,v in self._params['options'].items()})
                 self._dsn = f"{self._dsn};{options}"
             user = self._params['user']
             password = self._params ['password']
-            # print(self._classname, self._dsn, self._file_jar)
-            self._executor = self.get_executor(max_workers=10)
+            self._executor = self.get_executor(executor=None, max_workers=10)
             self._connection = await self._thread_func(
                 jaydebeapi.connect, self._classname, self._dsn,
                 driver_args=[user,password],
@@ -141,7 +151,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
                     await self._init_func(self._connection)
         except jpype.JException as ex:
             print(ex.stacktrace())
-            self._logger(
+            self._logger.error(
                 f"Driver {self._classname} Error: {ex}"
             )
         except TypeError as e:
@@ -167,7 +177,6 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
                 )
             self._connected = False
             self._connection = None
-            # jpype.shutdownJVM()
         except Exception as e:
             print(e)
             self._logger.exception(e, stack_info=True)
@@ -176,6 +185,14 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             ) from e
 
     disconnect = close
+
+    def __del__(self) -> None:
+        try:
+            if jpype.isThreadAttachedToJVM():
+                jpype.detachThreadFromJVM()
+            jpype.shutdownJVM()
+        except Exception as e:
+            self._logger.exception(e, stack_info=True)
 
     def get_columns(self):
         return self._columns
