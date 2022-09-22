@@ -31,6 +31,12 @@ extensions = [
         sources=['asyncdb/exceptions/exceptions.pyx'],
         extra_compile_args=COMPILE_ARGS,
         language="c"
+    ),
+    Extension(
+        name='asyncdb.utils.types',
+        sources=['asyncdb/utils/types.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c++"
     )
 ]
 
