@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-from asyncdb.drivers.pg import pg, pgPool
+from asyncdb.drivers.pg import pgPool
 
 loop = asyncio.get_event_loop()
 asyncio.set_event_loop(loop)
@@ -21,7 +21,7 @@ print('Pool Connected: ', pool.is_connected())
 db = loop.run_until_complete(pool.acquire())
 print('Is Connected: ', db.is_connected())
 
-sql = "SELECT * FROM troc.query_util WHERE query_slug = '{}'".format("walmart_stores")
+sql = "SELECT * FROM troc.query_util WHERE query_slug = 'walmart_stores'"
 
 async def connect(c):
     async with await c.connection() as conn:

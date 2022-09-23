@@ -16,7 +16,7 @@ from typing import (
     Optional
 )
 from collections.abc import Iterable
-from datetime import relativedelta
+from dateutil.relativedelta import relativedelta
 import asyncpg
 import uvloop
 from asyncpg.exceptions import (
