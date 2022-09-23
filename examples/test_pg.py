@@ -1,11 +1,9 @@
 import asyncio
 from datetime import datetime
+from asyncdb.drivers.pg import pg, pgPool
+
 loop = asyncio.get_event_loop()
 asyncio.set_event_loop(loop)
-
-from asyncdb import AsyncDB, AsyncPool
-from asyncdb.providers.pg import pg, pgPool
-
 
 params = {
     "user": "troc_pgdata",
@@ -54,9 +52,15 @@ async def pooler(p):
         start = datetime.now()
         result, error = await conn.query('SELECT * FROM troc.dashboards')
         exec_time = (datetime.now() - start).total_seconds()
-        if not error:
-            for row in result:
-                print(row)
+        # if not error:
+        #     for row in result:
+        #         print(row)
+        print(f"Execution Time {exec_time:.3f}s\n")
+        # a very very huge dataset:
+        print('=== GETTING EPSON SALES === ')
+        start = datetime.now()
+        result, error = await conn.query('SELECT * FROM epson.sales LIMIT 1000000')
+        exec_time = (datetime.now() - start).total_seconds()
         print(f"Execution Time {exec_time:.3f}s\n")
 
 if __name__ == "__main__":

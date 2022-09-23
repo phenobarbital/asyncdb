@@ -70,7 +70,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             if self._connection:
                 if self._init_func is not None and callable(self._init_func):
                     try:
-                        await self._init_func(
+                        await self._init_func( # pylint: disable=E1102
                             self._connection
                         )
                     except RuntimeError as err:
