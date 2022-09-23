@@ -3,28 +3,44 @@
 Notes on memcache Provider
 --------------------
 This provider implements a simple subset of funcionalities from aiomcache, this is a WIP
+TODO: add Thread Pool Support.
 """
-
 import asyncio
-import pylibmc
 import time
-
-from asyncdb.exceptions import *
-
-from .base import (
-    BasePool,
-    InitProvider,
+from typing import Any
+import pylibmc
+from asyncdb.exceptions import (
+    ProviderError,
+    DriverError
+)
+from .abstract import (
+    InitDriver,
 )
 
 
-class mcache(InitProvider):
+class mcache(InitDriver):
     _provider = "memcache"
     _syntax = "nosql"
     _behaviors = {"tcp_nodelay": True, "ketama": True}
 
-    def __init__(self, loop=None, params={}, **kwargs):
+    def __init__(
+            self,
+            loop: asyncio.AbstractEventLoop = None,
+            params: dict = None,
+            **kwargs
+    ) -> None:
         super(mcache, self).__init__(loop=loop, params=params, **kwargs)
-        self._server = ["{0}:{1}".format(params["host"], params["port"])]
+        try:
+            host = params["host"]
+        except KeyError as ex:
+            raise DriverError(
+                "Memcache: Unable to find *host* in parameters."
+            ) from ex
+        try:
+            port = params["port"]
+        except KeyError:
+            port = 11211
+        self._server = [f"{host}:{port}"]
         try:
             if kwargs["behaviors"]:
                 self._behaviors = {
@@ -33,10 +49,7 @@ class mcache(InitProvider):
         except KeyError:
             pass
 
-    """
-    Context magic Methods
-    """
-
+### Context magic Methods
     def __enter__(self):
         return self
 
@@ -44,11 +57,13 @@ class mcache(InitProvider):
         self.release()
 
     # Create a memcache Connection
-    def connection(self):
+    def connection(self): # pylint: disable=W0236
         """
-        __init Memcache initialization
+        __init Memcache initialization.
         """
-        self._logger.info("Memcache: Connecting to {}".format(self._server))
+        self._logger.info(
+            f"Memcache: Connecting to {self._server}"
+        )
         try:
             self._connection = pylibmc.Client(
                 self._server,
@@ -57,17 +72,17 @@ class mcache(InitProvider):
             )
         except (pylibmc.Error) as err:
             raise ProviderError(
-                message="Connection Error: {}".format(str(err))
-            )
+                message=f"Connection Error: {err}"
+            ) from err
         except Exception as err:
             raise ProviderError(
-                message="Unknown Memcache Error: {}".format(str(err))
-            )
-            return False
+                message=f"Unknown Memcache Error: {err}"
+            ) from err
         # is connected
         if self._connection:
             self._connected = True
             self._initialized_on = time.time()
+        return self
 
     def release(self):
         """
@@ -75,18 +90,20 @@ class mcache(InitProvider):
         """
         self._connection.disconnect_all()
 
-    def close(self):
+    def close(self): # pylint: disable=W0221,W0236
         """
         Closing memcache Connection
         """
         try:
             self._connection.disconnect_all()
         except (pylibmc.Error) as err:
-            raise ProviderError("Close Error: {}".format(str(err)))
+            raise ProviderError(
+                f"Close Error: {err}"
+            ) from err
         except Exception as err:
             raise ProviderError(
-                "Unknown Memcache Closing Error: {}".format(str(err)))
-            return False
+               f"Unknown Memcache Closing Error: {err}"
+            ) from err
 
     disconnect = close
 
@@ -98,42 +115,45 @@ class mcache(InitProvider):
             if self._connection:
                 self._connection.flush_all()
         except (pylibmc.Error) as err:
-            raise ProviderError("Close Error: {}".format(str(err)))
+            raise ProviderError(
+                f"Close Error: {err}"
+            ) from err
         except Exception as err:
-            raise ProviderError("Unknown Memcache Error: {}".format(str(err)))
-            return False
+            raise ProviderError(
+                f"Unknown Memcache Error: {err}"
+            ) from err
 
-    def test_connection(self, optional=1):
+    def test_connection(self, key: str = 'test_123', optional: int = 1): # pylint: disable=W0221,W0236
         result = None
         error = None
         try:
-            self.set("test_123", optional)
-            result = self.get("test_123")
-        except Exception as err:
+            self.set(key, optional)
+            result = self.get(key)
+        except Exception as err: # pylint: disable=W0703
             error = err
         finally:
-            self.delete("test_123")
-            return [result, error]
+            self.delete(key)
+            return [result, error] # pylint: disable=W0150
 
-    async def execute(self, sentence=""):
-        pass
+    def execute(self, sentence: Any): # pylint: disable=W0221,W0236
+        raise NotImplementedError
 
-    async def execute_many(self, sentence=""):
-        pass
+    async def execute_many(self, sentence=""): # pylint: disable=W0221,W0236
+        raise NotImplementedError
 
     async def prepare(self, sentence=""):
-        pass
+        raise NotImplementedError
 
     async def use(self, database=""):
-        pass
+        raise NotImplementedError
 
-    def query(self, key="", *val):
+    def query(self, key: str, *val): # pylint: disable=W0221,W0236
         return self.get_multi(key, val)
 
     fetch_all = query
 
-    def queryrow(self, key="", *args):
-        return self.get(key, val)
+    def queryrow(self, key: str, *args): # pylint: disable=W0221,W0236
+        return self.get(key, *args)
 
     fetch_one = queryrow
 
@@ -146,15 +166,21 @@ class mcache(InitProvider):
             else:
                 return self._connection.set(bytes(key, "utf-8"), bytes(value, "utf-8"))
         except (pylibmc.Error) as err:
-            raise ProviderError("Set Memcache Error: {}".format(str(err)))
+            raise ProviderError(
+                f"Set Memcache Error: {err}"
+            ) from err
         except Exception as err:
-            raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
+            raise ProviderError(
+                f"Memcache Unknown Error: {err}"
+            ) from err
 
-    def set_multi(self, map, timeout=0):
+    def set_multi(self, mapping, timeout=0):
         try:
-            self._connection.set_multi(map, timeout)
+            self._connection.set_multi(mapping, timeout)
         except (pylibmc.Error) as err:
-            raise ProviderError("Set Memcache Error: {}".format(str(err)))
+            raise ProviderError(
+                f"Set Memcache Error: {err}"
+            ) from err
 
     def get(self, key, default=None):
         try:
@@ -164,9 +190,13 @@ class mcache(InitProvider):
             else:
                 return None
         except (pylibmc.Error) as err:
-            raise ProviderError("Get Memcache Error: {}".format(str(err)))
+            raise ProviderError(
+                f"Get Memcache Error: {err}"
+            ) from err
         except Exception as err:
-            raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
+            raise ProviderError(
+                f"Memcache Unknown Error: {err}"
+            ) from err
 
     def get_multi(self, *kwargs):
         return self.multiget(kwargs)
@@ -175,10 +205,13 @@ class mcache(InitProvider):
         try:
             return self._connection.delete(bytes(key, "utf-8"))
         except (pylibmc.Error) as err:
-            raise ProviderError("Memcache Exists Error: {}".format(str(err)))
+            raise ProviderError(
+                f"DELETE Memcache Error: {err}"
+            ) from err
         except Exception as err:
             raise ProviderError(
-                "Memcache Exists Unknown Error: {}".format(str(err)))
+                f"DELETE Unknown Error: {err}"
+            ) from err
 
     def delete_multi(self, *kwargs):
         try:
@@ -186,9 +219,13 @@ class mcache(InitProvider):
             result = self._connection.delete_multi(ky)
             return result
         except (pylibmc.Error) as err:
-            raise ProviderError("Get Memcache Error: {}".format(str(err)))
+            raise ProviderError(
+                f"DELETE Memcache Error: {err}"
+            ) from err
         except Exception as err:
-            raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
+            raise ProviderError(
+                f"DELETE Unknown Error: {err}"
+            ) from err
 
     def multiget(self, *kwargs):
         try:
@@ -197,6 +234,10 @@ class mcache(InitProvider):
             if result:
                 return {key.decode("utf-8"): value for key, value in result.items()}
         except (pylibmc.Error) as err:
-            raise ProviderError("Get Memcache Error: {}".format(str(err)))
+            raise ProviderError(
+                f"MULTI Memcache Error: {err}"
+            ) from err
         except Exception as err:
-            raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
+            raise ProviderError(
+                f"MULTI Unknown Error: {err}"
+            ) from err

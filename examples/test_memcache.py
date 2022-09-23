@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from asyncdb.drivers.mcache import mcache
 
 loop = asyncio.get_event_loop()
 asyncio.set_event_loop(loop)
@@ -7,13 +8,6 @@ loop.set_debug(True)
 
 logging.basicConfig(level=logging.INFO, format="%(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
-
-from asyncdb import AsyncDB, AsyncPool
-from asyncdb.providers.mcache import mcache
-
-params = {"host": "localhost", "port": 11211}
-m = mcache(loop=loop, params=params)
-m.connection()
 
 
 def test_memcache(conn):
@@ -34,9 +28,12 @@ def test_memcache(conn):
     # delete all
     conn.delete_multi("Test&4", "Test3")
 
-
-try:
-    print("Connected: {}".format(m.is_connected()))
-    test_memcache(m)
-finally:
-    m.close()
+if __name__ == '__main__':
+    try:
+        params = {"host": "localhost", "port": 11211}
+        m = mcache(loop=loop, params=params)
+        m.connection()
+        print(f"Connected: {m.is_connected()}")
+        test_memcache(m)
+    finally:
+        m.close()
