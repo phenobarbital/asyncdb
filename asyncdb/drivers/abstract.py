@@ -10,7 +10,7 @@ from typing import (
     Optional,
     Any
 )
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 import uvloop
 from asyncdb.exceptions import EmptyStatement
 from asyncdb.interfaces import (
@@ -32,13 +32,18 @@ class BasePool(PoolBackend, ConnectionDSNBackend):
 
     Abstract Class to create Pool-based database connectors.
     """
-    def __init__(self, dsn: str = "", loop=None, params: dict = None, **kwargs):
+    def __init__(self, dsn: str = "", loop=None, params: Optional[dict] = None, **kwargs):
         ConnectionDSNBackend.__init__(
             self,
             dsn=dsn,
             params=params
         )
-        PoolBackend.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
+        PoolBackend.__init__(
+            self,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
 
 
     # Create a database connection pool
@@ -102,7 +107,7 @@ class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
         self._result = result
         return [result, error]
 
-    def output_format(self, frmt: str = 'native', *args, **kwargs):
+    def output_format(self, frmt: str = 'native', *args, **kwargs): # pylint: disable=W1113
         self._serializer = OutputFactory(self, frmt=frmt, *args, **kwargs)
 
     async def valid_operation(self, sentence: Any):
@@ -126,7 +131,7 @@ class BaseDriver(InitDriver, ConnectionDSNBackend, ABC):
     _provider: str = "base"
     _syntax: str = "base"  # can use QueryParser for parsing SQL queries
 
-    def __init__(self, dsn="", loop=None, params: dict = None, **kwargs):
+    def __init__(self, dsn: str = None, loop=None, params: dict = None, **kwargs):
         InitDriver.__init__(
             self,
             loop=loop,

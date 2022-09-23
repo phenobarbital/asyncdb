@@ -17,7 +17,7 @@ from dateutil.parser import parse, ParserError
 
 
 
-cpdef object strtobool (str val):
+cpdef object strtobool(str val):
     """Convert a string representation of truth to true (1) or false (0).
 
     True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
@@ -27,7 +27,7 @@ cpdef object strtobool (str val):
     val = val.lower()
     if val in ('y', 'yes', 't', 'true', 'on', '1'):
         return True
-    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
+    elif val in ('n', 'no', 'f', 'false', 'off', '0', 'null'):
         return False
     else:
         raise ValueError(
@@ -97,6 +97,31 @@ cpdef datetime.datetime epoch_to_date(object value, str tz = None):
     else:
         zone = timezone.utc
     return datetime.datetime.fromtimestamp(s, zone)
+
+
+cpdef object to_boolean(object value):
+    if isinstance(value, bool):
+        return value
+    elif value is None:
+        return False
+    else:
+        try:
+            return strtobool(value)
+        except ValueError:
+            return False
+
+
+cpdef object is_date(object value):
+        if isinstance(value, (datetime.datetime, time, datetime.time, datetime.timedelta)):
+            return True
+        else:
+            try:
+                val = parse(value)
+                if val:
+                    return True
+                return False
+            except (ParserError, ValueError):
+                return False
 
 cdef class Entity:
     """Entity.

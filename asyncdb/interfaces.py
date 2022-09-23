@@ -27,7 +27,7 @@ from .exceptions import (
     EmptyStatement
 )
 from .models import Model, Field, is_missing, is_dataclass
-from .utils.types import Entity
+from .utils.types import Entity, SafeDict
 
 class PoolBackend(ABC):
     """
@@ -39,7 +39,6 @@ class PoolBackend(ABC):
 
     def __init__(
             self,
-            dsn: str = None,
             loop: asyncio.AbstractEventLoop = None,
             params: dict[Any] = None,
             **kwargs
@@ -55,7 +54,6 @@ class PoolBackend(ABC):
             self._max_queries = 300
         self._connection = None
         self._connected = False
-        self._dsn = dsn
         if loop:
             self._loop = loop
             asyncio.set_event_loop(self._loop)
@@ -332,7 +330,7 @@ class ConnectionDSNBackend(ABC):
     def __init__(
             self,
             dsn: str = None,
-            params: dict[Any] = None
+            params: Optional[dict] = None
     ) -> None:
         if dsn:
             self._dsn = dsn
@@ -346,7 +344,7 @@ class ConnectionDSNBackend(ABC):
     def create_dsn(self, params: dict):
         try:
             if params:
-                return self._dsn.format(**params)
+                return self._dsn.format_map(SafeDict(**params))
             else:
                 return None
         except TypeError as err:
