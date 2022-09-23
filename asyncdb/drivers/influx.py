@@ -3,12 +3,6 @@ import asyncio
 import json
 import time
 import logging
-import pandas
-from influxdb_client import InfluxDBClient, Dialect, BucketRetentionRules
-from influxdb_client.client.write_api import ASYNCHRONOUS, PointSettings
-from influxdb_client.client.exceptions import InfluxDBError
-from influxdb_client.client.flux_table import FluxStructureEncoder
-from influxdb_client.rest import _BaseRESTClient
 from dataclasses import is_dataclass, asdict
 from functools import partial
 from typing import (
@@ -18,35 +12,38 @@ from typing import (
     Union,
     Tuple
 )
+from influxdb_client import InfluxDBClient, Dialect, BucketRetentionRules
+from influxdb_client.client.write_api import ASYNCHRONOUS, PointSettings
+from influxdb_client.client.exceptions import InfluxDBError
+from influxdb_client.client.flux_table import FluxStructureEncoder
+from influxdb_client.rest import _BaseRESTClient
+import pandas
 from asyncdb.exceptions import (
-    ConnectionTimeout,
-    DataError,
-    EmptyStatement,
     NoDataFound,
     ProviderError,
-    StatementError,
-    TooManyConnections,
+    DriverError
 )
-from asyncdb.providers.base import InitProvider
-from .interfaces import (
+from asyncdb.interfaces import (
     ConnectionDSNBackend
 )
+from .abstract import InitDriver
+
 
 
 class WriteCallback(object):
-    def success(self, conf: Tuple[str, str, str], data: str):
+    def success(self, conf: tuple[str, str, str], data: str):
         """Successfully written batch."""
         logging.debug(f"Written batch: {conf}, data: {data}")
 
-    def error(self, conf: Tuple[str, str, str], data: str, exception: InfluxDBError):
+    def error(self, conf: tuple[str, str, str], data: str, exception: InfluxDBError):
         """Unsuccessfully writen batch."""
         logging.error(f"Cannot write batch: {conf}, data: {data} due: {exception}")
 
-    def retry(self, conf: Tuple[str, str, str], data: str, exception: InfluxDBError):
+    def retry(self, conf: tuple[str, str, str], data: str, exception: InfluxDBError):
         """Retryable error."""
         logging.error(f"Retryable error occurs for batch: {conf}, data: {data} retry: {exception}")
 
-class influx(InitProvider, ConnectionDSNBackend):
+class influx(InitDriver, ConnectionDSNBackend):
     _provider = "influxdb"
     _syntax = "sql"
 
@@ -54,7 +51,7 @@ class influx(InitProvider, ConnectionDSNBackend):
             self,
             dsn: str = '',
             loop: asyncio.AbstractEventLoop = None,
-            params: Dict[Any, Any] = None,
+            params: dict = None,
             **kwargs
     ) -> None:
         self._test_query = "SELECT 1"
@@ -75,7 +72,7 @@ class influx(InitProvider, ConnectionDSNBackend):
             params['protocol'] = kwargs['protocol']
         except KeyError:
             params['protocol'] = 'http'
-        InitProvider.__init__(
+        InitDriver.__init__(
             self,
             loop=loop,
             params=params,
@@ -84,8 +81,7 @@ class influx(InitProvider, ConnectionDSNBackend):
         ConnectionDSNBackend.__init__(
             self,
             dsn=dsn,
-            params=params,
-            **kwargs
+            params=params
         )
         try:
             self._config_file: str = kwargs['config_file']
@@ -98,16 +94,20 @@ class influx(InitProvider, ConnectionDSNBackend):
             except KeyError:
                 try:
                     self._token = self.params["password"]
-                except KeyError:
-                    raise Exception('InfluxDB: Missing Token Authentication.')
+                except KeyError as e:
+                    raise DriverError(
+                        'InfluxDB: Missing Token Authentication.'
+                    ) from e
                 self._token = None
             try:
                 self._org = self.params['org'] if self.params['org'] else self.params['organization']
             except KeyError:
                 try:
                     self._org = kwargs['user']
-                except KeyError:
-                    raise Exception('InfluxDB: Missing Organization on Connection Info.')
+                except KeyError as e:
+                    raise DriverError(
+                        'InfluxDB: Missing Organization on Connection Info.'
+                    ) from e
         # callback
         self._callback = WriteCallback
         # dialect for export to csv
@@ -147,7 +147,12 @@ class influx(InitProvider, ConnectionDSNBackend):
                 if self._connection.ready():
                     self._client = self._connection.api_client
             except Exception as err:
-                logging.exception(f'Error creating REST client: {err}')
+                logging.exception(
+                    f'Error creating REST client: {err}'
+                )
+                raise DriverError(
+                    f'Error creating REST client: {err}'
+                ) from err
             settings = {
                 "app_name": "${env.APP_NAME}",
                 "customer": self._org
@@ -158,17 +163,17 @@ class influx(InitProvider, ConnectionDSNBackend):
             if self._version:
                 self._connected = True
                 self._initialized_on = time.time()
+            return self
         except Exception as err:
             self._connection = None
             self._cursor = None
             logging.exception(err)
             raise ProviderError(
                 message=f"InfluxDB connection Error: {err!s}"
-            )
-        finally:
-            return self
+            ) from err
 
-    async def close(self):
+
+    async def close(self): # pylint: disable=W0221
         """
         Closing a Connection
         """
@@ -181,25 +186,25 @@ class influx(InitProvider, ConnectionDSNBackend):
                     self._connection = None
                     raise ProviderError(
                         message=f"InfluxDB: Connection Error, Terminated: {err!s}"
-                    )
+                    ) from err
         except Exception as err:
             raise ProviderError(
                 message=f"InfluxDB: Close Error: {err!s}"
-            )
+            ) from err
         finally:
             self._connection = None
             self._connected = False
 
-    async def test_connection(self):
+    async def test_connection(self): # pylint: disable=W0221
         error = None
         result = None
         if self._connection:
             try:
-                result = await self.query("SHOW databases")
-            except Exception as err:
+                result = self._connection.health()
+            except Exception as err: # pylint: disable=W0703
                 error = err
             finally:
-                return [result, error]
+                return [result, error] # pylint: disable=W0150
 
     def api_client(self):
         return self._client
@@ -211,7 +216,6 @@ class influx(InitProvider, ConnectionDSNBackend):
         Returns:
             bool: a boolean with the response of the instance.
         """
-        # return self._connection.get_list_database()
         return self._connection.ping()
 
     async def health(self):
@@ -232,7 +236,7 @@ class influx(InitProvider, ConnectionDSNBackend):
     def organization(self, org):
         self._org = org
 
-    def settings(self, config: Dict):
+    def settings(self, config: dict):
         """settings.
             Set Default Tags for every measurement.
         Args:
@@ -264,6 +268,28 @@ class influx(InitProvider, ConnectionDSNBackend):
         buckets_api = self._connection.buckets_api()
         return buckets_api.find_buckets().buckets
 
+
+    async def drop_bucket(self, bucket: str):
+        try:
+            buckets_api = self._connection.buckets_api()
+            bname = buckets_api.find_bucket_by_name(bucket)
+            if bname:
+                deleted = buckets_api.delete_bucket(
+                    bname
+                )
+                return deleted
+            else:
+                self._logger.error(
+                    f"Bucket {bucket} does not exist."
+                )
+                return False
+        except Exception as err:
+            raise ProviderError(
+                message=f"Error Deleting Bucket {bucket}: {err}"
+            ) from err
+
+    drop_database = drop_bucket
+
     async def create_bucket(self, bucket: str, btype: str = 'expire', expiration: int = 0, **kwgars):
         try:
             buckets_api = self._connection.buckets_api()
@@ -277,15 +303,18 @@ class influx(InitProvider, ConnectionDSNBackend):
             print(created)
         except Exception as err:
             raise ProviderError(
-                message="Error creating Bucket {}".format(err)
-            )
+                message=f"Error creating Bucket {err}"
+            ) from err
 
     create_database = create_bucket
 
     async def use(self, database: str):
         pass
 
-    async def write(self, data: List, bucket: str, **kwargs):
+    async def write(self, data: list, bucket: str, **kwargs):
+        """
+            Write data into InfluxDB.
+        """
         try:
             result = None
             with self._connection.write_api(
@@ -294,9 +323,6 @@ class influx(InitProvider, ConnectionDSNBackend):
                     error_callback=self._callback.error,
                     retry_callback=self._callback.retry,
                     point_settings=self._settings) as writer:
-                """
-                Write data into InfluxDB
-                """
                 if isinstance(data, pandas.core.frame.DataFrame):
                 # need the index and the name of the measurement
                     rst = writer.write(
@@ -329,77 +355,79 @@ class influx(InitProvider, ConnectionDSNBackend):
         except RuntimeError as err:
             raise ProviderError(
                 f"InfluxDB: Runtime Error: {err!s}"
-            )
+            ) from err
         except Exception as err:
-            raise Exception(f"InfluxDB: Error on Write: {err!s}")
+            raise Exception(
+                f"InfluxDB: Error on Write: {err!s}"
+            ) from err
 
     save = write
 
-    async def query(self, sentence: str, format: str = 'native', params: Dict = None):
+    async def query(self, sentence: str, frmt: str = 'native', params: dict = None, **kwargs):
         self._result = None
         error = None
         await self.valid_operation(sentence)
         try:
             self.start_timing()
             query_api = self._connection.query_api()
-            if format == 'pandas':
-                reader = partial(query_api.query_data_frame, query=sentence, params=params)
+            if frmt == 'pandas':
+                reader = partial(query_api.query_data_frame, query=sentence, params=params, **kwargs)
                 # self._result = query_api.query_data_frame(sentence, params=params)
-            elif format == 'csv':
-                reader = partial(query_api.query_csv, query=sentence, params=params, dialect=self._dialect)
+            elif frmt == 'csv':
+                reader = partial(query_api.query_csv, query=sentence, params=params, dialect=self._dialect, **kwargs)
                 # self._result = query_api.query_csv(sentence, params=params, dialect=self._dialect)
             else:
-                reader = partial(query_api.query, query=sentence, params=params)
+                reader = partial(query_api.query, query=sentence, params=params, **kwargs)
                 # self._result = query_api.query(sentence, params=params)
             self._result = await self._loop.run_in_executor(None, reader)
             if not self._result:
                 raise NoDataFound("InfluxDB: No Data was Found")
-            if format == 'json':
+            if frmt == 'json':
                 self._result = json.dumps(self._result, cls=FluxStructureEncoder)
         except NoDataFound:
             raise
         except RuntimeError as err:
-            error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(message=error)
-        except Exception as err:
-            error = "Error on Query: {}".format(str(err))
-            raise Exception(error)
+            error = f"Runtime Error: {err}"
+        except Exception as err: # pylint: disable=W0703
+            error = f"Error on Query: {err}"
         finally:
             self.generated_at()
-            return await self._serializer(self._result, error)
+            return await self._serializer(self._result, error) # pylint: disable=W0150
 
     queryrow = query
 
-    async def fetch_all(self, sentence: str, *args, params: Dict = None):
+    async def fetch_all(self, sentence: str, params: dict = None, frmt: str = 'native', **kwargs):
         await self.valid_operation(sentence)
         try:
             self.start_timing()
             query_api = self._connection.query_api()
-            if format == 'pandas':
-                result = query_api.query_data_frame(sentence, params=params)
-            elif format == 'csv':
-                result = query_api.query_csv(sentence, params=params, dialect=self._dialect)
+            if frmt == 'pandas':
+                result = query_api.query_data_frame(sentence, params=params, **kwargs)
+            elif frmt == 'csv':
+                result = query_api.query_csv(sentence, params=params, dialect=self._dialect, **kwargs)
             else:
-                result = query_api.query(sentence, params=params)
+                result = query_api.query(sentence, params=params, **kwargs)
             if not result:
                 raise NoDataFound("InfluxDB: No Data was Found")
-            if format == 'json':
+            if frmt == 'json':
                 result = json.dumps(self._result, cls=FluxStructureEncoder)
             self.generated_at()
             return result
         except NoDataFound:
             raise
         except RuntimeError as err:
-            error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise ProviderError(
+                f"Runtime Error: {err}"
+            ) from err
         except Exception as err:
-            error = "Error on Query: {}".format(str(err))
-            raise Exception(error)
+            raise Exception(
+                f"Error on Query: {err}"
+            ) from err
 
     fetch_one = fetch_all
 
-    async def execute(self, sentence: str, method: str = "GET", **kwargs):
-        """Execute a transaction
+    async def execute(self, sentence: str, method: str = "GET", **kwargs): # pylint: disable=W0221
+        """Execute a transaction.
 
         returns: results of the execution
         """
@@ -418,11 +446,10 @@ class influx(InitProvider, ConnectionDSNBackend):
                     result = rst.data
             else:
                 result = rst
-        except Exception as err:
-            error = "Error on Execute: {}".format(str(err))
-            raise [None, error]
+        except Exception as err: # pylint: disable=W0703
+            error = f"Error on Execute: {err}"
         finally:
-            return [result, error]
+            return [result, error] # pylint: disable=W0150
 
     async def execute_many(self, sentence: Union[str, Any], method: str = "GET", **kwargs):
         """Execute many transactions at once.
