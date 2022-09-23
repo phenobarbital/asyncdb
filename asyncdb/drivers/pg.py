@@ -498,9 +498,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
 
     def is_connected(self):
         try:
-            return not (self._connection.is_closed())
-        except AttributeError:
-            return self._connected
+            if self._connection:
+                return not (self._connection.is_closed())
+        except (AttributeError, InterfaceError):
+            pass
+        return self._connected
 
     async def connection(self):
         """connection.

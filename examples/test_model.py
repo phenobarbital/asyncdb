@@ -1,10 +1,11 @@
-from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
-from asyncdb.utils.models import Model, Column
-from asyncdb import AsyncDB
+import asyncio
 from decimal import Decimal
 import datetime
 import numpy as np
-import asyncio
+from typing import Any, List, Optional, get_type_hints, Callable, ClassVar, Union
+from asyncdb.models import Model, Column
+from asyncdb import AsyncDB
+
 
 loop = asyncio.get_event_loop()
 asyncio.set_event_loop(loop)
@@ -18,14 +19,6 @@ params = {
     "DEBUG": True,
 }
 
-# running new multi-threaded async SA (using aiopg)
-args = {
-    "server_settings": {
-        "application_name": "Testing"
-    }
-}
-p = AsyncDB("pg", params=params, **args)
-
 f = [
     ('sara_order_no', str),
     ('dealer_name', str),
@@ -38,6 +31,12 @@ f = [
 ]
 
 async def create_model():
+    args = {
+        "server_settings": {
+            "application_name": "Testing"
+        }
+    }
+    p = AsyncDB("pg", params=params, **args)
     query = await Model.makeModel(name='query_util', schema='troc', db=p)
     q = await query.filter(query_slug='walmart_stores')
     print(q, q[0].query_raw)

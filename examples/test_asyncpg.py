@@ -1,10 +1,6 @@
 import asyncio
-
-loop = asyncio.get_event_loop()
-asyncio.set_event_loop(loop)
-
-from asyncdb import AsyncDB, AsyncPool
-from asyncdb.providers.pg import pg, pgPool
+from asyncdb import AsyncDB
+from asyncdb.drivers.pg import pgPool
 
 # from asyncdb.providers.sa import sa
 # create a pool with parameters
@@ -17,59 +13,47 @@ params = {
     "DEBUG": True,
 }
 
-# pool = AsyncPool('pg', loop=loop, params=params)
-pool = pgPool(loop=loop, params=params)
-loop.run_until_complete(pool.connect())
-
-
-db = loop.run_until_complete(pool.acquire())
-loop.run_until_complete(pool.release(connection=db.get_connection()))
-pool.terminate()
-
-# running new multi-threaded async SA (using aiopg)
-args = {
-    "server_settings": {
-        "application_name": "Testing"
-    }
-}
-p = AsyncDB("pg", params=params, **args)
-print(p)
-loop.run_until_complete(p.connection())
-print('HERE: ', p, not(p._connection.is_closed()), p.is_connected())
-sql = "SELECT * FROM troc.query_util WHERE query_slug = '{}'".format("walmart_stores")
-
-# result, error = loop.run_until_complete(p.query(sql))
-# print(result)
-
-
-# async def cursor(d):
-#     async for record in await d.cursor(
-#         "SELECT store_id, store_name FROM walmart.stores"
-#     ):
-#         print(record)
-#
-#
-# # loop.run_until_complete(cursor(p))
-
-
-async def connect(c):
-    async with await c.connection() as conn:
-        newloop = conn.get_loop()  # get the running loop
-        print(conn, conn.is_connected())
-        result, error = await conn.test_connection()
+async def pooler(loop):
+    pool = pgPool(loop=loop, params=params)
+    await pool.connect()
+    print(f"Connected: {pool.is_connected()}")
+    db = await pool.acquire()
+    await pool.release(connection=db.get_connection())
+    async with await pool.acquire() as conn:
+        # execute a sentence
+        result, error = await conn.execute("SET TIMEZONE TO 'America/New_York'")
         print(result)
+        # execute other, long-term query:
+        result, error = await conn.execute("REFRESH MATERIALIZED VIEW flexroc.vw_form_information;")
+        print(result, error)
+    print('Is closed: ', {db.is_connected()})
+    await pool.close()
+
+
+async def test_pg(loop):
+    args = {
+        "server_settings": {
+            "application_name": "Testing"
+        }
+    }
+    db = AsyncDB("pg", params=params, **args)
+    print(db)
+    async with await db.connection() as conn:
+        print('HERE: ', conn, not(conn._connection.is_closed()), conn.is_connected())
+        result, error = await conn.test_connection()
+        print('Test: ', result, 'Error: ', error)
+
+        sql = "SELECT * FROM troc.query_util WHERE query_slug = 'walmart_stores'"
         result, error = await conn.query(sql)
-        if not error:
-            print(result)
+        print(result, 'Error: ', error)
+        async for record in await conn.cursor(
+            "SELECT store_id, store_name FROM walmart.stores"
+        ):
+            print('Cursor Record: ', record)
         # execute a sentence
         result, error = await conn.execute("SET TIMEZONE TO 'America/New_York'")
         print(result)
 
-
-loop.run_until_complete(connect(p))
-
-# call closing provider
-p.terminate()
 #
 # from sqlalchemy import (Column, Integer, MetaData, Table, Text, create_engine,
 #                         select)
@@ -110,3 +94,12 @@ p.terminate()
 #     print(result)
 #     # Drop the table
 #     result, error = newloop.run_until_complete(conn.execute(DropTable(users)))
+
+if __name__ == '__main__':
+    try:
+        loop = asyncio.get_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(pooler(loop))
+        loop.run_until_complete(test_pg(loop))
+    finally:
+        loop.stop()
