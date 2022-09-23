@@ -21,9 +21,7 @@ from aioredis.exceptions import (
 )
 from asyncdb.exceptions import (
     ConnectionTimeout,
-    NoDataFound,
     ProviderError,
-    StatementError,
     DriverError
 )
 from .abstract import (
