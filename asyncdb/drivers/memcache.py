@@ -10,8 +10,10 @@ from typing import (
     Dict
 )
 import aiomcache
+from aiomcache.exceptions import (
+    ClientException
+)
 from asyncdb.exceptions import (
-    ConnectionTimeout,
     ProviderError,
     DriverError
 )
@@ -26,7 +28,13 @@ class memcachePool(BasePool):
     Pool-based version of Memcached connector.
     """
 
-    def __init__(self, dsn: str = "", loop=None, params={}, **kwargs):
+    def __init__(
+            self,
+            dsn: str = '',
+            loop: asyncio.AbstractEventLoop = None,
+            params: dict = None,
+            **kwargs
+    ) -> None:
         self._dsn = None
         self._connection = None
         self._max_queries = 10
@@ -34,42 +42,48 @@ class memcachePool(BasePool):
             dsn, loop, params, **kwargs
         )
 
-    def create_dsn(self, params: Dict):
+    def create_dsn(self, params: dict):
         return params
 
     async def connect(self):
         self._logger.debug(
-            "AsyncMcache: Connecting to {}".format(self._params))
+            f"Memcache: Connecting to {self._params}")
         try:
             self._pool = aiomcache.Client(
                 pool_size=self._max_queries, **self._params
             )
-        except aiomcache.exceptions.ClientException as err:
-            raise ProviderError(
-                "Unable to connect to Memcache: {}".format(str(err)))
+
+        except ClientException as err:
+            raise DriverError(
+                f"Unable to connect to Memcache: {err}"
+            ) from err
         except Exception as err:
-            raise ProviderError("Unknown Error: {}".format(str(err)))
-            return False
+            raise ProviderError(
+                f"Unknown Error: {err}"
+            ) from err
         # is connected
         if self._pool:
             self._connected = True
             self._initialized_on = time.time()
+        return self
 
     async def acquire(self):
         """
         Take a connection from the pool.
+        TODO: create a Pool infraestructure.
         """
         db = None
         self._connection = None
         try:
-            # self._connection = await self._pool.acquire()
             self._connection = self._pool
-        except aiomcache.exceptions.ClientException as err:
+        except ClientException as err:
             raise ProviderError(
-                "Unable to connect to Memcache: {}".format(str(err)))
+                f"Unable to connect to Memcache: {err}"
+            ) from err
         except Exception as err:
-            raise ProviderError("Unknown Error: {}".format(str(err)))
-            return False
+            raise ProviderError(
+                f"Unknown Error: {err}"
+            ) from err
         if self._connection:
             db = memcache(
                 pool=self,
@@ -78,7 +92,7 @@ class memcachePool(BasePool):
             )
         return db
 
-    async def release(self, connection=None):
+    async def release(self, connection=None): # pylint: disable=W0221
         """
         Release a connection from the pool
         """
@@ -90,34 +104,40 @@ class memcachePool(BasePool):
             if conn:
                 self._pool.release(conn)
         except Exception as err:
-            raise ProviderError("Memcache Release Error: {}".format(str(err)))
+            raise ProviderError(
+                f"Memcache Release Error: {err}"
+            ) from err
 
-    async def close(self):
+    async def close(self): # pylint: disable=W0221
         """
         Close Pool
         """
         try:
             if self._pool:
                 await self._pool.close()
-        except (aiomcache.exceptions.ClientException) as err:
-            raise ProviderError("Connection Close Error: {}".format(str(err)))
+        except (ClientException) as err:
+            raise DriverError(
+                f"Connection Close Error: {err}"
+            ) from err
         except Exception as err:
-            raise ProviderError("Closing Error: {}".format(str(err)))
+            raise ProviderError(
+                f"Closing Error: {err}"
+            ) from err
 
     disconnect = close
 
 
-class memcache(BaseProvider):
+class memcache(BaseDriver):
     _provider = "memcache"
     _syntax = "nosql"
 
     def __init__(
             self,
-            dsn: str = '',
-            loop: asyncio.AbstractEventLoop = None,
-            params: Dict[Any, Any] = {},
+            dsn: str = None,
+            loop=None,
+            params: dict = None,
             **kwargs
-    ) -> None:
+        ) -> None:
         super(memcache, self).__init__(
             dsn=dsn,
             loop=loop,
@@ -130,7 +150,7 @@ class memcache(BaseProvider):
             self._connected = True
             self._initialized_on = time.time()
 
-    def create_dsn(self, params: Dict):
+    def create_dsn(self, params: dict):
         return params
 
     # Create a memcache Connection
@@ -139,23 +159,29 @@ class memcache(BaseProvider):
         __init async Memcache initialization
         """
         self._logger.debug(
-            "AsyncMcache: Connecting to {}".format(self._params))
+            f"Memcache: Connecting to {self._params}"
+        )
         try:
             self._connection = aiomcache.Client(**self._params)
         except (aiomcache.exceptions.ValidationException) as err:
-            raise ProviderError(
-                "Invalid Connection Parameters: {}".format(str(err)))
-        except (aiomcache.exceptions.ClientException) as err:
-            raise ProviderError("Connection Error: {}".format(str(err)))
+            raise DriverError(
+                f"Invalid Connection Parameters: {err}"
+            ) from err
+        except ClientException as err:
+            raise DriverError(
+                f"Unable to connect to Memcache: {err}"
+            ) from err
         except Exception as err:
-            raise ProviderError("Unknown Memcache Error: {}".format(str(err)))
-            return False
+            raise ProviderError(
+                f"Unknown Error: {err}"
+            ) from err
         # is connected
         if self._connection:
             self._connected = True
             self._initialized_on = time.time()
+        return self
 
-    async def close(self):
+    async def close(self): # pylint: disable=W0221
         """
         Closing memcache Connection
         """
@@ -164,12 +190,14 @@ class memcache(BaseProvider):
         else:
             try:
                 await self._connection.close()
-            except (aiomcache.exceptions.ClientException) as err:
-                raise ProviderError("Close Error: {}".format(str(err)))
+            except ClientException as err:
+                raise DriverError(
+                    f"Unable to connect to Memcache: {err}"
+                ) from err
             except Exception as err:
                 raise ProviderError(
-                    "Unknown Memcache Error: {}".format(str(err)))
-                return False
+                    f"Unknown Error: {err}"
+                ) from err
 
     disconnect = close
 
@@ -180,50 +208,26 @@ class memcache(BaseProvider):
         try:
             if self._connection:
                 self._connection.flush_all()
-        except (aiomcache.exceptions.ClientException) as err:
-            raise ProviderError("Close Error: {}".format(str(err)))
+        except ClientException as err:
+            raise DriverError(
+                f"Unable to connect to Memcache: {err}"
+            ) from err
         except Exception as err:
-            raise ProviderError("Unknown Memcache Error: {}".format(str(err)))
-            return False
+            raise ProviderError(
+                f"Unknown Error: {err}"
+            ) from err
 
     async def prepare(self, sentence=""):
         raise NotImplementedError
 
-    async def execute(self, sentence=""):
-        pass
+    async def execute(self, sentence=""): # pylint: disable=W0221
+        raise NotImplementedError
 
-    async def execute_many(self, sentence: str = ''):
-        pass
+    async def execute_many(self, sentence: str = ''): # pylint: disable=W0221
+        raise NotImplementedError
 
-    async def use(self, database: str) -> None:
-        pass
-
-    async def query(self, key="", *val):
-        return await self.get(key, val)
-
-    async def queryrow(self, key="", *args):
-        return await self.get(key, val)
-
-    async def fetch_one(self, key="", *args):
-        return await self.get(key, val)
-
-    async def fetch_all(self, key, *args):
-        return await self.multiget(*args)
-
-    async def set(self, key, value, timeout=None):
-        try:
-            if timeout:
-                return await self._connection.set(
-                    bytes(key, "utf-8"), bytes(value, "utf-8"), exptime=timeout
-                )
-            else:
-                return await self._connection.set(
-                    bytes(key, "utf-8"), bytes(value, "utf-8")
-                )
-        except (aiomcache.exceptions.ClientException) as err:
-            raise ProviderError("Set Memcache Error: {}".format(str(err)))
-        except Exception as err:
-            raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
+    async def use(self, database: str) -> None: # pylint: disable=W0221
+        raise NotImplementedError
 
     async def get(self, key):
         try:
@@ -233,18 +237,30 @@ class memcache(BaseProvider):
             else:
                 return None
         except (aiomcache.exceptions.ClientException) as err:
-            raise ProviderError("Get Memcache Error: {}".format(str(err)))
-        except Exception as err:
-            raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
-
-    async def delete(self, key):
-        try:
-            return await self._connection.delete(bytes(key, "utf-8"))
-        except (aiomcache.exceptions.ClientException) as err:
-            raise ProviderError("Memcache Exists Error: {}".format(str(err)))
+            raise ProviderError(
+                f"Get Memcache Error: {err}"
+            ) from err
         except Exception as err:
             raise ProviderError(
-                "Memcache Exists Unknown Error: {}".format(str(err)))
+                f"Memcache Unknown Error: {err}"
+            ) from err
+
+    async def query(self, sentence, **kwargs):
+        return await self.get(sentence)
+
+    async def queryrow(self, sentence, **kwargs): # pylint: disable=W0613
+        result = await self.get(sentence)
+        if isinstance(result, list):
+            result = result[0]
+        return result
+
+    fetch_one = queryrow
+
+    async def fetch_all(self, sentence, *args): # pylint: disable=W0221
+        return await self.multiget(*args)
+
+    async def get_multi(self, *kwargs):
+        return await self.multiget(kwargs)
 
     async def multiget(self, *args):
         try:
@@ -253,19 +269,83 @@ class memcache(BaseProvider):
             result = await self._connection.multi_get(*ky)
             print(result)
             return [k.decode("utf-8") for k in result]
-        except (aiomcache.exceptions.ClientException) as err:
-            raise ProviderError("Get Memcache Error: {}".format(str(err)))
+        except ClientException as err:
+            raise ProviderError(
+                f"Get Memcache Error: {err}"
+            ) from err
         except Exception as err:
-            raise ProviderError("Memcache Unknown Error: {}".format(str(err)))
+            raise ProviderError(
+                f"Memcache Unknown Error: {err}"
+            ) from err
 
-    async def test_connection(self, optional=1):
+    async def set(self, key, value, timeout: int = None):
+        try:
+            args = {}
+            if timeout:
+                args = {
+                    "exptime": timeout
+                }
+            return await self._connection.set(
+                bytes(key, "utf-8"), bytes(value, "utf-8"), **args
+            )
+        except ClientException as err:
+            raise ProviderError(
+                f"Set Memcache Error: {err}"
+            ) from err
+        except Exception as err:
+            raise ProviderError(
+                f"Memcache Unknown Error: {err}"
+            ) from err
+
+    async def set_multi(self, mapping: dict, timeout=0):
+        """Migrate to pylibmc with Threads.
+        """
+        try:
+            for k, v in mapping.items():
+                await self._connection.set(bytes(k, "utf-8"), bytes(v, "utf-8"), timeout)
+        except ClientException as err:
+            raise ProviderError(
+                f"Set Memcache Error: {err}"
+            ) from err
+        except Exception as err:
+            raise ProviderError(
+                f"Memcache Unknown Error: {err}"
+            ) from err
+
+    async def delete(self, key):
+        try:
+            return await self._connection.delete(bytes(key, "utf-8"))
+        except ClientException as err:
+            raise ProviderError(
+                f"Delete Memcache Error: {err}"
+            ) from err
+        except Exception as err:
+            raise ProviderError(
+                f"Memcache Unknown Error: {err}"
+            ) from err
+
+    async def delete_multi(self, *kwargs):
+        try:
+            for key in kwargs:
+                result = await self._connection.delete(bytes(key, "utf-8"))
+            return result
+        except ClientException as err:
+            raise ProviderError(
+                f"DELETE Memcache Error: {err}"
+            ) from err
+        except Exception as err:
+            raise ProviderError(
+                f"DELETE Unknown Error: {err}"
+            ) from err
+
+    async def test_connection(self, key: str = 'test_123', optional: str = '1'): # pylint: disable=W0221
         result = None
         error = None
         try:
-            await self.set("test_123", optional)
-            result = await self.get("test_123")
-        except Exception as err:
+            await self.set(key, optional)
+            result = await self.get(key)
+        except Exception as err: # pylint: disable=W0703
             error = err
         finally:
-            await self.delete("test_123")
-            return [result, error]
+            await self.delete(key)
+            return [result, error] # pylint: disable=W0150
