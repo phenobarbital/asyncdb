@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
 
 import asyncio
-import json
 import time
-from datetime import datetime
-
 import motor.motor_asyncio
-from functools import partial
-
 from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
@@ -16,19 +11,12 @@ from asyncdb.exceptions import (
     ProviderError,
     StatementError,
     TooManyConnections,
+    DriverError
 )
-from asyncdb.providers import (
-    BasePool,
-    BaseProvider,
-    registerProvider,
-)
-from asyncdb.utils import (
-    EnumEncoder,
-    SafeDict,
-)
+from .abstract import BaseDriver
 
 
-class mongo(BaseProvider):
+class mongo(BaseDriver):
     _provider = "mongodb"
     _dsn = "'mongodb://{host}:{port}"
     _syntax = "mongo"
@@ -37,12 +25,18 @@ class mongo(BaseProvider):
     _timeout: int = 5
     _databases: list = []
 
-    def __init__(self, loop=None, pool=None, params={}, **kwargs):
+    def __init__(
+            self,
+            dsn: str = '',
+            loop: asyncio.AbstractEventLoop = None,
+            params: dict = None,
+            **kwargs
+    ) -> None:
         if "username" in params:
             self._dsn = "mongodb://{username}:{password}@{host}:{port}"
         if "database" in params:
             self._dsn = self._dsn + "/{database}"
-        super(mongo, self).__init__(loop=loop, params=params, **kwargs)
+        super(mongo, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         asyncio.set_event_loop(self._loop)
 
     async def connection(self):
@@ -63,17 +57,20 @@ class mongo(BaseProvider):
             try:
                 self._databases = await self._connection.list_database_names()
             except Exception as err:
-                raise ProviderError(err)
+                raise DriverError(
+                    f"Error Connecting to Mongo: {err}"
+                ) from err
             if len(self._databases) > 0:
                 self._connected = True
                 self._initialized_on = time.time()
+            return self
         except Exception as err:
             self._connection = None
             self._cursor = None
             print(err)
-            raise ProviderError("connection Error, Terminated: {}".format(str(err)))
-        finally:
-            return self
+            raise ProviderError(
+                f"connection Error, Terminated: {err}"
+            ) from err
 
     async def close(self):
         """

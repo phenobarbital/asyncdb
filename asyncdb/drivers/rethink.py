@@ -10,31 +10,19 @@ TODO:
  * to_json_string, to_json
 
 """
+import asyncio
+import logging
+import time
 from typing import (
     List,
     Dict,
     Any,
     Optional,
-    Iterable,
     Union
 )
-from .interfaces import (
-    ConnectionDSNBackend,
-    DBCursorBackend
-)
-from .base import (
-    InitProvider,
-    BaseCursor
-)
-from asyncdb.exceptions import (
-    ConnectionTimeout,
-    DataError,
-    EmptyStatement,
-    NoDataFound,
-    ProviderError,
-    StatementError,
-    TooManyConnections,
-)
+from collections.abc import Iterable
+import uvloop
+import rethinkdb
 from rethinkdb.errors import (
     ReqlDriverError,
     ReqlError,
@@ -44,17 +32,31 @@ from rethinkdb.errors import (
     ReqlResourceLimitError,
     ReqlRuntimeError,
 )
-import rethinkdb
-from rethinkdb import RethinkDB
-import asyncio
-import uvloop
-import logging
-from asyncdb.utils.functions import today
-from .base import CursorBackend
-
+from rethinkdb import r
+from asyncdb.interfaces import (
+    DBCursorBackend,
+    CursorBackend
+)
+from asyncdb.exceptions import (
+    DriverError,
+    ConnectionTimeout,
+    DataError,
+    EmptyStatement,
+    NoDataFound,
+    ProviderError,
+    StatementError,
+    TooManyConnections,
+)
+from .abstract import (
+    InitDriver,
+    BaseCursor
+)
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 uvloop.install()
+
+def today(mask="%m/%d/%Y"):
+    return time.strftime(mask)
 
 
 class rethinkCursor(BaseCursor):
@@ -64,19 +66,7 @@ class rethinkCursor(BaseCursor):
     _provider: "rethink"
     _connection: Any = None
 
-    def __init__(
-        self,
-        provider: Any,
-        sentence: Any
-    ):
-        self._provider = provider
-        self._sentence = sentence
-        self._connection = self._provider.get_connection()
-
-    # async def __aenter__(self) -> "rethinkCursor":
-    #     return self
-
-    async def __aenter__(self) -> "CursorBackend":
+    async def __aenter__(self) -> CursorBackend:
         try:
             self._cursor = await self._sentence.run(self._connection)
         except Exception as err:
@@ -100,34 +90,30 @@ class rethinkCursor(BaseCursor):
         else:
             raise StopAsyncIteration
 
-    async def fetch_one(self) -> Optional[Dict]:
-        return await self._cursor.next()
+    # async def fetch_one(self) -> Optional[Dict]:
+    #     return await self._cursor.next()
 
-    async def fetch_many(self, size: int = None) -> Iterable[List]:
-        pass
+    # async def fetch_many(self, size: int = None) -> Iterable[List]:
+    #     pass
 
-    async def fetch_all(self) -> Iterable[List]:
-        return list(self._cursor)
+    # async def fetch_all(self) -> Iterable[List]:
+    #     return list(self._cursor)
 
-    """
-    Cursor Methods.
-    """
-
-    async def fetch_one(self) -> Optional[Dict]:
+    async def fetch_one(self) -> Optional[dict]:
         return await self._cursor.fetchone()
 
-    async def fetch_many(self, size: int = None) -> Iterable[List]:
+    async def fetch_many(self, size: int = None) -> Iterable[dict]:
         return await self._cursor.fetch(size)
 
-    async def fetch_all(self) -> Iterable[List]:
+    async def fetch_all(self) -> Iterable[dict]:
         return await self._cursor.fetchall()
 
 
-class rethink(InitProvider, DBCursorBackend):
+class rethink(InitDriver, DBCursorBackend):
     _provider = "rethink"
     _syntax = "rql"
 
-    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: Dict = None, **kwargs):
+    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
         self.conditions = {}
         self.fields = []
         self.conditions = {}
@@ -138,15 +124,15 @@ class rethink(InitProvider, DBCursorBackend):
         self.qry_options = None
         self._group = None
         self.distinct = None
-        InitProvider.__init__(
+        InitDriver.__init__(
             self,
             loop=loop,
             params=params,
             **kwargs
         )
-        DBCursorBackend.__init__(self, params, **kwargs)
+        DBCursorBackend.__init__(self)
         # set rt object
-        self._engine = RethinkDB()
+        self._engine = r
         # set asyncio type
         self._engine.set_loop_type("asyncio")
         asyncio.set_event_loop(self._loop)
@@ -159,9 +145,7 @@ class rethink(InitProvider, DBCursorBackend):
 
     async def connection(self):
         self._logger.debug(
-            "RT Connection to host {} on port {} to database {}".format(
-                self.params["host"], self.params["port"], self.params["db"]
-            )
+            f'RT Connection to host {self.params["host"]}:{self.params["port"]}'
         )
         self.params["timeout"] = self._timeout
         try:
@@ -174,13 +158,13 @@ class rethink(InitProvider, DBCursorBackend):
                 )
         except ReqlRuntimeError as err:
             error = f"No database connection could be established: {err!s}"
-            raise ProviderError(message=error, code=503)
+            raise ProviderError(message=error) from err
         except ReqlDriverError as err:
             error = f"No database connection could be established: {err!s}"
-            raise ProviderError(message=error, code=503)
+            raise ProviderError(message=error) from err
         except Exception as err:
             error = f"Exception on RethinkDB: {err!s}"
-            raise ProviderError(message=error, code=503)
+            raise ProviderError(message=error) from err
         finally:
             if self._connection:
                 self._connected = True
@@ -189,7 +173,7 @@ class rethink(InitProvider, DBCursorBackend):
     def engine(self):
         return self._engine
 
-    async def close(self, wait=True):
+    async def close(self, timeout=10, wait=True):
         try:
             if self._connection:
                 await self._connection.close(noreply_wait=wait)
@@ -202,16 +186,15 @@ class rethink(InitProvider, DBCursorBackend):
     async def release(self):
         await self.close(wait=10)
 
-    """
-    Basic Methods
-    """
-
-    async def use(self, db: str):
-        self._db = db
+### Basic Methods
+    async def use(self, database: str):
+        self._db = database
         try:
             self._connection.use(self._db)
         except ReqlError as err:
-            raise ProviderError(message=err, code=503)
+            raise DriverError(
+                message=f"Error connecting to database: {database}"
+            ) from err
         return self
 
     db = use
@@ -226,8 +209,8 @@ class rethink(InitProvider, DBCursorBackend):
             if dbname not in await self._engine.db_list().run(self._connection):
                 self._db = dbname
                 return await self._engine.db_create(self._db).run(self._connection)
-        finally:
-            return self
+        except Exception:
+            raise
 
     async def dropdb(self, dbname: str):
         """
@@ -235,10 +218,10 @@ class rethink(InitProvider, DBCursorBackend):
         """
         try:
             await self._engine.db_drop(dbname).run(self._connection)
+            return self
         finally:
             if dbname == self._db:
                 self._connection.use("test")
-            return self
 
     async def sync(self, table: str):
         """
@@ -252,10 +235,10 @@ class rethink(InitProvider, DBCursorBackend):
                 return await self._engine.table(table).sync().run(self._connection)
 
     async def createindex(
-            self, table: str, 
-            field: str = "", 
-            name: str = "", 
-            fields: List = None, 
+            self, table: str,
+            field: str = "",
+            name: str = "",
+            fields: list = None,
             multi=True
         ):
         """
@@ -291,7 +274,7 @@ class rethink(InitProvider, DBCursorBackend):
                         raise ProviderError(message=err, code=503)
             else:
                 return False
-            
+
     create_index = createindex
 
     async def create_table(self, table: str, pk: Union[str, List] = None):
@@ -444,8 +427,10 @@ class rethink(InitProvider, DBCursorBackend):
         except (ReqlNonExistenceError, ReqlRuntimeError) as err:
             error = f"Query Runtime Error: {err!s}"
             raise NoDataFound(error)
-        except (rethinkdb.errors.ReqlPermissionError, Exception) as err:
+        except (rethinkdb.errors.ReqlPermissionError) as err:
             raise ProviderError(message=err)
+        except Exception as err:
+            error = f'Unknown RT error: {err}'
         finally:
             self.generated_at()
             return await self._serializer(self._result, error)
@@ -499,7 +484,7 @@ class rethink(InitProvider, DBCursorBackend):
         finally:
             self.generated_at()
             return self._result
-    
+
     fetchall = fetch_all
 
     async def queryrow(self, table: str, filter: Dict = {}, id: int = 0):
@@ -539,7 +524,7 @@ class rethink(InitProvider, DBCursorBackend):
         finally:
             self.generated_at()
             return await self._serializer(self._result, error)
-        
+
     query_row = queryrow
 
     async def fetch_one(self, table: str, filter: Dict = None, id: int = 0):

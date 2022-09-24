@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 
 import asyncio
-import json
 import time
 from datetime import datetime
-
 import aiomysql
-
 from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
@@ -14,17 +11,14 @@ from asyncdb.exceptions import (
     NoDataFound,
     ProviderError,
     StatementError,
-    TooManyConnections,
 )
-from asyncdb.providers import (
-    BasePool,
-    BaseProvider,
-    registerProvider,
-)
-from asyncdb.utils import (
-    EnumEncoder,
+from asyncdb.utils.types import (
     SafeDict,
 )
+from .abstract import (
+    BasePool
+)
+from .sql import SQLDriver
 
 
 class mysqlPool(BasePool):
@@ -169,7 +163,7 @@ class mysqlPool(BasePool):
                 raise ProviderError("Execute Error: {}".format(str(err)))
 
 
-class mysql(BaseProvider):
+class mysql(SQLDriver):
 
     _provider = "mysql"
     _syntax = "sql"
@@ -713,10 +707,3 @@ class mysql(BaseProvider):
             # print(sql)
             print(err)
             return False
-
-
-"""
-Registering this Provider
-"""
-
-registerProvider(mysql)

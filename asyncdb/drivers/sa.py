@@ -4,15 +4,11 @@ Notes on sqlalchemy async Provider
 This provider implements a basic set of funcionalities from SQLAlchemy core and use threads
 """
 import asyncio
-import logging
-import time
 from threading import Thread
-
 from psycopg2.extras import NamedTupleCursor
 from sqlalchemy import create_engine, select
 from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
-from sqlalchemy_aio import ASYNCIO_STRATEGY
-
+# from sqlalchemy_aio import ASYNCIO_STRATEGY
 from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
@@ -22,13 +18,10 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from asyncdb.providers import (
-    BaseProvider,
-    registerProvider,
-)
 
+from .sql import SQLDriver
 
-class sa(BaseProvider, Thread):
+class sa(SQLDriver, Thread):
     _provider = "sqlalchemy"
     _syntax = "sql"
     _test_query = "SELECT 1"
@@ -78,7 +71,7 @@ class sa(BaseProvider, Thread):
     def connect(self):
         self._logger.debug("Running Connect")
         try:
-            self._engine = create_engine(self._dsn, strategy=ASYNCIO_STRATEGY)
+            self._engine = create_engine(self._dsn)
         except (SQLAlchemyError, DatabaseError, OperationalError) as err:
             self._engine = None
             raise ProviderError("Connection Error: {}".format(str(err)))
@@ -239,9 +232,3 @@ class sa(BaseProvider, Thread):
             raise ProviderError(message=error)
         finally:
             return [self._result, error]
-
-
-"""
-Registering this Provider
-"""
-registerProvider(sa)
