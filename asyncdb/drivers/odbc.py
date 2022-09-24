@@ -1,19 +1,14 @@
 #!/usr/bin/env python3
 import asyncio
-import os
 import time
 from typing import (
     Any,
-    List,
-    Dict,
-    Generator,
-    Iterable,
     Optional,
 )
+from collections.abc import Iterable
 import aioodbc
 from aioodbc.cursor import Cursor
 import pyodbc
-
 from asyncdb.exceptions import (
     ConnectionTimeout,
     DataError,
@@ -23,15 +18,11 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from asyncdb.providers import (
-    BaseProvider,
-    registerProvider,
-)
-
-from asyncdb.providers.sql import SQLProvider, baseCursor
+from asyncdb.interfaces import DBCursorBackend
+from .sql import SQLDriver, SQLCursor
 
 
-class odbcCursor(baseCursor):
+class odbcCursor(SQLCursor):
     async def __aenter__(self) -> "odbcCursor":
         "Redefining __aenter__ based on requirements of ODBC Cursors"
         self._cursor = await self._connection.cursor()
@@ -39,17 +30,24 @@ class odbcCursor(baseCursor):
         return self
 
 
-class odbc(SQLProvider):
+class odbc(SQLDriver, DBCursorBackend):
     _provider = "odbc"
     _dsn = "Driver={driver};Database={database}"
 
-    def __init__(self, dsn="", loop=None, params={}, **kwargs):
+    def __init__(
+            self,
+            dsn: str = '',
+            loop: asyncio.AbstractEventLoop = None,
+            params: dict = None,
+            **kwargs
+    ) -> None:
         if "host" in params:
             self._dsn = "DRIVER={driver};Database={database};server={host};uid={user};pwd={password}"
-        super(odbc, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        SQLDriver.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
+        DBCursorBackend.__init__(self)
 
     async def prepare(self):
-        pass
+        raise NotImplementedError('Prepared Statements not supported yet.')
 
     async def connection(self, **kwargs):
         """
@@ -223,7 +221,3 @@ class odbc(SQLProvider):
         self._cursor = await self._connection.cursor()
         await self._cursor.execute(sentence, parameters)
         return self._cursor
-
-
-# Registering this Provider
-registerProvider(odbc)

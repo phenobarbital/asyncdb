@@ -7,7 +7,13 @@ This provider implements a basic set of funcionalities from SQLAlchemy core
 """
 
 import asyncio
-import time
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional
+)
+from collections.abc import Callable, Iterable
 from psycopg2.extras import NamedTupleCursor, DictCursor
 from sqlalchemy import create_engine, select
 from sqlalchemy.dialects import mysql, postgresql
@@ -27,18 +33,10 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from .interfaces import (
+from asyncdb.interfaces import (
     DBCursorBackend
 )
-from typing import (
-    Any,
-    Dict,
-    List,
-    Optional,
-    Callable,
-    Iterable
-)
-from .sql import SQLProvider, SQLCursor
+from .sql import SQLDriver, SQLCursor
 
 
 class sql_alchemyCursor(SQLCursor):
@@ -50,7 +48,7 @@ class sql_alchemyCursor(SQLCursor):
             self._params
         )
         return self
-    
+
     def __next__(self):
         """Use `cursor.fetchrow()` to provide an iterable."""
         row = self._cursor.fetchone()
@@ -59,7 +57,7 @@ class sql_alchemyCursor(SQLCursor):
         else:
             raise StopIteration
 
-class sql_alchemy(SQLProvider, DBCursorBackend):
+class sql_alchemy(SQLDriver, DBCursorBackend):
     _provider = "sql_alchemy"
     _syntax = "sql"
     _test_query = "SELECT 1 as one"
@@ -100,8 +98,8 @@ class sql_alchemy(SQLProvider, DBCursorBackend):
                     self._driver = params["driver"]
             except KeyError:
                 params["driver"] = "postgresql"
-        SQLProvider.__init__(self, dsn, loop, params, **kwargs)
-        DBCursorBackend.__init__(self, params, **kwargs)
+        SQLDriver.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
+        DBCursorBackend.__init__(self)
         self._options = self._engine_options
         if kwargs:
             self._options = {**self._options, **kwargs}
@@ -280,7 +278,7 @@ class sql_alchemy(SQLProvider, DBCursorBackend):
             raise ProviderError(message=error)
         finally:
             return [self._result, error]
-        
+
     def fetch_all(self, sentence: Any, params: List = None):
         """
         Running Query.
@@ -336,7 +334,7 @@ class sql_alchemy(SQLProvider, DBCursorBackend):
             raise ProviderError(message=error)
         finally:
             return result
-        
+
     fetchone = fetch_one
 
     def execute(self, sentence, params: List = None):
@@ -378,7 +376,7 @@ class sql_alchemy(SQLProvider, DBCursorBackend):
             raise ProviderError(message=error)
         finally:
             return [self._result, error]
-        
+
     executemany = execute_many
 
     """
@@ -424,7 +422,7 @@ class sql_alchemy(SQLProvider, DBCursorBackend):
         if self._transaction:
             self.close_transaction()
         self.release()
-        
+
     """
     DDL Information.
     """
