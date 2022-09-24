@@ -1,8 +1,5 @@
 import asyncio
 from pprint import pprint
-
-from asyncdb.providers import sqlserver
-
 from asyncdb import AsyncDB
 from asyncdb.exceptions import default_exception_handler
 
@@ -22,8 +19,9 @@ async def connect(db):
         print('Getting Driver: ', conn)
         pprint(await conn.test_connection())
         pprint(conn.is_connected())
-        conn.use('AdventureWorks2019')
-        await conn.execute("create table tests(id integer, name text)")
+        await conn.use('AdventureWorks2019')
+        result = await conn.execute("create table tests(id INT NOT NULL, name VARCHAR(100))")
+        print('Execute Result: ', result)
         many = "INSERT INTO dbo.tests VALUES(%d, %s)"
         examples = [(2, "def"), (3, "ghi"), (4, "jkl")]
         print(": Executing Insert of many entries: ")
@@ -32,6 +30,9 @@ async def connect(db):
         result, error = await conn.query("SELECT * FROM dbo.tests")
         for row in result:
             print(row)
+        print('=== getting parametrized results: ===')
+        result, error = await conn.queryrow("SELECT * FROM dbo.tests WHERE name=%s", 'jkl', as_dict=True)
+        print(result, 'Error: ', error)
         table = """
             DROP TABLE IF EXISTS dbo.airports;
             CREATE TABLE dbo.airports (
@@ -42,7 +43,6 @@ async def connect(db):
         """
         print(": Creating Table Airport: ")
         result, error = await conn.execute(table)
-        print(error)
         data = [
             ("ORD", "Chicago", "United States"),
             ("JFK", "New York City", "United States"),
@@ -70,8 +70,11 @@ async def connect(db):
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.set_exception_handler(default_exception_handler)
-    driver = AsyncDB(DRIVER, params=params, loop=loop)
-    print(driver)
-    asyncio.run(connect(driver))
+    try:
+        loop = asyncio.get_event_loop()
+        loop.set_exception_handler(default_exception_handler)
+        driver = AsyncDB(DRIVER, params=params, loop=loop)
+        print(driver)
+        loop.run_until_complete(connect(driver))
+    finally:
+        loop.stop()
