@@ -20,38 +20,32 @@ OPTIONS (
 ).result()
 
 # Fetch values in between (40, 50)
-result_future = client.sql.execute("SELECT * FROM integers WHERE this > ? AND this < ?", 40, 50)
-print(result_future)
+result = client.sql.execute("SELECT * FROM integers WHERE this > ? AND this < ?", 10, 50).result()
+for row in result:
+    print(row)
 
-fut = result_future.result().iterator()
-while True:
-    try:
-        row = next(fut)
-    except StopIteration:
-        # Exhausted the iterator. No more rows are left.
-        pass
+# print(result_future)
 
+# def on_response(sql_result_future):
+#     print('HERE ')
+#     it = sql_result_future.result().iterator()
+#     print(it)
 
-def on_response(sql_result_future):
-    print('HERE ')
-    it = sql_result_future.result().iterator()
-    print(it)
+#     def on_next_row(row_future):
+#         try:
+#             row = row_future.result()
+#             # Process the row.
+#             print(row)
 
-    def on_next_row(row_future):
-        try:
-            row = row_future.result()
-            # Process the row.
-            print(row)
+#             # Iterate over the next row.
+#             next(it).add_done_callback(on_next_row)
+#         except StopIteration:
+#             # Exhausted the iterator. No more rows are left.
+#             pass
 
-            # Iterate over the next row.
-            next(it).add_done_callback(on_next_row)
-        except StopIteration:
-            # Exhausted the iterator. No more rows are left.
-            pass
-
-    next(it).add_done_callback(on_next_row)
+#     next(it).add_done_callback(on_next_row)
 
 
-# Request the iterator over rows and add a callback to
-# run, when the response comes
-result_future.add_done_callback(on_response)
+# # Request the iterator over rows and add a callback to
+# # run, when the response comes
+# result_future.add_done_callback(on_response)

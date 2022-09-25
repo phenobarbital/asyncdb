@@ -35,7 +35,7 @@ class HazelPortable(BaseModel, Portable):
 
     def write_portable(self, writer):
         for name, f in self.columns().items():
-            if name == 'factory_id':
+            if name == 'FACTORY_ID':
                 continue
             _type = f.type
             value = getattr(self, name)
@@ -50,7 +50,7 @@ class HazelPortable(BaseModel, Portable):
 
     def read_portable(self, reader):
         for name, f in self.columns().items():
-            if name == 'factory_id':
+            if name == 'FACTORY_ID':
                 continue
             _type = f.type
             if Entity.is_integer(_type):
@@ -404,12 +404,17 @@ class hazel(InitDriver):
 
     fetch_one = fetch_all
 
-    async def execute(self, sentence: Union[Any, str], *args, **kwargs) -> Union[Sequence, None]:
+    async def execute(self, sentence: Union[Any, str], *args, fut: bool = False, map_name: str = None, **kwargs) -> Union[Sequence, None]:
         print(f"Execute Query {sentence}")
         result = []
         error = None
         try:
-            result = self._connection.sql.execute(sentence, *args).result()
+            if map_name:
+                self._connection.get_map(map_name).blocking()
+            if not fut:
+                result = self._connection.sql.execute(sentence, *args).result()
+            else:
+                result = self._connection.sql.execute(sentence, *args)
         except (HazelcastError) as err:
             error = f"Get Hazelcast Error: {err}"
         except Exception as err: # pylint: disable=W0703
