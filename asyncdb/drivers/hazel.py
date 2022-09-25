@@ -6,11 +6,14 @@ import logging
 from datetime import datetime
 from typing import (
     Union,
-    Any
+    Any,
+    ClassVar
 )
 from collections.abc import Sequence
 from datamodel import BaseModel, Field
+
 import hazelcast
+from hazelcast.serialization.api import Portable
 from hazelcast.errors import (
     HazelcastError,
     HazelcastClientNotActiveError
@@ -26,31 +29,37 @@ from .abstract import (
 )
 
 
-class HazelPortable(BaseModel):
-    factory_id: int = Field(default=1)
+class HazelPortable(BaseModel, Portable):
+    FACTORY_ID: ClassVar[int] = Field(default=1, repr=False)
+    CLASS_ID: ClassVar[int] = Field(default=1, repr=False)
 
     def write_portable(self, writer):
         for name, f in self.columns().items():
+            if name == 'factory_id':
+                continue
             _type = f.type
-            value = getattr(self, f)
+            value = getattr(self, name)
             if Entity.is_integer(_type):
                 writer.write_int(name, value)
+            elif _type == bool:
+                writer.write_boolean(name, value)
             elif Entity.is_number(_type):
                 writer.write_long(name, value)
-            elif Entity.is_bool(_type):
-                writer.write_boolean(name, value)
             else:
                 writer.write_string(name, value)
 
     def read_portable(self, reader):
         for name, f in self.columns().items():
+            if name == 'factory_id':
+                continue
             _type = f.type
             if Entity.is_integer(_type):
                 value = reader.read_int(name)
+            elif _type == bool:
+                val = reader.read_boolean(name)
+                value = bool(val)
             elif Entity.is_number(_type):
                 value = reader.read_long(name)
-            elif Entity.is_bool(_type):
-                value = reader.read_boolean(name)
             else:
                 value = reader.read_string(name)
             try:
@@ -58,14 +67,15 @@ class HazelPortable(BaseModel):
             except (TypeError, ValueError) as e:
                 logging.warning(f'Hazelcast Error on Portable: {e}')
 
-    def set_factory(self, fid: int = 1):
-        self.factory_id = fid
+    @classmethod
+    def set_factory(cls, fid: int = 1):
+        cls.FACTORY_ID = fid
 
     def get_factory_id(self):
-        return self.factory_id
+        return self.__class__.FACTORY_ID
 
     def get_class_id(self):
-        return self.factory_id
+        return self.__class__.FACTORY_ID
 
 class hazel(InitDriver):
     _provider = "hazelcast"
@@ -136,14 +146,12 @@ class hazel(InitDriver):
             n = 1
             factories = {}
             for factory in self.factories:
-                # print(factory, type(factory), isinstance(factory, HazelPortable))
-                # TODO: fix bug of inherit classes on BaseModel.
-                # if not isinstance(factory, BaseModel):
-                #     raise TypeError(
-                #         f"Wrong instance type for a Hazelcast Portable: {factory!r}"
-                #     )
+                if not issubclass(factory, HazelPortable):
+                    raise TypeError(
+                        f"Wrong instance type for a Hazelcast Portable: {factory!r}"
+                    )
                 factory.set_factory(n)
-                factories[n] = factory
+                factories[factory.FACTORY_ID] = {factory.CLASS_ID: factory}
                 n+=1
             self._connection = hazelcast.HazelcastClient(
                 cluster_members=[
@@ -216,7 +224,7 @@ class hazel(InitDriver):
             map_name = self._map_name
         try:
             a_map = self._connection.get_map(map_name)
-            a_map.put(key, value)
+            a_map.set(key, value)
         except (HazelcastError) as err:
             raise ProviderError(
                 f"Get Hazelcast Error: {err}"
@@ -226,7 +234,20 @@ class hazel(InitDriver):
                 f"Hazelcast Unknown Error: {err}"
             ) from err
 
-    put = set
+    async def put(self, key, value: Any, map_name: str = None) -> None:
+        if not map_name:
+            map_name = self._map_name
+        try:
+            a_map = self._connection.get_map(map_name)
+            a_map.put(key, value)
+        except (HazelcastError) as err:
+            raise ProviderError(
+                f"Get Hazelcast Error: {err}"
+            ) from err
+        except Exception as err:
+            raise ProviderError(
+                f"Hazelcast Unknown Error: {err}"
+            ) from err
 
     async def set_multi(self, key, *args, map_name: str = None):
         if not map_name:
@@ -342,14 +363,17 @@ class hazel(InitDriver):
     async def use(self, database):
         raise NotImplementedError
 
-    async def query(self, sentence, map_name: str = None, **kwargs):
+    async def query(self, sentence: Any = None, map_name: str = None, **kwargs):
         error = None
         result = None
         if not map_name:
             map_name = self._map_name
         try:
-            mmap = self._connection.get_multi_map(map_name)
-            result = mmap.get(sentence).result()
+            mmap = self._connection.get_map(map_name)
+            if not sentence:
+                result = mmap.entry_set().result()
+            else:
+                result = mmap.get(sentence).result()
         except (HazelcastError) as err:
             error = f"Get Hazelcast Error: {err}"
         except Exception as err: # pylint: disable=W0703
@@ -385,7 +409,7 @@ class hazel(InitDriver):
         result = []
         error = None
         try:
-            result = self._connection.sql.execute(sentence, *args)
+            result = self._connection.sql.execute(sentence, *args).result()
         except (HazelcastError) as err:
             error = f"Get Hazelcast Error: {err}"
         except Exception as err: # pylint: disable=W0703
