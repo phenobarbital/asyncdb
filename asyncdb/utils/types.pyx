@@ -127,6 +127,11 @@ cdef class Entity:
     """Entity.
     Used to convert entities (string, number, dates) to appropiated string on SQL queries.
     """
+
+    @classmethod
+    def is_integer(cls, _type):
+        return _type in (int, int64)
+
     @classmethod
     def is_number(cls, _type):
         return _type in (int, int64, float, Decimal, bytes, bool)

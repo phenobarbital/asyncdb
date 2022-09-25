@@ -292,7 +292,7 @@ class ConnectionBackend(ABC):
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         # clean up anything you need to clean up
         try:
-            await asyncio.wait_for(self.close(), timeout=5)
+            await asyncio.wait_for(self.close(), timeout=20)
         except Exception as err:
             self._logger.exception(f'Closing Error: {err}')
             raise

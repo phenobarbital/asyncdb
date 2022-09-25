@@ -183,6 +183,9 @@ setup(
         "couchdb": [
             "aiocouch==2.2.2"
         ],
+        "hazelcast": [
+            "hazelcast-python-client==5.1"
+        ],
         "all": [
             "dask==2022.9.1",
             "datatable==1.0.0",
@@ -220,6 +223,7 @@ setup(
             "aiocouch==2.2.2",
             "asyncmy==0.2.5",
             "mysqlclient==2.1.1",
+            "hazelcast-python-client==5.1",
             "aiomysql==0.1.1",
             "pyspark==3.3.0"
         ]
