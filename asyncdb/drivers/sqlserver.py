@@ -233,6 +233,8 @@ class sqlserver(mssql):
         finally:
             return await self._serializer(self._result, error) # pylint: disable=W0150
 
+    callproc = procedure
+
     async def queryrow(self, sentence, *args, **kwargs):
         error = None
         self._result = None
@@ -254,13 +256,13 @@ class sqlserver(mssql):
         finally:
             return await self._serializer(self._result, error) # pylint: disable=W0150
 
-    async def fetch_one(self, sentence, *args):
+    async def fetch_one(self, sentence, *args, **kwargs):
         self._result = None
         await self.valid_operation(sentence)
         if isinstance(sentence, str):
             sentence = sentence.encode(self._charset)
         try:
-            self._cursor = self._connection.cursor()
+            self._cursor = self._connection.cursor(**kwargs)
             self._cursor.execute(sentence, args)
             self._result = self._cursor.fetchone()
             if not self._result:
@@ -331,3 +333,72 @@ class sqlserver(mssql):
             raise ProviderError(
                 f"Error on Query: {err}"
             ) from err
+
+
+    async def exec(
+            self,
+            sentence,
+            *args,
+            paginated: bool = False,
+            page: str = None,
+            idx: str = None,
+            **kwargs
+        ):
+        """exec.
+
+        Calling an Stored Function with parameters.
+        Args:
+            sentence (str): Called Procedure.
+            paginated (bool, optional): True if Stored Function is paginated. Defaults to False.
+            page (str, optional): Rowset parameter with the number of records. Defaults to None.
+            idx (str, optional): Parameter used to declare the Page Index. Defaults to None.
+            *args (optional): Any other parameter required by the function (passed on executed).
+            **kwargs (str, optional): any parameter required by the stored function.
+        Returns:
+            Tuple(Any, Exception): tuple with resultset and possible error.
+        """
+        error = None
+        self._result = None
+        await self.valid_operation(sentence)
+        try:
+            self._cursor = self._connection.cursor()
+            if kwargs:
+                params = ', '.join([f'{k}={v}' for k,v in kwargs.items()])
+            else:
+                params = ''
+            procedure = f'EXEC {sentence} {params}'
+            self._cursor.execute(procedure, *args)
+            result = self._cursor.fetchall()
+            if not result:
+                return [None, NoDataFound("SQL Server: No Data was Found")]
+            else:
+                # preparing for pagination and other stuff.
+                rowlen = len(result)
+                if paginated is True:
+                    results = []
+                    # this procedure is paginated:
+                    sample_row = result[0]
+                    num_rows = sample_row[page]
+                    if num_rows > rowlen:
+                        results.extend(result)
+                        # there are many more results:
+                        index = kwargs[idx]
+                        new_index = index + rowlen
+                        kwargs[idx] = new_index
+                        r, error = await self.exec(sentence, paginated=paginated, page=page, idx=idx, **kwargs)
+                        if r and not error:
+                            results.extend(r)
+                        return await self._serializer(results, error)
+                    else:
+                        return await self._serializer(result, error)
+                else:
+                    # is not paginated, return as usual:
+                    return await self._serializer(result, error)
+        except (pymssql.StandardError, pymssql.Error) as err:
+            error = f"SQL Server Query Error: {err}"
+        except RuntimeError as err:
+            error = f"Runtime Error: {err}"
+        except Exception as err: # pylint: disable=W0703
+            error = f"Error on Query: {err}"
+        finally:
+            return await self._serializer(self._result, error) # pylint: disable=W0150

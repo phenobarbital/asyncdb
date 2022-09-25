@@ -61,13 +61,14 @@ async def test_customer(params, event_loop):
         print(result.update_count())
         print('EXEC QUERY ==== ')
         result, error = await conn.execute(
-            "SELECT * FROM my_customers WHERE age < 18"
+            "SELECT name, age FROM my_customers WHERE age < 18", map_name='customers'
         )
+        print('ERROR: ', error)
         print('RESULT ', result, result.is_row_set())
         if result.is_row_set():
             print('METADATA: ', result.get_row_metadata())
-            len(result)
             for row in result:
+                print(row)
                 print('ROW ', row.get_object('name'))
         # DROPPING MAPPING:
         result, error = await conn.execute('DROP MAPPING IF EXISTS my_customers')
