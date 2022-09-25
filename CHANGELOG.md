@@ -10,6 +10,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * replaced rapidjson with orjson.
 * fix some issues in publish-to-pypi GH.
 * Deprecating some old classes as AsyncORM.
+* MS SQL Server: add method "exec" to calling Stored Functions with optional auto-pagination.
+* WiP: Added Hazelcast Driver.
+* Added JDBC Driver.
+* Tested InfluxDB driver.
+* aioSQLite Driver with Model Support.
+* WiP: Oracle Driver.
+* Working Cassandra Driver.
 
 ## [1.7.18] - 2021-10-20
 * First stable version with support to Python +3.8
