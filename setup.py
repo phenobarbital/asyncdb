@@ -159,7 +159,7 @@ setup(
         ],
         "odbc": [
             "aioodbc==0.3.3",
-            "pyodbc==4.0.30",
+            "pyodbc==4.0.34",
         ],
         "jdbc": [
             "JayDeBeApi==1.2.3"
