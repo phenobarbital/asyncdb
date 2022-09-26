@@ -148,7 +148,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
                 self._connected = True
                 self._initialized_on = time.time()
                 if self._init_func is not None and callable(self._init_func):
-                    await self._init_func(self._connection)
+                    await self._init_func(self._connection) # pylint: disable=E1102
         except jpype.JException as ex:
             print(ex.stacktrace())
             self._logger.error(

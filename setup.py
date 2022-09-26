@@ -164,6 +164,9 @@ setup(
         "jdbc": [
             "JayDeBeApi==1.2.3"
         ],
+        "oracle": [
+            "oracledb==1.1.0"
+        ],
         "sqlalchemy": [
             "sqlalchemy==1.4.41",
         ],
@@ -225,7 +228,8 @@ setup(
             "mysqlclient==2.1.1",
             "hazelcast-python-client==5.1",
             "aiomysql==0.1.1",
-            "pyspark==3.3.0"
+            "pyspark==3.3.0",
+            "oracledb==1.1.0"
         ]
     },
     tests_require=[

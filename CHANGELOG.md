@@ -15,7 +15,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Added JDBC Driver.
 * Tested InfluxDB driver.
 * aioSQLite Driver with Model Support.
-* WiP: Oracle Driver.
+* WiP: Oracle Driver (using newer oracledb connector).
 * Working Cassandra Driver.
 
 ## [1.7.18] - 2021-10-20
