@@ -35,7 +35,7 @@ class oracle(SQLDriver):
         self._test_query = "SELECT 1"
         _starttime = datetime.now()
         self._dsn = '{host}:{port}/{database}'
-        self.application_name = os.getenv('APP_NAME', "NAV")
+        self.application_name = os.getenv('APP_NAME', "ASYNCDB")
         try:
             self._lib_dir = params['oracle_client']
         except (KeyError, TypeError):
@@ -64,7 +64,10 @@ class oracle(SQLDriver):
         user = self._params['user']
         password = self._params ['password']
         if self._lib_dir is not None:
-            oracledb.init_oracle_client(lib_dir=self._lib_dir)
+            oracledb.init_oracle_client(
+                lib_dir=self._lib_dir,
+                driver_name=f"{self.application_name} : 1.0"
+            )
         self._executor = self.get_executor(executor='thread', max_workers=10)
         try:
             self._connection = await self._thread_func(
