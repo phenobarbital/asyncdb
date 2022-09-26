@@ -1,8 +1,5 @@
 import asyncio
 from pprint import pprint
-
-from asyncdb.providers import odbc
-
 from asyncdb import AsyncDB
 from asyncdb.exceptions import default_exception_handler
 
@@ -17,7 +14,7 @@ async def connect(db):
         examples = [(2, "def"), (3, "ghi"), (4, "jkl")]
         print(": Executing Insert of many entries: ")
         await conn.executemany(many, examples)
-        result, error = await conn.query("SELECT * FROM tests")
+        result, _ = await conn.query("SELECT * FROM tests")
         for row in result:
             print(row)
         table = """
