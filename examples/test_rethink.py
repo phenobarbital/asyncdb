@@ -3,7 +3,7 @@ import logging
 from pprint import pprint
 import iso8601
 from asyncdb import AsyncDB
-
+from asyncdb.drivers.rethink import Point
 
 
 logging.basicConfig(level=logging.INFO, format="%(name)s - %(levelname)s - %(message)s")
@@ -80,13 +80,25 @@ async def test_connect(event_loop):
             for row in result:
                 pprint(row)
         # getting one single row:
-        result, error = await conn.queryrow(
+        site1, error = await conn.queryrow(
             'troc_populartimes',
             columns=['address', 'city', 'state_code', 'name', 'place_id', 'company_id', 'coordinates'],
             place_id='ChIJheKbjENx54gRDpzTZVc0NHk'
         )
         if not error:
-            print('ROW ', result)
+            print('ROW ', site1)
+        site2, error = await conn.queryrow(
+            'troc_populartimes',
+            columns=['address', 'city', 'state_code', 'name', 'place_id', 'company_id', 'coordinates'],
+            place_id='ChIJMYUYxbBGFIgRMbFlFTJWD5g'
+        )
+        if not error:
+            print('ROW ', site2)
+        # return distance between site1 and 2:
+        p1 = Point(*site1['coordinates'].values())
+        p2 = Point(*site2['coordinates'].values())
+        distance = await conn.distance(p1, p2, unit='km')
+        print(f'::: Distance between {p1} and {p2}: {distance} km.')
         await conn.drop_database('testing')
 
 

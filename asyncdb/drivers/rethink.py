@@ -3,7 +3,6 @@ Notes on RethinkDB async Provider
 --------------------
 TODO:
  * Index Manipulation
- * Limits (r.table('marvel').order_by('belovedness').limit(10).run(conn))
  * map reductions
  * slice (.slice(3,6).run(conn)) for pagination
  * Group, aggregation, ungroup and reduce
@@ -31,6 +30,7 @@ from rethinkdb.errors import (
     ReqlRuntimeError,
 )
 from rethinkdb import r
+from datamodel import BaseModel
 from asyncdb.interfaces import (
     DBCursorBackend,
     CursorBackend
@@ -53,6 +53,13 @@ uvloop.install()
 def today(mask="%m/%d/%Y"):
     return time.strftime(mask)
 
+
+class Point(BaseModel):
+    x: float
+    y: float
+
+    def as_point(self) -> Any:
+        return r.point(self.x, self.y)
 
 class rethinkCursor(BaseCursor):
     """
@@ -1159,6 +1166,28 @@ class rethink(InitDriver, DBCursorBackend):
             raise DataError(
                 f"Permission error over {table}: {err}"
             ) from err
+        except ReqlRuntimeError as err:
+            raise DriverError(
+                f"Runtime Error: {err}"
+            ) from err
+        except Exception as err: # pylint: disable=W0703
+            raise ProviderError(
+                f'Unknown RT error: {err}'
+            ) from err
+
+    async def distance(self, p1: Point, p2: Point, unit: str = 'km', geo: str = 'WGS84') -> float:
+        if not isinstance(p1, Point):
+            raise TypeError(
+                f"Invalid type for Point 1: {type(p1)}"
+            )
+        if not isinstance(p2, Point):
+            raise TypeError(
+                f"Invalid type for Point 2: {type(p2)}"
+            )
+        try:
+            point1 = p1.as_point()
+            point2 = p2.as_point()
+            return await self._engine.distance(point1, point2, unit=unit, geo_system=geo).run(self._connection)
         except ReqlRuntimeError as err:
             raise DriverError(
                 f"Runtime Error: {err}"
