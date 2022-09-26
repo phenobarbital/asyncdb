@@ -1,18 +1,13 @@
 import asyncio
 import logging
-
-loop = asyncio.get_event_loop()
-asyncio.set_event_loop(loop)
-loop.set_debug(True)
+from pprint import pprint
 import iso8601
+from asyncdb import AsyncDB
+from asyncdb.drivers.rethink import Point
+
+
 logging.basicConfig(level=logging.INFO, format="%(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
-
-
-from asyncdb import AsyncDB, AsyncPool
-from asyncdb.exceptions import NoDataFound, ProviderError
-from asyncdb.providers.rethink import rethink
-
 
 params = {
     "host": "localhost",
@@ -20,10 +15,8 @@ params = {
     "db": "troc"
 }
 
-rt = AsyncDB("rethink", params=params, loop=loop)
-
-
-data = [{'inserted_at': iso8601.parse_date('2020-12-09 04:23:52.441312+0000'),
+data = [
+    {'inserted_at': iso8601.parse_date('2020-12-09 04:23:52.441312+0000'),
     'description': 'TERRE HAUTE-WM - #4235', 'company_id': 1,
     'territory_id': 2.0, 'territory_name': '2-Midwest',
     'region_name': 'William Pipkin', 'district_id': 235.0,
@@ -49,30 +42,71 @@ data = [{'inserted_at': iso8601.parse_date('2020-12-09 04:23:52.441312+0000'),
     'filterdate': iso8601.parse_date('2020-10-30 00:00:00+0000'),
     'store_tier': None,
     'launch_group': None
-    }]
+    }
+]
 
-print(data)
-async def connect(db):
-    async with await db.connection() as conn:
-        print("Connected: {}".format(conn.is_connected))
-        print(await conn.test_connection())
-        conn.use('troc')
-        db = await conn.list_databases()
-        print(db)
-        filter = {"company_id": 10, "state_code": "FL"}
-        result, error = await conn.query('troc_populartimes', filter=filter)
+async def test_connect(event_loop):
+    rt = AsyncDB("rethink", params=params, loop=event_loop)
+    print(rt)
+    async with await rt.connection() as conn:
+        print(f"Connected: {conn.is_connected()}")
+        print('== TEST ==')
+        result, error = await conn.test_connection()
+        print('TEST: ', result, error)
+        dbs = await conn.list_databases()
+        print('Current databases: ', dbs)
+        await conn.create_database('testing', use=True)
+        print('Created database testing ===')
+        created = await conn.create_table('sample_scorecard', pk='store_id')
+        print(created)
+        print('Check if table already exists: ')
+        exists = await conn.list_tables()
+        print('Exists? ', 'sample_scorecard' in exists)
+        inserted = await conn.insert('sample_scorecard', data)
+        print('INSERTED: ', inserted)
+        await conn.drop_table('sample_scorecard')
+
+        await conn.db('troc')
+        _filter = {"company_id": 10, "state_code": "FL"}
+        result, error = await conn.query(
+            'troc_populartimes',
+            **_filter,
+            order_by = ['company_id', 'city'],
+            limit=10,
+            columns=['address', 'city', 'state_code', 'name', 'place_id', 'company_id']
+        )
+        print('Error: ', error)
         if not error:
             for row in result:
-                #print(row)
-                pass
-        # insert data:
-        conn.use('walmart')
-        inserted = await conn.insert('walmart_scorecard', data)
-        print(inserted)
-try:
-    loop.run_until_complete(connect(rt))
-finally:
-    loop.run_until_complete(rt.close())
-    # Find all running tasks:
-    print("Shutdown complete ...")
-    #loop.stop()
+                pprint(row)
+        # getting one single row:
+        site1, error = await conn.queryrow(
+            'troc_populartimes',
+            columns=['address', 'city', 'state_code', 'name', 'place_id', 'company_id', 'coordinates'],
+            place_id='ChIJheKbjENx54gRDpzTZVc0NHk'
+        )
+        if not error:
+            print('ROW ', site1)
+        site2, error = await conn.queryrow(
+            'troc_populartimes',
+            columns=['address', 'city', 'state_code', 'name', 'place_id', 'company_id', 'coordinates'],
+            place_id='ChIJMYUYxbBGFIgRMbFlFTJWD5g'
+        )
+        if not error:
+            print('ROW ', site2)
+        # return distance between site1 and 2:
+        p1 = Point(*site1['coordinates'].values())
+        p2 = Point(*site2['coordinates'].values())
+        distance = await conn.distance(p1, p2, unit='km')
+        print(f'::: Distance between {p1} and {p2}: {distance} km.')
+        await conn.drop_database('testing')
+
+
+if __name__ == '__main__':
+    try:
+        loop = asyncio.get_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.set_debug(True)
+        loop.run_until_complete(test_connect(loop))
+    finally:
+        loop.stop()

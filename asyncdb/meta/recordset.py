@@ -3,16 +3,12 @@ Recordset.
 
 Sequence of Records.
 """
-from collections.abc import Sequence
+from collections.abc import Sequence, Iterator
 from typing import (
     Any,
-    List,
-    Dict,
-    Iterator,
     Union
 )
 from .record import Record
-from cassandra.cluster import ResultSet
 
 
 class Recordset(Sequence):
@@ -23,7 +19,9 @@ class Recordset(Sequence):
       params:
           result: any resultset
     """
-    def __init__(self, result: Any, columns: List = []):
+    __slots__ = ('_idx', '_columns', '_result')
+
+    def __init__(self, result: Any, columns: list = None):
         self._columns = columns
         self._result = result
         self._idx = 0
@@ -35,18 +33,19 @@ class Recordset(Sequence):
     def from_result(cls, result: Iterator) -> "Recordset":
         cols = []
         try:
-            if isinstance(result, ResultSet):
-                cols = result.one().keys
-                result = list(result)
+            if hasattr(result, 'one'): # Cassandra Resulset
+                if callable(result.one):
+                    cols = result.one().keys
+                    result = list(result)
             else:
                 cols = result[0].keys()
             return cls(result, columns = cols)
         except Exception as err:
-            raise ValueError(f"Recordset: Invalid data set {err}")
+            raise ValueError(
+                f"Recordset: Invalid data set {err}"
+            ) from err
 
-    """
-     Section: Simple magic methods
-    """
+### Section: Simple magic methods
     def __getitem__(self, key: Union[int, str]):
         if isinstance(key, int):
             if key >= len(self._result):
@@ -60,7 +59,7 @@ class Recordset(Sequence):
             raise TypeError(f"Recordset: Invalid request {key!s}")
 
     def __repr__(self) -> str:
-        return f"<Recordset {self._result!r}>"
+        return f"<Recordset {self._columns!r}>"
 
     def __len__(self) -> int:
         return len(self._result)
@@ -71,6 +70,8 @@ class Recordset(Sequence):
     def __next__(self):
         """
         Next: next object from iterator
+        :returns: a Record object.
+        :raises StopIteration: when end is reached.
         """
         if self._idx < len(self._result):
             row = self._result[self._idx]

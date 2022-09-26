@@ -1,16 +1,5 @@
-from asyncdb import AsyncDB
 import asyncio
-import logging
-
-loop = asyncio.get_event_loop()
-asyncio.set_event_loop(loop)
-
-params = {
-    "host": "127.0.0.1",
-    "port": "9042",
-    "username": 'cassandra',
-    "password": 'cassandra'
-}
+from asyncdb import AsyncDB
 
 DRIVER='cassandra'
 
@@ -22,7 +11,7 @@ async def test_connect(driver, params, event_loop):
     result, error = await db.test_connection()
     print(result, error)
     print(type(result) == list)
-    db.use('library')  # set database to work
+    await db.use('library')  # set database to work
     # making a simple query:
     result, error = await db.query('SELECT * from events LIMIT 100')
     print(error)
@@ -56,7 +45,7 @@ async def test_connect(driver, params, event_loop):
     # db.output_format('json')  # change output format to json
     # result, error = await db.query('SELECT * from events LIMIT 10000')
     # print(result)
-    
+
     # db.output_format('pandas')  # change output format to pandas
     # result, error = await db.query('SELECT * from events LIMIT 10000')
     # print(result)
@@ -84,8 +73,18 @@ async def test_connect(driver, params, event_loop):
 
 if __name__ == '__main__':
     try:
-        loop.run_until_complete(test_connect(DRIVER, params, loop))
+        loop = asyncio.get_event_loop()
+        asyncio.set_event_loop(loop)
+        params = {
+            "host": "127.0.0.1",
+            "port": "9042",
+            "username": 'cassandra',
+            "password": 'cassandra'
+        }
+        loop.run_until_complete(
+            test_connect(DRIVER, params, loop)
+        )
     except Exception as err:
-        print(err)
+        print('Error: ', err)
     finally:
         loop.close()
