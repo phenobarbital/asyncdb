@@ -131,7 +131,7 @@ setup(
             "rethinkdb==2.4.9",
         ],
         "postgres": [
-            "aiopg==1.3.3",
+            "aiopg==1.3.5",
             "psycopg2-binary>=2.9.1",
         ],
         "postgresql": [
@@ -205,7 +205,7 @@ setup(
             "objectpath==0.6.1",
             "asyncpg==0.26.0",
             "rethinkdb==2.4.9",
-            "aiopg==1.3.3",
+            "aiopg==1.3.5",
             "psycopg2-binary>=2.9.1",
             "botocore==1.27.81",
             "boto3==1.24.81",
