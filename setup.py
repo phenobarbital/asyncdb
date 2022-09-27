@@ -81,7 +81,7 @@ setup(
         "Cython==0.29.32",
         "numpy==1.23.3",
         "cryptography==38.0.1",
-        "aiohttp==3.8.1",
+        "aiohttp==3.8.3",
         "asyncpg==0.26.0",
         "uvloop==0.17.0",
         "asyncio==3.4.3",
