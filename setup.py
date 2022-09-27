@@ -95,7 +95,7 @@ setup(
         "charset-normalizer>=2.0.7",
         "ciso8601==2.2.0",
         "iso8601==1.0.2",
-        "pgpy==0.5.3",
+        "pgpy==0.5.4",
         "python-magic==0.4.27",
         "dateparser==1.1.1",
         "python-datamodel>=0.0.12"
