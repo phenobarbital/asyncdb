@@ -80,8 +80,8 @@ setup(
         "wheel==0.37.1",
         "Cython==0.29.32",
         "numpy==1.23.3",
-        "cryptography==37.0.4",
-        "aiohttp==3.8.1",
+        "cryptography==38.0.1",
+        "aiohttp==3.8.3",
         "asyncpg==0.26.0",
         "uvloop==0.17.0",
         "asyncio==3.4.3",
@@ -96,7 +96,7 @@ setup(
         "ciso8601==2.2.0",
         "iso8601==1.0.2",
         "pgpy==0.5.3",
-        "python-magic==0.4.18",
+        "python-magic==0.4.27",
         "dateparser==1.1.1",
         "python-datamodel>=0.0.12"
     ],
@@ -104,7 +104,7 @@ setup(
         "dataframe": [
             "dask==2022.9.1",
             "datatable==1.0.0",
-            "polars==0.14.11",
+            "polars==0.14.14",
             "pyarrow==4.0.1",
             "connectorx==0.3.0",
             "pyspark==3.3.0"
@@ -145,9 +145,8 @@ setup(
             "aiomysql==0.1.1"
         ],
         "boto3": [
-            "botocore==1.24.21",
-            "boto3==1.21.21",
-            "aiobotocore==2.3.4",
+            "botocore==1.27.81",
+            "boto3==1.24.81"
 
         ],
         "cassandra": [
@@ -155,11 +154,11 @@ setup(
         ],
         "influxdb": [
             "influxdb==5.3.1",
-            "influxdb-client==1.31.0",
+            "influxdb-client==1.32.0",
         ],
         "odbc": [
             "aioodbc==0.3.3",
-            "pyodbc==4.0.30",
+            "pyodbc==4.0.34",
         ],
         "jdbc": [
             "JayDeBeApi==1.2.3"
@@ -192,7 +191,7 @@ setup(
         "all": [
             "dask==2022.9.1",
             "datatable==1.0.0",
-            "polars==0.14.11",
+            "polars==0.14.14",
             "pyarrow==4.0.1",
             "connectorx==0.3.0",
             "aiosqlite>=0.15.0",
@@ -208,12 +207,11 @@ setup(
             "rethinkdb==2.4.9",
             "aiopg==1.3.3",
             "psycopg2-binary>=2.9.1",
-            "botocore==1.24.21",
-            "boto3==1.21.21",
-            "aiobotocore==2.3.4",
+            "botocore==1.27.81",
+            "boto3==1.24.81",
             "cassandra-driver==3.25.0",
             "influxdb==5.3.1",
-            "influxdb-client==1.31.0",
+            "influxdb-client==1.32.0",
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.34",
