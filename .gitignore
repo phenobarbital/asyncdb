@@ -33,6 +33,8 @@ eggs/
 lib64/
 parts/
 sdist/
+dist/
+build/
 var/
 wheels/
 *.egg-info/
