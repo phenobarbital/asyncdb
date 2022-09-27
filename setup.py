@@ -145,7 +145,7 @@ setup(
             "aiomysql==0.1.1"
         ],
         "boto3": [
-            "botocore==1.24.21",
+            "botocore==1.27.81",
             "boto3==1.21.21",
             "aiobotocore==2.3.4",
 
@@ -208,7 +208,7 @@ setup(
             "rethinkdb==2.4.9",
             "aiopg==1.3.3",
             "psycopg2-binary>=2.9.1",
-            "botocore==1.24.21",
+            "botocore==1.27.81",
             "boto3==1.21.21",
             "aiobotocore==2.3.4",
             "cassandra-driver==3.25.0",
