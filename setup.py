@@ -80,7 +80,7 @@ setup(
         "wheel==0.37.1",
         "Cython==0.29.32",
         "numpy==1.23.3",
-        "cryptography==37.0.4",
+        "cryptography==38.0.1",
         "aiohttp==3.8.1",
         "asyncpg==0.26.0",
         "uvloop==0.17.0",
