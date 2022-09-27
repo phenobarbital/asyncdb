@@ -155,7 +155,7 @@ setup(
         ],
         "influxdb": [
             "influxdb==5.3.1",
-            "influxdb-client==1.31.0",
+            "influxdb-client==1.32.0",
         ],
         "odbc": [
             "aioodbc==0.3.3",
@@ -213,7 +213,7 @@ setup(
             "aiobotocore==2.3.4",
             "cassandra-driver==3.25.0",
             "influxdb==5.3.1",
-            "influxdb-client==1.31.0",
+            "influxdb-client==1.32.0",
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.34",
