@@ -1,5 +1,5 @@
 aiounittest==1.4.2
-black==22.6.0
+black==22.8.0
 codecov==2.1.12
 coverage[toml]==6.4.4
 flit==3.7.1
