@@ -45,7 +45,7 @@ class colors:
         lightcyan = "\033[96m"
 
 
-class Msg(object):
+class cPrint(object):
     def __init__(self, message: str = "", level: str = "INFO"):
         if level == "INFO" or level == "info":
             coloring = colors.bold + colors.fg.green
@@ -53,9 +53,9 @@ class Msg(object):
             coloring = colors.fg.lightblue
         elif level == "WARN" or level == "warning":
             coloring = colors.bold + colors.fg.yellow
-        elif self.level == "ERROR":
+        elif level == "ERROR":
             coloring = colors.fg.lightred
-        elif self.level == "CRITICAL":
+        elif level == "CRITICAL":
             coloring = colors.bold + colors.fg.red
         else:
             coloring = colors.reset
@@ -68,12 +68,12 @@ class Msg(object):
             coloring = colors.fg.lightblue
         elif level == "WARN" or level == "warning":
             coloring = colors.bold + colors.fg.yellow
-        elif self.level == "ERROR":
+        elif level == "ERROR":
             coloring = colors.fg.lightred
-        elif self.level == "CRITICAL":
+        elif level == "CRITICAL":
             coloring = colors.bold + colors.fg.red
         else:
             coloring = colors.reset
         print(coloring + message, colors.reset)
 
-cPrint = Msg
+Msg = cPrint
