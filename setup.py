@@ -101,6 +101,12 @@ setup(
         "python-datamodel>=0.0.12"
     ],
     extras_require = {
+        "default": [
+            "aioredis==2.0.1",
+            "pylibmc==1.6.1",
+            "aiomcache==0.7.0",
+            "aiosqlite>=0.15.0",
+        ],
         "dataframe": [
             "dask==2022.9.1",
             "datatable==1.0.0",
