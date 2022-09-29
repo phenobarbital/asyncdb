@@ -94,7 +94,7 @@ setup(
         "urllib3==1.26.11",
         "charset-normalizer>=2.0.7",
         "ciso8601==2.2.0",
-        "iso8601==1.0.2",
+        "iso8601==1.1.0",
         "pgpy==0.5.4",
         "python-magic==0.4.27",
         "dateparser==1.1.1",
