@@ -103,7 +103,7 @@ setup(
     extras_require = {
         "default": [
             "aioredis==2.0.1",
-            "pylibmc==1.6.1",
+            "pylibmc==1.6.3",
             "aiomcache==0.7.0",
             "aiosqlite>=0.15.0",
         ],
@@ -122,7 +122,7 @@ setup(
             "aiosqlite>=0.15.0",
         ],
         "memcache": [
-          "pylibmc==1.6.1",
+          "pylibmc==1.6.3",
           "aiomcache==0.7.0",
         ],
         "redis": [
@@ -201,7 +201,7 @@ setup(
             "pyarrow==4.0.1",
             "connectorx==0.3.0",
             "aiosqlite>=0.15.0",
-            "pylibmc==1.6.1",
+            "pylibmc==1.6.3",
             "aiomcache==0.7.0",
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
