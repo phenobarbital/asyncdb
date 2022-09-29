@@ -71,7 +71,7 @@ class pgPool(BasePool):
     _setup_func: Optional[Callable] = None
     _init_func: Optional[Callable] = None
 
-    def __init__(self, dsn="", loop=None, params: Optional[dict] = None, **kwargs):
+    def __init__(self, dsn: str = None, loop: asyncio.AbstractEventLoop = None, params: Optional[dict] = None, **kwargs):
         self._test_query = 'SELECT 1'
         self.application_name = os.getenv('APP_NAME', "NAV")
         self._max_clients = 300
@@ -542,7 +542,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     max_cached_statement_lifetime=max_cached_statement_lifetime,
                     max_cacheable_statement_size=max_cacheable_statement_size,
                     server_settings=server_settings,
-                    connection_class=NAVConnection
+                    connection_class=NAVConnection,
+                    loop=self._loop
                 )
                 await self._connection.set_type_codec(
                     "json",
