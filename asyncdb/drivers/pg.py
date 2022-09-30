@@ -81,7 +81,6 @@ class pgPool(BasePool):
         super(pgPool, self).__init__(
             dsn=dsn, loop=loop, params=params, **kwargs
         )
-        print('DSN is: ', self._dsn)
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if "application_name" in self._server_settings:
@@ -170,9 +169,6 @@ class pgPool(BasePool):
         Creates a Pool Connection.
         """
         self._logger.debug(
-            f"AsyncPg (Pool): Connecting to {self._dsn}"
-        )
-        print(
             f"AsyncPg (Pool): Connecting to {self._dsn}"
         )
         try:
@@ -968,7 +964,6 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 format=file_type,
                 output=output,
             )
-            print(result)
             return result
         except UndefinedTableError as ex:
             raise StatementError(
@@ -1008,7 +1003,6 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 format=file_type,
                 source=source,
             )
-            print(result)
             return result
         except UndefinedTableError as ex:
             raise StatementError(
