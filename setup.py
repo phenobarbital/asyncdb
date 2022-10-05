@@ -110,7 +110,7 @@ setup(
         "dataframe": [
             "dask==2022.9.1",
             "datatable==1.0.0",
-            "polars==0.14.14",
+            "polars==0.14.18",
             "pyarrow==4.0.1",
             "connectorx==0.3.0",
             "pyspark==3.3.0"
@@ -160,7 +160,7 @@ setup(
         ],
         "influxdb": [
             "influxdb==5.3.1",
-            "influxdb-client==1.32.0",
+            "influxdb-client==1.33.0",
         ],
         "odbc": [
             "aioodbc==0.3.3",
@@ -197,7 +197,7 @@ setup(
         "all": [
             "dask==2022.9.1",
             "datatable==1.0.0",
-            "polars==0.14.14",
+            "polars==0.14.18",
             "pyarrow==4.0.1",
             "connectorx==0.3.0",
             "aiosqlite>=0.15.0",
@@ -217,7 +217,7 @@ setup(
             "boto3==1.24.81",
             "cassandra-driver==3.25.0",
             "influxdb==5.3.1",
-            "influxdb-client==1.32.0",
+            "influxdb-client==1.33.0",
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.34",
