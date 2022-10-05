@@ -1,6 +1,5 @@
 """Dummy Driver.
 """
-import os
 import asyncio
 from typing import (
     Union,
@@ -8,7 +7,7 @@ from typing import (
 )
 import time
 from collections.abc import Iterable, Sequence
-from pathlib import PurePath
+from pathlib import Path, PurePath
 from functools import partial
 import jaydebeapi
 import jpype
@@ -35,6 +34,11 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             **kwargs
     ) -> None:
         self._test_query = "SELECT 1"
+        try:
+            if isinstance(params['classpath'], str):
+                params['classpath'] = Path(params['classpath'])
+        except KeyError:
+            pass
         self._file_jar, self._classname = self.get_classdriver(params)
         SQLDriver.__init__(self, dsn, loop, params, **kwargs)
         DatabaseBackend.__init__(self)
@@ -83,9 +87,14 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
                 f"Invalid type of Jar Filenames: {file}"
             )
         for f in file:
-            if not f.exists():
+            if isinstance(f, str):
+                d = params['classpath'].joinpath(f)
+            else:
+                d = f
+            print('AQUI FILE ::: ', d)
+            if not d.exists():
                 raise DriverError(
-                    f"JDBC: Invalid or missing binary JDBC driver: {f}"
+                    f"JDBC: Invalid or missing binary JDBC driver: {d}"
                 )
             files.append(str(f))
         return (files, classdriver)

@@ -16,7 +16,8 @@ migrations/
 migrations/*
 apps/troc/migrations/
 apps/troc/migrations/__init__.py
-
+bin/
+bin/jar/
 # Distribution / packaging
 .Python
 env/
