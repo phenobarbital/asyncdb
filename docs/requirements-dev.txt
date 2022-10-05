@@ -1,11 +1,11 @@
 aiounittest==1.4.2
 black==22.8.0
 codecov==2.1.12
-coverage[toml]==6.4.4
+coverage[toml]==6.5.0
 flit==3.7.1
-hypothesis==6.54.6
+hypothesis==6.56.1
 lint==1.2.1
-mypy==0.981
+mypy==0.982
 pylint==2.15.3
 sphinx==5.2.2
 pytest>=6.0.0
