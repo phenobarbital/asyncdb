@@ -152,7 +152,7 @@ setup(
         ],
         "boto3": [
             "botocore==1.27.81",
-            "boto3==1.24.81"
+            "boto3==1.24.87"
 
         ],
         "cassandra": [
@@ -160,7 +160,7 @@ setup(
         ],
         "influxdb": [
             "influxdb==5.3.1",
-            "influxdb-client==1.32.0",
+            "influxdb-client==1.33.0",
         ],
         "odbc": [
             "aioodbc==0.3.3",
@@ -214,10 +214,10 @@ setup(
             "aiopg==1.3.5",
             "psycopg2-binary>=2.9.1",
             "botocore==1.27.81",
-            "boto3==1.24.81",
+            "boto3==1.24.87",
             "cassandra-driver==3.25.0",
             "influxdb==5.3.1",
-            "influxdb-client==1.32.0",
+            "influxdb-client==1.33.0",
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.34",
