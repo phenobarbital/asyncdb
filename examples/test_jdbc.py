@@ -60,9 +60,9 @@ postgresql = {
     "port": 5432,
     "database": "navigator_dev",
     "jar": [
-        ABS_PATH.joinpath('bin', 'jar', 'postgresql-42.5.0.jar')
+        'postgresql-42.5.0.jar'
     ],
-    "classpath": ABS_PATH.joinpath('bin', 'jar')
+    "classpath": '/home/jesuslara/proyectos/navigator/asyncdb/bin/jar/'
 }
 
 mysql = {
@@ -97,20 +97,33 @@ oracle = {
     "password": 'oracle',
     "database": 'xe',
     "jar": [
-        ABS_PATH.joinpath('bin', 'jar', 'ojdbc8.jar'),
+        'ojdbc8.jar'
     ],
-    "classpath": ABS_PATH.joinpath('bin', 'jar')
+    "classpath": '/home/jesuslara/proyectos/navigator/asyncdb/bin/jar/'
 }
 
+test2 = {
+    "driver": "cassandra",
+    "host": "127.0.0.1",
+    "port": 9042,
+    "user": "cassandra",
+    "password": "cassandra",
+    "database": "navigator",
+    "jar": [
+        "CassandraJDBC4.jar"
+        # ABS_PATH.joinpath('bin', 'jar', 'CassandraJDBC4.jar'),
+    ],
+    "classpath": '/home/jesuslara/proyectos/navigator/asyncdb/bin/jar/'
+}
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     try:
         driver = AsyncDB("jdbc", params=postgresql, loop=loop)
         loop.run_until_complete(test_connect(driver))
-        d = AsyncDB("jdbc", params=mysql, loop=loop)
-        loop.run_until_complete(test_model(d))
-        o = AsyncDB("jdbc", params=oracle, loop=loop)
-        asyncio.run(test_model(o))
+        # d = AsyncDB("jdbc", params=mysql, loop=loop)
+        # loop.run_until_complete(test_model(d))
+        # o = AsyncDB("jdbc", params=oracle, loop=loop)
+        # asyncio.run(test_model(o))
     finally:
         loop.stop()
