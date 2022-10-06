@@ -720,6 +720,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
     async def queryrow(self, sentence: str, *args):
         self._result = None
         error = None
+        started = self.start_timing()
         await self.valid_operation(sentence)
         try:
             stmt = await self._connection.prepare(sentence)
@@ -742,7 +743,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         except Exception as err: # pylint: disable=W0703
             error = f"Error on Query Row: {err}"
         finally:
-            self.generated_at()
+            self.generated_at(started)
             return await self._serializer(self._result, error) # pylint: disable=W0150
 
     async def execute(self, sentence: Any, *args, **kwargs) -> Optional[Any]:
