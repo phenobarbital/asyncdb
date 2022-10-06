@@ -11,12 +11,10 @@ from dataclasses import (
     _MISSING_TYPE,
     MISSING
 )
-from typing import (
-    Dict
-)
 from collections.abc import Awaitable
 from datamodel import BaseModel, Field
 from datamodel.base import Meta
+from datamodel.exceptions import ValidationError
 from datamodel.types import (
     MODEL_TYPES
 )
@@ -231,6 +229,8 @@ class Model(BaseModel):
                 raise NoDataFound(
                     f"{self.Meta.name}: Data Not found"
                 )
+        except ValidationError:
+            raise
         except NoDataFound:
             raise
         except (AttributeError, StatementError) as err:
@@ -262,6 +262,8 @@ class Model(BaseModel):
             )
             if result:
                 return result
+        except ValidationError:
+            raise
         except (AttributeError, StatementError) as err:
             raise StatementError(
                 f"Error on Attribute {cls.Meta.name}: {err}"
@@ -344,6 +346,8 @@ class Model(BaseModel):
                 return [cls(**dict(r)) for r in result]
             else:
                 return []
+        except ValidationError:
+            raise
         except NoDataFound:
             raise
         except (AttributeError, StatementError) as err:
@@ -376,6 +380,8 @@ class Model(BaseModel):
                 return [cls(**dict(r)) for r in result]
             else:
                 return []
+        except ValidationError:
+            raise
         except NoDataFound:
             raise
         except (AttributeError, StatementError) as err:
@@ -409,6 +415,8 @@ class Model(BaseModel):
                 raise NoDataFound(
                     message=f"Data not found over {cls.Meta.name!s}"
                 )
+        except ValidationError:
+            raise
         except NoDataFound as e:
             raise NoDataFound(
                 message=f"Data not found over {cls.Meta.name!s}"
@@ -439,6 +447,8 @@ class Model(BaseModel):
                 _model=cls, **kwargs
             )
             return [cls(**dict(row)) for row in result]
+        except ValidationError:
+            raise
         except StatementError:
             raise
         except ProviderError:

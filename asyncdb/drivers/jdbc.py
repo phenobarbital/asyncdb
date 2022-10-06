@@ -91,7 +91,6 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
                 d = params['classpath'].joinpath(f)
             else:
                 d = f
-            print('AQUI FILE ::: ', d)
             if not d.exists():
                 raise DriverError(
                     f"JDBC: Invalid or missing binary JDBC driver: {d}"
