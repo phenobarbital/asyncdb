@@ -267,9 +267,15 @@ class ConnectionBackend(ABC):
 
     def start_timing(self):
         self._starttime = datetime.now()
+        return self._starttime
 
-    def generated_at(self):
-        self._generated = datetime.now() - self._starttime
+    def generated_at(self, started: datetime = None):
+        if not started:
+            started = datetime.now()
+        try:
+            self._generated = started - self._starttime
+        except TypeError:
+            return None
         return self._generated
 
     def last_duration(self):
