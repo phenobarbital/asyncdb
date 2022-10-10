@@ -16,10 +16,10 @@ cdef class AsyncDBException(Exception):
         super().__init__(message)
 
     def __repr__(self):
-        return f"{__name__}({self.args!r})"
+        return f"<{type(self).__name__}>: {self.message}, code: {self.code}"
 
     def __str__(self):
-        return f"{__name__}: {self.message}"
+        return f"{self.message}, code: {self.code}"
 
     def get(self):
         return self.message
