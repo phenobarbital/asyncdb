@@ -1145,7 +1145,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         insert a row from model.
         """
         try:
-            table = f"{_model.Meta.name}"
+            schema = ''
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
         except AttributeError:
             table = _model.__name__
         cols = []
@@ -1212,7 +1216,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         delete a row from model.
         """
         try:
-            table = f"{_model.Meta.name}"
+            schema = ''
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
         except AttributeError:
             table = _model.__name__
         source = []
@@ -1251,7 +1259,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         Alternatives: Saving *dirty* status and previous value on dict
         """
         try:
-            table = f"{_model.Meta.name}"
+            schema = ''
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
         except AttributeError:
             table = _model.__name__
         cols = []
@@ -1324,7 +1336,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         Returns one Row using Model.
         """
         try:
-            table = f"{_model.Meta.name}"
+            schema = ''
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
         except AttributeError:
             table = _model.__name__
         fields = _model.columns()
@@ -1354,7 +1370,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         Filter a Model using Fields.
         """
         try:
-            table = f"{_model.Meta.name}"
+            schema = ''
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
         except AttributeError:
             table = _model.__name__
         fields = _model.columns(_model)
@@ -1394,7 +1414,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 f'Missing Model for SELECT {kwargs!s}'
             ) from e
         try:
-            table = f"{model.Meta.name}"
+            schema = ''
+            sc = model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{model.Meta.name}"
         except AttributeError:
             table = model.__name__
         if args:
@@ -1419,7 +1443,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         Get one row from model.
         """
         try:
-            table = f"{_model.Meta.name}"
+            schema = ''
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
         except AttributeError:
             table = _model.__name__
         fields = _model.columns(_model)
@@ -1453,7 +1481,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         Get all rows on a Model.
         """
         try:
-            table = f"{_model.Meta.name}"
+            schema = ''
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
         except AttributeError:
             table = _model.__name__
         if 'fields' in kwargs:
@@ -1474,7 +1506,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         Deleting some records using Model.
         """
         try:
-            table = f"{_model.Meta.name}"
+            schema = ''
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
         except AttributeError:
             table = _model.__name__
         fields = _model.columns(_model)
@@ -1508,11 +1544,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 f'Missing Model for SELECT {kwargs!s}'
             ) from e
         try:
-            table = f"{model.Meta.name}"
-        except AttributeError:
-            table = model.__name__
-        try:
-            table = f"{model.Meta.name}"
+            schema = ''
+            sc = model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{model.Meta.name}"
         except AttributeError:
             table = model.__name__
         fields = model.columns(model)
