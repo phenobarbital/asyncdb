@@ -137,7 +137,7 @@ setup(
             "dask==2022.9.1",
             "datatable==1.0.0",
             "polars==0.14.19",
-            "pyarrow==4.0.1",
+            "pyarrow==9.0.0",
             "connectorx==0.3.0",
             "pyspark==3.3.0"
         ],
@@ -224,7 +224,7 @@ setup(
             "dask==2022.9.1",
             "datatable==1.0.0",
             "polars==0.14.19",
-            "pyarrow==4.0.1",
+            "pyarrow==9.0.0",
             "connectorx==0.3.0",
             "aiosqlite>=0.15.0",
             "pylibmc==1.6.3",
