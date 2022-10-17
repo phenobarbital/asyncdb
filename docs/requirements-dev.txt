@@ -6,7 +6,7 @@ flit==3.7.1
 hypothesis==6.56.1
 lint==1.2.1
 mypy==0.982
-pylint==2.15.3
+pylint==2.15.4
 sphinx==5.2.2
 pytest>=6.0.0
 pytest-asyncio==0.19.0
