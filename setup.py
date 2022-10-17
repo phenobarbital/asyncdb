@@ -115,7 +115,7 @@ setup(
         "pandas==1.5.0",
         "xlrd==2.0.1",
         "openpyxl==3.0.10",
-        "lz4==4.0.0",
+        "lz4==4.0.2",
         "typing_extensions==4.4.0",
         "urllib3==1.26.12",
         "charset-normalizer>=2.0.7",
