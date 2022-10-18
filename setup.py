@@ -106,7 +106,7 @@ setup(
         "wheel==0.37.1",
         "Cython==0.29.32",
         "numpy==1.23.4",
-        "cryptography==38.0.1",
+        "cryptography==38.0.2",
         "aiohttp==3.8.3",
         "asyncpg==0.26.0",
         "uvloop==0.17.0",
@@ -124,7 +124,7 @@ setup(
         "pgpy==0.5.4",
         "python-magic==0.4.27",
         "dateparser==1.1.1",
-        "python-datamodel>=0.0.12"
+        "python-datamodel>=0.0.37"
     ],
     extras_require = {
         "default": [
