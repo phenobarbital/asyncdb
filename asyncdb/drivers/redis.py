@@ -9,25 +9,15 @@ TODO:
 """
 import asyncio
 import time
-from typing import (
-    Union,
-    Any
-)
+from typing import Any, Union
+
 import aioredis
 import uvloop
-from aioredis.exceptions import (
-    AuthenticationError,
-    RedisError
-)
-from asyncdb.exceptions import (
-    ConnectionTimeout,
-    ProviderError,
-    DriverError
-)
-from .abstract import (
-    BasePool,
-    BaseDriver,
-)
+from aioredis.exceptions import AuthenticationError, RedisError
+
+from asyncdb.exceptions import ConnectionTimeout, DriverError, ProviderError
+
+from .abstract import BaseDriver, BasePool
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 uvloop.install()

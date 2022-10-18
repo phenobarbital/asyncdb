@@ -1,9 +1,8 @@
 import logging
-from .exceptions import (
-    ProviderError
-)
+
+from .exceptions import ProviderError
+from .interfaces import ConnectionBackend, PoolBackend
 from .utils.modules import module_exists
-from .interfaces import PoolBackend, ConnectionBackend
 
 
 class AsyncPool:
