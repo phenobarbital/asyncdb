@@ -178,7 +178,7 @@ setup(
         ],
         "boto3": [
             "botocore==1.27.91",
-            "boto3==1.24.91"
+            "boto3==1.24.93"
 
         ],
         "cassandra": [
@@ -240,7 +240,7 @@ setup(
             "aiopg==1.3.5",
             "psycopg2-binary>=2.9.1",
             "botocore==1.27.91",
-            "boto3==1.24.91",
+            "boto3==1.24.93",
             "cassandra-driver==3.25.0",
             "influxdb==5.3.1",
             "influxdb-client==1.33.0",
