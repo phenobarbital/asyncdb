@@ -4,21 +4,19 @@ Notes on pg Provider
 This provider implements basic funcionalities from asyncpg
 (cursors, transactions, copy from and to files, pools, native data types, etc).
 """
-import os
 import asyncio
+import os
+import ssl
 import time
 import uuid
-from typing import (
-    Optional,
-    Any,
-    Union
-)
-from collections.abc import Iterable, Callable
-import uvloop
+from collections.abc import Callable, Iterable
+from typing import Any, Optional, Union
+
 import asyncpg
-from asyncpg.pgproto import pgproto
+import uvloop
 from asyncpg.exceptions import (
     ConnectionDoesNotExistError,
+    DuplicateTableError,
     FatalPostgresError,
     InterfaceError,
     InterfaceWarning,
@@ -29,32 +27,26 @@ from asyncpg.exceptions import (
     TooManyConnectionsError,
     UndefinedColumnError,
     UndefinedTableError,
-    DuplicateTableError,
-    UniqueViolationError
+    UniqueViolationError,
 )
+from asyncpg.pgproto import pgproto
+
 from asyncdb.exceptions import (
-    DriverError,
     ConnectionTimeout,
+    DriverError,
     EmptyStatement,
     ProviderError,
     StatementError,
     TooManyConnections,
-    UninitializedError
+    UninitializedError,
 )
-from asyncdb.interfaces import (
-    DBCursorBackend
-)
-from asyncdb.utils.encoders import (
-    DefaultEncoder
-)
-from asyncdb.utils.types import Entity
+from asyncdb.interfaces import DBCursorBackend, ModelBackend
 from asyncdb.models import Model
-from asyncdb.interfaces import ModelBackend
-from .abstract import (
-    BasePool
-)
-from .sql import SQLDriver, SQLCursor
+from asyncdb.utils.encoders import DefaultEncoder
+from asyncdb.utils.types import Entity
 
+from .abstract import BasePool
+from .sql import SQLCursor, SQLDriver
 
 max_cached_statement_lifetime = 600
 max_cacheable_statement_size = 1024 * 15
@@ -93,6 +85,48 @@ class pgPool(BasePool):
             self._numeric_as_float = kwargs['numeric_as_float']
         # set the JSON encoder:
         self._encoder = DefaultEncoder()
+        ### SSL Support:
+        self.ssl: bool = False
+        if params and 'ssl' in params:
+            ssloptions = params['ssl']
+        elif 'ssl' in kwargs:
+            ssloptions = kwargs['ssl']
+        else:
+            ssloptions = None
+        if ssloptions:
+            self.ssl: bool = True
+            try:
+                check_hostname = ssloptions['check_hostname']
+            except KeyError:
+                check_hostname = False
+            ### certificate Support:
+            try:
+                ca_file = ssloptions['cafile']
+            except KeyError:
+                ca_file = None
+            args = {
+                "cafile": ca_file
+            }
+            self.sslctx = ssl.create_default_context(
+                ssl.Purpose.SERVER_AUTH,
+                **args
+            )
+            # Certificate Chain:
+            try:
+                certs = {
+                    "certfile": ssloptions['certfile'],
+                    "keyfile": ssloptions['keyfile']
+                }
+            except KeyError:
+                certs = {
+                    "certfile": None,
+                    "keyfile": None
+                }
+            if certs['certfile']:
+                self.sslctx.load_cert_chain(
+                    **certs
+                )
+            self.sslctx.check_hostname = check_hostname
 
     async def setup_connection(self, connection):
         if self._setup_func:
@@ -181,6 +215,12 @@ class pgPool(BasePool):
                 "jit": "off"
             }
             server_settings = {**server_settings, **self._server_settings}
+            if self.ssl:
+                _ssl = {
+                    "ssl": self.sslctx
+                }
+            else:
+                _ssl = {}
             self._pool = await asyncpg.create_pool(
                 dsn=self._dsn,
                 max_queries=self._max_queries,
@@ -193,7 +233,8 @@ class pgPool(BasePool):
                 setup=self.setup_connection,
                 loop=self._loop,
                 server_settings=server_settings,
-                connection_class=NAVConnection
+                connection_class=NAVConnection,
+                **_ssl
             )
             # is connected
             if self._pool:
@@ -450,6 +491,48 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             self._numeric_as_float = False
         # set the JSON encoder:
         self._encoder = DefaultEncoder()
+        ### SSL Support:
+        self.ssl: bool = False
+        if params and 'ssl' in params:
+            ssloptions = params['ssl']
+        elif 'ssl' in kwargs:
+            ssloptions = kwargs['ssl']
+        else:
+            ssloptions = None
+        if ssloptions:
+            self.ssl: bool = True
+            try:
+                check_hostname = ssloptions['check_hostname']
+            except KeyError:
+                check_hostname = False
+            ### certificate Support:
+            try:
+                ca_file = ssloptions['cafile']
+            except KeyError:
+                ca_file = None
+            args = {
+                "cafile": ca_file
+            }
+            self.sslctx = ssl.create_default_context(
+                ssl.Purpose.SERVER_AUTH,
+                **args
+            )
+            # Certificate Chain:
+            try:
+                certs = {
+                    "certfile": ssloptions['certfile'],
+                    "keyfile": ssloptions['keyfile']
+                }
+            except KeyError:
+                certs = {
+                    "certfile": None,
+                    "keyfile": None
+                }
+            if certs['certfile']:
+                self.sslctx.load_cert_chain(
+                    **certs
+                )
+            self.sslctx.check_hostname = check_hostname
 
     async def close(self, timeout=5):
         """
@@ -526,7 +609,12 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             "jit": "off"
         }
         server_settings = {**server_settings, **self._server_settings}
-
+        if self.ssl:
+            _ssl = {
+                "ssl": self.sslctx
+            }
+        else:
+            _ssl = {}
         try:
             if self._pool and not self._connection:
                 self._connection = await self._pool.pool().acquire()
@@ -539,7 +627,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     max_cacheable_statement_size=max_cacheable_statement_size,
                     server_settings=server_settings,
                     connection_class=NAVConnection,
-                    loop=self._loop
+                    loop=self._loop,
+                    **_ssl
                 )
                 await self._connection.set_type_codec(
                     "json",

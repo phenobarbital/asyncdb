@@ -1,4 +1,5 @@
 import asyncio
+
 from asyncdb import AsyncDB
 from asyncdb.drivers.pg import pgPool
 
@@ -11,6 +12,8 @@ params = {
     "port": "5432",
     "database": "navigator_dev",
     "DEBUG": True,
+    # "ssl": True,
+    # "check_hostname": True
 }
 
 async def pooler(loop):
