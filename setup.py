@@ -205,7 +205,7 @@ setup(
             "elasticsearch[async]==7.15.1",
         ],
         "mongodb": [
-            "pymongo==4.2.0",
+            "pymongo==4.3.2",
             "motor==3.0.0",
         ],
         "msqlserver": [
@@ -249,7 +249,7 @@ setup(
             "pyodbc==4.0.34",
             "sqlalchemy==1.4.42",
             "elasticsearch[async]==8.4.3",
-            "pymongo==4.2.0",
+            "pymongo==4.3.2",
             "motor==3.0.0",
             "pymssql==2.2.5",
             "couchbase==4.0.5",
