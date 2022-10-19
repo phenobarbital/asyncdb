@@ -132,6 +132,11 @@ setup(
             "pylibmc==1.6.3",
             "aiomcache==0.7.0",
             "aiosqlite>=0.15.0",
+            "cassandra-driver==3.25.0",
+            "rethinkdb==2.4.9",
+            "influxdb==5.3.1",
+            "influxdb-client==1.33.0",
+            "pymssql==2.2.5",
         ],
         "dataframe": [
             "dask==2022.9.1",
@@ -179,7 +184,6 @@ setup(
         "boto3": [
             "botocore==1.27.91",
             "boto3==1.24.91"
-
         ],
         "cassandra": [
             "cassandra-driver==3.25.0",
