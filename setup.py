@@ -139,7 +139,7 @@ setup(
             "pymssql==2.2.5",
         ],
         "dataframe": [
-            "dask==2022.9.1",
+            "dask==2022.10.0",
             "datatable==1.0.0",
             "polars==0.14.19",
             "pyarrow==4.0.1",
@@ -225,7 +225,7 @@ setup(
             "hazelcast-python-client==5.1"
         ],
         "all": [
-            "dask==2022.9.1",
+            "dask==2022.10.0",
             "datatable==1.0.0",
             "polars==0.14.19",
             "pyarrow==4.0.1",
