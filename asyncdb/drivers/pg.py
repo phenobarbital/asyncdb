@@ -1544,7 +1544,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         if args:
             columns = ','.join(args)
         else:
-            columns = '*'
+            columns = ','.join(fields) ## getting only selected fields
         for name, field in fields.items():
             if name in kwargs:
                 try:
