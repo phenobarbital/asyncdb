@@ -2,29 +2,21 @@
 Basic, Abstract Model.
 """
 from __future__ import annotations
-import logging
+
 import inspect
+import logging
 import traceback
-from dataclasses import (
-    is_dataclass,
-    make_dataclass,
-    _MISSING_TYPE,
-    MISSING
-)
 from collections.abc import Awaitable
+from dataclasses import _MISSING_TYPE, MISSING, is_dataclass, make_dataclass
+
 from datamodel import BaseModel, Field
 from datamodel.base import Meta
 from datamodel.exceptions import ValidationError
-from datamodel.types import (
-    MODEL_TYPES
-)
+from datamodel.types import MODEL_TYPES
+
+from asyncdb.exceptions import ConnectionMissing, NoDataFound, ProviderError, StatementError
 from asyncdb.utils.modules import module_exists
-from asyncdb.exceptions import (
-    NoDataFound,
-    ProviderError,
-    StatementError,
-    ConnectionMissing
-)
+
 
 def is_missing(value):
     if value == _MISSING_TYPE:
