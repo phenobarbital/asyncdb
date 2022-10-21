@@ -402,7 +402,9 @@ class Model(BaseModel):
                 _model=cls, **kwargs
             )
             if result:
-                return cls(**dict(result))
+                fields = cls.get_fields(cls)
+                result = {k:v for k,v in dict(result).items() if k in fields}
+                return cls(**result)
             else:
                 raise NoDataFound(
                     message=f"Data not found over {cls.Meta.name!s}"
