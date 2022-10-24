@@ -1281,7 +1281,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         try:
             columns = ",".join(cols)
             values = ",".join(["${}".format(a) for a in range(1, n)]) # pylint: disable=C0209
-            primary = "RETURNING {columns}"
+            primary = f"RETURNING {columns}"
             insert = f"INSERT INTO {table}({columns}) VALUES({values}) {primary}"
             self._logger.debug(f"INSERT: {insert}")
             stmt = await self._connection.prepare(insert)

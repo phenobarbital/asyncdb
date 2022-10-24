@@ -802,7 +802,7 @@ class ModelBackend(ABC):
                 try:
                     new_val = datatype()
                 except (TypeError, ValueError, AttributeError):
-                    self._logger.error('Error Calling {datatype} in Field {field}')
+                    self._logger.error(f'Error Calling {datatype} in Field {field}')
                     new_val = None
         else:
             new_val = value
