@@ -6,17 +6,20 @@ cdef class AsyncDBException(Exception):
 
     code: int = 0
 
-    def __init__(self, str message, *args, int code = 0, **kwargs):
+    def __init__(self, object message, *args, int code = 0, **kwargs):
         super().__init__(message)
+        if hasattr(message, 'message'):
+            self.message = message.message
+        else:
+            self.message = str(message)
         self.stacktrace = None
         if 'stacktrace' in kwargs:
             self.stacktrace = kwargs['stacktrace']
-        self.message = message
         self.args = kwargs
         self.code = int(code)
 
     def __repr__(self):
-        return f"<{type(self).__name__}>: {self.message}, code: {self.code}"
+        return f"{self.message}, code: {self.code}"
 
     def __str__(self):
         return f"{self.message}, code: {self.code}"
