@@ -35,19 +35,19 @@ with open(version, 'r', encoding='utf-8') as meta:
                             '__description__',
                             '__author__',
                             '__license__', '__author_email__'):
-                        v = node.value
-                        if name.id == '__version__':
-                            __version__ = v.s
-                        if name.id == '__title__':
-                            __title__ = v.s
-                        if name.id == '__description__':
-                            __description__ = v.s
-                        if name.id == '__license__':
-                            __license__ = v.s
-                        if name.id == '__author__':
-                            __author__ = v.s
-                        if name.id == '__author_email__':
-                            __author_email__ = v.s
+                v = node.value
+                if name.id == '__version__':
+                    __version__ = v.s
+                if name.id == '__title__':
+                    __title__ = v.s
+                if name.id == '__description__':
+                    __description__ = v.s
+                if name.id == '__license__':
+                    __license__ = v.s
+                if name.id == '__author__':
+                    __author__ = v.s
+                if name.id == '__author_email__':
+                    __author_email__ = v.s
 
 COMPILE_ARGS = ["-O2"]
 
@@ -184,7 +184,7 @@ setup(
         "boto3": [
             "botocore==1.27.59",
             "boto3==1.24.91",
-            "aiobotocore=2.4.0",
+            "aiobotocore==2.4.0",
         ],
         "cassandra": [
             "cassandra-driver==3.25.0",
@@ -244,6 +244,8 @@ setup(
             "rethinkdb==2.4.9",
             "aiopg==1.3.5",
             "psycopg2-binary>=2.9.1",
+            "botocore==1.27.91",
+            "boto3==1.24.91",
             "cassandra-driver==3.25.0",
             "influxdb==5.3.1",
             "influxdb-client==1.33.0",
@@ -265,7 +267,7 @@ setup(
             "oracledb==1.1.1",
             "botocore==1.27.59",
             "boto3==1.24.91",
-            "aiobotocore=2.4.0",
+            "aiobotocore==2.4.0",
         ]
     },
     tests_require=[
