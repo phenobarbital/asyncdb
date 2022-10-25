@@ -5,6 +5,7 @@ This provider implements basic funcionalities from asyncpg
 (cursors, transactions, copy from and to files, pools, native data types, etc).
 """
 import asyncio
+from multiprocessing import Value
 import os
 import ssl
 import time
@@ -650,15 +651,21 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     if isinstance(value, uuid.UUID):
                         val = value.bytes
                     elif value is not None:
-                        val = uuid.UUID(value).bytes
+                        val = uuid.UUID(bytes=value)
                     else:
                         val = b""
                     return val
 
+                def _uuid_decoder(value):
+                    if value is None:
+                        return b""
+                    else:
+                        return uuid.UUID(bytes=value)
+
                 await self._connection.set_type_codec(
                     "uuid",
                     encoder=_uuid_encoder,
-                    decoder=lambda u: pgproto.UUID(u), # pylint: disable=I1101,W0108
+                    decoder=_uuid_decoder,
                     schema="pg_catalog",
                     format="binary",
                 )
@@ -1242,6 +1249,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         except AttributeError:
             table = _model.__name__
         cols = []
+        columns = []
         source = []
         _filter = {}
         n = 1
@@ -1254,17 +1262,26 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             ## getting the value of column:
             value = self._get_value(field, val)
             column = field.name
+            columns.append(column)
             # validating required field
             try:
                 required = field.required()
             except AttributeError:
                 required = False
-            if required is False and value is None or value == "None":
-                default = field.default
-                if callable(default):
-                    value = default()
-                else:
+            pk = self._get_attribute(field, value, attr='primary_key')
+            if pk is True and value is None:
+                if 'db_default' in field.metadata:
                     continue
+            if required is False and value is None or value == "None":
+                if 'db_default' in field.metadata:
+                    continue
+                else:
+                    # get default value
+                    default = field.default
+                    if callable(default):
+                        value = default()
+                    else:
+                        continue
             elif required is True and value is None or value == "None":
                 if 'db_default' in field.metadata:
                     # field get a default value from database
@@ -1279,10 +1296,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             if pk:=self._get_attribute(field, value, attr='primary_key'):
                 _filter[column] = pk
         try:
-            columns = ",".join(cols)
+            cols = ",".join(cols)
             values = ",".join(["${}".format(a) for a in range(1, n)]) # pylint: disable=C0209
+            columns = ','.join(columns)
             primary = f"RETURNING {columns}"
-            insert = f"INSERT INTO {table}({columns}) VALUES({values}) {primary}"
+            insert = f"INSERT INTO {table}({cols}) VALUES({values}) {primary}"
             self._logger.debug(f"INSERT: {insert}")
             stmt = await self._connection.prepare(insert)
             result = await stmt.fetchrow(*source, timeout=2)
