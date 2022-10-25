@@ -182,8 +182,9 @@ setup(
             "aiomysql==0.1.1"
         ],
         "boto3": [
-            "botocore==1.27.91",
-            "boto3==1.24.91"
+            "botocore==1.27.59",
+            "boto3==1.24.91",
+            "aiobotocore=2.4.0",
         ],
         "cassandra": [
             "cassandra-driver==3.25.0",
@@ -243,8 +244,6 @@ setup(
             "rethinkdb==2.4.9",
             "aiopg==1.3.5",
             "psycopg2-binary>=2.9.1",
-            "botocore==1.27.91",
-            "boto3==1.24.91",
             "cassandra-driver==3.25.0",
             "influxdb==5.3.1",
             "influxdb-client==1.33.0",
@@ -263,7 +262,10 @@ setup(
             "hazelcast-python-client==5.1",
             "aiomysql==0.1.1",
             "pyspark==3.3.0",
-            "oracledb==1.1.1"
+            "oracledb==1.1.1",
+            "botocore==1.27.59",
+            "boto3==1.24.91",
+            "aiobotocore=2.4.0",
         ]
     },
     tests_require=[
