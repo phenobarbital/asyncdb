@@ -4,6 +4,7 @@ Basic Interfaces for every kind of Database Connector.
 import asyncio
 import logging
 import inspect
+import types
 from importlib import import_module
 from collections.abc import Sequence, Iterable, Callable
 from datetime import datetime
@@ -798,12 +799,14 @@ class ModelBackend(ABC):
             else:
                 new_val = value
         if inspect.isclass(datatype) and value is None:
-            if callable(datatype):
+            if isinstance(datatype, (types.BuiltinFunctionType, types.FunctionType)):
                 try:
                     new_val = datatype()
                 except (TypeError, ValueError, AttributeError):
                     self._logger.error(f'Error Calling {datatype} in Field {field}')
                     new_val = None
+        elif callable(datatype) and value is None:
+            new_val = None
         else:
             new_val = value
         return new_val
