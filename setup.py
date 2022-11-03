@@ -123,7 +123,7 @@ setup(
         "iso8601==1.1.0",
         "pgpy==0.5.4",
         "python-magic==0.4.27",
-        "dateparser==1.1.1",
+        "dateparser==1.1.3",
         "python-datamodel>=0.0.37"
     ],
     extras_require = {
