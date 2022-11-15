@@ -841,6 +841,10 @@ class ModelBackend(ABC):
                 elif isinstance(value, bool):
                     val = str(value)
                     _cond.append(f"{key} is {value}")
+                elif isinstance(value, list):
+                    _cond.append(
+                        f"{key} = ANY(ARRAY[{value!r}])"
+                    )
                 elif isinstance(datatype, (list, List)):
                     val = ", ".join(
                         map(str, [Entity.escapeLiteral(v, type(v)) for v in value])
