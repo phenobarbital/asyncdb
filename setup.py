@@ -112,7 +112,7 @@ setup(
         "uvloop==0.17.0",
         "asyncio==3.4.3",
         "cchardet==2.1.7",
-        "pandas==1.5.0",
+        "pandas==1.5.2",
         "xlrd==2.0.1",
         "openpyxl==3.0.10",
         "lz4==4.0.2",
