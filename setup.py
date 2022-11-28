@@ -141,10 +141,10 @@ setup(
             "polars==0.15.1",
             "pyarrow==4.0.1",
             "connectorx==0.3.0",
-            "pyspark==3.3.0"
+            "pyspark==3.3.1"
         ],
         "pyspark": [
-            "pyspark==3.3.0"
+            "pyspark==3.3.1"
         ],
         "sqlite": [
             "aiosqlite>=0.15.0",
@@ -254,7 +254,7 @@ setup(
             "asyncmy==0.2.5",
             "mysqlclient==2.1.1",
             "aiomysql==0.1.1",
-            "pyspark==3.3.0",
+            "pyspark==3.3.1",
             "oracledb==1.1.1",
             "hazelcast-python-client==5.1",
         ]
