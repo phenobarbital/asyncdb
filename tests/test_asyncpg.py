@@ -1,7 +1,6 @@
 import pytest
 from asyncdb import AsyncDB, AsyncPool
 import asyncio
-import asyncpg
 from io import BytesIO
 from pathlib import Path
 import pytest_asyncio
@@ -51,9 +50,9 @@ async def test_pool_by_dsn(event_loop):
     """ test creation using DSN """
     pool = AsyncPool(DRIVER, dsn=DSN, loop=event_loop)
     assert pool.application_name == 'NAV'
-    pytest.assume(pool.is_connected() == False)
+    pytest.assume(pool.is_connected() is False)
     await pool.connect()
-    pytest.assume(pool.is_connected() == True)
+    pytest.assume(pool.is_connected() is True)
     await pool.wait_close(True, 5)
     assert pool.is_closed() is True
 
@@ -61,9 +60,9 @@ async def test_pool_by_dsn(event_loop):
 async def test_pool_by_params(event_loop):
     pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
     assert pool.get_dsn() == DSN
-    pytest.assume(pool.is_connected() == False)
+    pytest.assume(pool.is_connected() is False)
     await pool.connect()
-    pytest.assume(pool.is_connected() == True)
+    pytest.assume(pool.is_connected() is True)
     result, error = await pool.test_connection()
     pytest.assume(not error)
     pytest.assume(result == 'SELECT 1')
@@ -101,9 +100,9 @@ async def test_pool_connect(event_loop):
     pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop, **args)
     pytest.assume(pool.application_name == 'Navigator')
     await pool.connect()
-    pytest.assume(pool.is_connected() == True)
+    pytest.assume(pool.is_connected() is True)
     db = await pool.acquire()
-    pytest.assume(db.is_connected() == True)
+    pytest.assume(db.is_connected() is True)
     result = await pool.execute("SELECT 1")
     pytest.assume(result == 'SELECT 1')
     result, error = await pool.test_connection()
@@ -113,7 +112,7 @@ async def test_pool_connect(event_loop):
         connection=db
     )
     async with await pool.acquire() as conn:
-        assert(conn.is_connected() == True)
+        assert (conn.is_connected() is True)
         result, error = await conn.test_connection()
         pytest.assume(not error)
         pytest.assume(result[0][0] == 1)
@@ -137,7 +136,7 @@ async def test_huge_query(event_loop):
     sql = 'SELECT * FROM trocplaces.stores LIMIT 1000'
     pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
     await pool.connect()
-    pytest.assume(pool.is_connected() == True)
+    pytest.assume(pool.is_connected() is True)
     async with await pool.acquire() as conn:
         result, error = await conn.execute("SET TIMEZONE TO 'America/New_York'")
         pytest.assume(not error)
@@ -209,7 +208,7 @@ async def test_cicle(conn):
         result, error = await conn.queryrow('SELECT count(*) as count FROM test.stores')
         pytest.assume(len(st) == result['count'])
         # testing the cursor iterator:
-        #iterate a cursor:
+        # iterate a cursor:
         rows = []
         async for record in await conn.cursor(
             "SELECT store_id, store_name FROM test.stores"
@@ -310,9 +309,9 @@ async def test_formats(event_loop):
         conn.output_format('polars')  # change output format to iter generator
         result, error = await conn.query("SELECT * FROM walmart.stores")
         print(result)
-        pytest.assume(type(result) == pl.frame.DataFrame)
+        pytest.assume(type(result) == pl.DataFrame)
         # change output format to iter generator
-        conn.output_format('datatable')
+        conn.output_format('dt')
         # TODO: error when a python list is on a column
         result, error = await conn.query("SELECT store_id, store_name FROM walmart.stores")
         print(result)

@@ -249,7 +249,6 @@ class redis(BaseDriver):
                 f"Unknown Redis Error: {err}"
             ) from err
 
-
     disconnect = close
 
     async def execute(self, sentence, *args, **kwargs) -> Any:
@@ -274,19 +273,19 @@ class redis(BaseDriver):
     execute_many = execute
 
     async def prepare(self, sentence: Union[str, list]) -> Any:
-        raise NotImplementedError() # pragma: no-cover
+        raise NotImplementedError()  # pragma: no-cover
 
-    async def test_connection(self, key: str = 'test_123', optional: int = 1): # pylint: disable=W0221
+    async def test_connection(self, key: str = 'test_123', optional: int = 1):  # pylint: disable=W0221
         result = None
         error = None
         try:
             await self.set(key, optional)
             result = await self.get(key)
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = err
         finally:
             await self.delete(key)
-            return [result, error] # pylint: disable=W0150
+            return [result, error]  # pylint: disable=W0150
 
     async def get(self, key):
         try:

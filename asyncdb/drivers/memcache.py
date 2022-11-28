@@ -92,7 +92,7 @@ class memcachePool(BasePool):
             )
         return db
 
-    async def release(self, connection=None): # pylint: disable=W0221
+    async def release(self, connection=None):  # pylint: disable=W0221
         """
         Release a connection from the pool
         """
@@ -132,12 +132,12 @@ class memcache(BaseDriver):
     _syntax = "nosql"
 
     def __init__(
-            self,
-            dsn: str = None,
-            loop=None,
-            params: dict = None,
-            **kwargs
-        ) -> None:
+        self,
+        dsn: str = None,
+        loop=None,
+        params: dict = None,
+        **kwargs
+    ) -> None:
         super(memcache, self).__init__(
             dsn=dsn,
             loop=loop,
@@ -338,13 +338,13 @@ class memcache(BaseDriver):
                 f"DELETE Unknown Error: {err}"
             ) from err
 
-    async def test_connection(self, key: str = 'test_123', optional: str = '1'): # pylint: disable=W0221
+    async def test_connection(self, key: str = 'test_123', optional: str = '1'):  # pylint: disable=W0221
         result = None
         error = None
         try:
             await self.set(key, optional)
             result = await self.get(key)
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = err
         finally:
             await self.delete(key)

@@ -29,12 +29,12 @@ with open(version, 'r', encoding='utf-8') as meta:
         if len(node.targets) == 1:
             name = node.targets[0]
             if isinstance(name, ast.Name) and \
-                    name.id in (
+                    name.id in {
                         '__version__',
                         '__title__',
                         '__description__',
                         '__author__',
-                        '__license__', '__author_email__'):
+                        '__license__', '__author_email__'}:
                 v = node.value
                 if name.id == '__version__':
                     __version__ = v.s
@@ -87,6 +87,7 @@ setup(
         "Topic :: Database :: Front-Ends",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3 :: Only",
         "Framework :: AsyncIO",
     ],
@@ -96,19 +97,14 @@ setup(
     package_data={"asyncdb": ["py.typed"]},
     license=__license__,
     setup_requires=[
-        "wheel==0.37.1",
+        "wheel==0.38.4",
         "Cython==0.29.32",
-        "numpy==1.23.4",
-        "asyncio==3.4.3",
-        "cchardet==2.1.7"
     ],
     install_requires=[
-        "wheel==0.37.1",
-        "Cython==0.29.32",
         "numpy==1.23.4",
         "cryptography==38.0.4",
         "aiohttp==3.8.3",
-        "asyncpg==0.26.0",
+        "asyncpg==0.27.0",
         "uvloop==0.17.0",
         "asyncio==3.4.3",
         "cchardet==2.1.7",
@@ -123,8 +119,9 @@ setup(
         "iso8601==1.1.0",
         "pgpy==0.5.4",
         "python-magic==0.4.27",
-        "dateparser==1.1.1",
-        "python-datamodel>=0.0.37"
+        "dateparser==1.1.4",
+        "python-datamodel>=0.1.14",
+        "aiosqlite>=0.15.0",
     ],
     extras_require={
         "default": [
@@ -141,7 +138,7 @@ setup(
         "dataframe": [
             "dask==2022.9.1",
             "datatable==1.0.0",
-            "polars==0.14.19",
+            "polars==0.15.1",
             "pyarrow==4.0.1",
             "connectorx==0.3.0",
             "pyspark==3.3.0"
@@ -183,7 +180,7 @@ setup(
         ],
         "boto3": [
             "botocore==1.27.59",
-            "boto3==1.24.91",
+            "boto3==1.26.17",
             "aiobotocore==2.4.0",
         ],
         "cassandra": [
@@ -228,7 +225,7 @@ setup(
         "all": [
             "dask==2022.9.1",
             "datatable==1.0.0",
-            "polars==0.14.19",
+            "polars==0.15.1",
             "pyarrow==4.0.1",
             "connectorx==0.3.0",
             "aiosqlite>=0.15.0",
@@ -236,16 +233,11 @@ setup(
             "aiomcache==0.7.0",
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
-            "redis==4.3.4",
             "aioredis==2.0.1",
-            "hiredis==2.0.0",
             "objectpath==0.6.1",
-            "asyncpg==0.26.0",
             "rethinkdb==2.4.9",
             "aiopg==1.3.5",
             "psycopg2-binary>=2.9.1",
-            "botocore==1.27.91",
-            "boto3==1.24.91",
             "cassandra-driver==3.25.0",
             "influxdb==5.3.1",
             "influxdb-client==1.33.0",
@@ -261,19 +253,16 @@ setup(
             "aiocouch==2.2.2",
             "asyncmy==0.2.5",
             "mysqlclient==2.1.1",
-            "hazelcast-python-client==5.1",
             "aiomysql==0.1.1",
             "pyspark==3.3.0",
             "oracledb==1.1.1",
-            "botocore==1.27.59",
-            "boto3==1.24.91",
-            "aiobotocore==2.4.0",
+            "hazelcast-python-client==5.1",
         ]
     },
     tests_require=[
         'pytest>=6.0.0',
         'pytest-asyncio==0.20.2',
-        'pytest-xdist==2.1.0',
+        'pytest-xdist==3.0.2',
         'pytest-assume==2.4.2'
     ],
     test_suite='tests',
