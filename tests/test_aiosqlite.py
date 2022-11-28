@@ -44,7 +44,7 @@ async def test_operations(event_loop):
         )
         pytest.assume(result)
         columns = await conn.column_info(
-            tablename='tests'
+            table='tests'
         )
         pytest.assume(len(columns) > 0)
         pytest.assume(columns[0]['name'] == 'id')
@@ -129,7 +129,7 @@ async def test_cursors(event_loop):
                 print(values)
                 pytest.assume(type(values) == list)
                 pytest.assume(
-                    values=[('CDG', 'Paris', 'France'), ('LHR', 'London', 'United Kingdom')])
+                    values==[('CDG', 'Paris', 'France'), ('LHR', 'London', 'United Kingdom')])
             # this returns a cursor based object
     assert db.is_closed() is True
 
@@ -202,9 +202,9 @@ async def test_formats(event_loop):
         conn.output_format('polars')  # change output format to iter generator
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
-        pytest.assume(type(result) == pl.frame.DataFrame)
+        pytest.assume(type(result) == pl.DataFrame)
         # change output format to iter generator
-        conn.output_format('datatable')
+        conn.output_format('dt')
         result, error = await conn.query("SELECT * FROM airports")
         print(result)
         print(type(result))

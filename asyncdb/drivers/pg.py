@@ -147,20 +147,20 @@ class pgPool(BasePool):
         if self._test_query is None:
             return [None, NotImplementedError()]
         try:
-            result, error = await self.execute(self._test_query, *args)
+            result = await self.execute(self._test_query, *args)
         except ProviderError as err:
             error = err
         finally:
-            return [result, error] # pylint: disable=W0150
+            return [result, error]  # pylint: disable=W0150
 
     async def init_connection(self, connection):
         # Setup jsonb encoder/decoder
         def _encoder(value):
             # return json.dumps(value, cls=BaseEncoder)
-            return self._encoder.dumps(value) # pylint: disable=E1120
+            return self._encoder.dumps(value)  # pylint: disable=E1120
 
         def _decoder(value):
-            return self._encoder.loads(value) # pylint: disable=E1120
+            return self._encoder.loads(value)  # pylint: disable=E1120
 
         await connection.set_type_codec(
             "json", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
@@ -184,13 +184,13 @@ class pgPool(BasePool):
         await connection.set_type_codec(
             "uuid",
             encoder=_uuid_encoder,
-            decoder=lambda u: pgproto.UUID(u), # pylint: disable=I1101,W0108
+            decoder=lambda u: pgproto.UUID(u),  # pylint: disable=I1101,W0108
             schema="pg_catalog",
             format="binary",
         )
         if self._init_func is not None and callable(self._init_func):
             try:
-                await self._init_func(connection) # pylint: disable=E1102
+                await self._init_func(connection)  # pylint: disable=E1102
             except (ValueError, RuntimeError) as err:
                 self._logger.warning(
                     f"Error on Init Connection: {err}"
@@ -290,7 +290,6 @@ class pgPool(BasePool):
                 f"Asyncpg Unknown Error: {ex}"
             ) from ex
 
-
     async def acquire(self):
         """
         Takes a connection from the pool.
@@ -331,7 +330,7 @@ class pgPool(BasePool):
             self._logger.warning(
                 f"Interface Warning: {err}"
             )
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             self._logger.error(
                 f"Unknown Error on Acquire: {err}"
             )
@@ -443,8 +442,7 @@ class pgPool(BasePool):
         Execute a connection into the Pool
         """
         try:
-            result = await self._pool.execute(sentence, *args)
-            return result
+            return await self._pool.execute(sentence, *args)
         except InterfaceError as err:
             raise ProviderError(
                 f"Execute Interface Error: {err}"
@@ -596,11 +594,12 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         self._connection = None
         self._connected = False
         # Setup jsonb encoder/decoder
+
         def _encoder(value):
-            return self._encoder.dumps(value) # pylint: disable=E1120
+            return self._encoder.dumps(value)  # pylint: disable=E1120
 
         def _decoder(value):
-            return self._encoder.loads(value) # pylint: disable=E1120
+            return self._encoder.loads(value)  # pylint: disable=E1120
 
         server_settings = {
             "application_name": self.application_name,
@@ -673,7 +672,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 self._connected = True
                 if self._init_func is not None and callable(self._init_func):
                     try:
-                        await self._init_func(self._connection) # pylint: disable=E1102
+                        await self._init_func(self._connection)  # pylint: disable=E1102
                     except (ValueError, RuntimeError) as err:
                         self._logger.warning(
                             f"Error on Init Connection: {err}"
@@ -729,7 +728,6 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 f"Asyncpg Unknown Error: {ex}"
             ) from ex
 
-
     async def release(self):
         try:
             if not await self._connection.is_closed():
@@ -762,6 +760,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             return self._pool._connected
         elif self._connection:
             return not self._connection.is_closed()
+        else:
+            return False
 
     async def prepare(self, sentence: str):
         error = None
@@ -782,10 +782,10 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             error = f"Sentence Syntax Error: {err}"
         except PostgresError as err:
             error = f"PostgreSQL Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Prepare Unknown Error: {err}"
         finally:
-            return [self._prepared, error] # pylint: disable=W0150
+            return [self._prepared, error]  # pylint: disable=W0150
 
     async def query(self, sentence: Union[str, Any], *args, **kwargs):
         self._result = None
@@ -803,15 +803,15 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 PostgresSyntaxError,
                 UndefinedColumnError,
                 UndefinedTableError
-            ) as err:
+        ) as err:
             error = f"Sentence Error: {err}"
         except PostgresError as err:
             error = f"Postgres Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
         finally:
             self.generated_at()
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def queryrow(self, sentence: str, *args):
         self._result = None
@@ -832,15 +832,15 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 PostgresSyntaxError,
                 UndefinedColumnError,
                 UndefinedTableError
-            ) as err:
+        ) as err:
             error = f"Sentence Error: {err}"
         except PostgresError as err:
             error = f"Postgres Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query Row: {err}"
         finally:
             self.generated_at(started)
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def execute(self, sentence: Any, *args, **kwargs) -> Optional[Any]:
         """Execute a transaction
@@ -853,21 +853,21 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         try:
             self._result = await self._connection.execute(sentence, *args, **kwargs)
         except (
-                InvalidSQLStatementNameError,
-                PostgresSyntaxError,
-                UndefinedColumnError,
-                UndefinedTableError
-            ) as err:
+            InvalidSQLStatementNameError,
+            PostgresSyntaxError,
+            UndefinedColumnError,
+            UndefinedTableError
+        ) as err:
             error = f"Sentence Error: {err}"
         except DuplicateTableError as err:
             error = f"Duplicated table: {err}"
         except PostgresError as err:
             error = f"Postgres Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Execute: {err}"
         finally:
             self.generated_at()
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def execute_many(self, sentence: str, *args):
         error = None
@@ -882,17 +882,17 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 PostgresSyntaxError,
                 UndefinedColumnError,
                 UndefinedTableError
-            ) as err:
+        ) as err:
             error = f"Sentence Error: {err}"
         except DuplicateTableError as err:
             error = f"Duplicated table: {err}"
         except PostgresError as err:
             error = f"Postgres Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Execute: {err}"
         finally:
             self.generated_at()
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     executemany = execute_many
 
@@ -913,7 +913,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 PostgresSyntaxError,
                 UndefinedColumnError,
                 UndefinedTableError
-            ) as err:
+        ) as err:
             raise StatementError(f"Statement Error: {err}") from err
         except (RuntimeError, PostgresError) as err:
             raise ProviderError(
@@ -938,7 +938,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 PostgresSyntaxError,
                 UndefinedColumnError,
                 UndefinedTableError
-            ) as err:
+        ) as err:
             raise StatementError(f"Statement Error: {err}") from err
         except (RuntimeError, PostgresError) as err:
             raise ProviderError(
@@ -963,7 +963,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 PostgresSyntaxError,
                 UndefinedColumnError,
                 UndefinedTableError
-            ) as err:
+        ) as err:
             raise StatementError(f"Statement Error: {err}") from err
         except (RuntimeError, PostgresError) as err:
             raise ProviderError(
@@ -992,14 +992,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         if self._transaction:
             await self._transaction.rollback()
 
-
-## Cursor Context
-    async def cursor( # pylint: disable=W0236
-            self,
-            sentence: Union[str, any],
-            params: Iterable[Any] = None,
-            **kwargs
-        ):
+    async def cursor(self, sentence: Union[str, any], params: Iterable[Any] = None, **kwargs):  # pylint: disable=W0236
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
         if not self._connection:
@@ -1070,7 +1063,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 InvalidSQLStatementNameError,
                 PostgresSyntaxError,
                 UndefinedColumnError
-            ) as ex:
+        ) as ex:
             raise StatementError(
                 f"Error on Copy, Invalid Statement Error: {ex}"
             ) from ex
@@ -1109,7 +1102,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 InvalidSQLStatementNameError,
                 PostgresSyntaxError,
                 UndefinedColumnError
-            ) as ex:
+        ) as ex:
             raise StatementError(
                 f"Error on Copy, Invalid Statement Error: {ex}"
             ) from ex
@@ -1141,10 +1134,10 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 f"Error on Copy to Table {table }doesn't exists: {ex}"
             ) from ex
         except (
-                InvalidSQLStatementNameError,
-                PostgresSyntaxError,
-                UndefinedColumnError
-            ) as ex:
+            InvalidSQLStatementNameError,
+            PostgresSyntaxError,
+            UndefinedColumnError
+        ) as ex:
             raise StatementError(
                 f"Error on Copy, Invalid Statement Error: {ex}"
             ) from ex
@@ -1190,7 +1183,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         try:
             colinfo = await self._connection.fetch(sql)
             return colinfo
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             self._logger.exception(
                 f"Wrong Table information {tablename!s}: {err}"
             )
@@ -1207,7 +1200,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         """
         if obj == 'table':
             sql = "CREATE TABLE {name}({columns});"
-            columns = ", ".join(["{name} {type}".format(**e) for e in fields]) # pylint: disable=C0209
+            columns = ", ".join(["{name} {type}".format(**e) for e in fields])  # pylint: disable=C0209
             sql = sql.format(name=name, columns=columns)
             try:
                 result = await self._connection.execute(sql)
@@ -1232,11 +1225,9 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
     async def use(self, database: str):
         raise NotImplementedError(
             'AsyncPg Error: There is no Database in SQLite'
-        ) # pragma: no cover
+        )  # pragma: no cover
 
-
-## ModelBackend Methods
-    async def _insert_(self, _model: Model, **kwargs): # pylint: disable=W0613
+    async def _insert_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """
         insert a row from model.
         """
@@ -1293,11 +1284,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             source.append(value)
             cols.append(column)
             n += 1
-            if pk:=self._get_attribute(field, value, attr='primary_key'):
+            if pk := self._get_attribute(field, value, attr='primary_key'):
                 _filter[column] = pk
         try:
             cols = ",".join(cols)
-            values = ",".join(["${}".format(a) for a in range(1, n)]) # pylint: disable=C0209
+            values = ",".join(["${}".format(a) for a in range(1, n)])  # pylint: disable=C0209
             columns = ','.join(columns)
             primary = f"RETURNING {columns}"
             insert = f"INSERT INTO {table}({cols}) VALUES({values}) {primary}"
@@ -1318,7 +1309,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
-    async def _delete_(self, _model: Model, **kwargs): # pylint: disable=W0613
+    async def _delete_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """
         delete a row from model.
         """
@@ -1346,7 +1337,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 value
             )
             n += 1
-            if pk:=self._get_attribute(field, value, attr='primary_key'):
+            if pk := self._get_attribute(field, value, attr='primary_key'):
                 _filter[column] = pk
         try:
             condition = self._where(fields, **_filter)
@@ -1359,7 +1350,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
-    async def _update_(self, _model: Model, **kwargs): # pylint: disable=W0613
+    async def _update_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """
         Updating a row in a Model.
         TODO: How to update when if primary key changed.
@@ -1405,10 +1396,10 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     raise ValueError(
                         f"Field {name} is required and value is null over {_model.Meta.name}"
                     )
-            cols.append("{} = {}".format(name, "${}".format(n))) # pylint: disable=C0209
+            cols.append("{} = {}".format(name, "${}".format(n)))  # pylint: disable=C0209
             source.append(value)
             n += 1
-            if pk:=self._get_attribute(field, value, attr='primary_key'):
+            if pk := self._get_attribute(field, value, attr='primary_key'):
                 _filter[column] = pk
         try:
             set_fields = ", ".join(cols)
@@ -1562,7 +1553,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         if args:
             columns = ','.join(args)
         else:
-            columns = ','.join(fields) ## getting only selected fields
+            columns = ','.join(fields)  # getting only selected fields
         for name, field in fields.items():
             if name in kwargs:
                 try:
@@ -1583,7 +1574,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 f"Error: Model GET over {table}: {e}"
             ) from e
 
-    async def _all_(self, _model: Model, *args, **kwargs): # pylint: disable=W0613
+    async def _all_(self, _model: Model, *args, **kwargs):  # pylint: disable=W0613
         """
         Get all rows on a Model.
         """
@@ -1639,7 +1630,6 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
-
     async def _updating_(self, *args, _filter: dict = None, **kwargs):
         """
         Updating records using Model.
@@ -1676,7 +1666,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             source.append(value)
             if name in _filter:
                 new_cond[name] = value
-            cols.append("{} = {}".format(name, "${}".format(n))) # pylint: disable=C0209
+            cols.append("{} = {}".format(name, "${}".format(n)))  # pylint: disable=C0209
             n += 1
         try:
             set_fields = ", ".join(cols)

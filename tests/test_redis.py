@@ -47,7 +47,7 @@ async def test_pool_by_dsn(driver, event_loop):
     db = await pool.acquire()
     result, error = await db.test_connection('helloworld')
     pytest.assume(not error)
-    pytest.assume(result == 'helloworld')
+    pytest.assume(result == '1')
     user = {
         "Name": "Pradeep",
         "Company": "SCTL",
@@ -65,7 +65,7 @@ async def test_pool_by_dsn(driver, event_loop):
     assert pool.is_closed() is True
 
 
-async def test_pool_by_params(event_loop):
+async def test_driver_by_params(event_loop):
     pool = AsyncPool(DRIVER, params=params, loop=event_loop)
     assert pool.is_connected() is False
     assert pool.get_dsn() == DSN
@@ -111,7 +111,7 @@ async def test_connect(driver, event_loop):
     result, error = await db.test_connection('bigtest')
     print(result, error)
     pytest.assume(not error)
-    pytest.assume(result == 'bigtest')
+    pytest.assume(result == '1')
     await db.close()
     print(db.is_closed())
     assert db.is_closed() is True
@@ -126,7 +126,7 @@ async def test_context(driver, event_loop):
         pytest.assume(conn.is_connected() is True)
         result, error = await conn.test_connection()
         pytest.assume(not error)
-        result, error = await conn.test_connection('TEST CONTEXT')
+        result, error = await conn.test_connection('TEST CONTEXT', 'TEST CONTEXT')
         pytest.assume(not error)
         pytest.assume(result == 'TEST CONTEXT')
     assert db.is_closed() is True
