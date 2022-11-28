@@ -245,7 +245,7 @@ setup(
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.34",
             "sqlalchemy==1.4.42",
-            "elasticsearch[async]==8.4.3",
+            "elasticsearch[async]==8.5.2",
             "pymongo==4.2.0",
             "motor==3.0.0",
             "pymssql==2.2.5",
