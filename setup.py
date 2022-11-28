@@ -30,11 +30,11 @@ with open(version, 'r', encoding='utf-8') as meta:
             name = node.targets[0]
             if isinstance(name, ast.Name) and \
                     name.id in (
-                            '__version__',
-                            '__title__',
-                            '__description__',
-                            '__author__',
-                            '__license__', '__author_email__'):
+                        '__version__',
+                        '__title__',
+                        '__description__',
+                        '__author__',
+                        '__license__', '__author_email__'):
                 v = node.value
                 if name.id == '__version__':
                     __version__ = v.s
@@ -106,7 +106,7 @@ setup(
         "wheel==0.37.1",
         "Cython==0.29.32",
         "numpy==1.23.4",
-        "cryptography==38.0.2",
+        "cryptography==38.0.4",
         "aiohttp==3.8.3",
         "asyncpg==0.26.0",
         "uvloop==0.17.0",
@@ -126,7 +126,7 @@ setup(
         "dateparser==1.1.1",
         "python-datamodel>=0.0.37"
     ],
-    extras_require = {
+    extras_require={
         "default": [
             "aioredis==2.0.1",
             "pylibmc==1.6.3",
@@ -153,8 +153,8 @@ setup(
             "aiosqlite>=0.15.0",
         ],
         "memcache": [
-          "pylibmc==1.6.3",
-          "aiomcache==0.7.0",
+            "pylibmc==1.6.3",
+            "aiomcache==0.7.0",
         ],
         "redis": [
             "jsonpath-rw==1.4.0",
