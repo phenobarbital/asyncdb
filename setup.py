@@ -169,7 +169,7 @@ setup(
             "psycopg2-binary>=2.9.1",
         ],
         "postgresql": [
-            "asyncpg==0.26.0",
+            "asyncpg==0.27.0",
         ],
         "mysql": [
             "asyncmy==0.2.5",
