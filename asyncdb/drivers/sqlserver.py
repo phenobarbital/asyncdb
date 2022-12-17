@@ -143,11 +143,11 @@ class sqlserver(mssql):
             error = f"SQL Server Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
         finally:
             logging.debug(error)
-            return [self._result, error] # pylint: disable=W0150
+            return [self._result, error]  # pylint: disable=W0150
 
     async def execute_many(self, sentence, *args):
         """
@@ -167,11 +167,11 @@ class sqlserver(mssql):
             error = f"SQL Server Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
         finally:
             logging.debug(error)
-            return [self._result, error] # pylint: disable=W0150
+            return [self._result, error]  # pylint: disable=W0150
 
     executemany = execute_many
 
@@ -228,10 +228,10 @@ class sqlserver(mssql):
             error = f"SQL Server Query Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
         finally:
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     callproc = procedure
 
@@ -276,11 +276,10 @@ class sqlserver(mssql):
             raise DriverError(
                 f"Runtime Error: {err}"
             ) from err
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             raise ProviderError(
                 f"Error on Query: {err}"
             ) from err
-
 
     fetchone = fetch_one
 
@@ -304,7 +303,7 @@ class sqlserver(mssql):
             raise DriverError(
                 f"Runtime Error: {err}"
             ) from err
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             raise ProviderError(
                 f"Error on Query: {err}"
             ) from err
@@ -329,7 +328,7 @@ class sqlserver(mssql):
             raise DriverError(
                 f"Runtime Error: {err}"
             ) from err
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             raise ProviderError(
                 f"Error on Query: {err}"
             ) from err
@@ -369,7 +368,6 @@ class sqlserver(mssql):
             else:
                 params = ''
             procedure = f'EXEC {sentence} {params}'
-            print('EXEC :: ', procedure)
             self._cursor.execute(procedure, *args)
             result = self._cursor.fetchall()
             if not result:
