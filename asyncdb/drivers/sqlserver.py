@@ -194,10 +194,10 @@ class sqlserver(mssql):
             error = f"SQL Server Query Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
         finally:
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def procedure(self, sentence, **kwargs):
         """
@@ -251,10 +251,10 @@ class sqlserver(mssql):
             error = f"SQL Server Query Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
         finally:
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def fetch_one(self, sentence, *args, **kwargs):
         self._result = None
@@ -362,11 +362,14 @@ class sqlserver(mssql):
         await self.valid_operation(sentence)
         try:
             self._cursor = self._connection.cursor()
+            if idx not in kwargs:
+                kwargs[idx] = 1
             if kwargs:
-                params = ', '.join([f'{k}={v}' for k,v in kwargs.items()])
+                params = ', '.join([f'{k}={v}' for k, v in kwargs.items()])
             else:
                 params = ''
             procedure = f'EXEC {sentence} {params}'
+            print('EXEC :: ', procedure)
             self._cursor.execute(procedure, *args)
             result = self._cursor.fetchall()
             if not result:
@@ -398,7 +401,7 @@ class sqlserver(mssql):
             error = f"SQL Server Query Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
         finally:
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
