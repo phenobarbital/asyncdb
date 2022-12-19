@@ -333,16 +333,15 @@ class sqlserver(mssql):
                 f"Error on Query: {err}"
             ) from err
 
-
     async def exec(
-            self,
-            sentence,
-            *args,
-            paginated: bool = False,
-            page: str = None,
-            idx: str = None,
-            **kwargs
-        ):
+        self,
+        sentence,
+        *args,
+        paginated: bool = False,
+        page: str = None,
+        idx: str = None,
+        **kwargs
+    ):
         """exec.
 
         Calling an Stored Function with parameters.
