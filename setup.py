@@ -192,7 +192,7 @@ setup(
         ],
         "odbc": [
             "aioodbc==0.3.3",
-            "pyodbc==4.0.34",
+            "pyodbc==4.0.35",
         ],
         "jdbc": [
             "JayDeBeApi==1.2.3"
@@ -243,7 +243,7 @@ setup(
             "influxdb-client==1.35.0",
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
-            "pyodbc==4.0.34",
+            "pyodbc==4.0.35",
             "sqlalchemy==1.4.46",
             "elasticsearch[async]==8.5.2",
             "pymongo==4.3.3",
