@@ -7,10 +7,7 @@ from dataclasses import is_dataclass, asdict
 from functools import partial
 from typing import (
     Any,
-    List,
-    Dict,
-    Union,
-    Tuple
+    Union
 )
 from influxdb_client import InfluxDBClient, Dialect, BucketRetentionRules
 from influxdb_client.client.write_api import ASYNCHRONOUS, PointSettings
@@ -29,8 +26,7 @@ from asyncdb.interfaces import (
 from .abstract import InitDriver
 
 
-
-class WriteCallback(object):
+class WriteCallback:
     def success(self, conf: tuple[str, str, str], data: str):
         """Successfully written batch."""
         logging.debug(f"Written batch: {conf}, data: {data}")
@@ -42,6 +38,7 @@ class WriteCallback(object):
     def retry(self, conf: tuple[str, str, str], data: str, exception: InfluxDBError):
         """Retryable error."""
         logging.error(f"Retryable error occurs for batch: {conf}, data: {data} retry: {exception}")
+
 
 class influx(InitDriver, ConnectionDSNBackend):
     _provider = "influxdb"
@@ -172,8 +169,7 @@ class influx(InitDriver, ConnectionDSNBackend):
                 message=f"InfluxDB connection Error: {err!s}"
             ) from err
 
-
-    async def close(self): # pylint: disable=W0221
+    async def close(self):  # pylint: disable=W0221
         """
         Closing a Connection
         """
@@ -195,16 +191,16 @@ class influx(InitDriver, ConnectionDSNBackend):
             self._connection = None
             self._connected = False
 
-    async def test_connection(self): # pylint: disable=W0221
+    async def test_connection(self):  # pylint: disable=W0221
         error = None
         result = None
         if self._connection:
             try:
                 result = self._connection.health()
-            except Exception as err: # pylint: disable=W0703
+            except Exception as err:  # pylint: disable=W0703
                 error = err
             finally:
-                return [result, error] # pylint: disable=W0150
+                return [result, error]  # pylint: disable=W0150
 
     def api_client(self):
         return self._client
@@ -268,7 +264,6 @@ class influx(InitDriver, ConnectionDSNBackend):
         buckets_api = self._connection.buckets_api()
         return buckets_api.find_buckets().buckets
 
-
     async def drop_bucket(self, bucket: str):
         try:
             buckets_api = self._connection.buckets_api()
@@ -296,9 +291,9 @@ class influx(InitDriver, ConnectionDSNBackend):
             rules = BucketRetentionRules(type=btype, every_seconds=expiration, **kwgars)
             print('ORG ', self._org)
             created = buckets_api.create_bucket(
-                    bucket_name=bucket,
-                    retention_rules=rules,
-                    org=self._org
+                bucket_name=bucket,
+                retention_rules=rules,
+                org=self._org
             )
             print(created)
         except Exception as err:
@@ -324,12 +319,12 @@ class influx(InitDriver, ConnectionDSNBackend):
                     retry_callback=self._callback.retry,
                     point_settings=self._settings) as writer:
                 if isinstance(data, pandas.core.frame.DataFrame):
-                # need the index and the name of the measurement
+                    # need the index and the name of the measurement
                     rst = writer.write(
                         bucket=bucket,
                         org=self._org,
-                        data_frame_measurement_name = kwargs['name'],
-                        data_frame_tag_columns = kwargs['index'],
+                        data_frame_measurement_name=kwargs['name'],
+                        data_frame_tag_columns=kwargs['index'],
                         record=data
                     )
                 elif is_dataclass(data):
@@ -343,9 +338,9 @@ class influx(InitDriver, ConnectionDSNBackend):
                     rst = writer.write(
                         bucket=bucket,
                         org=self._org,
-                        record_measurement_name = name,
-                        record_tag_keys = tag_keys,
-                        record_field_keys = field_keys,
+                        record_measurement_name=name,
+                        record_tag_keys=tag_keys,
+                        record_field_keys=field_keys,
                         **time_keys
                     )
                 else:
@@ -380,19 +375,30 @@ class influx(InitDriver, ConnectionDSNBackend):
                 reader = partial(query_api.query, query=sentence, params=params, **kwargs)
                 # self._result = query_api.query(sentence, params=params)
             self._result = await self._loop.run_in_executor(None, reader)
-            if not self._result:
+            if self._result is None:
                 raise NoDataFound("InfluxDB: No Data was Found")
             if frmt == 'json':
                 self._result = json.dumps(self._result, cls=FluxStructureEncoder)
+            elif frmt == 'recordset':
+                results = []
+                for table in self._result:
+                    for record in table.records:
+                        row = {
+                            "measurement": record.get_measurement(),
+                            "time": record.get_time(),
+                            **record.values
+                        }
+                        results.append(row)
+                self._result = results
         except NoDataFound:
             raise
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
         finally:
             self.generated_at()
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     queryrow = query
 
@@ -426,7 +432,7 @@ class influx(InitDriver, ConnectionDSNBackend):
 
     fetch_one = fetch_all
 
-    async def execute(self, sentence: str, method: str = "GET", **kwargs): # pylint: disable=W0221
+    async def execute(self, sentence: str, method: str = "GET", **kwargs):  # pylint: disable=W0221
         """Execute a transaction.
 
         returns: results of the execution
@@ -446,10 +452,10 @@ class influx(InitDriver, ConnectionDSNBackend):
                     result = rst.data
             else:
                 result = rst
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Execute: {err}"
         finally:
-            return [result, error] # pylint: disable=W0150
+            return [result, error]  # pylint: disable=W0150
 
     async def execute_many(self, sentence: Union[str, Any], method: str = "GET", **kwargs):
         """Execute many transactions at once.
