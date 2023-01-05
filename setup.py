@@ -132,7 +132,7 @@ setup(
             "cassandra-driver==3.25.0",
             "rethinkdb==2.4.9",
             "influxdb==5.3.1",
-            "influxdb-client==1.33.0",
+            "influxdb-client==1.35.0",
             "pymssql==2.2.5",
         ],
         "dataframe": [
@@ -188,7 +188,7 @@ setup(
         ],
         "influxdb": [
             "influxdb==5.3.1",
-            "influxdb-client==1.33.0",
+            "influxdb-client==1.35.0",
         ],
         "odbc": [
             "aioodbc==0.3.3",
@@ -240,7 +240,7 @@ setup(
             "psycopg2-binary>=2.9.1",
             "cassandra-driver==3.25.0",
             "influxdb==5.3.1",
-            "influxdb-client==1.33.0",
+            "influxdb-client==1.35.0",
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.34",
