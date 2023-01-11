@@ -14,6 +14,8 @@ class recordFormat(OutputFormat):
     """
     async def serialize(self, result, error, *args, **kwargs):
         self._result = None
+        if error:
+            return (None, error)
         try:
             if isinstance(result, list):
                 _set = [Record.from_dict(row) for row in result]

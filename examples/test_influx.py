@@ -1,7 +1,9 @@
 import asyncio
 from asyncdb import AsyncDB
 
-DRIVER='influx'
+
+DRIVER = 'influx'
+
 
 async def test_connect(driver, params, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
@@ -11,9 +13,14 @@ async def test_connect(driver, params, event_loop):
     await db.create_database('testdb')
     result, error = await db.test_connection()
     print(' == HEALTH == ')
-    print(result, 'Error: ', error)
-    print(type(result) == dict)
-
+    print(result, '/ Error: ', error)
+    print(isinstance(result, dict))
+    result, error = await db.query(
+        'from(bucket:"navigator")|> range(start: -180m)|> filter(fn: (r) => r["_measurement"] == "task_execution") |> pivot(rowKey: ["_time"], columnKey: ["task"], valueColumn: "_value")',
+        frmt='recordset'
+    )
+    # |> keep(columns: ["_time"])
+    print('HERE ', result, error)
     await db.close()
 
 

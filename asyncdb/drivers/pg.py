@@ -811,6 +811,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             error = f"Error on Query: {err}"
         finally:
             self.generated_at()
+            if error:
+                return [None, error]
             return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def queryrow(self, sentence: str, *args):
@@ -1580,8 +1582,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         """
         try:
             schema = ''
-            sc = _model.Meta.schema
-            if sc:
+            # sc = _model.Meta.schema
+            if (sc := _model.Meta.schema):
                 schema = f"{sc}."
             table = f"{schema}{_model.Meta.name}"
         except AttributeError:
@@ -1605,8 +1607,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         """
         try:
             schema = ''
-            sc = _model.Meta.schema
-            if sc:
+            if (sc := _model.Meta.schema):
                 schema = f"{sc}."
             table = f"{schema}{_model.Meta.name}"
         except AttributeError:

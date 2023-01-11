@@ -9,6 +9,8 @@ class dtFormat(OutputFormat):
     """
     async def serialize(self, result, error, *args, **kwargs):
         df = None
+        if error:
+            return (None, error)
         try:
             data = [dict(row) for row in result]
             df = dt.Frame(

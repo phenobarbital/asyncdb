@@ -14,6 +14,8 @@ class recordsetFormat(OutputFormat):
     """
     async def serialize(self, result, error, *args, **kwargs):
         self._result = None
+        if error:
+            return (None, error)
         try:
             self._result = Recordset.from_result(result)
         except (TypeError, ValueError, AttributeError) as err:
