@@ -108,7 +108,7 @@ setup(
         "uvloop==0.17.0",
         "asyncio==3.4.3",
         "cchardet==2.1.7",
-        "pandas==1.5.2",
+        "pandas==1.5.3",
         "xlrd==2.0.1",
         "openpyxl==3.0.10",
         "lz4==4.0.2",
@@ -198,7 +198,7 @@ setup(
             "JayDeBeApi==1.2.3"
         ],
         "oracle": [
-            "oracledb==1.2.1"
+            "oracledb==1.2.2"
         ],
         "sqlalchemy": [
             "sqlalchemy==1.4.46",
@@ -247,7 +247,7 @@ setup(
             "sqlalchemy==1.4.46",
             "elasticsearch[async]==8.5.2",
             "pymongo==4.3.3",
-            "motor==3.0.0",
+            "motor==3.1.1",
             "pymssql==2.2.7",
             "couchbase==4.0.5",
             "aiocouch==2.2.2",
@@ -255,7 +255,7 @@ setup(
             "mysqlclient==2.1.1",
             "aiomysql==0.1.1",
             "pyspark==3.3.1",
-            "oracledb==1.2.1",
+            "oracledb==1.2.2",
             "hazelcast-python-client==5.1",
         ]
     },
