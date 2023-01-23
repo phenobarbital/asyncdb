@@ -140,7 +140,7 @@ setup(
             "datatable==1.0.0",
             "polars==0.15.1",
             "pyarrow==10.0.1",
-            "connectorx==0.3.0",
+            "connectorx==0.3.1",
             "pyspark==3.3.1"
         ],
         "pyspark": [
@@ -227,7 +227,7 @@ setup(
             "datatable==1.0.0",
             "polars==0.15.1",
             "pyarrow==10.0.1",
-            "connectorx==0.3.0",
+            "connectorx==0.3.1",
             "aiosqlite>=0.15.0",
             "pylibmc==1.6.3",
             "aiomcache==0.7.0",
