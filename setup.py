@@ -127,7 +127,7 @@ setup(
         "default": [
             "aioredis==2.0.1",
             "pylibmc==1.6.3",
-            "aiomcache==0.7.0",
+            "aiomcache==0.8.0",
             "aiosqlite>=0.15.0",
             "cassandra-driver==3.25.0",
             "rethinkdb==2.4.9",
