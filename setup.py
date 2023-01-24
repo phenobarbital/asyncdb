@@ -165,7 +165,7 @@ setup(
             "rethinkdb==2.4.9",
         ],
         "postgres": [
-            "aiopg==1.3.5",
+            "aiopg==1.4.0",
             "psycopg2-binary>=2.9.1",
         ],
         "postgresql": [
@@ -236,7 +236,7 @@ setup(
             "aioredis==2.0.1",
             "objectpath==0.6.1",
             "rethinkdb==2.4.9",
-            "aiopg==1.3.5",
+            "aiopg==1.4.0",
             "psycopg2-binary>=2.9.1",
             "cassandra-driver==3.25.0",
             "influxdb==5.3.1",
