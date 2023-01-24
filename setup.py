@@ -138,7 +138,7 @@ setup(
         "dataframe": [
             "dask==2022.11.1",
             "datatable==1.0.0",
-            "polars==0.15.1",
+            "polars==0.15.16",
             "pyarrow==10.0.1",
             "connectorx==0.3.1",
             "pyspark==3.3.1"
@@ -225,7 +225,7 @@ setup(
         "all": [
             "dask==2022.11.1",
             "datatable==1.0.0",
-            "polars==0.15.1",
+            "polars==0.15.16",
             "pyarrow==10.0.1",
             "connectorx==0.3.1",
             "aiosqlite>=0.15.0",
