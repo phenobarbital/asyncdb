@@ -151,12 +151,12 @@ setup(
         ],
         "memcache": [
             "pylibmc==1.6.3",
-            "aiomcache==0.7.0",
+            "aiomcache==0.8.0",
         ],
         "redis": [
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
-            "redis==4.3.4",
+            "redis==4.4.2",
             "aioredis==2.0.1",
             "hiredis==2.0.0",
             "objectpath==0.6.1",
@@ -230,7 +230,7 @@ setup(
             "connectorx==0.3.1",
             "aiosqlite>=0.15.0",
             "pylibmc==1.6.3",
-            "aiomcache==0.7.0",
+            "aiomcache==0.8.0",
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
             "aioredis==2.0.1",
