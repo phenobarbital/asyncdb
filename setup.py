@@ -158,7 +158,7 @@ setup(
             "jsonpath-rw-ext==1.2.2",
             "redis==4.4.2",
             "aioredis==2.0.1",
-            "hiredis==2.0.0",
+            "hiredis==2.2.1",
             "objectpath==0.6.1",
         ],
         "rethinkdb": [
