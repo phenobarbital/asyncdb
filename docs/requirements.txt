@@ -3,3 +3,4 @@ sphinx-autobuild
 sphinx-rtd-theme 
 myst-parser
 
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
