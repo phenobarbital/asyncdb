@@ -101,7 +101,7 @@ setup(
         "Cython==0.29.32",
     ],
     install_requires=[
-        "numpy==1.23.4",
+        "numpy==1.24.2",
         "cryptography==37.0.4",
         "aiohttp==3.8.3",
         "asyncpg==0.27.0",
