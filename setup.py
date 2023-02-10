@@ -156,7 +156,7 @@ setup(
         "redis": [
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
-            "redis==4.4.2",
+            "redis==4.5.1",
             "aioredis==2.0.1",
             "hiredis==2.2.1",
             "objectpath==0.6.1",
