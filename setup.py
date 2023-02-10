@@ -136,9 +136,9 @@ setup(
             "pymssql==2.2.7",
         ],
         "dataframe": [
-            "dask==2022.11.1",
+            "dask==2023.1.1",
             "datatable==1.0.0",
-            "polars==0.15.16",
+            "polars==0.16.2",
             "pyarrow==11.0.0",
             "connectorx==0.3.1",
             "pyspark==3.3.1"
@@ -202,10 +202,10 @@ setup(
             "oracledb==1.2.2"
         ],
         "sqlalchemy": [
-            "sqlalchemy==1.4.46",
+            "sqlalchemy==2.0.3",
         ],
         "elasticsearch": [
-            "elasticsearch[async]==7.15.1",
+            "elasticsearch[async]==8.6.1",
         ],
         "mongodb": [
             "pymongo==4.3.3",
@@ -224,9 +224,9 @@ setup(
             "hazelcast-python-client==5.1"
         ],
         "all": [
-            "dask==2022.11.1",
+            "dask==2023.1.1",
             "datatable==1.0.0",
-            "polars==0.15.16",
+            "polars==0.16.2",
             "pyarrow==11.0.0",
             "connectorx==0.3.1",
             "aiosqlite>=0.15.0",
@@ -245,8 +245,8 @@ setup(
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.35",
-            "sqlalchemy==1.4.46",
-            "elasticsearch[async]==8.5.2",
+            "sqlalchemy==2.0.3",
+            "elasticsearch[async]==8.6.1",
             "pymongo==4.3.3",
             "motor==3.1.1",
             "pymssql==2.2.7",
