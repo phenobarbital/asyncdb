@@ -3,7 +3,7 @@ black==22.12.0
 codecov==2.1.12
 coverage[toml]==7.1.0
 flit==3.8.0
-hypothesis==6.58.1
+hypothesis==6.68.1
 lint==1.2.1
 mypy==1.0.0
 pylint==2.15.4
