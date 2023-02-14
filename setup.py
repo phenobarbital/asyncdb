@@ -209,7 +209,7 @@ setup(
         ],
         "mongodb": [
             "pymongo==4.3.3",
-            "motor==3.0.0",
+            "motor==3.1.1",
         ],
         "msqlserver": [
             "pymssql==2.2.7",
