@@ -360,16 +360,16 @@ class sqlserver(mssql):
         await self.valid_operation(sentence)
         try:
             self._cursor = self._connection.cursor()
-            if idx not in kwargs:
+            if idx is not None and idx not in kwargs:
                 kwargs[idx] = 1
             if kwargs:
-                params = ', '.join([f'{k}={v}' for k, v in kwargs.items()])
+                params = ', '.join([f'{k}={v}' for k, v in kwargs.items() if k is not None])
             else:
                 params = ''
             procedure = f'EXEC {sentence} {params}'
             self._cursor.execute(procedure, *args)
-            result = self._cursor.fetchall()
-            if not result:
+            # result = self._cursor.fetchall()
+            if not (result := self._cursor.fetchall()):
                 return [None, NoDataFound("SQL Server: No Data was Found")]
             else:
                 # preparing for pagination and other stuff.
