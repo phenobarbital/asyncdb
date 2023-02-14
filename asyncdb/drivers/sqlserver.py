@@ -368,8 +368,8 @@ class sqlserver(mssql):
                 params = ''
             procedure = f'EXEC {sentence} {params}'
             self._cursor.execute(procedure, *args)
-            result = self._cursor.fetchall()
-            if not result:
+            # result = self._cursor.fetchall()
+            if not (result := self._cursor.fetchall()):
                 return [None, NoDataFound("SQL Server: No Data was Found")]
             else:
                 # preparing for pagination and other stuff.
