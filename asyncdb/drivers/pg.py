@@ -210,7 +210,7 @@ class pgPool(BasePool):
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             server_settings = {
                 "application_name": self.application_name,
-                "idle_in_transaction_session_timeout": "3600",
+                "idle_in_transaction_session_timeout": "10",
                 "tcp_keepalives_idle": "3600",
                 "max_parallel_workers": "48",
                 "jit": "off"
@@ -228,6 +228,7 @@ class pgPool(BasePool):
                 min_size=self._min_size,
                 max_size=self._max_clients,
                 max_inactive_connection_lifetime=3600,
+                statement_cache_size=300,
                 timeout=10,
                 command_timeout=self._timeout,
                 init=self.init_connection,
@@ -603,7 +604,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
 
         server_settings = {
             "application_name": self.application_name,
-            "idle_in_transaction_session_timeout": "3600",
+            "idle_in_transaction_session_timeout": "30",
             "tcp_keepalives_idle": "3600",
             "max_parallel_workers": "24",
             "jit": "off"
@@ -625,6 +626,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     timeout=self._timeout,
                     max_cached_statement_lifetime=max_cached_statement_lifetime,
                     max_cacheable_statement_size=max_cacheable_statement_size,
+                    statement_cache_size=300,
                     server_settings=server_settings,
                     connection_class=NAVConnection,
                     loop=self._loop,
