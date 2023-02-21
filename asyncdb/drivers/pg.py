@@ -74,6 +74,10 @@ class pgPool(BasePool):
         super(pgPool, self).__init__(
             dsn=dsn, loop=loop, params=params, **kwargs
         )
+        try:
+            self._max_inactive_timeout = kwargs['max_inactive_timeout']
+        except KeyError:
+            self._max_inactive_timeout = 300
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if "application_name" in self._server_settings:
@@ -227,7 +231,7 @@ class pgPool(BasePool):
                 max_queries=self._max_queries,
                 min_size=self._min_size,
                 max_size=self._max_clients,
-                max_inactive_connection_lifetime=3600,
+                max_inactive_connection_lifetime=self._max_inactive_timeout,
                 statement_cache_size=300,
                 timeout=10,
                 command_timeout=self._timeout,
