@@ -69,7 +69,7 @@ extensions = [
 setup(
     name="asyncdb",
     version=__version__,
-    python_requires=">=3.8.0",
+    python_requires=">=3.9.16",
     url="https://github.com/phenobarbital/asyncdb",
     description=__description__,
     keywords=['asyncio', 'asyncpg', 'aioredis', 'aiomcache', 'cassandra'],
@@ -85,9 +85,9 @@ setup(
         "Topic :: Software Development :: Build Tools",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Database :: Front-Ends",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3 :: Only",
         "Framework :: AsyncIO",
     ],
@@ -98,67 +98,67 @@ setup(
     license=__license__,
     setup_requires=[
         "wheel==0.38.4",
-        "Cython==0.29.32",
+        "Cython==0.29.33",
     ],
     install_requires=[
-        "numpy==1.23.4",
-        "cryptography==37.0.4",
-        "aiohttp==3.8.3",
+        "numpy==1.24.2",
+        "cryptography==39.0.2",
+        "aiohttp==3.8.4",
         "asyncpg==0.27.0",
         "uvloop==0.17.0",
         "asyncio==3.4.3",
-        "cchardet==2.1.7",
+        "faust-cchardet==2.1.18",
         "pandas==1.5.3",
         "xlrd==2.0.1",
-        "openpyxl==3.0.10",
-        "lz4==4.0.2",
-        "typing_extensions==4.4.0",
+        "openpyxl==3.1.1",
+        "lz4==4.3.2",
+        "typing_extensions==4.5.0",
         "urllib3==1.26.14",
         "charset-normalizer>=2.0.7",
-        "ciso8601==2.2.0",
+        "ciso8601==2.3.0",
         "iso8601==1.1.0",
         "pgpy==0.6.0",
         "python-magic==0.4.27",
-        "dateparser==1.1.4",
+        "dateparser==1.1.7",
         "python-datamodel>=0.1.14",
-        "aiosqlite>=0.15.0",
+        "aiosqlite>=0.18.0",
     ],
     extras_require={
         "default": [
             "aioredis==2.0.1",
             "pylibmc==1.6.3",
-            "aiomcache==0.8.0",
-            "aiosqlite>=0.15.0",
+            "aiomcache==0.8.1",
+            "aiosqlite>=0.18.0",
             "cassandra-driver==3.25.0",
             "rethinkdb==2.4.9",
             "influxdb==5.3.1",
-            "influxdb-client==1.35.0",
+            "influxdb-client==1.36.1",
             "pymssql==2.2.7",
         ],
         "dataframe": [
-            "dask==2023.1.1",
+            "dask==2023.3.0",
             "datatable==1.0.0",
-            "polars==0.16.2",
+            "polars==0.16.11",
             "pyarrow==11.0.0",
             "connectorx==0.3.1",
-            "pyspark==3.3.1"
+            "pyspark==3.3.2"
         ],
         "pyspark": [
-            "pyspark==3.3.1"
+            "pyspark==3.3.2"
         ],
         "sqlite": [
-            "aiosqlite>=0.15.0",
+            "aiosqlite>=0.18.0",
         ],
         "memcache": [
             "pylibmc==1.6.3",
-            "aiomcache==0.8.0",
+            "aiomcache==0.8.1",
         ],
         "redis": [
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
-            "redis==4.4.2",
+            "redis==4.5.1",
             "aioredis==2.0.1",
-            "hiredis==2.2.1",
+            "hiredis==2.2.2",
             "objectpath==0.6.1",
         ],
         "rethinkdb": [
@@ -166,30 +166,30 @@ setup(
         ],
         "postgres": [
             "aiopg==1.4.0",
-            "psycopg2-binary>=2.9.1",
+            "psycopg2-binary>=3.1.8",
         ],
         "postgresql": [
             "asyncpg==0.27.0",
         ],
         "mysql": [
-            "asyncmy==0.2.5",
+            "asyncmy==0.2.7",
             "mysqlclient==2.1.1"
         ],
         "mariadb": [
             "aiomysql==0.1.1"
         ],
         "boto3": [
-            "botocore==1.27.59",
-            "boto3==1.24.59",
+            "botocore==1.29.84",
+            "boto3==1.26.84",
             "aiobotocore==2.4.2",
-            "aioboto3==10.4.0"
+            "aioboto3==11.0.0"
         ],
         "cassandra": [
             "cassandra-driver==3.25.0",
         ],
         "influxdb": [
             "influxdb==5.3.1",
-            "influxdb-client==1.35.0",
+            "influxdb-client==1.36.1",
         ],
         "odbc": [
             "aioodbc==0.3.3",
@@ -202,20 +202,20 @@ setup(
             "oracledb==1.2.2"
         ],
         "sqlalchemy": [
-            "sqlalchemy==1.4.46",
+            "sqlalchemy==2.0.4",
         ],
         "elasticsearch": [
-            "elasticsearch[async]==8.6.1",
+            "elasticsearch[async]==8.6.2",
         ],
         "mongodb": [
             "pymongo==4.3.3",
-            "motor==3.0.0",
+            "motor==3.1.1",
         ],
         "msqlserver": [
             "pymssql==2.2.7",
         ],
         "couchbase": [
-            "couchbase==4.0.5"
+            "couchbase==4.1.2"
         ],
         "couchdb": [
             "aiocouch==2.2.2"
@@ -224,47 +224,47 @@ setup(
             "hazelcast-python-client==5.1"
         ],
         "all": [
-            "dask==2023.1.1",
+            "dask==2023.3.0,
             "datatable==1.0.0",
-            "polars==0.16.2",
+            "polars==0.16.11",
             "pyarrow==11.0.0",
             "connectorx==0.3.1",
-            "aiosqlite>=0.15.0",
+            "aiosqlite>=0.18.0",
             "pylibmc==1.6.3",
-            "aiomcache==0.8.0",
+            "aiomcache==0.8.1",
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
             "aioredis==2.0.1",
             "objectpath==0.6.1",
             "rethinkdb==2.4.9",
             "aiopg==1.4.0",
-            "psycopg2-binary>=2.9.1",
+            "psycopg2-binary>=3.1.8",
             "cassandra-driver==3.25.0",
             "influxdb==5.3.1",
-            "influxdb-client==1.35.0",
+            "influxdb-client==1.36.1",
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.35",
-            "sqlalchemy==1.4.46",
-            "elasticsearch[async]==8.6.1",
+            "sqlalchemy==2.0.4",
+            "elasticsearch[async]==8.6.2",
             "pymongo==4.3.3",
             "motor==3.1.1",
             "pymssql==2.2.7",
-            "couchbase==4.0.5",
+            "couchbase==4.1.2",
             "aiocouch==2.2.2",
-            "asyncmy==0.2.5",
+            "asyncmy==0.2.7",
             "mysqlclient==2.1.1",
             "aiomysql==0.1.1",
-            "pyspark==3.3.1",
+            "pyspark==3.3.2",
             "oracledb==1.2.2",
             "hazelcast-python-client==5.1",
         ]
     },
     tests_require=[
-        'pytest>=6.0.0',
+        'pytest>=7.2.2',
         'pytest-asyncio==0.20.3',
-        'pytest-xdist==3.1.0',
-        'pytest-assume==2.4.2'
+        'pytest-xdist==3.2.0',
+        'pytest-assume==2.4.3'
     ],
     test_suite='tests',
     ext_modules=cythonize(extensions),
@@ -274,3 +274,4 @@ setup(
         "Say Thanks!": "https://saythanks.io/to/phenobarbital",
     },
 )
+
