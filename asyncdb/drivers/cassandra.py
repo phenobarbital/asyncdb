@@ -211,7 +211,7 @@ class cassandra(InitDriver):
                 self._connected = True
                 self._initialized_on = time.time()
             if 'database' in self.params:
-                self.use(self.params["database"])
+                await self.use(self.params["database"])
             else:
                 self._keyspace = keyspace
             return self
