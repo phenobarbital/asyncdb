@@ -137,7 +137,7 @@ setup(
         ],
         "dataframe": [
             "dask==2023.3.0",
-            "datatable==1.0.0",
+            "python-datatable==1.1.3",
             "polars==0.16.11",
             "pyarrow==11.0.0",
             "connectorx==0.3.1",
@@ -166,7 +166,7 @@ setup(
         ],
         "postgres": [
             "aiopg==1.4.0",
-            "psycopg2-binary>=2.9.5",
+            "psycopg-binary>=3.1.8",
         ],
         "postgresql": [
             "asyncpg==0.27.0",
@@ -225,7 +225,7 @@ setup(
         ],
         "all": [
             "dask==2023.3.0",
-            "datatable==1.0.0",
+            "python-datatable==1.1.3",
             "polars==0.16.11",
             "pyarrow==11.0.0",
             "connectorx==0.3.1",
@@ -238,7 +238,7 @@ setup(
             "objectpath==0.6.1",
             "rethinkdb==2.4.9",
             "aiopg==1.4.0",
-            "psycopg2-binary>=3.1.8",
+            "psycopg-binary>=3.1.8",
             "cassandra-driver==3.25.0",
             "influxdb==5.3.1",
             "influxdb-client==1.36.1",
