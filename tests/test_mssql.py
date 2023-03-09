@@ -48,10 +48,3 @@ async def test_connect(driver, event_loop):
     result, error = await db.test_connection()
     pytest.assume(type(result) == dict)
     await db.close()
-
-
-async def test_connection(conn):
-    #await conn.connection()
-    pytest.assume(conn.is_connected() is True)
-    result, error = await conn.test_connection()
-    pytest.assume(type(result) == dict)

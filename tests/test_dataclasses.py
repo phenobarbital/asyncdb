@@ -8,7 +8,6 @@ from io import BytesIO
 from pathlib import Path
 import pytest_asyncio
 from asyncdb.models import Model, Column
-from asyncdb.models.sql import SQLModel
 
 DRIVER = 'pg'
 CREDENTIALS = {
@@ -40,7 +39,7 @@ class Contact(Model):
     account: str = ''
     value: str = ''
 
-class User(SQLModel):
+class User(Model):
     """
     User Basic Structure
     """
@@ -163,7 +162,3 @@ async def test_dataclass_with_credentials(driver, event_loop):
     pytest.assume(result == 'DROP TABLE')
     await db.close()
     assert db.is_closed() is True
-
-
-def pytest_sessionfinish(session, exitstatus):
-    asyncio.get_event_loop().close()

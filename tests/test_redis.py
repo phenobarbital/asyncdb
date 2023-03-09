@@ -1,45 +1,47 @@
 import pytest
 from asyncdb import AsyncDB, AsyncPool
 import asyncio
-import asyncpg
-from io import BytesIO
-from pathlib import Path
-import pytest_asyncio
+from .conftest import (
+    conn,
+    pooler
+)
 
 
-DRIVER = 'redis'
-params = {
-    "host": "127.0.0.1",
-    "port": "6379",
-    "db": 0
-}
-DSN = "redis://127.0.0.1:6379/0"
+@pytest.fixture()
+def driver():
+    return 'redis'
 
 
-@pytest_asyncio.fixture
-async def conn(event_loop):
-    db = AsyncDB(DRIVER, params=params, loop=event_loop)
-    await db.connection()
-    yield db
-    await db.close()
+@pytest.fixture()
+def dsn():
+    return "redis://127.0.0.1:6379/0"
+
+
+@pytest.fixture()
+def params():
+    return {
+        "host": "127.0.0.1",
+        "port": "6379",
+        "db": 0
+    }
+
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_pool_by_params(event_loop):
-    pool = AsyncPool(DRIVER, params=params, loop=event_loop)
+@pytest.mark.usefixtures("driver", "params")
+async def test_pool_by_params(driver, params, event_loop):
+    pool = AsyncPool(driver, params=params, loop=event_loop)
     pytest.assume(pool.is_connected() is False)
     await pool.connect()
     pytest.assume(pool.is_connected() is True)
     await pool.close()
 
 
-@pytest.mark.parametrize("driver", [
-    (DRIVER)
-])
-async def test_pool_by_dsn(driver, event_loop):
+@pytest.mark.usefixtures("driver", "dsn")
+async def test_pool_by_dsn(driver, dsn, event_loop):
     """ test creation using DSN """
-    pool = AsyncPool(driver, dsn=DSN, loop=event_loop)
+    pool = AsyncPool(driver, dsn=dsn, loop=event_loop)
     print(pool)
     pytest.assume(pool.is_connected() is False)
     await pool.connect()
@@ -65,30 +67,30 @@ async def test_pool_by_dsn(driver, event_loop):
     assert pool.is_closed() is True
 
 
-async def test_driver_by_params(event_loop):
-    pool = AsyncPool(DRIVER, params=params, loop=event_loop)
+@pytest.mark.usefixtures("driver", "params", "dsn")
+async def test_driver_by_params(driver, params, dsn, event_loop):
+    pool = AsyncPool(driver, params=params, loop=event_loop)
     assert pool.is_connected() is False
-    assert pool.get_dsn() == DSN
+    assert pool.get_dsn() == dsn
     await pool.connect()
     pytest.assume(pool.is_connected() is True)
     await pool.close()
     assert pool.is_closed() is True
 
 
-async def test_pool_by_params2(event_loop):
-    pool = AsyncPool(DRIVER, params=params, loop=event_loop)
+@pytest.mark.usefixtures("driver", "params", "dsn")
+async def test_pool_by_params2(driver, params, dsn, event_loop):
+    pool = AsyncPool(driver, params=params, loop=event_loop)
     assert pool.is_connected() is False
-    assert pool.get_dsn() == DSN
+    assert pool.get_dsn() == dsn
     await pool.connect()
     pytest.assume(pool.is_connected() is True)
     await pool.close()
     assert pool.is_closed() is True
 
 
-@pytest.mark.parametrize("driver", [
-    (DRIVER)
-])
-async def test_conn_by_params(driver, event_loop):
+@pytest.mark.usefixtures("driver", "params")
+async def test_conn_by_params(driver, params, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
     assert db.is_connected() is False
     await db.connection()
@@ -98,10 +100,8 @@ async def test_conn_by_params(driver, event_loop):
     assert db.is_closed() is True
 
 
-@pytest.mark.parametrize("driver", [
-    (DRIVER)
-])
-async def test_connect(driver, event_loop):
+@pytest.mark.usefixtures("driver", "params")
+async def test_connect(driver, params, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
     print(driver, event_loop)
     await db.connection()
@@ -117,19 +117,16 @@ async def test_connect(driver, event_loop):
     assert db.is_closed() is True
 
 
-@pytest.mark.parametrize("driver", [
-    (DRIVER)
-])
-async def test_context(driver, event_loop):
-    db = AsyncDB(driver, params=params, loop=event_loop)
-    async with await db.connection() as conn:
-        pytest.assume(conn.is_connected() is True)
-        result, error = await conn.test_connection()
+@pytest.mark.usefixtures("conn", "driver")
+async def test_context(conn, event_loop):
+    async with await conn.connection() as db:
+        pytest.assume(db.is_connected() is True)
+        result, error = await db.test_connection()
         pytest.assume(not error)
-        result, error = await conn.test_connection('TEST CONTEXT', 'TEST CONTEXT')
+        result, error = await db.test_connection('TEST CONTEXT', 'TEST CONTEXT')
         pytest.assume(not error)
         pytest.assume(result == 'TEST CONTEXT')
-    assert db.is_closed() is True
+    assert conn.is_closed() is True
 
 
 def pytest_sessionfinish(session, exitstatus):
