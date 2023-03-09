@@ -181,7 +181,7 @@ setup(
         "boto3": [
             "botocore==1.29.84",
             "boto3==1.26.84",
-            "aiobotocore==2.4.2",
+            "aiobotocore==2.5.0",
             "aioboto3==11.0.0"
         ],
         "cassandra": [
