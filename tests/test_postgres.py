@@ -60,19 +60,11 @@ async def test_pool_connect():
     print(row, error)
     pytest.assume(not error)
     pytest.assume(row[0] == 1)
+    prepared, error = await db.prepare("SELECT store_id, store_name FROM walmart.stores")
+    pytest.assume(db.get_columns() == ["store_id", "store_name"])
+    assert not error
     db.disconnect()
     assert (not db.get_connection())
-
-
-async def test_connection(conn):
-    await conn.connection()
-    pytest.assume(conn.is_connected() == True)
-    result, error = await conn.test_connection()
-    row = result[0]
-    pytest.assume(row[0] == 1)
-    prepared, error = await conn.prepare("SELECT store_id, store_name FROM walmart.stores")
-    pytest.assume(conn.get_columns() == ["store_id", "store_name"])
-    assert not error
 
 
 async def test_huge_query(event_loop):

@@ -1,9 +1,6 @@
 import asyncio
 import pytest
-from pprint import pprint
 from asyncdb import AsyncDB
-import pytest_asyncio
-from typing import Generator
 import polars as pl
 import datatable as dt
 from asyncdb.meta import Record, Recordset
@@ -129,7 +126,7 @@ async def test_cursors(event_loop):
                 print(values)
                 pytest.assume(type(values) == list)
                 pytest.assume(
-                    values==[('CDG', 'Paris', 'France'), ('LHR', 'London', 'United Kingdom')])
+                    values == [('CDG', 'Paris', 'France'), ('LHR', 'London', 'United Kingdom')])
             # this returns a cursor based object
     assert db.is_closed() is True
 
@@ -148,7 +145,7 @@ async def test_execute_many(event_loop):
         )
         pytest.assume(result)
         context = "INSERT INTO tests_cursors VALUES(?, ?)"
-        await conn.execute_many(context, [[i, i*2] for i in range(100)])
+        await conn.execute_many(context, [[i, i * 2] for i in range(100)])
         async with conn.cursor("SELECT * FROM tests_cursors") as cursor:
             pytest.assume(cursor)
             async for row in cursor:

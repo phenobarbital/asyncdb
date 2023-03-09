@@ -50,10 +50,3 @@ async def test_connect(driver, event_loop):
     pytest.assume(result['version'] == '4.4.2')
     await db.close()
     pytest.assume(db.is_connected() is False)
-
-
-async def test_connection(conn):
-    #await conn.connection()
-    pytest.assume(conn.is_connected() is True)
-    result, error = await conn.test_connection()
-    pytest.assume(type(result) == dict)
