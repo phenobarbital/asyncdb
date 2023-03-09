@@ -20,7 +20,13 @@ async def test_connect(driver, params, event_loop):
         frmt='recordset'
     )
     # |> keep(columns: ["_time"])
-    print('HERE ', result, error)
+    # print('HERE ', result, error)
+    result, error = await db.query(
+        'from(bucket: "navigator") |> range(start: -12h)|> filter(fn: (r) => r["_measurement"] == "task_execution") |> filter(fn: (r) => r["task"] == "hourly_postpaid") |> keep(columns: ["stats"])'
+        ,frmt='recordset',
+        json_output=["stats"]
+    )
+    print(' RESULT > ', result, error)
     await db.close()
 
 

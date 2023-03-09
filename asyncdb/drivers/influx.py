@@ -9,6 +9,7 @@ from typing import (
     Any,
     Union
 )
+from datamodel.parsers.json import json_decoder
 from influxdb_client import InfluxDBClient, Dialect, BucketRetentionRules
 from influxdb_client.client.write_api import ASYNCHRONOUS, PointSettings
 from influxdb_client.client.exceptions import InfluxDBError
@@ -360,6 +361,11 @@ class influx(InitDriver, ConnectionDSNBackend):
 
     async def query(self, sentence: str, frmt: str = 'native', params: dict = None, **kwargs):
         self._result = None
+        try:
+            json_output = kwargs['json_output']
+            del kwargs["json_output"]
+        except KeyError:
+            json_output = None
         error = None
         await self.valid_operation(sentence)
         try:
@@ -383,11 +389,23 @@ class influx(InitDriver, ConnectionDSNBackend):
                 results = []
                 for table in self._result:
                     for record in table.records:
-                        row = {
-                            "measurement": record.get_measurement(),
-                            "time": record.get_time(),
-                            **record.values
-                        }
+                        try:
+                            row = {
+                                "measurement": record.get_measurement(),
+                                "time": record.get_time(),
+                                **record.values
+                            }
+                        except KeyError:
+                            row = {
+                                **record.values
+                            }
+                            if json_output:
+                                for k, v in row.items():
+                                    if k in json_output:
+                                        try:
+                                            row[k] = json_decoder(v)
+                                        except (ValueError, TypeError):
+                                            pass
                         results.append(row)
                 self._result = results
         except NoDataFound:
