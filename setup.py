@@ -215,7 +215,7 @@ setup(
             "pymssql==2.2.7",
         ],
         "couchbase": [
-            "couchbase==4.1.2"
+            "couchbase==4.1.3"
         ],
         "couchdb": [
             "aiocouch==2.2.2"
@@ -250,7 +250,7 @@ setup(
             "pymongo==4.3.3",
             "motor==3.1.1",
             "pymssql==2.2.7",
-            "couchbase==4.1.2",
+            "couchbase==4.1.3",
             "aiocouch==2.2.2",
             "asyncmy==0.2.7",
             "mysqlclient==2.1.1",
