@@ -842,8 +842,15 @@ class ModelBackend(ABC):
                     val = str(value)
                     _cond.append(f"{key} is {value}")
                 elif isinstance(value, list):
+                    if None in value:
+                        null_vals = f' OR {key} is NULL'
+                    else:
+                        null_vals = ''
+                    values = ','.join(
+                        map(str, [Entity.toSQL(v, type(v)) for v in value if v is not None])
+                    )
                     _cond.append(
-                        f"{key} = ANY(ARRAY[{value!r}])"
+                        f"({key} = ANY(ARRAY[{values}]){null_vals})"
                     )
                 elif isinstance(datatype, (list, List)):
                     val = ", ".join(
