@@ -69,7 +69,7 @@ class PoolBackend(ABC):
             default_exception_handler
         )
         try:
-            self._debug = bool(params["DEBUG"])
+            self._debug = bool(params.get("DEBUG", False))
         except (TypeError, KeyError):
             try:
                 self._debug = kwargs["debug"]

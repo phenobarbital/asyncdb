@@ -987,10 +987,10 @@ static const char *__pyx_filename;
 static const char *__pyx_f[] = {
   "asyncdb/utils/types.pyx",
   "stringsource",
-  "datetime.pxd",
-  "type.pxd",
-  "bool.pxd",
-  "complex.pxd",
+  ".venv/lib/python3.10/site-packages/Cython/Includes/cpython/datetime.pxd",
+  ".venv/lib/python3.10/site-packages/Cython/Includes/cpython/type.pxd",
+  ".venv/lib/python3.10/site-packages/Cython/Includes/cpython/bool.pxd",
+  ".venv/lib/python3.10/site-packages/Cython/Includes/cpython/complex.pxd",
 };
 
 /*--- Type declarations ---*/
