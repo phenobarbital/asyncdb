@@ -14,7 +14,7 @@ from asyncdb.exceptions import (
     DataError,
     EmptyStatement,
     NoDataFound,
-    ProviderError,
+    DriverError,
     StatementError,
     TooManyConnections,
 )
@@ -74,10 +74,10 @@ class sa(SQLDriver, Thread):
             self._engine = create_engine(self._dsn)
         except (SQLAlchemyError, DatabaseError, OperationalError) as err:
             self._engine = None
-            raise ProviderError("Connection Error: {}".format(str(err)))
+            raise DriverError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._engine = None
-            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
+            raise DriverError("Engine Error, Terminated: {}".format(str(err)))
 
     def close(self):
         self._logger.debug("Running Close")
@@ -119,10 +119,10 @@ class sa(SQLDriver, Thread):
                 self._connection = self._loop.run_until_complete(self._engine.connect())
         except (SQLAlchemyError, DatabaseError, OperationalError) as err:
             self._connection = None
-            raise ProviderError("Connection Error: {}".format(str(err)))
+            raise DriverError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._connection = None
-            raise ProviderError("Engine Error, Terminated: {}".format(str(err)))
+            raise DriverError("Engine Error, Terminated: {}".format(str(err)))
         finally:
             return self
 
@@ -133,7 +133,7 @@ class sa(SQLDriver, Thread):
         try:
             await self._connection.close()
         except Exception as err:
-            raise ProviderError("Release Error, Terminated: {}".format(str(err)))
+            raise DriverError("Release Error, Terminated: {}".format(str(err)))
         finally:
             self._connection = None
 
@@ -164,7 +164,7 @@ class sa(SQLDriver, Thread):
                 self._logger.debug("Test Error: {}".format(error))
         except Exception as err:
             error = str(err)
-            raise ProviderError(message=str(err), code=0)
+            raise DriverError(message=str(err), code=0)
         finally:
             return [row, error]
 
@@ -183,10 +183,10 @@ class sa(SQLDriver, Thread):
                 self._result = [dict(row.items()) for row in rows]
         except (DatabaseError, OperationalError) as err:
             error = "Query Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Query Error, Terminated: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             return [self._result, error]
 
@@ -205,10 +205,10 @@ class sa(SQLDriver, Thread):
                 self._result = dict(row)
         except (DatabaseError, OperationalError) as err:
             error = "Query Row Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Query Row Error, Terminated: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             return [self._result, error]
 
@@ -226,9 +226,9 @@ class sa(SQLDriver, Thread):
             self._result = result
         except (DatabaseError, OperationalError) as err:
             error = "Execute Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Exception Error on Execute: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             return [self._result, error]

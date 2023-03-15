@@ -9,8 +9,7 @@ from typing import (
 )
 from collections.abc import Iterable
 from asyncdb.exceptions import (
-    DriverError,
-    ProviderError
+    DriverError
 )
 from .abstract import BaseDBDriver, BaseCursor
 
@@ -29,7 +28,7 @@ class SQLCursor(BaseCursor):
                 self._sentence, self._params
             )
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"SQLCursor Error: {e}"
             ) from e
         return self

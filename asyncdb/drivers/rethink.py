@@ -4,7 +4,7 @@ Notes on RethinkDB async Provider
 TODO:
  * Index Manipulation
  * map reductions
- * slice (.slice(3,6).run(conn)) for pagination
+ * slice (.slice(3,6).run(conn))
  * Group, aggregation, ungroup and reduce
  * to_json_string, to_json
 
@@ -18,7 +18,6 @@ from typing import (
     Union
 )
 from collections.abc import Iterable
-import uvloop
 import rethinkdb
 from rethinkdb.errors import (
     ReqlDriverError,
@@ -39,7 +38,6 @@ from asyncdb.exceptions import (
     DriverError,
     DataError,
     NoDataFound,
-    ProviderError,
     StatementError
 )
 from .abstract import (
@@ -47,8 +45,6 @@ from .abstract import (
     BaseCursor
 )
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-uvloop.install()
 
 def today(mask="%m/%d/%Y"):
     return time.strftime(mask)
@@ -61,24 +57,24 @@ class Point(BaseModel):
     def as_point(self) -> Any:
         return r.point(self.x, self.y)
 
+
 class rethinkCursor(BaseCursor):
     """
     Cursor Object for RethinkDB.
     """
     _provider: "rethink"
-    _connection: Any = None
 
     async def __aenter__(self) -> CursorBackend:
         try:
             self._cursor = await self._sentence.run(self._connection)
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             logging.exception(err)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         try:
             return await self._cursor.close()
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             logging.exception(err)
 
     async def __anext__(self):
@@ -91,15 +87,6 @@ class rethinkCursor(BaseCursor):
             return row
         else:
             raise StopAsyncIteration
-
-    # async def fetch_one(self) -> Optional[Dict]:
-    #     return await self._cursor.next()
-
-    # async def fetch_many(self, size: int = None) -> Iterable[List]:
-    #     pass
-
-    # async def fetch_all(self) -> Iterable[List]:
-    #     return list(self._cursor)
 
     async def fetch_one(self) -> Optional[dict]:
         return await self._cursor.fetchone()
@@ -149,6 +136,7 @@ class rethink(InitDriver, DBCursorBackend):
         self._logger.debug(
             f'RT Connection to host {self.params["host"]}:{self.params["port"]}'
         )
+        self._connection = None
         self.params["timeout"] = self._timeout
         try:
             self._connection = await self._engine.connect(
@@ -160,13 +148,13 @@ class rethink(InitDriver, DBCursorBackend):
                 )
         except ReqlRuntimeError as err:
             error = f"No database connection could be established: {err!s}"
-            raise ProviderError(message=error) from err
+            raise DriverError(message=error) from err
         except ReqlDriverError as err:
             error = f"No database connection could be established: {err!s}"
-            raise ProviderError(message=error) from err
+            raise DriverError(message=error) from err
         except Exception as err:
             error = f"Exception on RethinkDB: {err!s}"
-            raise ProviderError(message=error) from err
+            raise DriverError(message=error) from err
         finally:
             if self._connection:
                 self._connected = True
@@ -218,7 +206,7 @@ class rethink(InitDriver, DBCursorBackend):
             logging.exception(
                 error
             )
-            raise ProviderError(error) from ex
+            raise DriverError(error) from ex
 
     create_database = createdb
 
@@ -265,8 +253,8 @@ class rethink(InitDriver, DBCursorBackend):
             # check for a single index
             if isinstance(fields, list) and len(fields) > 0:
                 idx = []
-                for field in fields:
-                    idx.append(self._engine.row(field))
+                for f in fields:
+                    idx.append(self._engine.row(f))
                 try:
                     return (
                         await self._engine.table(table)
@@ -286,7 +274,7 @@ class rethink(InitDriver, DBCursorBackend):
                         .run(self._connection)
                     )
                 except ReqlOpFailedError as ex:
-                    raise ProviderError(
+                    raise DriverError(
                         f"Failed to create index: {ex}"
                     ) from ex
         else:
@@ -313,18 +301,17 @@ class rethink(InitDriver, DBCursorBackend):
                     .run(self._connection)
                 )
         except ReqlOpFailedError as ex:
-            raise ProviderError(
+            raise DriverError(
                 f"Cannot create Table {table}, {ex}"
             ) from ex
         except (ReqlDriverError, ReqlRuntimeError) as ex:
-            raise ProviderError(
+            raise DriverError(
                 f"Error crating Table {table}, {ex}"
             ) from ex
         except Exception as err:
             raise DriverError(
                 f"Unknown ERROR on Table Creation: {err}"
             ) from err
-
 
     async def clean(self, table: str, conditions: list = None):
         """
@@ -334,7 +321,6 @@ class rethink(InitDriver, DBCursorBackend):
         result = []
         if self.conditions:
             conditions = {**conditions, **self.conditions}
-
         conditions.update((x, None)
                           for (x, y) in conditions.items() if y == "null")
         self._logger.debug(
@@ -345,10 +331,7 @@ class rethink(InitDriver, DBCursorBackend):
         except (KeyError, ValueError):
             conditions["filterdate"] = today(mask="%Y-%m-%d")
         result = await self.delete(table, filter=conditions, changes=False)
-        if result:
-            return result
-        else:
-            return []
+        return result
 
     async def listdb(self):
         if self._connection:
@@ -369,11 +352,11 @@ class rethink(InitDriver, DBCursorBackend):
         try:
             return await self._engine.db(self._db).table_drop(table).run(self._connection)
         except ReqlOpFailedError as ex:
-            raise ProviderError(
+            raise DriverError(
                 f"Cannot drop Table {table}, {ex}"
             ) from ex
         except (ReqlDriverError, ReqlRuntimeError) as ex:
-            raise ProviderError(
+            raise DriverError(
                 f"Error dropping Table {table}, {ex}"
             ) from ex
         except Exception as err:
@@ -387,10 +370,10 @@ class rethink(InitDriver, DBCursorBackend):
         error = None
         try:
             result = await self._engine.db_list().run(self._connection)
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             return [None, err]
         finally:
-            return [result, error] # pylint: disable=W0150
+            return [result, error]  # pylint: disable=W0150
 
     async def execute(self, sentence: Any, *args, **kwargs) -> Optional[Any]:
         raise NotImplementedError
@@ -401,7 +384,7 @@ class rethink(InitDriver, DBCursorBackend):
     async def prepare(self, sentence: Any, **kwargs):
         raise NotImplementedError
 
-    async def query(self, table: str, columns: list = None, order_by: list = None, limit: int = None, **kwargs): # pylint: disable=W0221,W0237
+    async def query(self, table: str, columns: list = None, order_by: list = None, limit: int = None, **kwargs):  # pylint: disable=W0221,W0237
         """
         query
             get all rows from a table
@@ -413,10 +396,9 @@ class rethink(InitDriver, DBCursorBackend):
         data = []
         try:
             self.start_timing()
-            if 'filter' in kwargs:
-                _filter = kwargs['filter']
-            else:
-                _filter = kwargs
+            _filter = kwargs.get('filter', kwargs)
+            # table:
+            table = self._engine.db(self._db).table(table)
             if not columns:
                 self._columns = (
                     await self._engine.table(table)
@@ -427,9 +409,6 @@ class rethink(InitDriver, DBCursorBackend):
                 )
             else:
                 self._columns = columns
-            # table:
-            table = self._engine.db(self._db).table(table)
-            if columns:
                 table = table.with_fields(*columns)
             if _filter:
                 result = table.filter(_filter)
@@ -464,13 +443,13 @@ class rethink(InitDriver, DBCursorBackend):
             error = f"Permission error over {table}: {err}"
         except ReqlRuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f'Unknown RT error: {err}'
         finally:
             self.generated_at()
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
-    async def fetch_all(self, table: str, **kwargs): # pylint: disable=W0221,W0237
+    async def fetch_all(self, table: str, **kwargs):  # pylint: disable=W0221,W0237
         """
         query
             get all rows from a table
@@ -481,10 +460,7 @@ class rethink(InitDriver, DBCursorBackend):
         data = []
         try:
             self.start_timing()
-            if 'filter' in kwargs:
-                _filter = kwargs['filter']
-            else:
-                _filter = kwargs
+            _filter = kwargs.get('filter', kwargs)
             self._columns = (
                 await self._engine.table(table)
                 .nth(0)
@@ -535,8 +511,8 @@ class rethink(InitDriver, DBCursorBackend):
             raise DriverError(
                 f"Runtime Error: {err}"
             ) from err
-        except Exception as err: # pylint: disable=W0703
-            raise ProviderError(
+        except Exception as err:  # pylint: disable=W0703
+            raise DriverError(
                 f'Unknown RT error: {err}'
             ) from err
         finally:
@@ -544,7 +520,7 @@ class rethink(InitDriver, DBCursorBackend):
 
     fetchall = fetch_all
 
-    async def queryrow(self, table: str, columns: list = None, nth: int = 0, **kwargs): # pylint: disable=W0221,W0237
+    async def queryrow(self, table: str, columns: list = None, nth: int = 0, **kwargs):  # pylint: disable=W0221,W0237
         """
         queryrow
             get only one row.
@@ -554,10 +530,7 @@ class rethink(InitDriver, DBCursorBackend):
         await self.valid_operation(table)
         try:
             self.start_timing()
-            if 'filter' in kwargs:
-                _filter = kwargs['filter']
-            else:
-                _filter = kwargs
+            _filter = kwargs.get('filter', kwargs)
             if not columns:
                 self._columns = (
                     await self._engine.table(table)
@@ -612,10 +585,7 @@ class rethink(InitDriver, DBCursorBackend):
         self._result = None
         await self.valid_operation(table)
         try:
-            if 'filter' in kwargs:
-                _filter = kwargs['filter']
-            else:
-                _filter = kwargs
+            _filter = kwargs.get('filter', kwargs)
             self.start_timing()
             if kwargs:
                 data = (
@@ -658,7 +628,7 @@ class rethink(InitDriver, DBCursorBackend):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err: # pylint: disable=W0703
-            raise ProviderError(
+            raise DriverError(
                 f'Unknown RT error: {err}'
             ) from err
 
@@ -697,7 +667,7 @@ class rethink(InitDriver, DBCursorBackend):
         except Exception as err: # pylint: disable=W0703
             error = f'Unknown RT error: {err}'
         finally:
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def get_all(self, table: str, index: str = None, **kwargs):
         """
@@ -710,10 +680,7 @@ class rethink(InitDriver, DBCursorBackend):
         self._result = None
         await self.valid_operation(table)
         try:
-            if 'filter' in kwargs:
-                _filter = kwargs['filter']
-            else:
-                _filter = kwargs
+            _filter = kwargs.get('filter', kwargs)
             if index:
                 cursor = (
                     await self._engine.table(table)
@@ -802,7 +769,7 @@ class rethink(InitDriver, DBCursorBackend):
                 .run(self._connection)
             )
             if inserted["errors"] > 0:
-                raise ProviderError(
+                raise DriverError(
                     f"INSERT Error: {inserted['first_error']}"
                 )
             return inserted
@@ -827,7 +794,7 @@ class rethink(InitDriver, DBCursorBackend):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err: # pylint: disable=W0703
-            raise ProviderError(
+            raise DriverError(
                 f'Unknown RT error: {err}'
             ) from err
 
@@ -845,7 +812,7 @@ class rethink(InitDriver, DBCursorBackend):
                 .run(self._connection)
             )
             if replaced["errors"] > 0:
-                raise ProviderError(
+                raise DriverError(
                     f"REPLACE Error: {replaced['first_error']}"
                 )
             return replaced
@@ -870,7 +837,7 @@ class rethink(InitDriver, DBCursorBackend):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err: # pylint: disable=W0703
-            raise ProviderError(
+            raise DriverError(
                 f'Unknown RT error: {err}'
             ) from err
 
@@ -880,10 +847,7 @@ class rethink(InitDriver, DBCursorBackend):
              update a record based on filter match
         -----
         """
-        if 'filter' in kwargs:
-            _filter = kwargs['filter']
-        else:
-            _filter = kwargs
+        _filter = kwargs.get('filter', kwargs)
         if idx:
             sentence = self._engine.table(table).get(id).update(data)
         elif isinstance(_filter, dict) and len(_filter) > 0:
@@ -920,7 +884,7 @@ class rethink(InitDriver, DBCursorBackend):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err: # pylint: disable=W0703
-            raise ProviderError(
+            raise DriverError(
                 f'Unknown RT error: {err}'
             ) from err
 
@@ -961,7 +925,7 @@ class rethink(InitDriver, DBCursorBackend):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err: # pylint: disable=W0703
-            raise ProviderError(
+            raise DriverError(
                 f'Unknown RT error: {err}'
             ) from err
 
@@ -978,10 +942,7 @@ class rethink(InitDriver, DBCursorBackend):
         -----
         """
         try:
-            if 'filter' in kwargs:
-                _filter = kwargs['filter']
-            else:
-                _filter = kwargs
+            _filter = kwargs.get('filter', kwargs)
             self._result = (
                 await self._engine.table(table)
                 .filter(~self._engine.row.has_fields(field)
@@ -1012,26 +973,23 @@ class rethink(InitDriver, DBCursorBackend):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err: # pylint: disable=W0703
-            raise ProviderError(
+            raise DriverError(
                 f'Unknown RT error: {err}'
             ) from err
 
     async def delete(
-            self,
-            table: str,
-            idx: str = None,
-            changes: bool = True,
-            **kwargs
-        ):
+        self,
+        table: str,
+        idx: str = None,
+        changes: bool = True,
+        **kwargs
+    ):
         """
         delete
              delete a record based on id or filter search
         -----
         """
-        if 'filter' in kwargs:
-            _filter = kwargs['filter']
-        else:
-            _filter = kwargs
+        _filter = kwargs.get('filter', kwargs)
         if idx:
             sentence = self._engine.table(
                 table
@@ -1067,17 +1025,17 @@ class rethink(InitDriver, DBCursorBackend):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err: # pylint: disable=W0703
-            raise ProviderError(
+            raise DriverError(
                 f'Unknown RT error: {err}'
             ) from err
 
     async def between(
-            self,
-            table: str,
-            min: int = None,
-            max: int = None,
-            idx: str = None
-        ):
+        self,
+        table: str,
+        min: int = None,
+        max: int = None,
+        idx: str = None
+    ):
         """
         between.
              Get all documents between two keys
@@ -1128,13 +1086,13 @@ class rethink(InitDriver, DBCursorBackend):
             error = f"Permission error over {table}: {err}"
         except ReqlRuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f'Unknown RT error: {err}'
         finally:
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
-### Cursors:
-    def cursor(self, table: str, params: Union[dict, list] = None, **kwargs): # pylint: disable=W0237
+# Cursors:
+    def cursor(self, table: str, params: Union[dict, list] = None, **kwargs):  # pylint: disable=W0237
         """
         cursor
             get all rows from a table, returning a Cursor.
@@ -1171,7 +1129,7 @@ class rethink(InitDriver, DBCursorBackend):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err: # pylint: disable=W0703
-            raise ProviderError(
+            raise DriverError(
                 f'Unknown RT error: {err}'
             ) from err
 
@@ -1193,6 +1151,6 @@ class rethink(InitDriver, DBCursorBackend):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err: # pylint: disable=W0703
-            raise ProviderError(
+            raise DriverError(
                 f'Unknown RT error: {err}'
             ) from err

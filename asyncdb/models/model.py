@@ -14,7 +14,7 @@ from datamodel.base import Meta
 from datamodel.exceptions import ValidationError
 from datamodel.types import MODEL_TYPES
 
-from asyncdb.exceptions import ConnectionMissing, NoDataFound, ProviderError, StatementError
+from asyncdb.exceptions import ConnectionMissing, NoDataFound, DriverError, ModelError, StatementError
 from asyncdb.utils.modules import module_exists
 
 
@@ -41,7 +41,7 @@ class Model(BaseModel):
         try:
             self.Meta.connection = connection
         except Exception as err:
-            raise Exception(
+            raise ModelError(
                 f"{err}"
             ) from err
 
@@ -58,28 +58,28 @@ class Model(BaseModel):
             try:
                 obj = module_exists(driver, provider)
             except Exception as err:
-                raise Exception(
+                raise ModelError(
                     f"{err}"
                 ) from err
             if self.Meta.dsn is not None:
                 try:
                     self.Meta.connection = obj(dsn=self.Meta.dsn)
-                except ProviderError:
+                except DriverError:
                     raise
                 except Exception as err:
                     logging.exception(err)
-                    raise Exception(
+                    raise ModelError(
                         f"{err}"
                     ) from err
             elif hasattr(self.Meta, "credentials"):
                 params = self.Meta.credentials
                 try:
                     self.Meta.connection = obj(params=params)
-                except ProviderError:
+                except DriverError:
                     raise
                 except Exception as err:
                     logging.exception(err)
-                    raise Exception(
+                    raise ModelError(
                         f"{err}"
                     ) from err
         return self.Meta.connection
@@ -125,11 +125,11 @@ class Model(BaseModel):
             return result
         except StatementError:
             raise
-        except ProviderError:
+        except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise Exception(
+            raise ModelError(
                 f"Error on INSERT {self.Meta.name}: {err}"
             ) from err
 
@@ -147,11 +147,11 @@ class Model(BaseModel):
                 _model=self, **kwargs
             )
             return result
-        except ProviderError:
+        except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise Exception(
+            raise ModelError(
                 f"Error on UPDATE {self.Meta.name}: {err}"
             ) from err
 
@@ -172,11 +172,11 @@ class Model(BaseModel):
             return result
         except StatementError:
             raise
-        except ProviderError:
+        except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise Exception(
+            raise ModelError(
                 f"Error on DELETE {self.Meta.name}: {err}"
             ) from err
 
@@ -192,11 +192,11 @@ class Model(BaseModel):
                     _model=self, **kwargs
                 )
                 return result
-            except ProviderError:
+            except DriverError:
                 raise
             except Exception as err:
                 logging.debug(traceback.format_exc())
-                raise Exception(
+                raise ModelError(
                     f"Error on SAVE {self.Meta.name}: {err}"
                 ) from err
 
@@ -229,11 +229,11 @@ class Model(BaseModel):
             raise StatementError(
                 f"Error on Attribute {self.Meta.name}: {err}"
             ) from err
-        except ProviderError:
+        except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise Exception(
+            raise ModelError(
                 f"Error on get {self.Meta.name}: {err}"
             ) from err
 
@@ -260,11 +260,11 @@ class Model(BaseModel):
             raise StatementError(
                 f"Error on Attribute {cls.Meta.name}: {err}"
             ) from err
-        except ProviderError:
+        except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise Exception(
+            raise ModelError(
                 f"Error Updating Table {cls.Meta.name}: {err}"
             ) from err
 
@@ -284,11 +284,11 @@ class Model(BaseModel):
             raise StatementError(
                 f"Error on Attribute {cls.Meta.name}: {err}"
             ) from err
-        except ProviderError:
+        except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise Exception(
+            raise ModelError(
                 f"Error Deleting Table {cls.Meta.name}: {err}"
             ) from err
 
@@ -310,11 +310,11 @@ class Model(BaseModel):
             raise StatementError(
                 f"Error on Attribute {cls.Meta.name}: {err}"
             ) from err
-        except ProviderError:
+        except DriverError:
             raise
         except Exception as err:
             print(traceback.format_exc())
-            raise Exception(
+            raise ModelError(
                 f"Error Updating Table {cls.Meta.name}: {err}"
             ) from err
 
@@ -323,7 +323,7 @@ class Model(BaseModel):
     async def select(cls, *args, **kwargs):
         """Select.
         passing a where condition directly to model.
-        :raises ProviderError, Exception
+        :raises DriverError, Exception
         """
         if not cls.Meta.connection:
             raise ConnectionMissing(
@@ -346,11 +346,11 @@ class Model(BaseModel):
             raise StatementError(
                 f"Error on Attribute {cls.Meta.name}: {err}"
             ) from err
-        except ProviderError:
+        except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise Exception(
+            raise ModelError(
                 f"Error on Select {cls.Meta.name}: {err}"
             ) from err
 
@@ -380,11 +380,11 @@ class Model(BaseModel):
             raise StatementError(
                 f"Error on Attribute {cls.Meta.name}: {err}"
             ) from err
-        except ProviderError:
+        except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise Exception(
+            raise ModelError(
                 f"Error on filter {cls.Meta.name}: {err}"
             ) from err
 
@@ -419,13 +419,13 @@ class Model(BaseModel):
             raise StatementError(
                 f"Error on Attribute {cls.Meta.name}: {err}"
             ) from err
-        except (StatementError, ProviderError) as err:
-            raise ProviderError(
+        except (StatementError, DriverError) as err:
+            raise DriverError(
                 f"Error on get {cls.Meta.name}: {err}"
             ) from err
         except Exception as err:
             print(traceback.format_exc())
-            raise Exception(
+            raise ModelError(
                 f"Error on get {cls.Meta.name}: {err}"
             ) from err
 
@@ -445,11 +445,11 @@ class Model(BaseModel):
             raise
         except StatementError:
             raise
-        except ProviderError:
+        except DriverError:
             raise
         except Exception as err:
             print(traceback.format_exc())
-            raise Exception(
+            raise ModelError(
                 f"Error on query_all over table {cls.Meta.name}: {err}"
             ) from err
 

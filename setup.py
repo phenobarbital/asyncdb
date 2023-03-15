@@ -134,6 +134,7 @@ setup(
             "influxdb==5.3.1",
             "influxdb-client==1.36.1",
             "pymssql==2.2.7",
+            "redis==4.5.1"
         ],
         "dataframe": [
             "dask==2023.3.0",

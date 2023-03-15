@@ -10,7 +10,7 @@ from collections.abc import Sequence, Iterable
 import aiosqlite
 from asyncdb.exceptions import (
     NoDataFound,
-    ProviderError
+    DriverError
 )
 from asyncdb.interfaces import DBCursorBackend, ModelBackend
 from asyncdb.models import Model
@@ -81,20 +81,20 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 self._initialized_on = time.time()
             return self
         except aiosqlite.OperationalError as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Unable to Open Database: {self._dsn}, {e}"
             ) from e
         except aiosqlite.DatabaseError as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Database Connection Error: {e!s}"
             ) from e
         except aiosqlite.Error as e:
-            raise ProviderError(
+            raise DriverError(
                 f"SQLite Internal Error: {e!s}"
             ) from e
         except Exception as e:
             self._logger.exception(e, stack_info=True)
-            raise ProviderError(
+            raise DriverError(
                 f"SQLite Unknown Error: {e!s}"
             ) from e
 
@@ -124,7 +124,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 return (None, NoDataFound())
         except Exception as err:
             error = f"SQLite Error on Query: {err}"
-            raise ProviderError(
+            raise DriverError(
                 message=error
             ) from err
         finally:
@@ -151,7 +151,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 return (None, NoDataFound())
         except Exception as e:
             error = f"Error on Query: {e}"
-            raise ProviderError(
+            raise DriverError(
                 message=error
             ) from e
         finally:
@@ -176,7 +176,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 )
         except Exception as e:
             error = f"Error on Fetch: {e}"
-            raise ProviderError(
+            raise DriverError(
                 message=error
             ) from e
         finally:
@@ -202,7 +202,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 raise NoDataFound()
         except Exception as err:
             error = "Error on Query: {err}"
-            raise ProviderError(
+            raise DriverError(
                 message=error
             ) from err
         finally:
@@ -231,7 +231,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 raise NoDataFound()
         except Exception as err:
             error = "Error on Query: {err}"
-            raise ProviderError(
+            raise DriverError(
                 message=error
             ) from err
         finally:
@@ -258,7 +258,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 await self._connection.commit()
         except Exception as err:
             error = "Error on Execute: {err}"
-            raise ProviderError(
+            raise DriverError(
                 message=error
             ) from err
         finally:
@@ -277,7 +277,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 await self._connection.commit()
         except Exception as err:
             error = "Error on Execute Many: {err}"
-            raise ProviderError(
+            raise DriverError(
                 message=error
             ) from err
         finally:
@@ -336,7 +336,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 raise NoDataFound()
         except Exception as err:
             error = "Error on Column Info: {err}"
-            raise ProviderError(
+            raise DriverError(
                 message=error
             ) from err
         finally:
@@ -363,7 +363,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                 else:
                     return False
             except Exception as err:
-                raise ProviderError(
+                raise DriverError(
                     f"Error in Object Creation: {err!s}"
                 ) from err
         else:
@@ -436,7 +436,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                     setattr(_model, f, val)
                 return _model
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
@@ -474,7 +474,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             await self._connection.commit()
             return f'DELETE {cursor.rowcount}: {_filter!s}'
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
@@ -547,7 +547,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
                     setattr(_model, f, val)
                 return _model
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
@@ -583,7 +583,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             result = await cursor.fetchone()
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model Fetch over {table}: {e}"
             ) from e
 
@@ -618,7 +618,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             result = await cursor.fetchall()
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model GET over {table}: {e}"
             ) from e
 
@@ -629,7 +629,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
         try:
             model = kwargs['_model']
         except KeyError as e:
-            raise ProviderError(
+            raise DriverError(
                 f'Missing Model for SELECT {kwargs!s}'
             ) from e
         try:
@@ -650,7 +650,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             result = await cursor.fetchall()
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model SELECT over {table}: {e}"
             ) from e
 
@@ -685,7 +685,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             result = await cursor.fetchone()
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model GET over {table}: {e}"
             ) from e
 
@@ -707,7 +707,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             result = await cursor.fetchall()
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model All over {table}: {e}"
             ) from e
 
@@ -735,7 +735,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             await self._connection.commit()
             return f'DELETE {cursor.rowcount}: {_filter!s}'
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
@@ -747,7 +747,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
         try:
             model = kwargs['_model']
         except KeyError as e:
-            raise ProviderError(
+            raise DriverError(
                 f'Missing Model for SELECT {kwargs!s}'
             ) from e
         try:
@@ -796,6 +796,6 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             result = await cursor.fetchall()
             return [model(**dict(r)) for r in result]
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {model.Meta.name}: {err!s}"
             ) from err
