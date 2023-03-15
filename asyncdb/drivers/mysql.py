@@ -9,7 +9,7 @@ from asyncdb.exceptions import (
     DataError,
     EmptyStatement,
     NoDataFound,
-    ProviderError,
+    DriverError,
     StatementError,
 )
 from asyncdb.utils.types import (
@@ -55,11 +55,11 @@ class mysqlPool(BasePool):
                 "Unable to connect to database: {}".format(str(err))
             )
         except ConnectionRefusedError as err:
-            raise ProviderError(
+            raise DriverError(
                 "Unable to connect to database, connection Refused: {}".format(str(err))
             )
         except Exception as err:
-            raise ProviderError("Unknown Error: {}".format(str(err)))
+            raise DriverError("Unknown Error: {}".format(str(err)))
             return False
         # is connected
         if self._pool:
@@ -78,7 +78,7 @@ class mysqlPool(BasePool):
         try:
             self._connection = await self._pool.acquire()
         except Exception as err:
-            raise ProviderError("Close Error: {}".format(str(err)))
+            raise DriverError("Close Error: {}".format(str(err)))
         if self._connection:
             db = mysql(pool=self)
             db.set_connection(self._connection)
@@ -103,7 +103,7 @@ class mysqlPool(BasePool):
             # await asyncio.wait_for(release, timeout=timeout, loop=self._loop)
             # await release
         except Exception as err:
-            raise ProviderError("Release Error: {}".format(str(err)))
+            raise DriverError("Release Error: {}".format(str(err)))
 
     """
     close
@@ -118,7 +118,7 @@ class mysqlPool(BasePool):
                 if self._connection:
                     await self._pool.release(self._connection, timeout=2)
             except Exception as err:
-                raise ProviderError("Release Error: {}".format(str(err)))
+                raise DriverError("Release Error: {}".format(str(err)))
             # at now, try to closing pool
             try:
                 await self._pool.close()
@@ -126,7 +126,7 @@ class mysqlPool(BasePool):
             except Exception as err:
                 print("Pool Error: {}".format(str(err)))
                 await self._pool.terminate()
-                raise ProviderError("Pool Error: {}".format(str(err)))
+                raise DriverError("Pool Error: {}".format(str(err)))
             finally:
                 self._pool = None
 
@@ -140,7 +140,7 @@ class mysqlPool(BasePool):
         #        print('self._pool', self._pool)
         #        await self._pool.release(self._connection)
         # except Exception as err:
-        #    raise ProviderError("Release Error: {}".format(str(err)))
+        #    raise DriverError("Release Error: {}".format(str(err)))
         try:
             await self._pool.close()
         except Exception as err:
@@ -160,7 +160,7 @@ class mysqlPool(BasePool):
                 result = await self._pool.execute(sentence, *args)
                 return result
             except Exception as err:
-                raise ProviderError("Execute Error: {}".format(str(err)))
+                raise DriverError("Execute Error: {}".format(str(err)))
 
 
 class mysql(SQLDriver):
@@ -200,11 +200,11 @@ class mysql(SQLDriver):
                     except Exception as err:
                         self._pool.terminate()
                         self._connection = None
-                        raise ProviderError(
+                        raise DriverError(
                             "Connection Error, Terminated: {}".format(str(err))
                         )
         except Exception as err:
-            raise ProviderError("Close Error: {}".format(str(err)))
+            raise DriverError("Close Error: {}".format(str(err)))
         finally:
             self._connection = None
             self._connected = False
@@ -236,7 +236,7 @@ class mysql(SQLDriver):
         except Exception as err:
             self._connection = None
             self._cursor = None
-            raise ProviderError("connection Error, Terminated: {}".format(str(err)))
+            raise DriverError("connection Error, Terminated: {}".format(str(err)))
         finally:
             return self._connection
 
@@ -256,7 +256,7 @@ class mysql(SQLDriver):
                 else:
                     await self._connection.close(timeout=5)
         except Exception as err:
-            raise ProviderError("Release Interface Error: {}".format(str(err)))
+            raise DriverError("Release Interface Error: {}".format(str(err)))
             return False
         finally:
             self._connected = False
@@ -298,7 +298,7 @@ class mysql(SQLDriver):
                 raise StatementError(message=error)
             except Exception as err:
                 error = "Unknown Error: {}".format(str(err))
-                raise ProviderError(message=error)
+                raise DriverError(message=error)
         finally:
             return [self._prepared, error]
 
@@ -318,7 +318,7 @@ class mysql(SQLDriver):
                 return [None, "Mysql: No Data was Found"]
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
             raise Exception(error)
@@ -340,7 +340,7 @@ class mysql(SQLDriver):
             self._result = await self.fetchone()
         except RuntimeError as err:
             error = "Runtime on Query Row Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Error on Query Row: {}".format(str(err))
             raise Exception(error)
@@ -658,8 +658,8 @@ class mysql(SQLDriver):
             else:
                 print("Error in Get Query", error)
                 return False
-        except (ProviderError, StatementError) as err:
-            print("ProviderError or StatementError Exception in Get Query", e)
+        except (DriverError, StatementError) as err:
+            print("DriverError or StatementError Exception in Get Query", e)
             return False
         except Exception as e:
             print("Exception in Get Query", e)
@@ -678,7 +678,7 @@ class mysql(SQLDriver):
             result, error = self._loop.run_until_complete(self.query(discover))
             if result:
                 return result
-        except (NoDataFound, ProviderError):
+        except (NoDataFound, DriverError):
             print(err)
             return False
         except Exception as err:

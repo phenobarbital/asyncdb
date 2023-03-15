@@ -10,7 +10,6 @@ import time
 from typing import Any
 import pylibmc
 from asyncdb.exceptions import (
-    ProviderError,
     DriverError
 )
 from .abstract import (
@@ -71,11 +70,11 @@ class mcache(InitDriver):
                 behaviors=self._behaviors
             )
         except (pylibmc.Error) as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Connection Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Unknown Memcache Error: {err}"
             ) from err
         # is connected
@@ -97,11 +96,11 @@ class mcache(InitDriver):
         try:
             self._connection.disconnect_all()
         except (pylibmc.Error) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Close Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                f"Unknown Memcache Closing Error: {err}"
             ) from err
 
@@ -115,11 +114,11 @@ class mcache(InitDriver):
             if self._connection:
                 self._connection.flush_all()
         except (pylibmc.Error) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Close Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Unknown Memcache Error: {err}"
             ) from err
 
@@ -166,11 +165,11 @@ class mcache(InitDriver):
             else:
                 return self._connection.set(bytes(key, "utf-8"), bytes(value, "utf-8"))
         except (pylibmc.Error) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Set Memcache Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Memcache Unknown Error: {err}"
             ) from err
 
@@ -178,7 +177,7 @@ class mcache(InitDriver):
         try:
             self._connection.set_multi(mapping, timeout)
         except (pylibmc.Error) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Set Memcache Error: {err}"
             ) from err
 
@@ -190,11 +189,11 @@ class mcache(InitDriver):
             else:
                 return None
         except (pylibmc.Error) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Get Memcache Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Memcache Unknown Error: {err}"
             ) from err
 
@@ -205,11 +204,11 @@ class mcache(InitDriver):
         try:
             return self._connection.delete(bytes(key, "utf-8"))
         except (pylibmc.Error) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"DELETE Memcache Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"DELETE Unknown Error: {err}"
             ) from err
 
@@ -219,11 +218,11 @@ class mcache(InitDriver):
             result = self._connection.delete_multi(ky)
             return result
         except (pylibmc.Error) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"DELETE Memcache Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"DELETE Unknown Error: {err}"
             ) from err
 
@@ -234,10 +233,10 @@ class mcache(InitDriver):
             if result:
                 return {key.decode("utf-8"): value for key, value in result.items()}
         except (pylibmc.Error) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"MULTI Memcache Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"MULTI Unknown Error: {err}"
             ) from err

@@ -21,7 +21,6 @@ from hazelcast.errors import (
 from asyncdb.utils.types import Entity
 from asyncdb.exceptions import (
     DriverError,
-    ProviderError,
     NoDataFound,
 )
 from .abstract import (
@@ -174,7 +173,7 @@ class hazel(InitDriver):
                 f"Error connecting to Hazelcast Cluster: {ex}"
             ) from ex
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Unknown Hazelcast Error: {err}"
             ) from err
 
@@ -194,7 +193,7 @@ class hazel(InitDriver):
                 f"Hazelcast Client is not Active: {ex}"
             )
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Close Hazelcast Error: {err}"
             ) from err
         finally:
@@ -211,11 +210,11 @@ class hazel(InitDriver):
             else:
                 return None
         except (HazelcastError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Get Hazelcast Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Hazelcast Unknown Error: {err}"
             ) from err
 
@@ -226,11 +225,11 @@ class hazel(InitDriver):
             a_map = self._connection.get_map(map_name)
             a_map.set(key, value)
         except (HazelcastError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Get Hazelcast Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Hazelcast Unknown Error: {err}"
             ) from err
 
@@ -241,11 +240,11 @@ class hazel(InitDriver):
             a_map = self._connection.get_map(map_name)
             a_map.put(key, value)
         except (HazelcastError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Get Hazelcast Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Hazelcast Unknown Error: {err}"
             ) from err
 
@@ -257,11 +256,11 @@ class hazel(InitDriver):
             for el in args:
                 mmap.put(key, el)
         except (HazelcastError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Set-Multi Hazelcast Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Hazelcast Unknown Error: {err}"
             ) from err
 
@@ -277,11 +276,11 @@ class hazel(InitDriver):
                 )
             return result.result()
         except (HazelcastError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Set-Multi Hazelcast Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Hazelcast Unknown Error: {err}"
             ) from err
 
@@ -297,11 +296,11 @@ class hazel(InitDriver):
             )
             print(f"Map {mmap}, size: {mmap.entry_set().result()}")
         except (HazelcastError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Set-Multi Hazelcast Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Hazelcast Unknown Error: {err}"
             ) from err
 
@@ -315,11 +314,11 @@ class hazel(InitDriver):
             a_map = self._connection.get_map(map_name)
             return a_map.entry_set().result()
         except (HazelcastError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Get Hazelcast Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Hazelcast Unknown Error: {err}"
             ) from err
 
@@ -330,11 +329,11 @@ class hazel(InitDriver):
             a_map = self._connection.get_map(map_name)
             return a_map.contains_key(key).result()
         except (HazelcastError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Get Hazelcast Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Hazelcast Unknown Error: {err}"
             ) from err
 
@@ -347,11 +346,11 @@ class hazel(InitDriver):
             a_map = self._connection.get_map(map_name)
             a_map.remove(key)
         except (HazelcastError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Get Hazelcast Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Hazelcast Unknown Error: {err}"
             ) from err
 
@@ -394,11 +393,11 @@ class hazel(InitDriver):
                 raise NoDataFound()
             return result
         except (HazelcastError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Get Hazelcast Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Hazelcast Unknown Error: {err}"
             ) from err
 

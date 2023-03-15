@@ -8,10 +8,9 @@ from asyncdb.exceptions import (
     DataError,
     EmptyStatement,
     NoDataFound,
-    ProviderError,
+    DriverError,
     StatementError,
-    TooManyConnections,
-    DriverError
+    TooManyConnections
 )
 from .abstract import BaseDriver
 
@@ -68,7 +67,7 @@ class mongo(BaseDriver):
             self._connection = None
             self._cursor = None
             print(err)
-            raise ProviderError(
+            raise DriverError(
                 f"connection Error, Terminated: {err}"
             ) from err
 
@@ -83,11 +82,11 @@ class mongo(BaseDriver):
                     self._connection.close()
                 except Exception as err:
                     self._connection = None
-                    raise ProviderError(
+                    raise DriverError(
                         "Connection Error, Terminated: {}".format(str(err))
                     )
         except Exception as err:
-            raise ProviderError("Close Error: {}".format(str(err)))
+            raise DriverError("Close Error: {}".format(str(err)))
         finally:
             self._connection = None
             self._connected = False
