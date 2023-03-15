@@ -1,5 +1,6 @@
 import asyncio
-import logging
+# import logging
+from navconfig.logging import logging, logger
 from typing import (
     Any
 )
@@ -14,11 +15,12 @@ def handle_done_tasks(task: asyncio.Task, logger: logging.Logger, *args: tuple[A
     try:
         return task.result()
     except asyncio.CancelledError:
-        return None # Task cancellation should not be logged as an error.
+        return True # Task cancellation should not be logged as an error.
     except Exception as err:  # pylint: disable=broad-except
         logger.exception(
             f"Exception raised by Task {task}, error: {err}", *args
         )
+        return None
 
 
 async def shutdown(loop: asyncio.AbstractEventLoop, signal = None):
@@ -54,7 +56,7 @@ async def shutdown(loop: asyncio.AbstractEventLoop, signal = None):
 
 
 def default_exception_handler(loop: asyncio.AbstractEventLoop, context):
-    logging.info(
+    logging.debug(
         f"Asyncio Exception Handler Caught: {context!s}"
     )
     # first, handle with default handler
@@ -64,16 +66,16 @@ def default_exception_handler(loop: asyncio.AbstractEventLoop, context):
         raise type(context)
     exception = context.get('exception')
     msg = context.get("message", None)
+    loop.default_exception_handler(context)
     if exception:
         logging.error(f"AsyncDB: Caught exception: {exception}")
         if not isinstance(exception, asyncio.CancelledError):
             task = context.get("task", context["future"])
             exc = type(task.exception())
             try:
-                logging.exception(
-                    f"{exc.__name__!s}*{msg}* over task {task}"
+                logging.error(
+                    f"{exc.__name__!s}: *{msg}* over task {task}"
                 )
-                raise exc()
             except Exception as ex:
                 logging.exception(ex, stack_info=True)
                 raise RuntimeError(
