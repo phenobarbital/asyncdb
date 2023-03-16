@@ -104,7 +104,7 @@ async def test_connect(event_loop):
 
 if __name__ == '__main__':
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.set_debug(True)
         loop.run_until_complete(test_connect(loop))
