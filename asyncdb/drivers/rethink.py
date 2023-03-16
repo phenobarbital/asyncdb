@@ -46,10 +46,6 @@ from .abstract import (
 )
 
 
-def today(mask="%m/%d/%Y"):
-    return time.strftime(mask)
-
-
 class Point(BaseModel):
     x: float
     y: float
@@ -138,6 +134,7 @@ class rethink(InitDriver, DBCursorBackend):
         )
         self._connection = None
         self.params["timeout"] = self._timeout
+        print(self.params)
         try:
             self._connection = await self._engine.connect(
                 **self.params
@@ -327,9 +324,9 @@ class rethink(InitDriver, DBCursorBackend):
             f"Conditions for clean Table {table}: {conditions!r}")
         try:
             if conditions["filterdate"] == "CURRENT_DATE":
-                conditions["filterdate"] = today(mask="%Y-%m-%d")
+                conditions["filterdate"] = time.strftime("%Y-%m-%d")
         except (KeyError, ValueError):
-            conditions["filterdate"] = today(mask="%Y-%m-%d")
+            conditions["filterdate"] = time.strftime("%Y-%m-%d")
         result = await self.delete(table, filter=conditions, changes=False)
         return result
 
