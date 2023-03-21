@@ -790,6 +790,7 @@ class ModelBackend(ABC):
         """
 
 ## Aux Methods:
+
     def _get_value(self, field: Field, value: Any) -> Any:
         datatype = field.type
         new_val = None
@@ -846,9 +847,7 @@ class ModelBackend(ABC):
                         null_vals = f' OR {key} is NULL'
                     else:
                         null_vals = ''
-                    values = ','.join(
-                        map(str, [Entity.toSQL(v, type(v)) for v in value if v is not None])
-                    )
+                    values = ','.join([f"'{v}'" if isinstance(v, str) and v is not None else str(v) if v is not None else 'NULL' for v in value])
                     _cond.append(
                         f"({key} = ANY(ARRAY[{values}]){null_vals})"
                     )
