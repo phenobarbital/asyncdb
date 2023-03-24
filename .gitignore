@@ -124,6 +124,7 @@ files/
 # dumps de bd
 *.backup
 *.dump
+docs/
 
 # Translations
 *.mo
