@@ -135,7 +135,8 @@ setup(
             "influxdb-client==1.36.1",
             "pymssql==2.2.7",
             "redis==4.5.1",
-            "duckdb==0.7.1"
+            "duckdb==0.7.1",
+            "deltalake==0.8.1"
         ],
         "dataframe": [
             "dask==2023.3.0",
@@ -143,7 +144,8 @@ setup(
             "polars==0.16.11",
             "pyarrow==11.0.0",
             "connectorx==0.3.1",
-            "pyspark==3.3.2"
+            "pyspark==3.3.2",
+            "deltalake==0.8.1"
         ],
         "pyspark": [
             "pyspark==3.3.2"
@@ -216,9 +218,6 @@ setup(
         "msqlserver": [
             "pymssql==2.2.7",
         ],
-        "couchbase": [
-            "couchbase==4.1.2"
-        ],
         "couchdb": [
             "aiocouch==2.2.2"
         ],
@@ -252,7 +251,6 @@ setup(
             "pymongo==4.3.3",
             "motor==3.1.1",
             "pymssql==2.2.7",
-            "couchbase==4.1.2",
             "aiocouch==2.2.2",
             "asyncmy==0.2.7",
             "mysqlclient==2.1.1",
@@ -260,6 +258,7 @@ setup(
             "pyspark==3.3.2",
             "oracledb==1.2.2",
             "hazelcast-python-client==5.1",
+            "deltalake==0.8.1"
         ]
     },
     tests_require=[
