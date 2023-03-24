@@ -15,6 +15,7 @@ import pyarrow.parquet as pq
 import pyarrow.csv as pcsv
 from pyarrow import fs
 import pandas as pd
+import datatable as dt
 from deltalake import DeltaTable
 from deltalake import PyDeltaTableError
 from deltalake.table import DeltaTableProtocolError
@@ -50,7 +51,7 @@ class delta(InitDriver):
             raise DriverError(
                 "Delta: Missing Filename on Parameters"
             ) from ex
-        super(delta, self).__init__(
+        super().__init__(
             loop=loop, params=params, **kwargs
         )
         self.kwargs = params
@@ -192,6 +193,48 @@ class delta(InitDriver):
     async def use(self, database=""):
         raise NotImplementedError
 
+    async def get(
+        self,
+        partitions: Optional[list] = None,
+        columns: Optional[list] = None,
+        factory: Optional[str] = 'pandas',
+        **kwargs
+    ): # pylint: disable=W0221,W0236
+        """get.
+        Getting Data from Delta using columns and
+        partitions.
+        """
+        result = None
+        args = {}
+        if partitions:
+            args = {
+                "partitions": partitions
+            }
+        if columns:
+            args['columns'] = columns
+        try:
+            if factory == 'pandas':
+                result = self._connection.to_pandas(
+                    **args
+                )
+            elif factory == 'arrow':
+                result = self._connection.to_pyarrow_table(
+                    **args
+                )
+            elif factory == 'arrow_dataset':
+                result = self._connection.to_pyarrow_dataset(
+                    **args, **kwargs
+                )
+            return result
+        except (PyDeltaTableError, DeltaTableProtocolError) as exc:
+            raise DriverError(
+                f"DeltaTable Error: {exc}"
+            ) from exc
+        except Exception as exc:
+            raise DriverError(
+                f"Query Error: {exc}"
+            ) from exc
+
     async def query(
             self,
             sentence: Optional[str] = None,
@@ -245,3 +288,59 @@ class delta(InitDriver):
         return self.get(key, *args)
 
     fetch_one = queryrow
+
+    async def file_to_parquet(
+            self, filename: Union[str, Path],
+            parquet: str,
+            factory: str = 'pandas',
+            **kwargs
+    ):
+        """csv_to_parquet.
+
+        Creating a parquet file from a CSV object.
+        """
+        if isinstance(filename, str):
+            filename = Path(filename).resolve()
+        ext = filename.suffix
+        arguments = kwargs.get('pd_args', {})
+        df = None
+        if ext in ('.csv', '.txt', '.TXT', '.CSV'):
+            if factory == 'pandas':
+                df = pd.read_csv(
+                    filename,
+                    quotechar='"',
+                    decimal=',',
+                    engine='c',
+                    keep_default_na=False,
+                    na_values=['NULL', 'TBD'],
+                    na_filter=True,
+                    skipinitialspace=True,
+                    **arguments
+                )
+            elif factory == 'datatable':
+                frame = dt.fread(filename, **arguments)
+                df = frame.to_pandas()
+            elif factory == 'arrow':
+                atable = pcsv.read_csv(filename, **arguments)
+        elif ext in ['.xls', '.xlsx']:
+            if ext == '.xls':
+                engine = 'xlrd'
+            else:
+                engine = 'openpyxl'
+            df = pd.read_excel(
+                filename,
+                na_values=['NULL', 'TBD'],
+                na_filter=True,
+                engine=engine,
+                keep_default_na=False,
+                **arguments
+            )
+        try:
+            if df is not None:
+                df.to_parquet(parquet, engine='pyarrow', compression='snappy')
+            elif atable is not None:
+                pq.write_table(atable, parquet, compression='snappy')
+        except Exception as exc:
+            raise DriverError(
+                f"Query Error: {exc}"
+            ) from exc
