@@ -1699,8 +1699,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             condition = self._where(fields, **new_conditions)
 
             _all = f"SELECT * FROM {table} {condition}"
-            result = await self._connection.fetch(_all)
-            if result:
+            if result := await self._connection.fetch(_all):
                 return [model(**dict(r)) for r in result]
         except Exception as err:
             raise ProviderError(
