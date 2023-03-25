@@ -3,6 +3,7 @@ Basic Interfaces for every kind of Database Connector.
 """
 import asyncio
 import logging
+import uuid
 import inspect
 import types
 from importlib import import_module
@@ -847,7 +848,7 @@ class ModelBackend(ABC):
                         null_vals = f' OR {key} is NULL'
                     else:
                         null_vals = ''
-                    values = ','.join([f"'{v}'" if isinstance(v, str) and v is not None else str(v) if v is not None else 'NULL' for v in value])
+                    values = ','.join([f"'{v}'" if isinstance(v, str) and v is not None else f"uuid('{v}')" if isinstance(v, uuid.UUID) and v is not None else str(v) if v is not None else 'NULL' for v in value])
                     _cond.append(
                         f"({key} = ANY(ARRAY[{values}]){null_vals})"
                     )
