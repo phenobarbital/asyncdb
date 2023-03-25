@@ -12,7 +12,6 @@ from asyncdb.exceptions import (
     DataError,
     EmptyStatement,
     NoDataFound,
-    ProviderError,
     DriverError
 )
 from .sql import (
@@ -34,7 +33,7 @@ class sqlserverCursor(SQLCursor):
         except (pymssql.StandardError, pymssql.Error) as err:
             print(err)
             error = f"SQL Server Error: {err}"
-            raise ProviderError(message=error) from err
+            raise DriverError(message=error) from err
         except Exception as err:
             print(err)
             raise
@@ -106,7 +105,7 @@ class sqlserver(mssql):
             print(err)
             self._connection = None
             self._cursor = None
-            raise ProviderError(
+            raise DriverError(
                 f"connection Error, Terminated: {err}"
             ) from err
 
@@ -120,7 +119,7 @@ class sqlserver(mssql):
                 f"SQL Server Warning: {warn!s}"
             )
         except (pymssql.StandardError, pymssql.Error) as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"SQL Server Error: {err}"
             ) from err
 
@@ -277,7 +276,7 @@ class sqlserver(mssql):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err:  # pylint: disable=W0703
-            raise ProviderError(
+            raise DriverError(
                 f"Error on Query: {err}"
             ) from err
 
@@ -304,7 +303,7 @@ class sqlserver(mssql):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err:  # pylint: disable=W0703
-            raise ProviderError(
+            raise DriverError(
                 f"Error on Query: {err}"
             ) from err
 
@@ -329,7 +328,7 @@ class sqlserver(mssql):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err:  # pylint: disable=W0703
-            raise ProviderError(
+            raise DriverError(
                 f"Error on Query: {err}"
             ) from err
 

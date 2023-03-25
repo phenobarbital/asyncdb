@@ -34,6 +34,9 @@ cdef class DriverError(AsyncDBException):
     """Connection Driver Error.
     """
 
+cdef class ModelError(AsyncDBException):
+    """An error caused by Data Model."""
+
 cdef class ConnectionMissing(AsyncDBException):
     """Error when a Connection is missing or wrong.
     """

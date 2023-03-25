@@ -29,7 +29,7 @@ from asyncdb.meta import Record
 from asyncdb.exceptions import (
     EmptyStatement,
     NoDataFound,
-    ProviderError,
+    DriverError,
     StatementError,
     TooManyConnections,
 )
@@ -114,10 +114,10 @@ class sql_alchemy(SQLDriver, DBCursorBackend):
             self._engine = create_engine(self._dsn, poolclass=NullPool, **self._options)
         except (SQLAlchemyError, OperationalError) as err:
             self._connection = None
-            raise ProviderError("Connection Error: {}".format(str(err)))
+            raise DriverError("Connection Error: {}".format(str(err)))
         except Exception as err:
             self._connection = None
-            raise ProviderError(
+            raise DriverError(
                 "Engine Error, Terminated: {}".format(str(err))
             )
         finally:
@@ -144,7 +144,7 @@ class sql_alchemy(SQLDriver, DBCursorBackend):
                     self._connection.close()
             except Exception as err:
                 self._connection = None
-                raise ProviderError(
+                raise DriverError(
                     "Engine Error, Terminated: {}".format(str(err)))
             finally:
                 self._connection = None
@@ -163,12 +163,12 @@ class sql_alchemy(SQLDriver, DBCursorBackend):
             self._connected = True
         except (SQLAlchemyError, DatabaseError, OperationalError) as err:
             self._connection = None
-            raise ProviderError(
+            raise DriverError(
                 "SQL Alchemy: Connection Error: {}".format(str(err))
             )
         except Exception as err:
             self._connection = None
-            raise ProviderError(
+            raise DriverError(
                 "SQL Alchemy: Engine Error, Terminated: {}".format(str(err))
             )
         finally:
@@ -205,7 +205,7 @@ class sql_alchemy(SQLDriver, DBCursorBackend):
                 self._logger.info("Test Error: {}".format(error))
         except Exception as err:
             error = str(err)
-            raise ProviderError(message=str(err), code=0)
+            raise DriverError(message=str(err), code=0)
         finally:
             return [row, error]
 
@@ -242,10 +242,10 @@ class sql_alchemy(SQLDriver, DBCursorBackend):
                     self._result = rows
         except (DatabaseError, OperationalError) as err:
             error = "Query Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Query Error, Terminated: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             self.generated_at()
             return [self._result, error]
@@ -272,10 +272,10 @@ class sql_alchemy(SQLDriver, DBCursorBackend):
                     self._result = row
         except (DatabaseError, OperationalError) as err:
             error = "Query Row Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Query Row Error, Terminated: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             return [self._result, error]
 
@@ -299,10 +299,10 @@ class sql_alchemy(SQLDriver, DBCursorBackend):
                     result = rows
         except (DatabaseError, OperationalError) as err:
             error = "Query Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Query Error, Terminated: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             self.generated_at()
             return result
@@ -328,10 +328,10 @@ class sql_alchemy(SQLDriver, DBCursorBackend):
                     result = row
         except (DatabaseError, OperationalError) as err:
             error = "Query Row Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Query Row Error, Terminated: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             return result
 
@@ -351,10 +351,10 @@ class sql_alchemy(SQLDriver, DBCursorBackend):
             self._result = result
         except (DatabaseError, OperationalError) as err:
             error = "Execute Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Exception Error on Execute: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             return [self._result, error]
 
@@ -370,10 +370,10 @@ class sql_alchemy(SQLDriver, DBCursorBackend):
             self._result = result
         except (DatabaseError, OperationalError) as err:
             error = "Execute Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Exception Error on Execute: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             return [self._result, error]
 
@@ -407,7 +407,7 @@ class sql_alchemy(SQLDriver, DBCursorBackend):
                 pass
             except (SQLAlchemyError, DatabaseError, OperationalError) as err:
                 error = "Exception Error on Transaction: {}".format(str(err))
-                raise ProviderError(message=error)
+                raise DriverError(message=error)
             finally:
                 self._transaction = None
 
@@ -446,11 +446,11 @@ class sql_alchemy(SQLDriver, DBCursorBackend):
                 else:
                     return False
             except ProgrammingError as err:
-                raise ProviderError(
+                raise DriverError(
                     f"SQLAlchemy: Relation already exists: {err!s}"
                 )
             except Exception as err:
-                raise ProviderError(
+                raise DriverError(
                     f"SQLAlchemy: Error in Object Creation: {err!s}"
                 )
         else:

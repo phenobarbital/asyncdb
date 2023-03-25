@@ -124,6 +124,7 @@ files/
 # dumps de bd
 *.backup
 *.dump
+docs/
 
 # Translations
 *.mo
@@ -146,3 +147,9 @@ target/
 
 # Mac
 .DS_Store
+etc/
+env/
+*.cpp
+*.c
+asyncdb/utils/types.cpp
+asyncdb/exceptions/exceptions.c

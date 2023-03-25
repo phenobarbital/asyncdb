@@ -36,10 +36,9 @@ from asyncdb.exceptions import (
     EmptyStatement,
     ConnectionTimeout,
     NoDataFound,
-    ProviderError,
+    DriverError,
     StatementError,
-    TooManyConnections,
-    DriverError
+    TooManyConnections
 )
 
 from asyncdb.utils.encoders import (
@@ -242,7 +241,7 @@ class postgres(threading.Thread, SQLDriver):
                 f"Unable to connect to database: {err}"
             ) from err
         except ConnectionDoesNotExistError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Connection Error: {err}"
             ) from err
         except ConnectionError as ex:
@@ -253,11 +252,11 @@ class postgres(threading.Thread, SQLDriver):
                 f"Connection Error: {ex}"
             ) from ex
         except InternalClientError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Internal Error: {err}"
             ) from err
         except InterfaceError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Interface Error: {err}"
             ) from err
         except InterfaceWarning as err:
@@ -289,13 +288,13 @@ class postgres(threading.Thread, SQLDriver):
                     await self._connection.close(timeout=timeout)
                     self.join(timeout=timeout)
         except InterfaceError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Close Error: {err}"
             ) from err
         except Exception as err:
             await self._connection.terminate()
             self._connection = None
-            raise ProviderError(
+            raise DriverError(
                 f"Connection Error, Terminated: {err}"
             ) from err
         finally:
@@ -313,11 +312,11 @@ class postgres(threading.Thread, SQLDriver):
                         self._connection.close(timeout=wait_close)
                     )
             except (InterfaceError, RuntimeError) as err:
-                raise ProviderError(
+                raise DriverError(
                     message=f"Release Interface Error: {err!s}"
                 ) from err
             except Exception as err:
-                raise ProviderError(
+                raise DriverError(
                     f"Connection Error, Terminated: {err}"
                 ) from err
             finally:
@@ -343,7 +342,7 @@ class postgres(threading.Thread, SQLDriver):
             self._columns = [a.name for a in stmt.get_attributes()]
             self._prepared = stmt
         except RuntimeError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Runtime on Query Row Error: {err}"
             ) from err
         except (
@@ -374,7 +373,7 @@ class postgres(threading.Thread, SQLDriver):
             stmt = await self._connection.prepare(sentence, *args)
             self._columns = [a.name for a in stmt.get_attributes()]
         except RuntimeError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Runtime on Query Row Error: {err}"
             ) from err
         except (
@@ -410,7 +409,7 @@ class postgres(threading.Thread, SQLDriver):
             if not self._result:
                 return [None, NoDataFound("No data was found")]
         except RuntimeError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Runtime on Query Error: {err}"
             ) from err
         except (
@@ -445,7 +444,7 @@ class postgres(threading.Thread, SQLDriver):
             self._columns = [a.name for a in stmt.get_attributes()]
             self._result = await stmt.fetchrow()
         except RuntimeError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Runtime on Query Row Error: {err}"
             ) from err
         except (
@@ -482,7 +481,7 @@ class postgres(threading.Thread, SQLDriver):
             self._result = await self._connection.execute(sentence, *args)
             return [self._result, None]
         except RuntimeError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Runtime on Execute Error: {err}"
             ) from err
         except (
@@ -519,7 +518,7 @@ class postgres(threading.Thread, SQLDriver):
                 await self._connection.executemany(sentence, timeout=timeout, *args)
             return [True, None]
         except RuntimeError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Runtime on Execute Error: {err}"
             ) from err
         except (
@@ -655,7 +654,7 @@ class postgres(threading.Thread, SQLDriver):
                     result=result, columns=self._columns)
         except RuntimeError as err:
             self._error = f"Fetch Error: {err}"
-            raise ProviderError(
+            raise DriverError(
                 message=self._error
             ) from err
         except (
@@ -672,7 +671,7 @@ class postgres(threading.Thread, SQLDriver):
                 f"Error on Fetch: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Error on Execute: {err}"
             ) from err
         finally:
@@ -753,7 +752,7 @@ class postgres(threading.Thread, SQLDriver):
                 else:
                     return False
             except Exception as err:
-                raise ProviderError(
+                raise DriverError(
                     f"Error in Object Creation: {err!s}"
                 ) from err
         else:

@@ -1,6 +1,6 @@
 import logging
 
-from .exceptions import ProviderError
+from .exceptions import DriverError
 from .interfaces import ConnectionBackend, PoolBackend
 from .utils.modules import module_exists
 
@@ -20,7 +20,7 @@ class AsyncPool:
             return obj
         except Exception as err:
             logging.exception(err)
-            raise ProviderError(
+            raise DriverError(
                 message=f"Cannot Load Backend Pool: {pool}"
             ) from err
 
@@ -38,6 +38,6 @@ class AsyncDB:
             return obj
         except Exception as err:
             logging.exception(err)
-            raise ProviderError(
+            raise DriverError(
                 message=f"Cannot Load Backend {driver}"
             ) from err

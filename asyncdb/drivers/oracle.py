@@ -15,7 +15,6 @@ from asyncdb.utils.encoders import (
 )
 from asyncdb.exceptions import (
     DriverError,
-    ProviderError,
     NoDataFound
 )
 from .sql import SQLDriver
@@ -85,7 +84,7 @@ class oracle(SQLDriver):
             return self
         except Exception as ex:
             self._logger.exception(ex, stack_info=True)
-            raise ProviderError(
+            raise DriverError(
                 f"Oracle Unknown Error: {ex!s}"
             ) from ex
 
@@ -102,7 +101,7 @@ class oracle(SQLDriver):
         except Exception as e:
             print(e)
             self._logger.exception(e, stack_info=True)
-            raise ProviderError(
+            raise DriverError(
                 f"Oracle Closing Error: {e!s}"
             ) from e
 

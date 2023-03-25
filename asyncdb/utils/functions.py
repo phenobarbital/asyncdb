@@ -40,6 +40,7 @@ class colors:
         lightred = "\033[91m"
         lightgreen = "\033[92m"
         yellow = "\033[93m"
+        lightyellow = "\033[93;1m"
         lightblue = "\033[94m"
         pink = "\033[95m"
         lightcyan = "\033[96m"

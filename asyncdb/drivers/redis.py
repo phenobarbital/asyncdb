@@ -15,7 +15,7 @@ import aioredis
 import uvloop
 from aioredis.exceptions import AuthenticationError, RedisError
 
-from asyncdb.exceptions import ConnectionTimeout, DriverError, ProviderError
+from asyncdb.exceptions import ConnectionTimeout, DriverError
 
 from .abstract import BaseDriver, BasePool
 
@@ -62,11 +62,11 @@ class redisPool(BasePool):
                 f"Unable to connect to Redis: {err}"
             ) from err
         except (RedisError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Unable to connect to Redis, connection Refused: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(f"Unknown Error: {err}") from err
+            raise DriverError(f"Unknown Error: {err}") from err
         # is connected
         if self._pool:
             self._connected = True
@@ -89,7 +89,7 @@ class redisPool(BasePool):
                 f"Redis Pool is closed o doesnt exists: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Unknown Error: {err}"
             ) from err
 
@@ -103,7 +103,7 @@ class redisPool(BasePool):
             print(type(connection.get_connection()))
             await self._pool.release(connection.get_connection())
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Release Error: {err}"
             ) from err
 
@@ -119,7 +119,7 @@ class redisPool(BasePool):
             self._connected = False
             return True
         except (ConnectionError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Connection close Error: {err}"
             ) from err
         except Exception as err:
@@ -143,19 +143,19 @@ class redisPool(BasePool):
                 )
                 return result
             except TypeError as err:
-                raise ProviderError(
+                raise DriverError(
                     f"Execute Error: {err}"
                 ) from err
             except aioredis.exceptions.ConnectionError as err:
-                raise ProviderError(
+                raise DriverError(
                     f"Connection cannot be decoded or is broken, Error: {err}"
                 ) from err
             except RedisError as err:
-                raise ProviderError(
+                raise DriverError(
                     f"Connection close Error: {err}"
                 ) from err
             except Exception as err:
-                raise ProviderError(
+                raise DriverError(
                     f"Redis Execute Error: {err}"
                 ) from err
 
@@ -197,11 +197,11 @@ class redis(BaseDriver):
                 **kwargs,
             )
         except AuthenticationError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Unable to connect to Redis, connection Refused: {err}"
             ) from err
         except ConnectionError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Connection Error: {err}"
             ) from err
         except (aioredis.RedisError, asyncio.TimeoutError) as err:
@@ -209,7 +209,7 @@ class redis(BaseDriver):
                 f"Unable to connect to Redis: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Unknown Redis Error: {err}"
             ) from err
         # is connected
@@ -238,14 +238,14 @@ class redis(BaseDriver):
                 await self._connection.connection_pool.disconnect()
                 self._connected = False
             except Exception as err:
-                raise ProviderError(
+                raise DriverError(
                     f"Unknown Redis Error: {err}"
                 ) from err
         except (RuntimeError, AttributeError):
             pass
         except Exception as err:
             self._logger.exception(f'Redis Closing Error: {err}')
-            raise ProviderError(
+            raise DriverError(
                 f"Unknown Redis Error: {err}"
             ) from err
 
@@ -254,7 +254,7 @@ class redis(BaseDriver):
     async def execute(self, sentence, *args, **kwargs) -> Any:
         """execute.
         Raises:
-            ProviderError: Error on execution.
+            DriverError: Error on execution.
 
         Returns:
             Any: _description_
@@ -266,7 +266,7 @@ class redis(BaseDriver):
             except (
                 RedisError,
             ) as err:
-                raise ProviderError(
+                raise DriverError(
                     f"Connection Error: {err}"
                 ) from err
 
@@ -291,11 +291,11 @@ class redis(BaseDriver):
         try:
             return await self._connection.get(key)
         except (aioredis.RedisError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Unknown Error: {err}"
             ) from err
 
@@ -312,11 +312,11 @@ class redis(BaseDriver):
         try:
             return await self._connection.set(key, value, **kwargs)
         except (aioredis.RedisError) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Unknown Error: {err}"
             ) from err
 
@@ -328,7 +328,7 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Can't change to DB: {err!s}"
             ) from err
 
@@ -342,7 +342,7 @@ class redis(BaseDriver):
             else:
                 return await self._connection.flushdb()
         except Exception as ex:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error cleaning DB: {ex!s}"
             ) from ex
 
@@ -356,11 +356,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on Exists: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Exists Unknown Error: {err}"
             ) from err
 
@@ -372,11 +372,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on Delete: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Delete Unknown Error: {err}"
             ) from err
 
@@ -384,11 +384,11 @@ class redis(BaseDriver):
         try:
             return await self._connection.expireat(key, timestamp)
         except TypeError as ex:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: wrong Expiration timestamp: {timestamp}"
             ) from ex
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Expiration Unknown Error: {err}"
             ) from err
 
@@ -408,7 +408,7 @@ class redis(BaseDriver):
         try:
             await self._connection.setex(key, expiration, value)
         except TypeError as ex:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: wrong Expiration timestamp: {expiration}"
             ) from ex
         except ConnectionError as err:
@@ -416,11 +416,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on SetEX: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis SetEX Unknown Error: {err}"
             ) from err
 
@@ -436,11 +436,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on Persist: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Persist Unknown Error: {err}"
             ) from err
 
@@ -464,11 +464,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on hmset: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis hmset Unknown Error: {err}"
             ) from err
 
@@ -483,11 +483,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on hgetall: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis hgetall Unknown Error: {err}"
             ) from err
 
@@ -510,11 +510,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on hkeys: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis hkeys Unknown Error: {err}"
             ) from err
 
@@ -529,11 +529,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on hlen: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis hlen Unknown Error: {err}"
             ) from err
 
@@ -548,11 +548,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on hvals: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis hvals Unknown Error: {err}"
             ) from err
 
@@ -573,11 +573,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on Hset: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Hset Unknown Error: {err}"
             ) from err
 
@@ -592,11 +592,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on Hget: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Hget Unknown Error: {err}"
             ) from err
 
@@ -613,11 +613,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on Hexists: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Hexists Unknown Error: {err}"
             ) from err
 
@@ -632,11 +632,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on HDel: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis HDel Unknown Error: {err}"
             ) from err
 
@@ -651,11 +651,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on Mset: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Mset Unknown Error: {err}"
             ) from err
 
@@ -670,11 +670,11 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on Move: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Move Unknown Error: {err}"
             ) from err
 
@@ -689,10 +689,10 @@ class redis(BaseDriver):
                 f"Error connecting to Redis {err}"
             ) from err
         except RedisError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis: Error on Lrange: {err!s}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Redis Lrange Unknown Error: {err}"
             ) from err

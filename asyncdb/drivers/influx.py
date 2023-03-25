@@ -18,7 +18,6 @@ from influxdb_client.rest import _BaseRESTClient
 import pandas
 from asyncdb.exceptions import (
     NoDataFound,
-    ProviderError,
     DriverError
 )
 from asyncdb.interfaces import (
@@ -166,7 +165,7 @@ class influx(InitDriver, ConnectionDSNBackend):
             self._connection = None
             self._cursor = None
             logging.exception(err)
-            raise ProviderError(
+            raise DriverError(
                 message=f"InfluxDB connection Error: {err!s}"
             ) from err
 
@@ -181,11 +180,11 @@ class influx(InitDriver, ConnectionDSNBackend):
                     self._connection.close()
                 except Exception as err:
                     self._connection = None
-                    raise ProviderError(
+                    raise DriverError(
                         message=f"InfluxDB: Connection Error, Terminated: {err!s}"
                     ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"InfluxDB: Close Error: {err!s}"
             ) from err
         finally:
@@ -280,7 +279,7 @@ class influx(InitDriver, ConnectionDSNBackend):
                 )
                 return False
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error Deleting Bucket {bucket}: {err}"
             ) from err
 
@@ -298,7 +297,7 @@ class influx(InitDriver, ConnectionDSNBackend):
             )
             print(created)
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error creating Bucket {err}"
             ) from err
 
@@ -349,7 +348,7 @@ class influx(InitDriver, ConnectionDSNBackend):
                 result = rst.get()
             return result
         except RuntimeError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"InfluxDB: Runtime Error: {err!s}"
             ) from err
         except Exception as err:
@@ -440,7 +439,7 @@ class influx(InitDriver, ConnectionDSNBackend):
         except NoDataFound:
             raise
         except RuntimeError as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err:

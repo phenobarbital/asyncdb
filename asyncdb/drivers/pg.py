@@ -12,7 +12,8 @@ import time
 import uuid
 from collections.abc import Callable, Iterable
 from typing import Any, Optional, Union
-
+from dataclasses import is_dataclass
+from datamodel import BaseModel
 import asyncpg
 import uvloop
 from asyncpg.exceptions import (
@@ -1291,6 +1292,13 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     raise ValueError(
                         f"Field {name} is required and value is null over {_model.Meta.name}"
                     )
+            elif is_dataclass(value):
+                if isinstance(value, BaseModel):
+                    ### get value for primary key associated with.
+                    try:
+                        value = getattr(value, name)
+                    except AttributeError:
+                        value = None
             source.append(value)
             cols.append(column)
             n += 1

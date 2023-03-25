@@ -14,7 +14,7 @@ from asyncdb.exceptions import (
     DataError,
     EmptyStatement,
     NoDataFound,
-    ProviderError,
+    DriverError,
     StatementError,
     TooManyConnections,
 )
@@ -68,11 +68,11 @@ class odbc(SQLDriver, DBCursorBackend):
         except pyodbc.Error as err:
             print("ERR ", err)
             self._logger.exception(err)
-            raise ProviderError("ODBC Internal Error: {}".format(str(err)))
+            raise DriverError("ODBC Internal Error: {}".format(str(err)))
         except Exception as err:
             print("ERR ", err)
             self._logger.exception(err)
-            raise ProviderError("ODBC Unknown Error: {}".format(str(err)))
+            raise DriverError("ODBC Unknown Error: {}".format(str(err)))
         finally:
             return self
 
@@ -92,10 +92,10 @@ class odbc(SQLDriver, DBCursorBackend):
                 return [None, NoDataFound]
         except pyodbc.Error as err:
             error = "ODBC: Query Error: {}".format(err)
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             await self._cursor.close()
             return [self._result, error]
@@ -114,7 +114,7 @@ class odbc(SQLDriver, DBCursorBackend):
                 raise NoDataFound
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             await self._cursor.close()
             return self._result
@@ -132,10 +132,10 @@ class odbc(SQLDriver, DBCursorBackend):
                 raise NoDataFound
         except pyodbc.ProgrammingError as err:
             error = "ODBC Query Error: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             await self._cursor.close()
             return self._result
@@ -155,7 +155,7 @@ class odbc(SQLDriver, DBCursorBackend):
                 return [None, NoDataFound]
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             await self._cursor.close()
             return [self._result, error]
@@ -173,7 +173,7 @@ class odbc(SQLDriver, DBCursorBackend):
                 raise NoDataFound
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             await self._cursor.close()
             return self._result
@@ -193,7 +193,7 @@ class odbc(SQLDriver, DBCursorBackend):
                 await self._connection.commit()
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             await self._cursor.close()
             return [result, error]
@@ -208,7 +208,7 @@ class odbc(SQLDriver, DBCursorBackend):
                 await self._connection.commit()
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise ProviderError(message=error)
+            raise DriverError(message=error)
         finally:
             await self._cursor.close()
             return [result, error]
