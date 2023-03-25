@@ -16,9 +16,8 @@ from asyncdb.exceptions import (
     DataError,
     EmptyStatement,
     NoDataFound,
-    ProviderError,
-    StatementError,
-    DriverError
+    DriverError,
+    StatementError
 )
 from .sql import SQLDriver, SQLCursor
 
@@ -95,11 +94,11 @@ class mssql(SQLDriver, DBCursorBackend):
                     self._connection.close()
                 except Exception as err:
                     self._connection = None
-                    raise ProviderError(
+                    raise DriverError(
                         message=f"Connection Error, Terminated: {err}"
                     ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Close Error: {err}"
             ) from err
         finally:
@@ -138,13 +137,13 @@ class mssql(SQLDriver, DBCursorBackend):
                 f"MSSQL Error {num}: {msg}, state={state}"
             ) from ex
         except _mssql.MSSQLDriverException as ex: # pylint: disable=I1101
-            raise ProviderError(
+            raise DriverError(
                 message=f"connection Error: {ex}"
             ) from ex
         except Exception as err:
             self._connection = None
             self._cursor = None
-            raise ProviderError(
+            raise DriverError(
                 message=f"connection Error, Terminated: {err}"
             ) from err
 
@@ -292,10 +291,10 @@ class mssql(SQLDriver, DBCursorBackend):
             raise DataError(error) from err
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-            raise ProviderError(error) from err
+            raise DriverError(error) from err
         except Exception as err: # pylint: disable=W0703
             error = f"Error on Query: {err}"
-            raise ProviderError(error) from err
+            raise DriverError(error) from err
 
     fetchone = fetch_one
 
@@ -328,10 +327,10 @@ class mssql(SQLDriver, DBCursorBackend):
             raise DataError(error) from err
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-            raise ProviderError(error) from err
+            raise DriverError(error) from err
         except Exception as err: # pylint: disable=W0703
             error = f"Error on Query: {err}"
-            raise ProviderError(error) from err
+            raise DriverError(error) from err
 
     fetchall = fetch_all
 
@@ -361,10 +360,10 @@ class mssql(SQLDriver, DBCursorBackend):
             raise DataError(error) from err
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-            raise ProviderError(error) from err
+            raise DriverError(error) from err
         except Exception as err: # pylint: disable=W0703
             error = f"Error on Query: {err}"
-            raise ProviderError(error) from err
+            raise DriverError(error) from err
 
     fetchval = fetch_scalar
 
@@ -420,7 +419,7 @@ class mssql(SQLDriver, DBCursorBackend):
                 else:
                     return False
             except Exception as err:
-                raise ProviderError(
+                raise DriverError(
                     message=f"Error in Object Creation: {err!s}"
                 ) from err
         else:

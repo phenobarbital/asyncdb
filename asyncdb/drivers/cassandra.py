@@ -44,16 +44,15 @@ from cassandra.query import (
 from asyncdb.meta import Recordset
 from asyncdb.exceptions import (
     NoDataFound,
-    ProviderError,
     DriverError
 )
-
-
 from .abstract import InitDriver
+
 
 def pandas_factory(colnames, rows):
     df = pd.DataFrame(rows, columns=colnames)
     return df
+
 
 def record_factory(colnames, rows):
     return Recordset(result=[dict(zip(colnames, values)) for values in rows], columns=colnames)
@@ -100,11 +99,11 @@ class cassandra(InitDriver):
                 except Exception as err:
                     self._cluster.shutdown()
                     self._connection = None
-                    raise ProviderError(
+                    raise DriverError(
                         message=f"Connection Error, Terminated: {err}"
                     ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Close Error: {err}"
             ) from err
         finally:
@@ -204,7 +203,7 @@ class cassandra(InitDriver):
             try:
                 self._connection = self._cluster.connect(keyspace=keyspace)
             except NoHostAvailable as ex:
-                raise ProviderError(
+                raise DriverError(
                     message=f'Not able to connect to any of the Cassandra contact points: {ex}'
                 ) from ex
             if self._connection:
@@ -215,13 +214,13 @@ class cassandra(InitDriver):
             else:
                 self._keyspace = keyspace
             return self
-        except ProviderError:
+        except DriverError:
             raise
         except Exception as err:
             logging.exception(f"connection Error, Terminated: {err}")
             self._connection = None
             self._cursor = None
-            raise ProviderError(
+            raise DriverError(
                 message=f"connection Error, Terminated: {err}"
             ) from err
 
@@ -262,7 +261,7 @@ class cassandra(InitDriver):
                 self._prepared.consistency_level = ConsistencyLevel.ALL
             return self._prepared
         except RuntimeError as ex:
-            raise ProviderError(message=f"Runtime Error: {ex}") from ex
+            raise DriverError(message=f"Runtime Error: {ex}") from ex
         except Exception as ex:
             raise DriverError(f"Error on Query: {ex}") from ex
 
@@ -329,7 +328,7 @@ class cassandra(InitDriver):
         except NoDataFound:
             raise
         except RuntimeError as err:
-            raise ProviderError(message=f"Runtime Error: {err}") from err
+            raise DriverError(message=f"Runtime Error: {err}") from err
         except Exception as err:
             raise Exception(f"Error on Query: {err}") from err
 
@@ -368,7 +367,7 @@ class cassandra(InitDriver):
             if not self._result:
                 raise NoDataFound("Cassandra: No Data was Found")
         except RuntimeError as err:
-            raise ProviderError (
+            raise DriverError (
                 message=f"Runtime on Query Row Error: {err}"
             ) from err
         except Exception as err:

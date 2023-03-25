@@ -6,15 +6,11 @@ This provider implements a simple subset of funcionalities from aiomcache.
 """
 import asyncio
 import time
-from typing import (
-    Dict
-)
 import aiomcache
 from aiomcache.exceptions import (
     ClientException
 )
 from asyncdb.exceptions import (
-    ProviderError,
     DriverError
 )
 from .abstract import (
@@ -58,7 +54,7 @@ class memcachePool(BasePool):
                 f"Unable to connect to Memcache: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Unknown Error: {err}"
             ) from err
         # is connected
@@ -77,11 +73,11 @@ class memcachePool(BasePool):
         try:
             self._connection = self._pool
         except ClientException as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Unable to connect to Memcache: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Unknown Error: {err}"
             ) from err
         if self._connection:
@@ -104,7 +100,7 @@ class memcachePool(BasePool):
             if conn:
                 self._pool.release(conn)
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Memcache Release Error: {err}"
             ) from err
 
@@ -120,7 +116,7 @@ class memcachePool(BasePool):
                 f"Connection Close Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Closing Error: {err}"
             ) from err
 
@@ -172,7 +168,7 @@ class memcache(BaseDriver):
                 f"Unable to connect to Memcache: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Unknown Error: {err}"
             ) from err
         # is connected
@@ -195,7 +191,7 @@ class memcache(BaseDriver):
                     f"Unable to connect to Memcache: {err}"
                 ) from err
             except Exception as err:
-                raise ProviderError(
+                raise DriverError(
                     f"Unknown Error: {err}"
                 ) from err
 
@@ -213,7 +209,7 @@ class memcache(BaseDriver):
                 f"Unable to connect to Memcache: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Unknown Error: {err}"
             ) from err
 
@@ -237,11 +233,11 @@ class memcache(BaseDriver):
             else:
                 return None
         except (aiomcache.exceptions.ClientException) as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Get Memcache Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Memcache Unknown Error: {err}"
             ) from err
 
@@ -270,11 +266,11 @@ class memcache(BaseDriver):
             print(result)
             return [k.decode("utf-8") for k in result]
         except ClientException as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Get Memcache Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Memcache Unknown Error: {err}"
             ) from err
 
@@ -289,11 +285,11 @@ class memcache(BaseDriver):
                 bytes(key, "utf-8"), bytes(value, "utf-8"), **args
             )
         except ClientException as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Set Memcache Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Memcache Unknown Error: {err}"
             ) from err
 
@@ -304,11 +300,11 @@ class memcache(BaseDriver):
             for k, v in mapping.items():
                 await self._connection.set(bytes(k, "utf-8"), bytes(v, "utf-8"), timeout)
         except ClientException as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Set Memcache Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Memcache Unknown Error: {err}"
             ) from err
 
@@ -316,11 +312,11 @@ class memcache(BaseDriver):
         try:
             return await self._connection.delete(bytes(key, "utf-8"))
         except ClientException as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Delete Memcache Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"Memcache Unknown Error: {err}"
             ) from err
 
@@ -330,11 +326,11 @@ class memcache(BaseDriver):
                 result = await self._connection.delete(bytes(key, "utf-8"))
             return result
         except ClientException as err:
-            raise ProviderError(
+            raise DriverError(
                 f"DELETE Memcache Error: {err}"
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 f"DELETE Unknown Error: {err}"
             ) from err
 

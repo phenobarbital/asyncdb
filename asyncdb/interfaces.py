@@ -25,7 +25,7 @@ from datamodel.exceptions import ValidationError
 from .meta import Record, Recordset
 from .exceptions import (
     default_exception_handler,
-    ProviderError,
+    DriverError,
     EmptyStatement
 )
 from .models import Model, Field, is_missing, is_dataclass
@@ -70,7 +70,7 @@ class PoolBackend(ABC):
             default_exception_handler
         )
         try:
-            self._debug = bool(params["DEBUG"])
+            self._debug = bool(params.get("DEBUG", False))
         except (TypeError, KeyError):
             try:
                 self._debug = kwargs["debug"]
@@ -357,7 +357,7 @@ class ConnectionDSNBackend(ABC):
                 return None
         except TypeError as err:
             self._logger.exception(err)
-            raise ProviderError(
+            raise DriverError(
                 f"Error creating DSN connection: {err}"
             ) from err
 
@@ -435,7 +435,7 @@ class DatabaseBackend(ABC):
         try:
             return await self.query(self._test_query, **kwargs)
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=str(err)
             ) from err
 
@@ -565,14 +565,14 @@ class CursorBackend(ABC):
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         try:
             return await self._provider.close()
-        except ProviderError as err:
+        except DriverError as err:
             logging.exception(err)
             raise
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         try:
             return self._provider.close()
-        except ProviderError as err:
+        except DriverError as err:
             logging.exception(err)
             raise
 
@@ -719,7 +719,7 @@ class ModelBackend(ABC):
                     result = await record.insert()
                     results.append(result)
                 except Exception as e:
-                    raise ProviderError(
+                    raise DriverError(
                         f"Error on Creation {table}: {e}"
                     ) from e
         return results

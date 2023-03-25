@@ -13,7 +13,6 @@ import jaydebeapi
 import jpype
 from asyncdb.exceptions import (
     DriverError,
-    ProviderError,
     NoDataFound
 )
 from asyncdb import ABS_PATH
@@ -168,7 +167,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             ) from e
         except Exception as e:
             self._logger.exception(e, stack_info=True)
-            raise ProviderError(
+            raise DriverError(
                 f"JDBC Unknown Error: {e!s}"
             ) from e
         return self
@@ -188,7 +187,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         except Exception as e:
             print(e)
             self._logger.exception(e, stack_info=True)
-            raise ProviderError(
+            raise DriverError(
                 f"JDBC Closing Error: {e!s}"
             ) from e
 
@@ -250,7 +249,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             return await self._serializer(self._result, error)
         except Exception as err:
             error = f"JDBC Error on Query: {err}"
-            raise ProviderError(
+            raise DriverError(
                 message=error
             ) from err
         finally:
@@ -274,7 +273,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
                 return NoDataFound()
             return [dict(zip(self._columns, row)) for row in result]
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"JDBC Error on Query: {err}"
             ) from err
         finally:
@@ -300,7 +299,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             return await self._serializer(self._result, error)
         except Exception as err:
             error = f"JDBC Error on Query: {err}"
-            raise ProviderError(
+            raise DriverError(
                 message=error
             ) from err
         finally:
@@ -328,7 +327,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             return result
         except Exception as err:
             error = f"JDBC Error on Query: {err}"
-            raise ProviderError(
+            raise DriverError(
                 message=error
             ) from err
         finally:
@@ -355,7 +354,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             return result
         except Exception as err:
             error = f"JDBC Error on Query: {err}"
-            raise ProviderError(
+            raise DriverError(
                 message=error
             ) from err
         finally:
@@ -377,7 +376,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             )
             return result
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"JDBC Error on Execute: {err}"
             ) from err
         finally:
@@ -408,7 +407,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
                     )
                 return result
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"JDBC Error on Execute: {err}"
             ) from err
         finally:
@@ -495,7 +494,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
                     setattr(_model, f, val)
                 return _model
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
@@ -533,7 +532,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             await self._connection.commit()
             return f'DELETE {cursor.rowcount}: {_filter!s}'
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
@@ -606,7 +605,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
                     setattr(_model, f, val)
                 return _model
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
@@ -642,7 +641,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             result = await cursor.fetchone()
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model Fetch over {table}: {e}"
             ) from e
 
@@ -677,7 +676,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             result = await cursor.fetchall()
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model GET over {table}: {e}"
             ) from e
 
@@ -688,7 +687,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         try:
             model = kwargs['_model']
         except KeyError as e:
-            raise ProviderError(
+            raise DriverError(
                 f'Missing Model for SELECT {kwargs!s}'
             ) from e
         try:
@@ -709,7 +708,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             result = await cursor.fetchall()
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model SELECT over {table}: {e}"
             ) from e
 
@@ -744,7 +743,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             result = await cursor.fetchone()
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model GET over {table}: {e}"
             ) from e
 
@@ -766,7 +765,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             result = await cursor.fetchall()
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model All over {table}: {e}"
             ) from e
 
@@ -794,7 +793,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             await self._connection.commit()
             return f'DELETE {cursor.rowcount}: {_filter!s}'
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
@@ -806,7 +805,7 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         try:
             model = kwargs['_model']
         except KeyError as e:
-            raise ProviderError(
+            raise DriverError(
                 f'Missing Model for SELECT {kwargs!s}'
             ) from e
         try:
@@ -855,6 +854,6 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             result = await cursor.fetchall()
             return [model(**dict(r)) for r in result]
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {model.Meta.name}: {err!s}"
             ) from err

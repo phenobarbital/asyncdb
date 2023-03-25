@@ -15,6 +15,9 @@ cdef class ConnectionMissing(AsyncDBException):
     """Error when a Connection is missing or wrong.
     """
 
+cdef class ModelError(AsyncDBException):
+    """An error caused by Data Model."""
+
 cdef class DataError(AsyncDBException):
     """An error caused by invalid query input."""
 

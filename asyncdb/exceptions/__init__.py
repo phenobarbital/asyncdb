@@ -13,7 +13,8 @@ from .exceptions import (
     EmptyStatement,
     UnknownPropertyError,
     StatementError,
-    ConditionsError
+    ConditionsError,
+    ModelError
 )
 from .handlers import default_exception_handler, handle_done_tasks, shutdown
 
@@ -34,5 +35,6 @@ __all__ = (
     'EmptyStatement',
     'UnknownPropertyError',
     'StatementError',
-    'ConditionsError'
+    'ConditionsError',
+    'ModelError',
 )
