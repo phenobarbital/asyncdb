@@ -1414,6 +1414,13 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     raise ValueError(
                         f"Field {name} is required and value is null over {_model.Meta.name}"
                     )
+            elif is_dataclass(value):
+                if isinstance(value, BaseModel):
+                    ### get value for primary key associated with.
+                    try:
+                        value = getattr(value, name)
+                    except AttributeError:
+                        value = None
             cols.append("{} = {}".format(name, "${}".format(n)))  # pylint: disable=C0209
             source.append(value)
             n += 1
