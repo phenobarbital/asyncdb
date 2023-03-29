@@ -215,10 +215,10 @@ class pgPool(BasePool):
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             server_settings = {
                 "application_name": self.application_name,
-                "idle_in_transaction_session_timeout": "1min",
-                "idle_session_timeout": "30s",
+                "idle_in_transaction_session_timeout": "5min",
+                "idle_session_timeout": "1min",
                 "tcp_keepalives_idle": "600",
-                "max_parallel_workers": "48",
+                "max_parallel_workers": "256",
                 "jit": "off"
             }
             server_settings = {**server_settings, **self._server_settings}
@@ -235,7 +235,7 @@ class pgPool(BasePool):
                 max_size=self._max_clients,
                 max_inactive_connection_lifetime=self._max_inactive_timeout,
                 statement_cache_size=300,
-                timeout=10,
+                timeout=360,
                 command_timeout=self._timeout,
                 init=self.init_connection,
                 setup=self.setup_connection,
@@ -610,10 +610,10 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
 
         server_settings = {
             "application_name": self.application_name,
-            "idle_in_transaction_session_timeout": "1min",
-            "idle_session_timeout": "30s",
+            "idle_in_transaction_session_timeout": "5min",
+            "idle_session_timeout": "1min",
             "tcp_keepalives_idle": "600",
-            "max_parallel_workers": "24",
+            "max_parallel_workers": "256",
             "jit": "off"
         }
         server_settings = {**server_settings, **self._server_settings}
@@ -1410,10 +1410,9 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 if 'db_default' in field.metadata:
                     # field get a default value from database
                     continue
-                else:
-                    raise ValueError(
-                        f"Field {name} is required and value is null over {_model.Meta.name}"
-                    )
+                raise ValueError(
+                    f"Field {name} is required and value is null over {_model.Meta.name}"
+                )
             elif is_dataclass(value):
                 if isinstance(value, BaseModel):
                     ### get value for primary key associated with.
