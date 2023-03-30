@@ -184,7 +184,7 @@ setup(
         ],
         "boto3": [
             "botocore==1.29.84",
-            "boto3==1.26.84",
+            "boto3==1.26.102",
             "aiobotocore==2.4.2",
             "aioboto3==11.0.0"
         ],
