@@ -206,7 +206,7 @@ setup(
             "oracledb==1.2.2"
         ],
         "sqlalchemy": [
-            "sqlalchemy==2.0.4",
+            "sqlalchemy==2.0.8",
         ],
         "elasticsearch": [
             "elasticsearch[async]==8.6.2",
@@ -246,7 +246,7 @@ setup(
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.35",
-            "sqlalchemy==2.0.4",
+            "sqlalchemy==2.0.8",
             "elasticsearch[async]==8.6.2",
             "pymongo==4.3.3",
             "motor==3.1.1",
