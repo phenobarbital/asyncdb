@@ -110,7 +110,7 @@ setup(
         "faust-cchardet==2.1.18",
         "pandas==1.5.3",
         "xlrd==2.0.1",
-        "openpyxl==3.1.1",
+        "openpyxl==3.1.0",
         "lz4==4.3.2",
         "typing_extensions==4.5.0",
         "urllib3==1.26.14",
