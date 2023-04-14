@@ -183,7 +183,7 @@ setup(
             "aiomysql==0.1.1"
         ],
         "boto3": [
-            "botocore==1.29.84",
+            "botocore==1.29.113",
             "boto3==1.26.84",
             "aiobotocore==2.4.2",
             "aioboto3==11.0.0"
