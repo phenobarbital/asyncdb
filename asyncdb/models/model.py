@@ -8,14 +8,16 @@ import logging
 import traceback
 from collections.abc import Awaitable
 from dataclasses import _MISSING_TYPE, MISSING, is_dataclass, make_dataclass
-
+from numpy import int64
 from datamodel import BaseModel, Field
 from datamodel.base import Meta
 from datamodel.exceptions import ValidationError
-from datamodel.types import MODEL_TYPES
+from datamodel.types import MODEL_TYPES, DB_TYPES
 
 from asyncdb.exceptions import ConnectionMissing, NoDataFound, DriverError, ModelError, StatementError
 from asyncdb.utils.modules import module_exists
+
+DB_TYPES[int64] = 'bigint'
 
 
 def is_missing(value):
