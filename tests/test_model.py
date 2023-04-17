@@ -1,7 +1,8 @@
 import asyncio
+import pytest
 from asyncdb import AsyncDB
 from asyncdb.models import Model, Column
-
+from asyncdb.exceptions import NoDataFound
 
 class Airport(Model):
     iata: str = Column(primary_key=True)
@@ -12,10 +13,22 @@ class Airport(Model):
         name: str = 'airports'
 
 
+@pytest.fixture(scope="function")
+async def db():
+    params = {
+        "user": "troc_pgdata",
+        "password": "12345678",
+        "host": "127.0.0.1",
+        "port": "5432",
+        "database": "navigator_dev",
+        "DEBUG": True,
+    }
+    driver = AsyncDB("pg", params=params)
+    await start_example(driver)
+    yield driver
+    await end_example(driver)
+
 async def start_example(db):
-    """
-    Create the Table:
-    """
     async with await db.connection() as conn:
         table = """
         CREATE TABLE IF NOT EXISTS public.airports
@@ -33,21 +46,21 @@ async def start_example(db):
         result = await conn.execute(table)
         print(result)
 
-
 async def end_example(db):
-    """
-    DROP the Table:
-    """
     async with await db.connection() as conn:
         drop = "DROP TABLE IF EXISTS public.airports;"
         result = await conn.execute(drop)
         print(result)
 
 
-async def test_model(db):
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("db")
+async def test_airport_model(db):
     async with await db.connection() as conn:
         # test insertion
         Airport.Meta.set_connection(conn) # set the connection
+        pytest.assume(db.is_connected() is True)
+        pytest.assume(Airport.Meta.connection is not None)
         data = {
             "iata": 'MAD',
             "airport": 'Adolfo Suarez',
@@ -57,17 +70,21 @@ async def test_model(db):
         airport = Airport(**data)
         # airport.set_connection(conn)
         result = await airport.insert()
-        print('INSERT: ', result)
+        assert result.to_dict() == data
         # test Update:
         result.city = 'Madrid'
         result = await result.update()
-        print('UPDATE: ', result)
+        pytest.assume(result.city == 'Madrid')
         # test get (returns other row replacing current)
         madrid = await result.fetch(city='Madrid')
-        print('MADRID IS: ', madrid)
+        pytest.assume(madrid.city == 'Madrid')
         # test Delete:
         result = await madrid.delete()
-        print('DELETE: ', result)
+        assert result is not None
+        try:
+            madrid = await airport.fetch(city='Madrid')
+        except NoDataFound as ex:
+            assert ex is not None
         # test Upsert (insert or update)
         data = [
             ("ORD", "O'Hare International", "Chicago", "United States"),
@@ -80,26 +97,29 @@ async def test_model(db):
         for air in data:
             airport = Airport(*air)
             result = await airport.insert()
-            print('INSERT: ', result)
+            pytest.assume(isinstance(result, Model))
+            pytest.assume(hasattr(result, 'iata'))
         # test query (all)
         print(' === ITERATE OVER ALL === ')
         airports = await Airport.all()
         for airport in airports:
-            print(airport)
+            pytest.assume(isinstance(airport, Model))
+            pytest.assume(hasattr(airport, 'iata'))
         # test query (get one)
         print('= Test One: = ')
         paris = await Airport.get(city='Paris')
-        print('Paris: ', paris)
+        pytest.assume(paris.iata == 'CDG')
         # test query (get many)
         print(' == Test Many ==')
         moscow = await Airport.filter(city='Moscow')
         for airport in moscow:
-            print(airport)
+            pytest.assume(airport.country == 'Russia')
         # test query SELECT
         print('== Test Query SELECT =')
         us = await Airport.select("WHERE country = 'United States'")
         for airport in us:
-            print(airport)
+            pytest.assume(airport.country == 'United States')
+            pytest.assume(airport.iata in ('ORD', 'JFK'))
         # at end: bulk insert, bulk update and bulk remove
         print(' == TEST Bulk Insert == ')
         data = [
@@ -111,46 +131,24 @@ async def test_model(db):
         ]
         new_airports = await Airport.create(data)
         for airport in new_airports:
-            print(airport)
+            pytest.assume(isinstance(airport, Model))
+            pytest.assume(hasattr(airport, 'iata'))
         print('== Removing Many == ')
         deleted = await Airport.remove(country='Russia')
-        print(deleted)
+        pytest.assume(deleted is not None)
         # Updating many
         print('== Updating Many ==')
         updated_airports = await Airport.updating(_filter={"country": 'Brasil'}, country='Brazil')
-        print(updated_airports)
         for airport in updated_airports:
-            print(airport)
+            pytest.assume(isinstance(airport, Model))
+            pytest.assume(hasattr(airport, 'iata'))
         updated = {
             "country": 'Venezuela'
         }
         updated_airports = await Airport.updating(updated, iata='BBM', airport='Jacinto Lara', city='Barquisimeto')
         for airport in updated_airports:
-            print(airport)
+            pytest.assume(isinstance(airport, Model))
+            pytest.assume(hasattr(airport, 'iata'))
 
-
-if __name__ == "__main__":
-    params = {
-        "user": "troc_pgdata",
-        "password": "12345678",
-        "host": "127.0.0.1",
-        "port": "5432",
-        "database": "navigator_dev",
-        "DEBUG": True,
-    }
-    try:
-        loop = asyncio.get_event_loop()
-        driver = AsyncDB("pg", params=params, loop=loop)
-        loop.run_until_complete(
-            start_example(driver)
-        )
-        print('====')
-        loop.run_until_complete(
-            test_model(driver)
-        )
-    finally:
-        print('== DELETE TABLE ==')
-        loop.run_until_complete(
-            end_example(driver)
-        )
-        loop.stop()
+def pytest_sessionfinish(session, exitstatus):
+    asyncio.get_event_loop().close()

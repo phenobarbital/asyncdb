@@ -1,9 +1,8 @@
-import asyncio
-# import logging
-from navconfig.logging import logging, logger
 from typing import (
     Any
 )
+import asyncio
+import logging
 import uvloop
 
 

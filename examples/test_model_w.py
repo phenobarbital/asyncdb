@@ -67,7 +67,7 @@ class WidgetTemplate(Model):
     class Meta:
         driver = "pg"
         name = "template_widgets"
-        schema = "troc"
+        schema = "navigator"
         strict = True
 
 

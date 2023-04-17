@@ -59,7 +59,7 @@ async def test_epson(evt: asyncio.AbstractEventLoop):
         "filename": "docs/epson.sales/"
     }
     dt = delta(params=params, loop=evt)
-    filename = '/home/ubuntu/symbits/epson/files/sales/SELLTHRU_TROC_20200630_091802.TXT'
+    filename = '/home/ubuntu/symbits/epson/files/sales/SELLTHRU_TROC_2020.TXT'
     parquet_dir = Path(__file__).parent.parent.joinpath('docs', "epson.sales")
     parquet = parquet_dir.joinpath("20200630_091802.parquet")
     await dt.file_to_parquet(filename, parquet, factory='datatable', **args)
