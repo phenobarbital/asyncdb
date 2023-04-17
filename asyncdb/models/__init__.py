@@ -9,7 +9,7 @@ AsyncDB Models are based on python Dataclasses and type annotations.
 """
 from dataclasses import is_dataclass
 from datamodel import Field, Column
-from .model import Model, is_missing
+from .model import Model, is_missing, DB_TYPES
 
 
-__all__ = ('Field', 'Column', 'Model', 'is_dataclass', 'is_missing', )
+__all__ = ('Field', 'Column', 'Model', 'is_dataclass', 'is_missing', 'DB_TYPES')
