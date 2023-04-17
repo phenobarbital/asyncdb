@@ -37,14 +37,19 @@ async def create_model():
         }
     }
     p = AsyncDB("pg", params=params, **args)
-    query = await Model.makeModel(name='query_util', schema='troc', db=p)
+    query = await Model.makeModel(name='queries', schema='public', db=p)
     q = await query.filter(query_slug='walmart_stores')
     print(q, q[0].query_raw)
-    print(q[0].schema(type='sql'))
+    print(
+        q[0].schema()
+    )
     # also, another type:
     act = await Model.makeModel(name='activity_data', schema='att', fields=f, db=p)
     m = act()
-    print(m.schema(type='sql'))
+    print('Create Table:')
+    print(m.model(dialect='sql'))
+    print('JSON Schema: ')
+    print(m.schema())
 
 if __name__ == '__main__':
     loop.run_until_complete(create_model())
