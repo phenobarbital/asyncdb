@@ -260,6 +260,7 @@ setup(
             "pyspark==3.3.2",
             "oracledb==1.2.2",
             "hazelcast-python-client==5.1",
+            "duckdb==0.7.1",
             "deltalake==0.8.1"
         ]
     },
