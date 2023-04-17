@@ -38,7 +38,6 @@ class delta(InitDriver):
             params: dict = None,
             **kwargs
     ) -> None:
-        print('HERE >> ', params, kwargs)
         try:
             self.storage_options = params["storage_options"]
             del params["storage_options"]

@@ -93,7 +93,7 @@ setup(
     ],
     author=__author__,
     author_email=__author_email__,
-    packages=find_packages(exclude=["contrib", "docs", "tests"]),
+    packages=find_packages(exclude=["contrib", "docs", "tests", "examples"]),
     package_data={"asyncdb": ["py.typed"]},
     license=__license__,
     setup_requires=[
