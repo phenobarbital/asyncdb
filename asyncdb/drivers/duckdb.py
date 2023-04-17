@@ -247,8 +247,7 @@ class duckdb(SQLDriver, DBCursorBackend):
             params = None
         await self.valid_operation(sentence)
         try:
-            result = self._connection.execute(sentence, parameters=params)
-            if result:
+            if (result:= self._connection.execute(sentence, parameters=params)):
                 self._connection.commit()
         except Exception as err:
             error = f"Error on Execute: {err}"
@@ -280,7 +279,6 @@ class duckdb(SQLDriver, DBCursorBackend):
     executemany = execute_many
 
     async def __aenter__(self) -> Any:
-        print('ENTER >')
         try:
             await self.connection()
         except Exception as err:
