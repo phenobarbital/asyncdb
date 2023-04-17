@@ -69,7 +69,7 @@ extensions = [
 setup(
     name="asyncdb",
     version=__version__,
-    python_requires=">=3.9.16",
+    python_requires=">=3.9.14",
     url="https://github.com/phenobarbital/asyncdb",
     description=__description__,
     keywords=['asyncio', 'asyncpg', 'aioredis', 'aiomcache', 'cassandra'],
@@ -97,8 +97,9 @@ setup(
     package_data={"asyncdb": ["py.typed"]},
     license=__license__,
     setup_requires=[
-        "wheel==0.38.4",
+        "setuptools==67.6.1",
         "Cython==0.29.33",
+        "wheel==0.40.0"
     ],
     install_requires=[
         "numpy==1.24.2",
@@ -122,6 +123,7 @@ setup(
         "dateparser==1.1.7",
         "python-datamodel>=0.2.1",
         "aiosqlite>=0.18.0",
+        "pendulum==2.1.2"
     ],
     extras_require={
         "default": [

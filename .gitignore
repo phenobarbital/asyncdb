@@ -153,3 +153,4 @@ env/
 *.c
 asyncdb/utils/types.cpp
 asyncdb/exceptions/exceptions.c
+asyncdb/utils/types.cpp
