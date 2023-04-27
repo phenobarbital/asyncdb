@@ -114,7 +114,7 @@ setup(
         "openpyxl==3.1.0",
         "lz4==4.3.2",
         "typing_extensions==4.5.0",
-        "urllib3==1.26.14",
+        "urllib3==2.0.0",
         "charset-normalizer>=2.0.7",
         "ciso8601==2.3.0",
         "iso8601==1.1.0",
