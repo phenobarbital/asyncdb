@@ -121,7 +121,7 @@ class influx(InitDriver, ConnectionDSNBackend):
                 self._connection = InfluxDBClient.from_config_file(self._config_file)
             else:
                 params = {
-                    "timeout": self._timeout,
+                    "timeout": self._timeout * 1000,
                     "connection_pool_maxsize": 5,
                     "enable_gzip": True,
                     "debug": self._debug,
