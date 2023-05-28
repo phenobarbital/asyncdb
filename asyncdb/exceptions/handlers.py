@@ -51,7 +51,7 @@ async def shutdown(loop: asyncio.AbstractEventLoop, signal = None):
             f"Asyncio Shutdown Error: {ex}"
         ) from ex
     finally:
-        loop.stop()
+        loop.close()
 
 
 def default_exception_handler(loop: asyncio.AbstractEventLoop, context):
