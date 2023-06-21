@@ -164,7 +164,7 @@ setup(
             "jsonpath-rw-ext==1.2.2",
             "redis==4.5.5",
             "aioredis==2.0.1",
-            "hiredis==2.2.2",
+            "hiredis==2.2.3",
             "objectpath==0.6.1",
         ],
         "rethinkdb": [
@@ -185,10 +185,9 @@ setup(
             "aiomysql==0.1.1"
         ],
         "boto3": [
-            "botocore==1.29.84",
-            "boto3==1.26.84",
-            "aiobotocore==2.4.2",
-            "aioboto3==11.0.0"
+            "botocore==1.29.76",
+            "aiobotocore==2.5.0",
+            "aioboto3==11.2.0"
         ],
         "cassandra": [
             "cassandra-driver==3.25.0",
@@ -238,6 +237,7 @@ setup(
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
             "aioredis==2.0.1",
+            "redis==4.5.5",
             "objectpath==0.6.1",
             "rethinkdb==2.4.9",
             "aiopg==1.4.0",
@@ -261,7 +261,10 @@ setup(
             "oracledb==1.2.2",
             "hazelcast-python-client==5.1",
             "duckdb==0.8.1",
-            "deltalake==0.8.1"
+            "deltalake==0.8.1",
+            "botocore==1.29.76",
+            "aiobotocore==2.5.0",
+            "aioboto3==11.2.0"
         ]
     },
     tests_require=[
