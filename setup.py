@@ -109,7 +109,7 @@ setup(
         "uvloop==0.17.0",
         "asyncio==3.4.3",
         "faust-cchardet==2.1.18",
-        "pandas==1.5.3",
+        "pandas==2.0.2",
         "xlrd==2.0.1",
         "openpyxl==3.1.0",
         "lz4==4.3.2",
