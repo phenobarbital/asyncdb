@@ -185,10 +185,9 @@ setup(
             "aiomysql==0.1.1"
         ],
         "boto3": [
-            "botocore==1.29.84",
-            "boto3==1.26.84",
-            "aiobotocore==2.4.2",
-            "aioboto3==11.0.0"
+            "botocore==1.29.76",
+            "aiobotocore==2.5.0",
+            "aioboto3==11.2.0"
         ],
         "cassandra": [
             "cassandra-driver==3.25.0",
@@ -262,7 +261,10 @@ setup(
             "oracledb==1.2.2",
             "hazelcast-python-client==5.1",
             "duckdb==0.7.1",
-            "deltalake==0.8.1"
+            "deltalake==0.8.1",
+            "botocore==1.29.76",
+            "aiobotocore==2.5.0",
+            "aioboto3==11.2.0"
         ]
     },
     tests_require=[
