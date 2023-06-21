@@ -10,17 +10,12 @@ TODO:
 import asyncio
 import time
 from typing import Any, Union
-
-import aioredis
-import uvloop
+from redis import asyncio as aioredis
 from aioredis.exceptions import AuthenticationError, RedisError
 
 from asyncdb.exceptions import ConnectionTimeout, DriverError
 
 from .abstract import BaseDriver, BasePool
-
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-uvloop.install()
 
 
 class redisPool(BasePool):
@@ -54,6 +49,7 @@ class redisPool(BasePool):
                 encoding=self._encoding,
                 decode_responses=True,
                 max_connections=self._max_queries,
+                health_check_interval=60.0,
                 **kwargs,
             )
             self._connection = aioredis.Redis(connection_pool=self._pool)

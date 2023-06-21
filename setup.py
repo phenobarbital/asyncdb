@@ -164,7 +164,7 @@ setup(
             "jsonpath-rw-ext==1.2.2",
             "redis==4.5.5",
             "aioredis==2.0.1",
-            "hiredis==2.2.2",
+            "hiredis==2.2.3",
             "objectpath==0.6.1",
         ],
         "rethinkdb": [
@@ -238,6 +238,7 @@ setup(
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
             "aioredis==2.0.1",
+            "redis==4.5.5",
             "objectpath==0.6.1",
             "rethinkdb==2.4.9",
             "aiopg==1.4.0",
