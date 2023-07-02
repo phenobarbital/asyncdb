@@ -544,34 +544,34 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         """
         Closing a Connection
         """
-        try:
-            if self._connection:
+        if self._connection:
+            try:
                 if not self._connection.is_closed():
                     self._logger.debug(
                         f"Closing Connection, id: {self._connection.get_server_pid()}"
                     )
-                    try:
-                        if self._pool:
-                            await self._pool.pool().release(self._connection)
-                        else:
-                            await self._connection.close(timeout=timeout)
-                    except InterfaceError as err:
-                        raise ProviderError(
-                            f"AsyncPg: Closing Error: {err}"
-                        ) from err
-                    except Exception as err:
-                        await self._connection.terminate()
-                        self._connection = None
-                        raise ProviderError(
-                            f"Connection Error, Terminated: {err}"
-                        ) from err
-        except Exception as err:
-            raise ProviderError(
-                f"Close Error: {err}"
-            ) from err
-        finally:
-            self._connection = None
-            self._connected = False
+                    if self._pool is not None:
+                        await self._pool.pool().release(self._connection)
+                    else:
+                        await self._connection.close(timeout=timeout)
+            except TypeError:
+                pass
+            except InterfaceError as err:
+                raise ProviderError(
+                    f"AsyncPg: Closing Error: {err}"
+                ) from err
+            except Exception as err:
+                try:
+                    await self._connection.terminate()
+                    self._connection = None
+                    raise ProviderError(
+                        f"Connection Error, Terminated: {err}"
+                    ) from err
+                except TypeError:
+                    pass
+            finally:
+                self._connection = None
+                self._connected = False
 
     disconnect = close
 
