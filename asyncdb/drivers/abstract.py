@@ -11,7 +11,6 @@ from typing import (
     Any
 )
 from collections.abc import Iterable
-import uvloop
 from asyncdb.exceptions import EmptyStatement
 from asyncdb.interfaces import (
     PoolBackend,
@@ -21,10 +20,6 @@ from asyncdb.interfaces import (
     CursorBackend
 )
 from .outputs import OutputFactory
-
-# install uvloop and set as default loop for asyncio.
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-uvloop.install()
 
 
 class BasePool(PoolBackend, ConnectionDSNBackend):
