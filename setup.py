@@ -134,7 +134,7 @@ setup(
             "cassandra-driver==3.25.0",
             "rethinkdb==2.4.9",
             "influxdb==5.3.1",
-            "influxdb-client==1.36.1",
+            "influxdb-client[async]==1.36.1",
             "pymssql==2.2.7",
             "redis==4.5.5",
             "duckdb==0.7.1",
@@ -194,7 +194,7 @@ setup(
         ],
         "influxdb": [
             "influxdb==5.3.1",
-            "influxdb-client==1.36.1",
+            "influxdb-client[async]==1.36.1",
         ],
         "odbc": [
             "aioodbc==0.3.3",
