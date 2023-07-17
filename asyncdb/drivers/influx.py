@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
+from typing import (
+    Any,
+    Union
+)
 import asyncio
 import json
 import time
 import logging
 from dataclasses import is_dataclass, asdict
 from functools import partial
-from typing import (
-    Any,
-    Union
-)
+from urllib3 import Retry
+from datetime import datetime, timezone
 from datamodel.parsers.json import json_decoder
 from influxdb_client import InfluxDBClient, Dialect, BucketRetentionRules
 from influxdb_client.client.write_api import ASYNCHRONOUS, PointSettings
+
+from influxdb_client import Point
+from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
+
+
 from influxdb_client.client.exceptions import InfluxDBError
 from influxdb_client.client.flux_table import FluxStructureEncoder
 from influxdb_client.rest import _BaseRESTClient
@@ -33,11 +40,15 @@ class WriteCallback:
 
     def error(self, conf: tuple[str, str, str], data: str, exception: InfluxDBError):
         """Unsuccessfully writen batch."""
-        logging.error(f"Cannot write batch: {conf}, data: {data} due: {exception}")
+        logging.error(
+            f"Cannot write batch: {conf}, data: {data} due: {exception}"
+        )
 
     def retry(self, conf: tuple[str, str, str], data: str, exception: InfluxDBError):
         """Retryable error."""
-        logging.error(f"Retryable error occurs for batch: {conf}, data: {data} retry: {exception}")
+        logging.error(
+            f"Retryable error occurs for batch: {conf}, data: {data} retry: {exception}"
+        )
 
 
 class influx(InitDriver, ConnectionDSNBackend):
@@ -55,7 +66,9 @@ class influx(InitDriver, ConnectionDSNBackend):
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
         self._version: str = None
         self._dsn = "{protocol}://{host}:{port}"
-        self._client = None
+        self._client = InfluxDBClientAsync
+        self._enable_gzip = kwargs.get('enable_gzip', True)
+        self._retries = Retry(connect=5, read=2, redirect=5)
         try:
             self._debug = kwargs['debug']
         except KeyError:
@@ -108,7 +121,13 @@ class influx(InitDriver, ConnectionDSNBackend):
         # callback
         self._callback = WriteCallback
         # dialect for export to csv
-        self._dialect = Dialect(header=True, delimiter=",", comment_prefix="#", annotations=[], date_time_format="RFC3339")
+        self._dialect = Dialect(
+            header=True,
+            delimiter=",",
+            comment_prefix="#",
+            annotations=[],
+            date_time_format="RFC3339"
+        )
 
     async def connection(self):
         """
@@ -118,31 +137,38 @@ class influx(InitDriver, ConnectionDSNBackend):
         self._connected = False
         try:
             if self._config_file:
-                self._connection = InfluxDBClient.from_config_file(self._config_file)
+                self._client = partial(
+                    InfluxDBClientAsync.from_config_file, self._config_file
+                )
+                self._connection = InfluxDBClient.from_config_file(
+                    self._config_file,
+                    enable_gzip=self._enable_gzip
+                )
             else:
                 params = {
                     "timeout": self._timeout * 1000,
                     "connection_pool_maxsize": 5,
                     "enable_gzip": True,
                     "debug": self._debug,
-                    "org": self._org
+                    "org": self._org,
+                    "enable_gzip": self._enable_gzip
                 }
                 if self._dsn:
-                    print("URL ", self._dsn)
                     params['url'] = self._dsn
                 else:
                     # fallback to host
                     params['url'] = self.params["host"]
                 if self._token:
                     params['token'] = self._token
+                self._client = partial(
+                    InfluxDBClientAsync, **params
+                )
                 self._connection = InfluxDBClient(
                     **params
                 )
             # checking if works:
-            self._version = self._connection.version()
             try:
-                if self._connection.ready():
-                    self._client = self._connection.api_client
+                self._version = self._connection.version()
             except Exception as err:
                 logging.exception(
                     f'Error creating REST client: {err}'
@@ -190,6 +216,7 @@ class influx(InitDriver, ConnectionDSNBackend):
         finally:
             self._connection = None
             self._connected = False
+            self._client = None
 
     async def test_connection(self):  # pylint: disable=W0221
         error = None
@@ -202,8 +229,18 @@ class influx(InitDriver, ConnectionDSNBackend):
             finally:
                 return [result, error]  # pylint: disable=W0150
 
-    def api_client(self):
-        return self._client
+    def api_client(self, client):
+        return client.api_client
+
+    def to_isoformat(self, dt: datetime) -> datetime:
+        dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat(timespec='seconds') + 'Z'
+
+    def point(self, measurement: str, tag: list, field: list, time: Union[str, int] = None) -> Point:
+        point = Point(measurement).tag(*tag).field(*field)
+        if time is not None:
+            point.time(time)
+        return point
 
     async def ping(self):
         """ping.
@@ -212,7 +249,8 @@ class influx(InitDriver, ConnectionDSNBackend):
         Returns:
             bool: a boolean with the response of the instance.
         """
-        return self._connection.ping()
+        async with self._client() as client:
+            return await client.ping()
 
     async def health(self):
         """health.
@@ -258,7 +296,7 @@ class influx(InitDriver, ConnectionDSNBackend):
         Returns:
             dict: version information.
         """
-        return self._version if self._version is not None else self._connection.version()
+        return self._version
 
     async def list_buckets(self):
         buckets_api = self._connection.buckets_api()
@@ -306,7 +344,7 @@ class influx(InitDriver, ConnectionDSNBackend):
     async def use(self, database: str):
         pass
 
-    async def write(self, data: list, bucket: str, **kwargs):
+    async def write_data(self, data: list, bucket: str, **kwargs):
         """
             Write data into InfluxDB.
         """
@@ -356,6 +394,58 @@ class influx(InitDriver, ConnectionDSNBackend):
                 f"InfluxDB: Error on Write: {err!s}"
             ) from err
 
+    async def write(self, data: Union[list, dict], bucket: str, **kwargs):
+        """
+            Write data into InfluxDB (async version).
+        """
+        try:
+            result = None
+            async with self._client() as client:
+                writer = client.write_api(point_settings=self._settings)
+                if isinstance(data, pandas.core.frame.DataFrame):
+                    # need the index and the name of the measurement
+                    _name = kwargs.get('name', None)
+                    idx = kwargs.get('index', None)
+                    result = await writer.write(
+                        bucket=bucket,
+                        org=self._org,
+                        data_frame_measurement_name=_name,
+                        data_frame_tag_columns=idx,
+                        record=data,
+                        **kwargs
+                    )
+                elif is_dataclass(data):
+                    name = kwargs['name']
+                    tag_keys = list(asdict(data).keys())
+                    field_keys = kwargs['fields']
+                    try:
+                        time_keys = kwargs['time']
+                    except KeyError:
+                        time_keys = {}
+                    result = await writer.write(
+                        bucket=bucket,
+                        org=self._org,
+                        record_measurement_name=name,
+                        record_tag_keys=tag_keys,
+                        record_field_keys=field_keys,
+                        **time_keys
+                    )
+                else:
+                    result = await writer.write(
+                        bucket=bucket,
+                        org=self._org,
+                        record=data
+                    )
+                return result
+        except RuntimeError as err:
+            raise DriverError(
+                f"InfluxDB: Runtime Error: {err!s}"
+            ) from err
+        except Exception as err:
+            raise Exception(
+                f"InfluxDB: Error on Write: {err!s}"
+            ) from err
+
     save = write
 
     async def query(self, sentence: str, frmt: str = 'native', params: dict = None, **kwargs):
@@ -369,44 +459,49 @@ class influx(InitDriver, ConnectionDSNBackend):
         await self.valid_operation(sentence)
         try:
             self.start_timing()
-            query_api = self._connection.query_api()
-            if frmt == 'pandas':
-                reader = partial(query_api.query_data_frame, query=sentence, params=params, **kwargs)
-                # self._result = query_api.query_data_frame(sentence, params=params)
-            elif frmt == 'csv':
-                reader = partial(query_api.query_csv, query=sentence, params=params, dialect=self._dialect, **kwargs)
-                # self._result = query_api.query_csv(sentence, params=params, dialect=self._dialect)
-            else:
-                reader = partial(query_api.query, query=sentence, params=params, **kwargs)
-                # self._result = query_api.query(sentence, params=params)
-            self._result = await self._loop.run_in_executor(None, reader)
-            if self._result is None:
-                raise NoDataFound("InfluxDB: No Data was Found")
-            if frmt == 'json':
-                self._result = json.dumps(self._result, cls=FluxStructureEncoder)
-            elif frmt == 'recordset':
-                results = []
-                for table in self._result:
-                    for record in table.records:
-                        try:
-                            row = {
-                                "measurement": record.get_measurement(),
-                                "time": record.get_time(),
-                                **record.values
-                            }
-                        except KeyError:
-                            row = {
-                                **record.values
-                            }
-                            if json_output:
-                                for k, v in row.items():
-                                    if k in json_output:
-                                        try:
-                                            row[k] = json_decoder(v)
-                                        except (ValueError, TypeError):
-                                            pass
-                        results.append(row)
-                self._result = results
+            async with self._client() as client:
+                query_api = client.query_api()
+                if frmt == 'flux':
+                    reader = partial(query_api.query_stream, query=sentence, params=params, **kwargs)
+                elif frmt == 'pandas':
+                    reader = partial(query_api.query_data_frame, query=sentence, params=params, **kwargs)
+                elif frmt == 'csv':
+                    reader = partial(query_api.query_csv, query=sentence, params=params, dialect=self._dialect, **kwargs)
+                else:
+                    reader = partial(query_api.query, query=sentence, params=params, **kwargs)
+                result = await reader()
+                if result is None:
+                    raise NoDataFound(
+                        "InfluxDB: No Data was Found"
+                    )
+                if frmt == 'json':
+                    self._result = json.dumps(result, cls=FluxStructureEncoder)
+                elif frmt == 'recordset':
+                    results = []
+                    for table in result:
+                        for record in table.records:
+                            try:
+                                row = {
+                                    "measurement": record.get_measurement(),
+                                    "time": record.get_time(),
+                                    **record.values
+                                }
+                            except KeyError:
+                                row = {
+                                    **record.values
+                                }
+                                if json_output:
+                                    for k, v in row.items():
+                                        if k in json_output:
+                                            try:
+                                                row[k] = json_decoder(v)
+                                            except (ValueError, TypeError):
+                                                pass
+                            results.append(row)
+                    self._result = results
+                else:
+                    # returning a FluxTable
+                    self._result = [r for r in result]
         except NoDataFound:
             raise
         except RuntimeError as err:
@@ -423,17 +518,24 @@ class influx(InitDriver, ConnectionDSNBackend):
         await self.valid_operation(sentence)
         try:
             self.start_timing()
-            query_api = self._connection.query_api()
-            if frmt == 'pandas':
-                result = query_api.query_data_frame(sentence, params=params, **kwargs)
-            elif frmt == 'csv':
-                result = query_api.query_csv(sentence, params=params, dialect=self._dialect, **kwargs)
-            else:
-                result = query_api.query(sentence, params=params, **kwargs)
+            result = None
+            async with self._client() as client:
+                query_api = client.query_api()
+                if frmt == 'flux':
+                    reader = partial(query_api.query_stream, query=sentence, params=params, **kwargs)
+                elif frmt == 'pandas':
+                    reader = partial(query_api.query_data_frame, query=sentence, params=params, **kwargs)
+                elif frmt == 'csv':
+                    reader = partial(query_api.query_csv, query=sentence, params=params, dialect=self._dialect, **kwargs)
+                else:
+                    reader = partial(query_api.query, query=sentence, params=params, **kwargs)
+                result = await reader()
             if not result:
-                raise NoDataFound("InfluxDB: No Data was Found")
+                raise NoDataFound(
+                    "InfluxDB: No Data was Found"
+                )
             if frmt == 'json':
-                result = json.dumps(self._result, cls=FluxStructureEncoder)
+                result = json.dumps(result, cls=FluxStructureEncoder)
             self.generated_at()
             return result
         except NoDataFound:
@@ -443,11 +545,37 @@ class influx(InitDriver, ConnectionDSNBackend):
                 f"Runtime Error: {err}"
             ) from err
         except Exception as err:
-            raise Exception(
+            raise DriverError(
                 f"Error on Query: {err}"
             ) from err
 
     fetch_one = fetch_all
+
+    async def delete(self, bucket: str, predicate: str = None, **kwargs):
+        """delete.
+
+            Delete Records from Bucket.
+        Args:
+            bucket (str): bucket name
+            *args: any optional arguments to Delete API.
+            predicate (str, optional): any optional predicate. Defaults to None.
+        """
+        try:
+            async with self._client() as client:
+                successfully = await client.delete_api().delete(
+                    bucket=bucket,
+                    predicate=predicate,
+                    **kwargs
+                )
+                return f'Deleted?: {successfully}'
+        except RuntimeError as err:
+            raise DriverError(
+                f"Runtime Error: {err}"
+            ) from err
+        except Exception as err:
+            raise DriverError(
+                f"Error on Query: {err}"
+            ) from err
 
     async def execute(self, sentence: str, method: str = "GET", **kwargs):  # pylint: disable=W0221
         """Execute a transaction.

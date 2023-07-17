@@ -3,7 +3,10 @@ import logging
 from .exceptions import DriverError
 from .interfaces import ConnectionBackend, PoolBackend
 from .utils.modules import module_exists
+from .utils import install_uvloop
 
+
+install_uvloop()
 
 class AsyncPool:
     """
