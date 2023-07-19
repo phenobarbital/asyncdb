@@ -109,7 +109,7 @@ setup(
         "uvloop==0.17.0",
         "asyncio==3.4.3",
         "faust-cchardet==2.1.18",
-        "pandas==1.5.3",
+        "pandas==2.0.3",
         "xlrd==2.0.1",
         "openpyxl==3.1.2",
         "lz4==4.3.2",
@@ -207,7 +207,7 @@ setup(
             "oracledb==1.2.2"
         ],
         "sqlalchemy": [
-            "sqlalchemy==2.0.4",
+            "sqlalchemy[asyncio]==2.0.19",
         ],
         "elasticsearch": [
             "elasticsearch[async]==8.6.2",
@@ -248,7 +248,7 @@ setup(
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.35",
-            "sqlalchemy==1.4.46",
+            "sqlalchemy[asyncio]==2.0.19",
             "elasticsearch[async]==8.6.2",
             "pymongo==4.3.3",
             "motor==3.1.1",
