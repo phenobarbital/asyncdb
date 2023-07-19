@@ -223,7 +223,7 @@ setup(
             "aiocouch==2.2.2"
         ],
         "hazelcast": [
-            "hazelcast-python-client==5.1"
+            "hazelcast-python-client==5.3.0"
         ],
         "all": [
             "dask==2023.3.0",
@@ -259,7 +259,7 @@ setup(
             "aiomysql==0.1.1",
             "pyspark==3.3.2",
             "oracledb==1.2.2",
-            "hazelcast-python-client==5.1",
+            "hazelcast-python-client==5.3.0",
             "duckdb==0.8.1",
             "deltalake==0.8.1",
             "botocore==1.29.76",
