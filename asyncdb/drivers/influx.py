@@ -206,9 +206,9 @@ class influx(InitDriver, ConnectionDSNBackend):
                     self._connection.close()
                 except Exception as err:
                     self._connection = None
-                    raise DriverError(
-                        message=f"InfluxDB: Connection Error, Terminated: {err!s}"
-                    ) from err
+                    self._logger.warning(
+                        f"InfluxDB: Connection Error, Terminated: {err!s}"
+                    )
         except Exception as err:
             raise DriverError(
                 message=f"InfluxDB: Close Error: {err!s}"
