@@ -17,6 +17,13 @@ async def test_connection(driver, params, event_loop):
     print(result, '/ Error: ', error)
     await db.close()
 
+async def test_context(driver, params, event_loop):
+    db = AsyncDB(driver, params=params, loop=event_loop)
+    async with await db.connection() as conn:
+        print('IS CONNECTED> ', db.is_connected() is True)
+        result = await db.ping()
+        print('PING > ', result)
+
 async def test_data(driver, params, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
     await db.connection()
@@ -90,6 +97,9 @@ if __name__ == '__main__':
         )
         loop.run_until_complete(
             test_data(DRIVER, params=p, event_loop=loop)
+        )
+        loop.run_until_complete(
+            test_context(DRIVER, params=p, event_loop=loop)
         )
     except Exception as err:
         print(err)
