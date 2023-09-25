@@ -447,6 +447,7 @@ class influx(InitDriver, ConnectionDSNBackend):
             ) from err
 
     save = write
+    copy = write
 
     async def query(self, sentence: str, frmt: str = 'native', params: dict = None, **kwargs):
         self._result = None
