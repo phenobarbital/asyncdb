@@ -10,7 +10,6 @@ import logging
 import asyncio
 from typing import (
     Any,
-    List,
     Union
 )
 from ssl import PROTOCOL_TLSv1
@@ -55,7 +54,10 @@ def pandas_factory(colnames, rows):
 
 
 def record_factory(colnames, rows):
-    return Recordset(result=[dict(zip(colnames, values)) for values in rows], columns=colnames)
+    return Recordset(
+        result=[dict(zip(colnames, values)) for values in rows],
+        columns=colnames
+    )
 
 
 class cassandra(InitDriver):
