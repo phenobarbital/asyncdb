@@ -225,6 +225,11 @@ setup(
         "hazelcast": [
             "hazelcast-python-client==5.3.0"
         ],
+        "scylla": [
+            "acsylla==0.1.8b0",
+            "scylla_driver==3.26.2",
+            "cqlsh==6.1.2"
+        ],
         "all": [
             "dask==2023.3.0",
             "python-datatable==1.1.3",

@@ -214,12 +214,7 @@ class ConnectionBackend(ABC):
             self._timeout = kwargs["timeout"]
         except KeyError:
             self._timeout = 600
-        try:
-            self._logger = logging.getLogger(name=__name__)
-        except Exception as err:
-            self._logger = None
-            logging.exception(err)
-            raise
+        self._logger = logging.getLogger(f"DB.{self.__class__.__name__}")
 
     @abstractmethod
     async def connection(self) -> Any:
@@ -301,8 +296,14 @@ class ConnectionBackend(ABC):
         # clean up anything you need to clean up
         try:
             await asyncio.wait_for(self.close(), timeout=20)
+        except RuntimeError as e:
+            self._logger.error(
+                str(e)
+            )
         except Exception as err:
-            self._logger.exception(f'Closing Error: {err}')
+            self._logger.exception(
+                f'Closing Error: {err}'
+            )
             raise
 
     def get_executor(self, executor = 'thread', max_workers: int = 2) -> Any:
@@ -565,6 +566,8 @@ class CursorBackend(ABC):
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         try:
             return await self._provider.close()
+        except RuntimeError as e:
+            logging.error(str(e))
         except DriverError as err:
             logging.exception(err)
             raise
