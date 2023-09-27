@@ -406,6 +406,10 @@ class pgPool(BasePool):
                     )
                 # # until end, close the pool correctly:
                 self._pool.terminate()
+            except asyncio.TimeoutError as e:
+                self._logger.warning(
+                    f"Close timed out: {e}"
+                )
             except Exception as err:
                 error = f"Pool Exception: {err.__class__.__name__}: {err}"
                 print(f"Pool Error: {error}")
@@ -1016,21 +1020,21 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             return await self._cursor.forward(number)
         except Exception as err:
             error = f"Error forward Cursor: {err}"
-            raise Exception(error) from err
+            raise DriverError(error) from err
 
     async def fetch(self, number=1):
         try:
             return await self._cursor.fetch(number)
         except Exception as err:
             error = f"Error Fetch Cursor: {err}"
-            raise Exception(error) from err
+            raise DriverError(error) from err
 
     async def fetchrow(self):
         try:
             return await self._cursor.fetchrow()
         except Exception as err:
             error = f"Error Fetchrow Cursor: {err}"
-            raise Exception(error) from err
+            raise DriverError(error) from err
 
 ## Cursor Iterator Context
     def __aiter__(self):
@@ -1077,7 +1081,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 f"Error on Copy, Invalid Statement Error: {ex}"
             ) from ex
         except Exception as ex:
-            raise ProviderError(
+            raise DriverError(
                 f"Error on Table Copy: {ex}"
             ) from ex
 
@@ -1116,7 +1120,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 f"Error on Copy, Invalid Statement Error: {ex}"
             ) from ex
         except Exception as ex:
-            raise Exception(
+            raise DriverError(
                 f"Error on Copy to Table {ex}"
             ) from ex
 
@@ -1135,7 +1139,10 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             await self._transaction.commit()
         try:
             result = await self._connection.copy_records_to_table(
-                table_name=table, schema_name=schema, columns=columns, records=source
+                table_name=table,
+                schema_name=schema,
+                columns=columns,
+                records=source
             )
             return result
         except UndefinedTableError as ex:
@@ -1155,15 +1162,15 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 f"Error on Copy, Constraint Violated: {ex}"
             ) from ex
         except InterfaceError as ex:
-            raise ProviderError(
+            raise DriverError(
                 f"Error on Copy into Table Function: {ex}"
             ) from ex
         except (RuntimeError, PostgresError) as ex:
-            raise ProviderError(
+            raise DriverError(
                 f"Postgres Error on Copy into Table: {ex}"
             ) from ex
         except Exception as ex:
-            raise Exception(
+            raise DriverError(
                 f"Error on Copy into Table: {ex}"
             ) from ex
 
@@ -1219,7 +1226,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 else:
                     return False
             except Exception as err:
-                raise ProviderError(
+                raise DriverError(
                     f"Error in Object Creation: {err!s}"
                 ) from err
         else:
@@ -1321,7 +1328,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 message=f"Constraint Error: {err!r}",
             ) from err
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
@@ -1362,7 +1369,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             result = await self._connection.execute(_delete)
             return f'DELETE {result}: {_filter!s}'
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
@@ -1442,7 +1449,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     setattr(_model, f, val)
                 return _model
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
@@ -1481,7 +1488,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             result = await self._connection.fetchrow(_get)
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model Fetch over {table}: {e}"
             ) from e
 
@@ -1519,7 +1526,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             result = await self._connection.fetch(_get)
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model GET over {table}: {e}"
             ) from e
 
@@ -1530,7 +1537,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         try:
             model = kwargs['_model']
         except KeyError as e:
-            raise ProviderError(
+            raise DriverError(
                 f'Missing Model for SELECT {kwargs!s}'
             ) from e
         try:
@@ -1554,7 +1561,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             result = await self._connection.fetch(_get)
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model SELECT over {table}: {e}"
             ) from e
 
@@ -1592,7 +1599,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             result = await self._connection.fetchrow(_get)
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model GET over {table}: {e}"
             ) from e
 
@@ -1617,7 +1624,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             result = await self._connection.fetch(_all)
             return result
         except Exception as e:
-            raise ProviderError(
+            raise DriverError(
                 f"Error: Model All over {table}: {e}"
             ) from e
 
@@ -1647,7 +1654,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             result = await self._connection.execute(_delete)
             return f'DELETE {result}: {_filter!s}'
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
@@ -1658,7 +1665,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         try:
             model = kwargs['_model']
         except KeyError as e:
-            raise ProviderError(
+            raise DriverError(
                 f'Missing Model for SELECT {kwargs!s}'
             ) from e
         try:
@@ -1706,6 +1713,6 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             if result := await self._connection.fetch(_all):
                 return [model(**dict(r)) for r in result]
         except Exception as err:
-            raise ProviderError(
+            raise DriverError(
                 message=f"Error on Insert over table {model.Meta.name}: {err!s}"
             ) from err
