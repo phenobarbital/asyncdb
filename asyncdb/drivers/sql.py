@@ -65,6 +65,10 @@ class SQLDriver(BaseDBDriver):
                 await asyncio.wait_for(
                     self._connection.close(), timeout=timeout
                 )
+        except asyncio.TimeoutError as e:
+            self._logger.warning(
+                f"Close timed out: {e}"
+            )
         except Exception as err:
             raise DriverError(
                 message=f"{__name__!s}: Closing Error: {err!s}"
