@@ -296,6 +296,10 @@ class ConnectionBackend(ABC):
         # clean up anything you need to clean up
         try:
             await asyncio.wait_for(self.close(), timeout=20)
+        except asyncio.TimeoutError as e:
+            self._logger.warning(
+                f"Close timed out: {e}"
+            )
         except RuntimeError as e:
             self._logger.error(
                 str(e)
