@@ -1332,7 +1332,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
-    async def _delete_(self, _model: Model, **kwargs):  # pylint: disable=W0613
+    async def _delete_(self, _model: Model, _filter: dict = None, **kwargs):  # pylint: disable=W0613
         """
         delete a row from model.
         """
@@ -1345,7 +1345,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         except AttributeError:
             table = _model.__name__
         source = []
-        _filter = {}
+        if not _filter:
+            _filter = {}
         n = 1
         fields = _model.columns()
         for _, field in fields.items():
@@ -1361,9 +1362,16 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             )
             n += 1
             if pk := self._get_attribute(field, value, attr='primary_key'):
+                if column in _filter:
+                    # already this value on delete:
+                    continue
                 _filter[column] = pk
         try:
             condition = self._where(fields, **_filter)
+            if not condition:
+                raise DriverError(
+                    f"Avoid DELETE without WHERE conditions: {_filter}"
+                )
             _delete = f"DELETE FROM {table} {condition};"
             self._logger.debug(f'DELETE: {_delete}')
             result = await self._connection.execute(_delete)
