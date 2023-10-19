@@ -1714,5 +1714,63 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 return [model(**dict(r)) for r in result]
         except Exception as err:
             raise DriverError(
-                message=f"Error on Insert over table {model.Meta.name}: {err!s}"
+                message=f"Error on UPDATE over table {model.Meta.name}: {err!s}"
+            ) from err
+
+    async def _deleting_(self, *args, _filter: dict = None, **kwargs):
+        """
+        Deleting records using Model.
+        """
+        try:
+            model = kwargs['_model']
+        except KeyError as e:
+            raise DriverError(
+                f'Missing Model for SELECT {kwargs!s}'
+            ) from e
+        try:
+            schema = ''
+            sc = model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        fields = model.columns(model)
+        if _filter is None:
+            if args:
+                _filter = args[0]
+        cols = []
+        source = []
+        new_cond = {}
+        n = 1
+        for name, field in fields.items():
+            try:
+                val = kwargs[name]
+            except (KeyError, AttributeError):
+                continue
+            ## getting the value of column:
+            value = self._get_value(field, val)
+            source.append(value)
+            if name in _filter:
+                new_cond[name] = value
+            cols.append("{} = {}".format(name, "${}".format(n)))  # pylint: disable=C0209
+            n += 1
+        try:
+            condition = self._where(fields, **_filter)
+            _delete = f"DELETE FROM {table} {condition}"
+            self._logger.debug(f'DELETE: {_delete}')
+            stmt = await self._connection.prepare(_delete)
+            result = await stmt.fetchrow(*source, timeout=2)
+            self._logger.debug(stmt.get_statusmsg())
+            print(f'DELETE {result}: {_filter!s}')
+
+            new_conditions = {**_filter, **new_cond}
+            condition = self._where(fields, **new_conditions)
+
+            _all = f"SELECT * FROM {table} {condition}"
+            if result := await self._connection.fetch(_all):
+                return [model(**dict(r)) for r in result]
+        except Exception as err:
+            raise DriverError(
+                message=f"Error on DELETE over table {model.Meta.name}: {err!s}"
             ) from err

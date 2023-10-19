@@ -320,6 +320,31 @@ class Model(BaseModel):
                 f"Error Updating Table {cls.Meta.name}: {err}"
             ) from err
 
+    @classmethod
+    async def deleting(cls, *args, _filter: dict = None, **kwargs):
+        if not cls.Meta.connection:
+            raise ConnectionMissing(
+                f"Missing Connection for Model: {cls}"
+            )
+        try:
+            result = await cls.Meta.connection._deleting_(
+                _model=cls, _filter=_filter, *args, **kwargs
+            )
+            if result:
+                return result
+            else:
+                return []
+        except (AttributeError, StatementError) as err:
+            raise StatementError(
+                f"Error on Attribute {cls.Meta.name}: {err}"
+            ) from err
+        except DriverError:
+            raise
+        except Exception as err:
+            print(traceback.format_exc())
+            raise ModelError(
+                f"Error Updating Table {cls.Meta.name}: {err}"
+            ) from err
 
     @classmethod
     async def select(cls, *args, **kwargs):
