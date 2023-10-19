@@ -157,7 +157,7 @@ class Model(BaseModel):
                 f"Error on UPDATE {self.Meta.name}: {err}"
             ) from err
 
-    async def delete(self, **kwargs):
+    async def delete(self, _filter: dict = None, **kwargs):
         """
         Deleting a row Model based on Primary Key
         """
@@ -169,6 +169,7 @@ class Model(BaseModel):
         try:
             result = await self.Meta.connection._delete_(
                 _model=self,
+                _filter=_filter,
                 **kwargs
             )
             return result
