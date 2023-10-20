@@ -113,7 +113,7 @@ setup(
         "xlrd==2.0.1",
         "openpyxl==3.1.2",
         "lz4==4.3.2",
-        "typing_extensions==4.5.0",
+        "typing_extensions==4.8.0",
         "urllib3==1.26.14",
         "charset-normalizer>=2.0.7",
         "ciso8601==2.3.0",
