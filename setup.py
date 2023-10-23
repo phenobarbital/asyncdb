@@ -105,11 +105,11 @@ setup(
         "numpy==1.24.2",
         "cryptography==37.0.4",
         "aiohttp==3.8.5",
-        "asyncpg==0.27.0",
-        "uvloop==0.17.0",
+        "asyncpg==0.28.0",
+        "uvloop==0.19.0",
         "asyncio==3.4.3",
         "faust-cchardet==2.1.18",
-        "pandas==2.0.3",
+        "pandas==2.1.1",
         "xlrd==2.0.1",
         "openpyxl==3.1.2",
         "lz4==4.3.2",
@@ -175,7 +175,7 @@ setup(
             "psycopg-binary>=3.1.8",
         ],
         "postgresql": [
-            "asyncpg==0.27.0",
+            "asyncpg==0.28.0",
         ],
         "mysql": [
             "asyncmy==0.2.7",
