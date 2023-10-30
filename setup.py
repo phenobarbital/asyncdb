@@ -120,7 +120,7 @@ setup(
         "iso8601==1.1.0",
         "pgpy==0.6.0",
         "python-magic==0.4.27",
-        "dateparser==1.1.7",
+        "dateparser==1.1.8",
         "python-datamodel>=0.2.1",
         "aiosqlite>=0.18.0",
         "pendulum==2.1.2"
@@ -131,7 +131,7 @@ setup(
             "pylibmc==1.6.3",
             "aiomcache==0.8.1",
             "aiosqlite>=0.18.0",
-            "cassandra-driver==3.25.0",
+            "cassandra-driver==3.28.0",
             "rethinkdb==2.4.9",
             "influxdb==5.3.1",
             "influxdb-client[async]==1.36.1",
@@ -190,7 +190,7 @@ setup(
             "aioboto3==11.2.0"
         ],
         "cassandra": [
-            "cassandra-driver==3.25.0",
+            "cassandra-driver==3.28.0",
         ],
         "influxdb": [
             "influxdb==5.3.1",
@@ -247,7 +247,7 @@ setup(
             "rethinkdb==2.4.9",
             "aiopg==1.4.0",
             "psycopg-binary>=3.1.8",
-            "cassandra-driver==3.25.0",
+            "cassandra-driver==3.28.0",
             "influxdb==5.3.1",
             "influxdb-client==1.36.1",
             "aioodbc==0.3.3",
@@ -269,7 +269,8 @@ setup(
             "deltalake==0.12.0",
             "botocore==1.29.76",
             "aiobotocore==2.5.0",
-            "aioboto3==11.2.0"
+            "aioboto3==11.2.0",
+            "acsylla==0.1.8b0",
         ]
     },
     tests_require=[
