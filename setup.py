@@ -186,7 +186,7 @@ setup(
         ],
         "boto3": [
             "botocore==1.29.76",
-            "aiobotocore==2.5.0",
+            "aiobotocore==2.7.0",
             "aioboto3==11.2.0"
         ],
         "cassandra": [
@@ -268,7 +268,7 @@ setup(
             "duckdb==0.8.1",
             "deltalake==0.12.0",
             "botocore==1.29.76",
-            "aiobotocore==2.5.0",
+            "aiobotocore==2.7.0",
             "aioboto3==11.2.0",
             "acsylla==0.1.8b0",
         ]
