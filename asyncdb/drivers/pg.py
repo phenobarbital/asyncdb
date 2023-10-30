@@ -215,9 +215,9 @@ class pgPool(BasePool):
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             server_settings = {
                 "application_name": self.application_name,
-                "idle_in_transaction_session_timeout": "30min",
+                # "idle_in_transaction_session_timeout": "30min",
                 "idle_session_timeout": "60min",
-                "tcp_keepalives_idle": "360",
+                "tcp_keepalives_idle": "3600",
                 "max_parallel_workers": "512"
             }
             server_settings = {**server_settings, **self._server_settings}
@@ -613,9 +613,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
 
         server_settings = {
             "application_name": self.application_name,
-            "idle_in_transaction_session_timeout": "30min",
             "idle_session_timeout": "60min",
-            "tcp_keepalives_idle": "360",
+            "tcp_keepalives_idle": "3600",
             "max_parallel_workers": "512"
         }
         server_settings = {**server_settings, **self._server_settings}
