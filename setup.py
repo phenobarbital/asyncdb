@@ -146,11 +146,11 @@ setup(
             "polars==0.19.12",
             "pyarrow==13.0.0",
             "connectorx==0.3.1",
-            "pyspark==3.3.2",
+            "pyspark==3.5.0",
             "deltalake==0.13.0"
         ],
         "pyspark": [
-            "pyspark==3.3.2"
+            "pyspark==3.5.0"
         ],
         "sqlite": [
             "aiosqlite>=0.18.0",
@@ -262,7 +262,7 @@ setup(
             "asyncmy==0.2.7",
             "mysqlclient==2.1.1",
             "aiomysql==0.1.1",
-            "pyspark==3.3.2",
+            "pyspark==3.5.0",
             "oracledb==1.2.2",
             "hazelcast-python-client==5.3.0",
             "duckdb==0.8.1",
