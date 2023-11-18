@@ -187,7 +187,7 @@ setup(
         "boto3": [
             "botocore==1.29.76",
             "aiobotocore==2.5.0",
-            "aioboto3==11.2.0"
+            "aioboto3==12.0.0"
         ],
         "cassandra": [
             "cassandra-driver==3.28.0",
@@ -269,7 +269,7 @@ setup(
             "deltalake==0.13.0",
             "botocore==1.29.76",
             "aiobotocore==2.5.0",
-            "aioboto3==11.2.0",
+            "aioboto3==12.0.0",
             "acsylla==0.1.8b0",
         ]
     },
