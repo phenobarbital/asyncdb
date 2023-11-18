@@ -10,7 +10,7 @@ params = {
     "password": "12345678",
     "host": "127.0.0.1",
     "port": "5432",
-    "database": "navigator_dev",
+    "database": "navigator",
     "DEBUG": True,
 }
 
@@ -21,7 +21,7 @@ print('Pool Connected: ', pool.is_connected())
 db = loop.run_until_complete(pool.acquire())
 print('Is Connected: ', db.is_connected())
 
-sql = "SELECT * FROM troc.query_util WHERE query_slug = 'walmart_stores'"
+# sql = "SELECT * FROM troc.query_util WHERE query_slug = 'walmart_stores'"
 
 async def connect(c):
     async with await c.connection() as conn:
@@ -29,7 +29,8 @@ async def connect(c):
         result, error = await conn.test_connection()
         print(result, error)
         start = datetime.now()
-        result, error = await conn.query(sql)
+        sql = 'REFRESH MATERIALIZED VIEW epson.vw_form_data;'
+        result, error = await conn.execute(sql)
         exec_time = (datetime.now() - start).total_seconds()
 
         if not error:
