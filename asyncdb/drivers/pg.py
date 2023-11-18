@@ -215,9 +215,8 @@ class pgPool(BasePool):
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             server_settings = {
                 "application_name": self.application_name,
-                # "idle_in_transaction_session_timeout": "30min",
+                "idle_in_transaction_session_timeout": "60min",
                 "idle_session_timeout": "60min",
-                "tcp_keepalives_idle": "3600",
                 "max_parallel_workers": "512"
             }
             server_settings = {**server_settings, **self._server_settings}
@@ -232,10 +231,10 @@ class pgPool(BasePool):
                 max_queries=self._max_queries,
                 min_size=self._min_size,
                 max_size=self._max_clients,
-                max_inactive_connection_lifetime=self._max_inactive_timeout,
-                statement_cache_size=3600,
+                # max_inactive_connection_lifetime=self._max_inactive_timeout,
+                statement_cache_size=36000,
                 timeout=self._timeout,
-                command_timeout=self._timeout,
+                # command_timeout=self._timeout,
                 init=self.init_connection,
                 setup=self.setup_connection,
                 loop=self._loop,
@@ -614,7 +613,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         server_settings = {
             "application_name": self.application_name,
             "idle_session_timeout": "60min",
-            "tcp_keepalives_idle": "3600",
+            # "tcp_keepalives_idle": "3600",
             "max_parallel_workers": "512"
         }
         server_settings = {**server_settings, **self._server_settings}
@@ -630,11 +629,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             else:
                 self._connection = await asyncpg.connect(
                     dsn=self._dsn,
-                    command_timeout=self._timeout,
+                    # command_timeout=self._timeout,
                     timeout=self._timeout,
-                    max_cached_statement_lifetime=max_cached_statement_lifetime,
-                    max_cacheable_statement_size=max_cacheable_statement_size,
-                    statement_cache_size=3600,
+                    # max_cached_statement_lifetime=max_cached_statement_lifetime,
+                    # max_cacheable_statement_size=max_cacheable_statement_size,
+                    statement_cache_size=36000,
                     server_settings=server_settings,
                     connection_class=NAVConnection,
                     loop=self._loop,
