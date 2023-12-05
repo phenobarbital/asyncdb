@@ -103,7 +103,7 @@ setup(
     ],
     install_requires=[
         "numpy==1.24.2",
-        "cryptography==37.0.4",
+        "cryptography==41.0.7",
         "aiohttp==3.9.1",
         "asyncpg==0.28.0",
         "uvloop==0.19.0",
