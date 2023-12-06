@@ -2,12 +2,12 @@ venv:
 	python3.10 -m venv .venv
 	echo 'run `source .venv/bin/activate` to start develop asyncDB'
 
-setup:
-	pip install wheel==0.40.0
+install:
+	pip install wheel==0.42.0
 	pip install -e .
 
 develop:
-	pip install wheel==0.40.0
+	pip install wheel==0.42.0
 	pip install -e .[all]
 	pip install -Ur docs/requirements-dev.txt
 	flit install --symlink

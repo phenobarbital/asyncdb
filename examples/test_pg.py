@@ -32,6 +32,9 @@ async def connect(c):
         sql = 'REFRESH MATERIALIZED VIEW epson.vw_form_data;'
         result, error = await conn.execute(sql)
         exec_time = (datetime.now() - start).total_seconds()
+        sql = 'TRUNCATE troc.employees_raw;'
+        result, error = await conn.execute(sql)
+        exec_time = (datetime.now() - start).total_seconds()
 
         if not error:
             print(result)
