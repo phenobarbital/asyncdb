@@ -114,7 +114,6 @@ setup(
         "openpyxl==3.1.2",
         "lz4==4.3.2",
         "typing_extensions==4.8.0",
-        "urllib3==2.1.0",
         "charset-normalizer>=2.0.7",
         "ciso8601==2.3.0",
         "iso8601==1.1.0",
@@ -185,8 +184,8 @@ setup(
             "aiomysql==0.2.0"
         ],
         "boto3": [
-            "botocore==1.33.8",
-            "aiobotocore==2.8.0",
+            "botocore==1.31.64",
+            "aiobotocore==2.7.0",
             "aioboto3==12.0.0"
         ],
         "cassandra": [
@@ -267,8 +266,8 @@ setup(
             "hazelcast-python-client==5.3.0",
             "duckdb==0.8.1",
             "deltalake==0.13.0",
-            "botocore==1.33.8",
-            "aiobotocore==2.8.0",
+            "botocore==1.31.64",
+            "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
             "acsylla==0.1.8b0",
         ]
