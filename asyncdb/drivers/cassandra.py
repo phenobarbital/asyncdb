@@ -3,7 +3,7 @@
 
 Cassandra Driver for asyncDB.
 
-TODO: migrate to Thread Executors or Asyncio version.
+TODO: migrate to Asyncio version (when available).
 """
 import time
 import logging

@@ -132,7 +132,7 @@ setup(
             "aiomcache==0.8.1",
             "aiosqlite>=0.18.0",
             "cassandra-driver==3.28.0",
-            "rethinkdb==2.4.9",
+            "rethinkdb==2.4.10",
             "influxdb==5.3.1",
             "influxdb-client[async]==1.39.0",
             "pymssql==2.2.7",
@@ -168,7 +168,7 @@ setup(
             "objectpath==0.6.1",
         ],
         "rethinkdb": [
-            "rethinkdb==2.4.9",
+            "rethinkdb==2.4.10",
         ],
         "postgres": [
             "aiopg==1.4.0",
@@ -244,7 +244,7 @@ setup(
             "aioredis==2.0.1",
             "redis==5.0.1",
             "objectpath==0.6.1",
-            "rethinkdb==2.4.9",
+            "rethinkdb==2.4.10",
             "aiopg==1.4.0",
             "psycopg-binary>=3.1.8",
             "cassandra-driver==3.28.0",

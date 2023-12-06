@@ -77,6 +77,8 @@ class rethinkCursor(BaseCursor):
         """Use `cursor.fetchrow()` to provide an async iterable."""
         try:
             row = await self._cursor.next()
+        except AttributeError:
+            row = None
         except rethinkdb.errors.ReqlCursorEmpty:
             row = None
         if row is not None:

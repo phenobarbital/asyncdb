@@ -19,8 +19,8 @@ params_auth = {
     "host": "localhost",
     "port": "28015",
     "db": "epson",
-    "user": "test",
-    "password": "supersecret"
+#     "user": "test",
+#     "password": "supersecret"
 }
 
 
