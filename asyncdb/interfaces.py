@@ -542,7 +542,7 @@ class CursorBackend(ABC):
         parameters: Iterable[Any] = None,
         **kwargs
     ):
-        # self._cursor = None
+        self._cursor = None
         self._provider = provider
         self._result = result
         self._sentence = sentence
