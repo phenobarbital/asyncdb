@@ -11,13 +11,13 @@ import datatable as dt
 from asyncdb.meta import Record, Recordset
 
 DRIVER = 'pg'
-DSN = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator_dev"
+DSN = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator"
 PARAMS = {
     "host": '127.0.0.1',
     "port": '5432',
     "user": 'troc_pgdata',
     "password": '12345678',
-    "database": 'navigator_dev'
+    "database": 'navigator'
 }
 
 

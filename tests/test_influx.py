@@ -19,7 +19,7 @@ def params():
         "host": "127.0.0.1",
         "port": "8086",
         "database": 'navigator',
-        "token": "qroJLmcrjM-IsDhxz-nR_NIoUxpjAgDz9AuXJJlTnikCIr70CNa_IxXlO5BID4LVrpHHCjzzeSr_UZab5ON_9A==",
+        "token": "FL2XDVzRheR9-apXJu0csK3HaBSjfEG3d15R9uIu8xG8WwL9ICAGyrPWLoPct4IHtacpjtKd1y3NbYbAFPs20g==",
         "user": "troc_pgdata",
         "password": "12345678",
         "org": "navigator"

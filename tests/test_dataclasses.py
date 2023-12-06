@@ -15,9 +15,9 @@ CREDENTIALS = {
     'password': '12345678',
     'host': 'localhost',
     'port': '5432',
-    'database': 'navigator_dev',
+    'database': 'navigator',
 }
-DSN = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator_dev"
+DSN = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator"
 
 
 @pytest_asyncio.fixture
