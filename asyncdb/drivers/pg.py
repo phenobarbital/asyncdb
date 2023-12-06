@@ -217,7 +217,8 @@ class pgPool(BasePool):
                 "application_name": self.application_name,
                 "idle_in_transaction_session_timeout": "60min",
                 "idle_session_timeout": "60min",
-                "max_parallel_workers": "512"
+                "statement_timeout": "60min",
+                "tcp_keepalives_idle": "30min"
             }
             server_settings = {**server_settings, **self._server_settings}
             if self.ssl:
