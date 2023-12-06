@@ -105,7 +105,7 @@ setup(
         "numpy==1.24.2",
         "cryptography==37.0.4",
         "aiohttp==3.9.1",
-        "asyncpg==0.28.0",
+        "asyncpg==0.29.0",
         "uvloop==0.19.0",
         "asyncio==3.4.3",
         "faust-cchardet==2.1.18",
@@ -145,11 +145,11 @@ setup(
             "polars==0.19.12",
             "pyarrow==14.0.1",
             "connectorx==0.3.2",
-            "pyspark==3.3.2",
+            "pyspark==3.5.0",
             "deltalake==0.13.0"
         ],
         "pyspark": [
-            "pyspark==3.3.2"
+            "pyspark==3.5.0"
         ],
         "sqlite": [
             "aiosqlite>=0.18.0",
@@ -174,7 +174,7 @@ setup(
             "psycopg-binary>=3.1.8",
         ],
         "postgresql": [
-            "asyncpg==0.28.0",
+            "asyncpg==0.29.0",
         ],
         "mysql": [
             "asyncmy==0.2.7",
@@ -261,7 +261,7 @@ setup(
             "asyncmy==0.2.7",
             "mysqlclient==2.1.1",
             "aiomysql==0.2.0",
-            "pyspark==3.3.2",
+            "pyspark==3.5.0",
             "oracledb==1.2.2",
             "hazelcast-python-client==5.3.0",
             "duckdb==0.8.1",
