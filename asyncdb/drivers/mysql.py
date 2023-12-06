@@ -2,187 +2,250 @@
 
 import asyncio
 import time
-from datetime import datetime
-import aiomysql
+from typing import Optional, Union, Any
+from collections.abc import Callable, Iterable
+import ssl
+import asyncmy
+from asyncmy.cursors import DictCursor
 from asyncdb.exceptions import (
     ConnectionTimeout,
-    DataError,
-    EmptyStatement,
     NoDataFound,
     DriverError,
     StatementError,
 )
-from asyncdb.utils.types import (
-    SafeDict,
-)
+from asyncdb.interfaces import DBCursorBackend
 from .abstract import (
     BasePool
 )
-from .sql import SQLDriver
+from .sql import SQLCursor, SQLDriver
 
+class mysqlCursor(SQLCursor):
+    _connection: Any = None
 
 class mysqlPool(BasePool):
-    _max_queries = 300
-    # _dsn = 'mysql://{user}:{password}@{host}:{port}/{database}'
-    loop = asyncio.get_event_loop()
+    _setup_func: Optional[Callable] = None
+    _init_func: Optional[Callable] = None
 
-    def __init__(self, loop=None, params={}):
-        self._logger.debug("Ready")
-        super(mysqlPool, self).__init__(loop=loop, params=params)
+    def __init__(self, dsn: str = None, loop: asyncio.AbstractEventLoop = None, params: Optional[dict] = None, **kwargs):
+        self._test_query = 'SELECT 1'
+        self._max_clients = 300
+        self._min_size = 10
+        self._dsn = 'mysql://{user}:{password}@{host}:{port}/{database}'
+        self._init_command = kwargs.pop('init_command', None)
+        self._sql_modes = kwargs.pop('sql_modes', None)
+        super(mysqlPool, self).__init__(
+            dsn=dsn, loop=loop, params=params, **kwargs
+        )
 
-    def get_event_loop(self):
-        return self._loop
-
-    """
-    __init async db initialization
-    """
-
-    # Create a database connection pool
     async def connect(self):
-        self._logger.debug("aioMysql: Connecting to {}".format(self._params))
-        self._logger.debug("Start connection")
+        """
+        Create a database connection pool.
+        """
+        self._logger.debug(
+            "MySQL: Connecting to {}".format(self._params)
+        )
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
-            self._pool = await aiomysql.create_pool(
+            params = {}
+            if self._init_command:
+                params['init_command'] = self._init_command
+            if self._sql_modes:
+                params['sql_modes'] = self._sql_modes
+            self._pool = await asyncmy.create_pool(
                 host=self._params["host"],
+                port=int(self._params["port"]),
                 user=self._params["user"],
                 password=self._params["password"],
-                db=self._params["database"],
-                loop=self._loop,
+                database=self._params["database"],
+                connect_timeout=self._timeout,
+                **params
             )
         except TimeoutError as err:
             raise ConnectionTimeout(
-                "Unable to connect to database: {}".format(str(err))
+                f"MySQL: Unable to connect to database: {err}"
             )
         except ConnectionRefusedError as err:
             raise DriverError(
-                "Unable to connect to database, connection Refused: {}".format(str(err))
+                f"MySQL: Unable to connect to database, connection Refused: {err}"
             )
         except Exception as err:
-            raise DriverError("Unknown Error: {}".format(str(err)))
-            return False
+            raise DriverError(
+                f"Unknown Error: {err}"
+            )
         # is connected
         if self._pool:
             self._connected = True
             self._initialized_on = time.time()
 
-    """
-       Take a connection from the pool.
-       """
-
     async def acquire(self):
-        self._logger.debug("Acquire")
-        db = None
-        self._connection = None
-        # Take a connection from the pool.
+        """
+        Take a connection from the pool.
+        """
         try:
             self._connection = await self._pool.acquire()
         except Exception as err:
-            raise DriverError("Close Error: {}".format(str(err)))
+            raise DriverError(
+                f"MySQL: Unable to acquire a connection from the pool: {err}"
+            )
         if self._connection:
             db = mysql(pool=self)
             db.set_connection(self._connection)
         return db
 
-    """
-    Release a connection from the pool
-    """
-
-    async def release(self, connection=None, timeout=10):
-        self._logger.debug("Release")
+    async def release(self, connection=None):
+        """
+        Release a connection from the pool
+        """
         if not connection:
             conn = self._connection
+        elif isinstance(connection, mysql):
+            conn = connection.get_connection()
         else:
             conn = connection
         try:
             await self._pool.release(conn)
-            # print('r', r)
-            # release = asyncio.create_task(r)
-            # await self._pool.release(connection, timeout = timeout)
-            # release = asyncio.ensure_future(release, loop=self._loop)
-            # await asyncio.wait_for(release, timeout=timeout, loop=self._loop)
-            # await release
         except Exception as err:
-            raise DriverError("Release Error: {}".format(str(err)))
-
-    """
-    close
-        Close Pool Connection
-    """
+            raise DriverError(
+                f"MySQL: Unable to release a connection from the pool: {err}"
+            )
 
     async def wait_close(self, gracefully=True):
+        """
+        close
+            Close Pool Connection
+        """
         if self._pool:
-            self._logger.debug("aioMysql: Closing Pool")
             # try to closing main connection
             try:
                 if self._connection:
-                    await self._pool.release(self._connection, timeout=2)
+                    await self._pool.release(self._connection)
             except Exception as err:
-                raise DriverError("Release Error: {}".format(str(err)))
+                raise DriverError(
+                    f"MySQL: Unable to release a connection from the pool: {err}"
+                )
             # at now, try to closing pool
             try:
-                await self._pool.close()
-                # await self._pool.terminate()
+                self._pool.close()
             except Exception as err:
-                print("Pool Error: {}".format(str(err)))
-                await self._pool.terminate()
-                raise DriverError("Pool Error: {}".format(str(err)))
+                raise DriverError(
+                    f"Closing Error: {err}"
+                )
             finally:
+                self._pool.terminate()
                 self._pool = None
 
-    """
-    Close Pool
-    """
-
     async def close(self):
-        # try:
-        #    if self._connection:
-        #        print('self._pool', self._pool)
-        #        await self._pool.release(self._connection)
-        # except Exception as err:
-        #    raise DriverError("Release Error: {}".format(str(err)))
+        """
+        Close Pool.
+        """
         try:
-            await self._pool.close()
+            await self._pool.clear()
+            self._pool.close()
         except Exception as err:
-            print("Pool Closing Error: {}".format(str(err)))
+            print(
+                f"MySQL: Unable to close the pool: {err}"
+            )
             self._pool.terminate()
 
-    def terminate(self, gracefully=True):
-        self._loop.run_until_complete(asyncio.wait_for(self.close(), timeout=5))
+    disconnect = close
 
-    """
-    Execute a connection into the Pool
-    """
+    def terminate(self):
+        self._pool.terminate()
 
     async def execute(self, sentence, *args):
-        if self._pool:
-            try:
-                result = await self._pool.execute(sentence, *args)
-                return result
-            except Exception as err:
-                raise DriverError("Execute Error: {}".format(str(err)))
+        """
+        Execute a connection into the Pool
+        """
+        try:
+            async with self._pool.acquire() as conn:
+                async with conn.cursor(DictCursor) as cursor:
+                    result = await cursor.execute(sentence, *args)
+            return result
+        except Exception as err:
+            raise DriverError(
+                f"MySQL: Unable to Execute: {err}"
+            )
 
+    async def test_connection(self, *args):
+        """Test Connnection.
+        Making a connection Test using the basic Query Method.
+        """
+        result = None
+        error = None
+        if self._test_query is None:
+            return [None, NotImplementedError()]
+        try:
+            result = await self.execute(self._test_query, *args)
+        except DriverError as err:
+            error = err
+        finally:
+            return [result, error]  # pylint: disable=W0150
 
-class mysql(SQLDriver):
+class mysql(SQLDriver, DBCursorBackend):
 
     _provider = "mysql"
     _syntax = "sql"
     _test_query = "SELECT 1"
-    _dsn = "mysql://{user}:{password}@{host}:{port}/{database}"
-    _loop = None
-    _pool = None
-    _connection = None
-    _connected = False
-    _prepared = None
-    _parameters = ()
-    _cursor = None
-    _transaction = None
-    _initialized_on = None
-    _query_raw = "SELECT {fields} FROM {table} {where_cond}"
 
-    def __init__(self, loop=None, pool=None, params={}):
-        super(mysql, self).__init__(loop=loop, params=params)
-        asyncio.set_event_loop(self._loop)
+    def __init__(
+            self,
+            dsn: str = '',
+            loop: asyncio.AbstractEventLoop = None,
+            params: dict = None,
+            **kwargs
+    ) -> None:
+        self._dsn = "mysql://{user}:{password}@{host}:{port}/{database}"
+        self._prepared = None
+        self._cursor = None
+        self._transaction = None
+        self._server_settings = {}
+        SQLDriver.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
+        DBCursorBackend.__init__(self)
+        if "pool" in kwargs:
+            self._pool = kwargs['pool']
+            self._loop = self._pool.get_loop()
+        ### SSL Support:
+        self.ssl: bool = False
+        if params and 'ssl' in params:
+            ssloptions = params['ssl']
+        elif 'ssl' in kwargs:
+            ssloptions = kwargs['ssl']
+        else:
+            ssloptions = None
+        if ssloptions:
+            self.ssl: bool = True
+            try:
+                check_hostname = ssloptions['check_hostname']
+            except KeyError:
+                check_hostname = False
+            ### certificate Support:
+            try:
+                ca_file = ssloptions['cafile']
+            except KeyError:
+                ca_file = None
+            args = {
+                "cafile": ca_file
+            }
+            self.sslctx = ssl.create_default_context(
+                ssl.Purpose.SERVER_AUTH,
+                **args
+            )
+            # Certificate Chain:
+            try:
+                certs = {
+                    "certfile": ssloptions['certfile'],
+                    "keyfile": ssloptions['keyfile']
+                }
+            except KeyError:
+                certs = {
+                    "certfile": None,
+                    "keyfile": None
+                }
+            if certs['certfile']:
+                self.sslctx.load_cert_chain(
+                    **certs
+                )
+            self.sslctx.check_hostname = check_hostname
 
     async def close(self):
         """
@@ -190,27 +253,21 @@ class mysql(SQLDriver):
         """
         try:
             if self._connection:
-                if not self._connection.closed:
-                    self._logger.debug("Closing Connection")
-                    try:
-                        if self._pool:
-                            self._pool.close()
-                        else:
-                            self._connection.close()
-                    except Exception as err:
-                        self._pool.terminate()
-                        self._connection = None
-                        raise DriverError(
-                            "Connection Error, Terminated: {}".format(str(err))
-                        )
+                self._logger.debug("Closing Connection")
+                if self._pool:
+                    await self._pool.release(self._connection)
+                else:
+                    self._connection.close()
         except Exception as err:
-            raise DriverError("Close Error: {}".format(str(err)))
+            raise DriverError(
+                f"Error on Close Connection: {err}"
+            )
         finally:
             self._connection = None
             self._connected = False
 
     def terminate(self):
-        self._loop.run_until_complete(self.close())
+        self.terminate()
 
     async def connection(self):
         """
@@ -221,32 +278,36 @@ class mysql(SQLDriver):
         self._cursor = None
         try:
             if not self._pool:
-                self._pool = await aiomysql.create_pool(
+                params = {}
+                self._connection = await asyncmy.connect(
                     host=self._params["host"],
+                    port=int(self._params["port"]),
                     user=self._params["user"],
                     password=self._params["password"],
-                    db=self._params["database"],
-                    loop=self._loop,
+                    database=self._params["database"],
+                    connect_timeout=self._timeout,
+                    **params
                 )
-            self._connection = await self._pool.acquire()
-            self._cursor = await self._connection.cursor()
+            else:
+                self._connection = await self._pool.acquire()
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
         except Exception as err:
             self._connection = None
             self._cursor = None
-            raise DriverError("connection Error, Terminated: {}".format(str(err)))
+            raise DriverError(
+                f"Connection Error: {err}"
+            )
         finally:
-            return self._connection
-
-    """
-    Release a Connection
-    """
+            return self
 
     async def release(self):
+        """
+        Release a Connection
+        """
         try:
-            if not await self._connection.closed:
+            if not await self._connection._closed:
                 if self._pool:
                     release = asyncio.create_task(
                         self._pool.release(self._connection, timeout=10)
@@ -254,10 +315,11 @@ class mysql(SQLDriver):
                     asyncio.ensure_future(release, loop=self._loop)
                     return await release
                 else:
-                    await self._connection.close(timeout=5)
+                    self._connection.close()
         except Exception as err:
-            raise DriverError("Release Interface Error: {}".format(str(err)))
-            return False
+            raise DriverError(
+                f"Release Error: {err}"
+            )
         finally:
             self._connected = False
             self._connection = None
@@ -270,182 +332,176 @@ class mysql(SQLDriver):
         if self._pool:
             return not self._pool._closed
         elif self._connection:
-            return not self._connection.closed
+            return not self._connection._closed
+        else:
+            return False
 
-    """
-    Preparing a sentence
-    """
+    async def prepare(self, sentence: str):
+        """
+        Preparing a sentence
+        """
+        raise NotImplementedError
 
-    async def prepare(self, sentence=""):
+    async def query(self, sentence: str, size: int = None):
         error = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-
+        await self.valid_operation(sentence)
         try:
-            if not self._connection:
-                await self.connection()
-            try:
-                stmt = await asyncio.shield(self._connection.prepare(sentence))
-                try:
-                    # print(stmt.get_attributes())
-                    self._columns = [a.name for a in stmt.get_attributes()]
-                    self._prepared = stmt
-                    self._parameters = stmt.get_parameters()
-                except TypeError:
-                    self._columns = []
-            except RuntimeError as err:
-                error = "Prepare Runtime Error: {}".format(str(err))
-                raise StatementError(message=error)
-            except Exception as err:
-                error = "Unknown Error: {}".format(str(err))
-                raise DriverError(message=error)
-        finally:
-            return [self._prepared, error]
-
-    async def query(self, sentence="", size=100000000000):
-        # self._logger.debug("Start Query function")
-        error = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
-        try:
-            startTime = datetime.now()
-            await self._cursor.execute(sentence)
-            self._result = await self.fetchmany(size)
+            self.start_timing()
+            async with self._connection.cursor(cursor=DictCursor) as cursor:
+                await cursor.execute(sentence)
+                if not size:
+                    self._result = await cursor.fetchall()
+                else:
+                    self._result = await cursor.fetchmany(size)
             if not self._result:
-                raise NoDataFound("Mysql: No Data was Found")
-                return [None, "Mysql: No Data was Found"]
+                raise NoDataFound("MySQL: No Data was Found")
+        except NoDataFound:
+            error = "Mysql: No Data was Found"
         except RuntimeError as err:
             error = "Runtime Error: {}".format(str(err))
-            raise DriverError(message=error)
         except Exception as err:
             error = "Error on Query: {}".format(str(err))
-            raise Exception(error)
         finally:
-            #    self._generated = datetime.now() - startTime
-            #    await self.close()
-            return [self._result, error]
+            self.generated_at()
+            if error:
+                return [None, error]
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
-    async def queryrow(self, sentence=""):
+    async def queryrow(self, sentence: str):
         error = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         try:
-            # stmt = await self._connection.prepare(sentence)
-            # self._columns = [a.name for a in stmt.get_attributes()]
-            await self._cursor.execute(sentence)
-            self._result = await self.fetchone()
+            self.start_timing()
+            async with self._connection.cursor(cursor=DictCursor) as cursor:
+                await cursor.execute(sentence)
+                self._result = await cursor.fetchone()
+            if not self._result:
+                raise NoDataFound("MySQL: No Data was Found")
+        except NoDataFound:
+            error = "Mysql: No Data was Found"
         except RuntimeError as err:
-            error = "Runtime on Query Row Error: {}".format(str(err))
-            raise DriverError(message=error)
+            error = "Runtime Error: {}".format(str(err))
         except Exception as err:
-            error = "Error on Query Row: {}".format(str(err))
-            raise Exception(error)
-        # finally:
-        # await self.close()
-        return [self._result, error]
+            error = "Error on Query: {}".format(str(err))
+        finally:
+            self.generated_at()
+            if error:
+                return [None, error]
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
-    async def execute(self, sentence=""):
+    async def fetch_one(self, sentence: str):
+        await self.valid_operation(sentence)
+        try:
+            self.start_timing()
+            async with self._connection.cursor(cursor=DictCursor) as cursor:
+                await cursor.execute(sentence)
+                result = await cursor.fetchone()
+            if not result:
+                raise NoDataFound("MySQL: No Data was Found")
+            return result
+        except NoDataFound:
+            raise
+        except RuntimeError as err:
+            raise DriverError(
+                f"MySQL Runtime Error: {err}"
+            )
+        except Exception as err:
+            raise DriverError(
+                f"MySQL: Error on Query: {err}"
+            )
+        finally:
+            self.generated_at()
+
+    async def fetch_all(self, sentence: str):
+        await self.valid_operation(sentence)
+        try:
+            self.start_timing()
+            async with self._connection.cursor(cursor=DictCursor) as cursor:
+                await cursor.execute(sentence)
+                result = await cursor.fetchall()
+            if not result:
+                raise NoDataFound("MySQL: No Data was Found")
+            return result
+        except NoDataFound:
+            raise
+        except RuntimeError as err:
+            raise DriverError(
+                f"MySQL Runtime Error: {err}"
+            )
+        except Exception as err:
+            raise DriverError(
+                f"MySQL: Error on Query: {err}"
+            )
+        finally:
+            self.generated_at()
+
+    async def fetch_many(self, sentence: str, size: int = 1000):
+        await self.valid_operation(sentence)
+        try:
+            self.start_timing()
+            async with self._connection.cursor(cursor=DictCursor) as cursor:
+                await cursor.execute(sentence)
+                result = await cursor.fetchmany(size)
+            if not result:
+                raise NoDataFound("MySQL: No Data was Found")
+            return result
+        except NoDataFound:
+            raise
+        except RuntimeError as err:
+            raise DriverError(
+                f"MySQL Runtime Error: {err}"
+            )
+        except Exception as err:
+            raise DriverError(
+                f"MySQL: Error on Query: {err}"
+            )
+        finally:
+            self.generated_at()
+
+    async def execute(self, sentence: str):
         """Execute a transaction
         get a SQL sentence and execute
         returns: results of the execution
         """
         error = None
         result = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+        await self.valid_operation(sentence)
         try:
-            result = await self._cursor.execute(sentence)
+            self.start_timing()
+            async with self._connection.cursor() as cursor:
+                result = await cursor.execute(sentence)
             return [result, None]
-            return [None, error]
         except Exception as err:
             error = "Error on Execute: {}".format(str(err))
-            raise [None, error]
         finally:
+            self.generated_at()
             return [result, error]
 
-    async def executemany(self, sentence="", args=[]):
-        error = None
-        if not sentence:
-            raise EmptyStatement("Sentence is an empty string")
-        if not self._connection:
-            await self.connection()
+    async def executemany(self, sentence: str, args: Union[tuple, list]):
+        await self.valid_operation(sentence)
         try:
-            await self.begin()
-            await self._cursor.executemany(sentence, args)
-            await self.commit()
-            return False
+            self.start_timing()
+            async with self._connection.cursor(cursor=DictCursor) as cursor:
+                result = await cursor.executemany(sentence, args)
+            return result
         except Exception as err:
-            await self.rollback()
-            error = "Error on Execute: {}".format(str(err))
-            raise Exception(error)
+            raise DriverError(
+                f"MySQL: Error on Execute: {err}"
+            )
         finally:
-            return error
+            self.generated_at()
 
-    """
-    Transaction Context
-    """
+    execute_many = executemany
 
-    async def begin(self):
-        if not self._connection:
-            await self.connection()
-        await self._connection.begin()
-        return self
+    def tables(self, schema: str = "") -> Iterable[Any]:
+        raise NotImplementedError
 
-    async def commit(self):
-        if not self._connection:
-            await self.connection()
-        await self._connection.commit()
-        return self
+    def table(self, tablename: str = "") -> Iterable[Any]:
+        raise NotImplementedError
 
-    async def rollback(self):
-        if not self._connection:
-            await self.connection()
-        await self._connection.rollback()
-        return self
+    async def use(self, database: str):
+        raise NotImplementedError # pragma: no cover
 
-    """
-    Cursor Context
-    """
-
-    async def cursor(self, sentence=""):
-        self._logger.debug("Cursor")
-        if not self._connection:
-            await self.connection()
-        return self._cursor
-
-    async def forward(self, number):
-        try:
-            return await self._cursor.scroll(number)
-        except Exception as err:
-            error = "Error forward Cursor: {}".format(str(err))
-            raise Exception(error)
-
-    async def fetchall(self):
-        try:
-            return await self._cursor.fetchall()
-        except Exception as err:
-            error = "Error FetchAll Cursor: {}".format(str(err))
-            raise Exception(error)
-
-    async def fetchmany(self, size=None):
-        try:
-            return await self._cursor.fetchmany(size)
-        except Exception as err:
-            error = "Error FetchMany Cursor: {}".format(str(err))
-            raise Exception(error)
-
-    async def fetchone(self):
-        try:
-            return await self._cursor.fetchone()
-        except Exception as err:
-            error = "Error FetchOne Cursor: {}".format(str(err))
-            raise Exception(error)
 
     """
     Cursor Iterator Context
@@ -460,250 +516,3 @@ class mysql(SQLDriver):
             return data
         else:
             raise StopAsyncIteration
-
-    """
-    COPY Functions
-    type: [ text, csv, binary ]
-    """
-
-    async def copy_from_table(
-        self, table="", schema="public", output=None, type="csv", columns=None
-    ):
-        """table_copy
-        get a copy of table data into a file, file-like object or a coroutine passed on "output"
-        returns: num of rows copied.
-        example: COPY 1470
-        """
-        if not self._connection:
-            await self.connection()
-        try:
-            result = await self._connection.copy_from_table(
-                table_name=table,
-                schema_name=schema,
-                columns=columns,
-                format=type,
-                output=output,
-            )
-            print(result)
-            return result
-        except Exception as err:
-            error = "Error on Table Copy: {}".format(str(err))
-            raise Exception(error)
-
-    async def copy_to_table(
-        self, table="", schema="public", source=None, type="csv", columns=None
-    ):
-        """copy_to_table
-        get data from a file, file-like object or a coroutine passed on "source" and copy into table
-        returns: num of rows copied.
-        example: COPY 1470
-        """
-        if not self._connection:
-            await self.connection()
-        try:
-            result = await self._connection.copy_to_table(
-                table_name=table,
-                schema_name=schema,
-                columns=columns,
-                format=type,
-                source=source,
-            )
-            print(result)
-            return result
-        except Exception as err:
-            error = "Error on Table Copy: {}".format(str(err))
-            raise Exception(error)
-
-    async def copy_into_table(
-        self, table="", schema="public", source=None, columns=None
-    ):
-        """copy_into_table
-        get data from records (any iterable object) and save into table
-        returns: num of rows copied.
-        example: COPY 1470
-        """
-        if not self._connection:
-            await self.connection()
-        try:
-            result = await self._connection.copy_records_to_table(
-                table_name=table, schema_name=schema, columns=columns, records=source
-            )
-            print(result)
-            return result
-        except Exception as err:
-            error = "Error on Table Copy: {}".format(str(err))
-            raise Exception(error)
-
-    """
-    Meta-Operations
-    """
-
-    def table(self, table):
-        try:
-            return self._query_raw.format_map(SafeDict(table=table))
-        except Exception as e:
-            print(e)
-            return False
-
-    def fields(self, sentence, fields=None):
-        _sql = False
-        if not fields:
-            _sql = sentence.format_map(SafeDict(fields="*"))
-        elif type(fields) == str:
-            _sql = sentence.format_map(SafeDict(fields=fields))
-        elif type(fields) == list:
-            _sql = sentence.format_map(SafeDict(fields=",".join(fields)))
-        return _sql
-
-    """
-    where
-      add WHERE conditions to SQL
-    """
-
-    def where(self, sentence, where):
-        sql = ""
-        if sentence:
-            where_string = ""
-            if not where:
-                sql = sentence.format_map(SafeDict(where_cond=""))
-            elif type(where) == dict:
-                where_cond = []
-                for key, value in where.items():
-                    # print("KEY {}, VAL: {}".format(key, value))
-                    if type(value) == str or type(value) == int:
-                        if value == "null" or value == "NULL":
-                            where_string.append("%s IS NULL" % (key))
-                        elif value == "!null" or value == "!NULL":
-                            where_string.append("%s IS NOT NULL" % (key))
-                        elif key.endswith("!"):
-                            where_cond.append("%s != %s" % (key[:-1], value))
-                        else:
-                            if (
-                                type(value) == str
-                                and value.startswith("'")
-                                and value.endswith("'")
-                            ):
-                                where_cond.append("%s = %s" % (key, "{}".format(value)))
-                            elif type(value) == int:
-                                where_cond.append("%s = %s" % (key, "{}".format(value)))
-                            else:
-                                where_cond.append(
-                                    "%s = %s" % (key, "'{}'".format(value))
-                                )
-                    elif type(value) == bool:
-                        val = str(value)
-                        where_cond.append("%s = %s" % (key, val))
-                    else:
-                        val = ",".join(map(str, value))
-                        if type(val) == str and "'" not in val:
-                            where_cond.append("%s IN (%s)" % (key, "'{}'".format(val)))
-                        else:
-                            where_cond.append("%s IN (%s)" % (key, val))
-                # if 'WHERE ' in sentence:
-                #    where_string = ' AND %s' % (' AND '.join(where_cond))
-                # else:
-                where_string = " WHERE %s" % (" AND ".join(where_cond))
-                print("WHERE cond is %s" % where_string)
-                sql = sentence.format_map(SafeDict(where_cond=where_string))
-            elif type(where) == str:
-                where_string = where
-                if not where.startswith("WHERE"):
-                    where_string = " WHERE %s" % where
-                sql = sentence.format_map(SafeDict(where_cond=where_string))
-            else:
-                sql = sentence.format_map(SafeDict(where_cond=""))
-            del where
-            del where_string
-            return sql
-        else:
-            return False
-
-    def limit(self, sentence, limit=1):
-        """
-        LIMIT
-          add limiting to SQL
-        """
-        if sentence:
-            return "{q} LIMIT {limit}".format(q=sentence, limit=limit)
-        return self
-
-    def orderby(self, sentence, ordering=[]):
-        """
-        LIMIT
-          add limiting to SQL
-        """
-        if sentence:
-            if type(ordering) == str:
-                return "{q} ORDER BY {ordering}".format(q=sentence, ordering=ordering)
-            elif type(ordering) == list:
-                return "{q} ORDER BY {ordering}".format(
-                    q=sentence, ordering=", ".join(ordering)
-                )
-        return self
-
-    def get_query(self, sentence):
-        """
-        get_query
-          Get formmated query
-        """
-        sql = sentence
-        try:
-            # remove fields and where_cond
-            sql = sentence.format_map(SafeDict(fields="*", where_cond=""))
-            if not self.connected:
-                self._loop.run_until_complete(self.connection())
-            prepared, error = self._loop.run_until_complete(self.prepare(sql))
-            if not error:
-                self._columns = self.get_columns()
-            else:
-                print("Error in Get Query", error)
-                return False
-        except (DriverError, StatementError) as err:
-            print("DriverError or StatementError Exception in Get Query", e)
-            return False
-        except Exception as e:
-            print("Exception in Get Query", e)
-            return False
-        return sql
-
-    def column_info(self, table):
-        """
-        column_info
-          get column information about a table
-        """
-        discover = "SELECT attname AS column_name, atttypid::regtype AS data_type FROM pg_attribute WHERE attrelid = '{}'::regclass AND attnum > 0 AND NOT attisdropped ORDER  BY attnum".format(
-            table
-        )
-        try:
-            result, error = self._loop.run_until_complete(self.query(discover))
-            if result:
-                return result
-        except (NoDataFound, DriverError):
-            print(err)
-            return False
-        except Exception as err:
-            print(err)
-            return False
-
-    def insert(self, table, data, **kwargs):
-        """
-        insert
-           insert the result onto a table
-        """
-        sql = "INSERT INTO {table} ({fields}) VALUES ({values})"
-        sql = sql.format_map(SafeDict(table=table))
-        # set columns
-        sql = sql.format_map(SafeDict(fields=",".join(data.keys())))
-        values = ",".join(str(v) for v in data.values())
-        sql = sql.format_map(SafeDict(values=values))
-        try:
-            result = self._loop.run_until_complete(self._connection.execute(sql))
-            if not result:
-                print(result)
-                return False
-            else:
-                return result
-        except Exception as err:
-            # print(sql)
-            print(err)
-            return False
