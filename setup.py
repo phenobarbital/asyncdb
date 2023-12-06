@@ -182,7 +182,7 @@ setup(
             "mysqlclient==2.1.1"
         ],
         "mariadb": [
-            "aiomysql==0.1.1"
+            "aiomysql==0.2.0"
         ],
         "boto3": [
             "botocore==1.29.76",
@@ -261,7 +261,7 @@ setup(
             "aiocouch==2.2.2",
             "asyncmy==0.2.7",
             "mysqlclient==2.1.1",
-            "aiomysql==0.1.1",
+            "aiomysql==0.2.0",
             "pyspark==3.3.2",
             "oracledb==1.2.2",
             "hazelcast-python-client==5.3.0",
