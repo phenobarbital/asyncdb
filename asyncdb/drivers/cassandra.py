@@ -17,6 +17,8 @@ import pandas as pd
 from cassandra import ReadTimeout
 from cassandra.cluster import Cluster, EXEC_PROFILE_DEFAULT, ExecutionProfile, NoHostAvailable, ResultSet
 from cassandra.io.asyncorereactor import AsyncoreConnection
+from cassandra.io.asyncioreactor import AsyncioConnection
+
 try:
     from cassandra.io.libevreactor import LibevConnection
     LIBEV = True
