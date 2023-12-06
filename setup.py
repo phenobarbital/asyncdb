@@ -123,7 +123,9 @@ setup(
         "dateparser==1.1.8",
         "python-datamodel>=0.5.0",
         "aiosqlite>=0.18.0",
-        "pendulum==2.1.2"
+        "pendulum==2.1.2",
+        "looseversion==1.3.0",
+        "aiofiles==23.2.1"
     ],
     extras_require={
         "default": [
