@@ -180,8 +180,8 @@ setup(
             "asyncpg==0.29.0",
         ],
         "mysql": [
-            "asyncmy==0.2.7",
-            "mysqlclient==2.1.1"
+            "asyncmy==0.2.9",
+            "mysqlclient==2.2.0"
         ],
         "mariadb": [
             "aiomysql==0.2.0"
@@ -261,8 +261,8 @@ setup(
             "motor==3.1.1",
             "pymssql==2.2.7",
             "aiocouch==2.2.2",
-            "asyncmy==0.2.7",
-            "mysqlclient==2.1.1",
+            "asyncmy==0.2.9",
+            "mysqlclient==2.2.0",
             "aiomysql==0.2.0",
             "pyspark==3.5.0",
             "oracledb==1.2.2",
