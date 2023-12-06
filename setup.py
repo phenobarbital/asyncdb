@@ -88,6 +88,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3 :: Only",
         "Framework :: AsyncIO",
     ],
@@ -98,14 +99,14 @@ setup(
     license=__license__,
     setup_requires=[
         "setuptools==67.6.1",
-        "Cython==0.29.33",
-        "wheel==0.40.0"
+        "Cython==3.0.6",
+        "wheel==0.42.0"
     ],
     install_requires=[
         "numpy==1.24.2",
-        "cryptography==37.0.4",
-        "aiohttp==3.8.6",
-        "asyncpg==0.28.0",
+        "cryptography==41.0.7",
+        "aiohttp==3.9.1",
+        "asyncpg==0.29.0",
         "uvloop==0.19.0",
         "asyncio==3.4.3",
         "faust-cchardet==2.1.18",
@@ -114,14 +115,13 @@ setup(
         "openpyxl==3.1.2",
         "lz4==4.3.2",
         "typing_extensions==4.8.0",
-        "urllib3==1.26.14",
         "charset-normalizer>=2.0.7",
         "ciso8601==2.3.0",
         "iso8601==1.1.0",
         "pgpy==0.6.0",
         "python-magic==0.4.27",
         "dateparser==1.1.8",
-        "python-datamodel>=0.2.1",
+        "python-datamodel>=0.5.0",
         "aiosqlite>=0.18.0",
         "pendulum==2.1.2"
     ],
@@ -134,9 +134,9 @@ setup(
             "cassandra-driver==3.28.0",
             "rethinkdb==2.4.9",
             "influxdb==5.3.1",
-            "influxdb-client[async]==1.36.1",
+            "influxdb-client[async]==1.39.0",
             "pymssql==2.2.7",
-            "redis==4.5.5",
+            "redis==5.0.1",
             "duckdb==0.8.1",
             "deltalake==0.13.0"
         ],
@@ -144,8 +144,8 @@ setup(
             "dask==2023.3.0",
             "python-datatable==1.1.3",
             "polars==0.19.12",
-            "pyarrow==13.0.0",
-            "connectorx==0.3.1",
+            "pyarrow==14.0.1",
+            "connectorx==0.3.2",
             "pyspark==3.5.0",
             "deltalake==0.13.0"
         ],
@@ -162,7 +162,7 @@ setup(
         "redis": [
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
-            "redis==4.5.5",
+            "redis==5.0.1",
             "aioredis==2.0.1",
             "hiredis==2.2.3",
             "objectpath==0.6.1",
@@ -175,26 +175,26 @@ setup(
             "psycopg-binary>=3.1.8",
         ],
         "postgresql": [
-            "asyncpg==0.28.0",
+            "asyncpg==0.29.0",
         ],
         "mysql": [
             "asyncmy==0.2.7",
             "mysqlclient==2.1.1"
         ],
         "mariadb": [
-            "aiomysql==0.1.1"
+            "aiomysql==0.2.0"
         ],
         "boto3": [
-            "botocore==1.29.76",
-            "aiobotocore==2.5.0",
-            "aioboto3==11.2.0"
+            "botocore==1.31.64",
+            "aiobotocore==2.7.0",
+            "aioboto3==12.0.0"
         ],
         "cassandra": [
             "cassandra-driver==3.28.0",
         ],
         "influxdb": [
             "influxdb==5.3.1",
-            "influxdb-client[async]==1.36.1",
+            "influxdb-client[async]==1.39.0",
         ],
         "odbc": [
             "aioodbc==0.3.3",
@@ -234,15 +234,15 @@ setup(
             "dask==2023.3.0",
             "python-datatable==1.1.3",
             "polars==0.19.12",
-            "pyarrow==13.0.0",
-            "connectorx==0.3.1",
+            "pyarrow==14.0.1",
+            "connectorx==0.3.2",
             "aiosqlite>=0.18.0",
             "pylibmc==1.6.3",
             "aiomcache==0.8.1",
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
             "aioredis==2.0.1",
-            "redis==4.5.5",
+            "redis==5.0.1",
             "objectpath==0.6.1",
             "rethinkdb==2.4.9",
             "aiopg==1.4.0",
@@ -261,15 +261,15 @@ setup(
             "aiocouch==2.2.2",
             "asyncmy==0.2.7",
             "mysqlclient==2.1.1",
-            "aiomysql==0.1.1",
+            "aiomysql==0.2.0",
             "pyspark==3.5.0",
             "oracledb==1.2.2",
             "hazelcast-python-client==5.3.0",
             "duckdb==0.8.1",
             "deltalake==0.13.0",
-            "botocore==1.29.76",
-            "aiobotocore==2.5.0",
-            "aioboto3==11.2.0",
+            "botocore==1.31.64",
+            "aiobotocore==2.7.0",
+            "aioboto3==12.0.0",
             "acsylla==0.1.8b0",
         ]
     },
