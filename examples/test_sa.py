@@ -11,9 +11,9 @@ params = {
     "password": "12345678",
     "host": "127.0.0.1",
     "port": "5432",
-    "database": "navigator_dev"
+    "database": "navigator"
 }
-dsn = "postgresql+asyncpg://troc_pgdata:12345678@127.0.0.1:5432/navigator_dev"
+dsn = "postgresql+asyncpg://troc_pgdata:12345678@127.0.0.1:5432/navigator"
 
 # asyncio version
 async def test_connection(loop):
