@@ -88,6 +88,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3 :: Only",
         "Framework :: AsyncIO",
     ],
@@ -120,7 +121,7 @@ setup(
         "pgpy==0.6.0",
         "python-magic==0.4.27",
         "dateparser==1.1.8",
-        "python-datamodel>=0.2.1",
+        "python-datamodel>=0.5.0",
         "aiosqlite>=0.18.0",
         "pendulum==2.1.2"
     ],
