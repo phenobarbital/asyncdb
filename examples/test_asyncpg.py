@@ -10,8 +10,14 @@ params = {
     "password": "12345678",
     "host": "127.0.0.1",
     "port": "5432",
-    "database": "navigator_dev",
-    "DEBUG": True,
+    "database": "navigator",
+    "connection_config": {
+        "work_mem": "1024MB",
+        # "shared_buffers": "4096MB",
+        "effective_io_concurrency": "100",
+        # "max_worker_processes": "12",
+        "max_parallel_workers_per_gather": "6",
+    }
     # "ssl": True,
     # "check_hostname": True
 }
@@ -29,7 +35,12 @@ async def pooler(loop):
         # execute other, long-term query:
         result, error = await conn.execute("REFRESH MATERIALIZED VIEW flexroc.vw_form_information;")
         print(result, error)
-    print('Is closed: ', {db.is_connected()})
+        # Check configuration Settings on this connection:
+        result, error = await conn.queryrow("SHOW work_mem;")
+        print('R ', result, error)
+        assert result['work_mem'] == "1GB"
+    print('Is closed Connection: ', {conn.is_connected()})
+    print('Is a closed Pool: ', {db.is_connected()})
     await pool.close()
 
 
@@ -103,6 +114,6 @@ if __name__ == '__main__':
         loop = asyncio.get_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(pooler(loop))
-        loop.run_until_complete(test_pg(loop))
+        # loop.run_until_complete(test_pg(loop))
     finally:
         loop.stop()
