@@ -137,7 +137,7 @@ setup(
             "rethinkdb==2.4.10",
             "influxdb==5.3.1",
             "influxdb-client[async]==1.39.0",
-            "pymssql==2.2.7",
+            "pymssql==2.2.11",
             "redis==5.0.1",
             "duckdb==0.8.1",
             "deltalake==0.13.0"
@@ -213,20 +213,20 @@ setup(
             "oracledb==1.2.2"
         ],
         "sqlalchemy": [
-            "sqlalchemy[asyncio]==2.0.19",
+            "sqlalchemy[asyncio]==2.0.23",
         ],
         "elasticsearch": [
-            "elasticsearch[async]==8.6.2",
+            "elasticsearch[async]==8.11.0",
         ],
         "mongodb": [
             "pymongo==4.3.3",
             "motor==3.1.1",
         ],
         "msqlserver": [
-            "pymssql==2.2.7",
+            "pymssql==2.2.11",
         ],
         "couchdb": [
-            "aiocouch==2.2.2"
+            "aiocouch==3.0.0"
         ],
         "hazelcast": [
             "hazelcast-python-client==5.3.0"
@@ -259,12 +259,12 @@ setup(
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.35",
-            "sqlalchemy[asyncio]==2.0.19",
-            "elasticsearch[async]==8.6.2",
+            "sqlalchemy[asyncio]==2.0.23",
+            "elasticsearch[async]==8.11.0",
             "pymongo==4.3.3",
             "motor==3.1.1",
-            "pymssql==2.2.7",
-            "aiocouch==2.2.2",
+            "pymssql==2.2.11",
+            "aiocouch==3.0.0",
             "asyncmy==0.2.9",
             "mysqlclient==2.2.0",
             "aiomysql==0.2.0",
