@@ -116,7 +116,7 @@ setup(
         "lz4==4.3.2",
         "typing_extensions==4.8.0",
         "charset-normalizer>=2.0.7",
-        "ciso8601==2.3.0",
+        "ciso8601==2.3.1",
         "iso8601==2.1.0",
         "pgpy==0.6.0",
         "python-magic==0.4.27",
