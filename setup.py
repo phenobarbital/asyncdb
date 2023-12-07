@@ -222,7 +222,7 @@ setup(
             "pymssql==2.2.7",
         ],
         "couchdb": [
-            "aiocouch==2.2.2"
+            "aiocouch==3.0.0"
         ],
         "hazelcast": [
             "hazelcast-python-client==5.3.0"
@@ -260,7 +260,7 @@ setup(
             "pymongo==4.3.3",
             "motor==3.1.1",
             "pymssql==2.2.7",
-            "aiocouch==2.2.2",
+            "aiocouch==3.0.0",
             "asyncmy==0.2.7",
             "mysqlclient==2.1.1",
             "aiomysql==0.2.0",
