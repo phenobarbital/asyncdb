@@ -5,7 +5,6 @@ This provider implements basic funcionalities from asyncpg
 (cursors, transactions, copy from and to files, pools, native data types, etc).
 """
 import asyncio
-from multiprocessing import Value
 import os
 import ssl
 import time
@@ -15,7 +14,6 @@ from typing import Any, Optional, Union
 from dataclasses import is_dataclass
 from datamodel import BaseModel
 import asyncpg
-import uvloop
 from asyncpg.exceptions import (
     ConnectionDoesNotExistError,
     DuplicateTableError,
@@ -53,8 +51,6 @@ from .sql import SQLCursor, SQLDriver
 max_cached_statement_lifetime = 600
 max_cacheable_statement_size = 1024 * 15
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
 
 class NAVConnection(asyncpg.Connection):
     def _get_reset_query(self):
@@ -65,7 +61,13 @@ class pgPool(BasePool):
     _setup_func: Optional[Callable] = None
     _init_func: Optional[Callable] = None
 
-    def __init__(self, dsn: str = None, loop: asyncio.AbstractEventLoop = None, params: Optional[dict] = None, **kwargs):
+    def __init__(
+        self,
+        dsn: str = None,
+        loop: asyncio.AbstractEventLoop = None,
+        params: Optional[dict] = None,
+        **kwargs
+    ):
         self._test_query = 'SELECT 1'
         self.application_name = os.getenv('APP_NAME', "NAV")
         self._max_clients = 300
@@ -78,7 +80,7 @@ class pgPool(BasePool):
         try:
             self._max_inactive_timeout = kwargs['max_inactive_timeout']
         except KeyError:
-            self._max_inactive_timeout = 300
+            self._max_inactive_timeout = 36000
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if "application_name" in self._server_settings:
@@ -89,6 +91,8 @@ class pgPool(BasePool):
             self._min_size = kwargs["min_size"]
         if "numeric_as_float" in kwargs:
             self._numeric_as_float = kwargs['numeric_as_float']
+        # Connection Configuration:
+        self._connection_config = params.pop('connection_config', {})
         # set the JSON encoder:
         self._encoder = DefaultEncoder()
         ### SSL Support:
@@ -193,6 +197,18 @@ class pgPool(BasePool):
             schema="pg_catalog",
             format="binary",
         )
+        if self._connection_config and isinstance(self._connection_config, dict):
+            for key, value in self._connection_config.items():
+                config = f"SELECT set_config('{key}', '{value}', false);"
+                try:
+                    r = await connection.execute(config)
+                    self._logger.debug(
+                        f"{r} - Config {key} = {value}"
+                    )
+                except RuntimeError as err:
+                    self._logger.warning(
+                        f"Pg: Error on Connection Configuration: {err}"
+                    )
         if self._init_func is not None and callable(self._init_func):
             try:
                 await self._init_func(connection)  # pylint: disable=E1102
@@ -200,8 +216,6 @@ class pgPool(BasePool):
                 self._logger.warning(
                     f"Error on Init Connection: {err}"
                 )
-
-## init async db initialization
 
     # Create a database connection pool
     async def connect(self):
@@ -232,7 +246,7 @@ class pgPool(BasePool):
                 max_queries=self._max_queries,
                 min_size=self._min_size,
                 max_size=self._max_clients,
-                # max_inactive_connection_lifetime=self._max_inactive_timeout,
+                max_inactive_connection_lifetime=self._max_inactive_timeout,
                 statement_cache_size=36000,
                 timeout=self._timeout,
                 # command_timeout=self._timeout,
@@ -344,6 +358,13 @@ class pgPool(BasePool):
             db = pg(pool=self)
             db.set_connection(self._connection)
         return db
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        # clean up anything you need to clean up
+        return await self.release(
+            connection=self._connection,
+            timeout=5
+        )
 
     async def release(self, connection=None, timeout=5):
         """
@@ -500,6 +521,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             self._numeric_as_float = False
         # set the JSON encoder:
         self._encoder = DefaultEncoder()
+        # Connection Configuration:
+        self._connection_config = params.pop('connection_config', {})
         ### SSL Support:
         self.ssl: bool = False
         if params and 'ssl' in params:
@@ -543,9 +566,13 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 )
             self.sslctx.check_hostname = check_hostname
 
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        # clean up anything you need to clean up
+        return await self.close()
+
     async def close(self, timeout=5):
         """
-        Closing a Connection
+        Closing a Connection.
         """
         if self._connection:
             try:
@@ -553,8 +580,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     self._logger.debug(
                         f"Closing Connection, id: {self._connection.get_server_pid()}"
                     )
-                    if self._pool is not None:
-                        await self._pool.pool().release(self._connection)
+                    if self._pool:
+                        await self._pool.release(self._connection)
                     else:
                         await self._connection.close(timeout=timeout)
             except TypeError:
@@ -573,8 +600,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 except TypeError:
                     pass
             finally:
-                self._connection = None
                 self._connected = False
+                self._connection = None
 
     disconnect = close
 
@@ -597,7 +624,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
 
         Get an asyncpg connection
         """
-        if self._connection is not None:
+        if self._connection:
             if not self._connection.is_closed():
                 self._connected = True
                 return self
@@ -613,8 +640,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
 
         server_settings = {
             "application_name": self.application_name,
-            "idle_session_timeout": "60min",
-            # "tcp_keepalives_idle": "3600",
+            "idle_session_timeout": "120min",
+            "tcp_keepalives_idle": "36000",
             "max_parallel_workers": "512"
         }
         server_settings = {**server_settings, **self._server_settings}
@@ -630,10 +657,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             else:
                 self._connection = await asyncpg.connect(
                     dsn=self._dsn,
-                    # command_timeout=self._timeout,
                     timeout=self._timeout,
-                    # max_cached_statement_lifetime=max_cached_statement_lifetime,
-                    # max_cacheable_statement_size=max_cacheable_statement_size,
                     statement_cache_size=36000,
                     server_settings=server_settings,
                     connection_class=NAVConnection,
@@ -680,6 +704,15 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 )
             if self._connection:
                 self._connected = True
+                if self._connection_config and isinstance(self._connection_config, dict):
+                    for key, value in self._connection_config.items():
+                        config = f"SELECT set_config('{key}', '{value}', false);"
+                        try:
+                            r = await self._connection.execute(config)
+                        except RuntimeError as err:
+                            self._logger.warning(
+                                f"Pg: Error on Connection Configuration: {err}"
+                            )
                 if self._init_func is not None and callable(self._init_func):
                     try:
                         await self._init_func(self._connection)  # pylint: disable=E1102
@@ -1238,9 +1271,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         raise NotImplementedError
 
     async def use(self, database: str):
-        raise NotImplementedError(
-            'AsyncPg Error: There is no Database in SQLite'
-        )  # pragma: no cover
+        raise NotImplementedError # pragma: no cover
 
     async def _insert_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """
