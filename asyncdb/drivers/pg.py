@@ -5,7 +5,6 @@ This provider implements basic funcionalities from asyncpg
 (cursors, transactions, copy from and to files, pools, native data types, etc).
 """
 import asyncio
-from multiprocessing import Value
 import os
 import ssl
 import time
@@ -1238,9 +1237,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         raise NotImplementedError
 
     async def use(self, database: str):
-        raise NotImplementedError(
-            'AsyncPg Error: There is no Database in SQLite'
-        )  # pragma: no cover
+        raise NotImplementedError # pragma: no cover
 
     async def _insert_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """

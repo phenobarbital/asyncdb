@@ -180,8 +180,8 @@ setup(
             "asyncpg==0.29.0",
         ],
         "mysql": [
-            "asyncmy==0.2.7",
-            "mysqlclient==2.1.1"
+            "asyncmy==0.2.9",
+            "mysqlclient==2.2.0"
         ],
         "mariadb": [
             "aiomysql==0.2.0"
@@ -190,6 +190,10 @@ setup(
             "botocore==1.31.64",
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0"
+        ],
+        "bigquery": [
+          "google-cloud-bigquery==3.13.0",
+          "pandas-gbq==0.19.2"
         ],
         "cassandra": [
             "cassandra-driver==3.28.0",
@@ -261,8 +265,8 @@ setup(
             "motor==3.1.1",
             "pymssql==2.2.11",
             "aiocouch==3.0.0",
-            "asyncmy==0.2.7",
-            "mysqlclient==2.1.1",
+            "asyncmy==0.2.9",
+            "mysqlclient==2.2.0",
             "aiomysql==0.2.0",
             "pyspark==3.5.0",
             "oracledb==1.2.2",
@@ -273,6 +277,9 @@ setup(
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
             "acsylla==0.1.8b0",
+            "google-cloud-bigquery==3.13.0",
+            "pandas-gbq==0.19.2",
+            "tqdm==4.66.1"
         ]
     },
     tests_require=[
