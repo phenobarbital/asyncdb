@@ -117,7 +117,7 @@ setup(
         "typing_extensions==4.8.0",
         "charset-normalizer>=2.0.7",
         "ciso8601==2.3.1",
-        "iso8601==1.1.0",
+        "iso8601==2.1.0",
         "pgpy==0.6.0",
         "python-magic==0.4.27",
         "dateparser==1.1.8",
@@ -137,7 +137,7 @@ setup(
             "rethinkdb==2.4.10",
             "influxdb==5.3.1",
             "influxdb-client[async]==1.39.0",
-            "pymssql==2.2.7",
+            "pymssql==2.2.11",
             "redis==5.0.1",
             "duckdb==0.8.1",
             "deltalake==0.13.0"
@@ -180,8 +180,8 @@ setup(
             "asyncpg==0.29.0",
         ],
         "mysql": [
-            "asyncmy==0.2.7",
-            "mysqlclient==2.1.1"
+            "asyncmy==0.2.9",
+            "mysqlclient==2.2.0"
         ],
         "mariadb": [
             "aiomysql==0.2.0"
@@ -190,6 +190,10 @@ setup(
             "botocore==1.31.64",
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0"
+        ],
+        "bigquery": [
+          "google-cloud-bigquery==3.13.0",
+          "pandas-gbq==0.19.2"
         ],
         "cassandra": [
             "cassandra-driver==3.28.0",
@@ -209,20 +213,20 @@ setup(
             "oracledb==1.2.2"
         ],
         "sqlalchemy": [
-            "sqlalchemy[asyncio]==2.0.19",
+            "sqlalchemy[asyncio]==2.0.23",
         ],
         "elasticsearch": [
-            "elasticsearch[async]==8.6.2",
+            "elasticsearch[async]==8.11.0",
         ],
         "mongodb": [
             "pymongo==4.3.3",
-            "motor==3.1.1",
+            "motor==3.3.2",
         ],
         "msqlserver": [
-            "pymssql==2.2.7",
+            "pymssql==2.2.11",
         ],
         "couchdb": [
-            "aiocouch==2.2.2"
+            "aiocouch==3.0.0"
         ],
         "hazelcast": [
             "hazelcast-python-client==5.3.0"
@@ -255,14 +259,14 @@ setup(
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.35",
-            "sqlalchemy[asyncio]==2.0.19",
-            "elasticsearch[async]==8.6.2",
+            "sqlalchemy[asyncio]==2.0.23",
+            "elasticsearch[async]==8.11.0",
             "pymongo==4.3.3",
-            "motor==3.1.1",
-            "pymssql==2.2.7",
-            "aiocouch==2.2.2",
-            "asyncmy==0.2.7",
-            "mysqlclient==2.1.1",
+            "motor==3.3.2",
+            "pymssql==2.2.11",
+            "aiocouch==3.0.0",
+            "asyncmy==0.2.9",
+            "mysqlclient==2.2.0",
             "aiomysql==0.2.0",
             "pyspark==3.5.0",
             "oracledb==1.2.2",
@@ -273,6 +277,9 @@ setup(
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
             "acsylla==0.1.8b0",
+            "google-cloud-bigquery==3.13.0",
+            "pandas-gbq==0.19.2",
+            "tqdm==4.66.1"
         ]
     },
     tests_require=[
