@@ -191,6 +191,10 @@ setup(
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0"
         ],
+        "bigquery": [
+          "google-cloud-bigquery==3.13.0",
+          "pandas-gbq==0.19.2"
+        ],
         "cassandra": [
             "cassandra-driver==3.28.0",
         ],
@@ -273,6 +277,9 @@ setup(
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
             "acsylla==0.1.8b0",
+            "google-cloud-bigquery==3.13.0",
+            "pandas-gbq==0.19.2",
+            "tqdm==4.66.1"
         ]
     },
     tests_require=[
