@@ -209,7 +209,7 @@ setup(
             "oracledb==1.2.2"
         ],
         "sqlalchemy": [
-            "sqlalchemy[asyncio]==2.0.19",
+            "sqlalchemy[asyncio]==2.0.23",
         ],
         "elasticsearch": [
             "elasticsearch[async]==8.6.2",
@@ -222,7 +222,7 @@ setup(
             "pymssql==2.2.11",
         ],
         "couchdb": [
-            "aiocouch==2.2.2"
+            "aiocouch==3.0.0"
         ],
         "hazelcast": [
             "hazelcast-python-client==5.3.0"
@@ -255,12 +255,12 @@ setup(
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.35",
-            "sqlalchemy[asyncio]==2.0.19",
+            "sqlalchemy[asyncio]==2.0.23",
             "elasticsearch[async]==8.6.2",
             "pymongo==4.3.3",
             "motor==3.1.1",
             "pymssql==2.2.11",
-            "aiocouch==2.2.2",
+            "aiocouch==3.0.0",
             "asyncmy==0.2.7",
             "mysqlclient==2.1.1",
             "aiomysql==0.2.0",
