@@ -251,7 +251,7 @@ class ConnectionBackend(ABC):
     event_loop = get_loop
 
     def is_connected(self):
-        return self._connected
+        return bool(self._connected)
 
     def get_connection(self):
         return self._connection
@@ -353,6 +353,8 @@ class ConnectionDSNBackend(ABC):
             self._params = params.copy()
         except (TypeError, AttributeError, ValueError):
             self._params = {}
+        # Executor:
+        self._executor = None
 
     def create_dsn(self, params: dict):
         try:
@@ -369,6 +371,29 @@ class ConnectionDSNBackend(ABC):
     def get_dsn(self):
         return self._dsn
 
+    def get_executor(self, executor = 'thread', max_workers: int = 2) -> Any:
+        if executor == 'thread':
+            return ThreadPoolExecutor(max_workers=max_workers)
+        elif executor == 'process':
+            return ProcessPoolExecutor(max_workers=max_workers)
+        else:
+            return None
+
+    async def _thread_func(self, fn, *args, executor: Any = None, **kwargs):
+        """_execute.
+
+        Returns a future to be executed into a Thread Pool.
+        """
+        loop = asyncio.get_event_loop()
+        func = partial(fn, *args, **kwargs)
+        if not executor:
+            executor = self._executor
+        try:
+            fut = loop.run_in_executor(executor, func)
+            return await fut
+        except Exception as e:
+            self._logger.exception(e, stack_info=True)
+            raise
 
 class TransactionBackend(ABC):
     """
