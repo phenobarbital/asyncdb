@@ -92,7 +92,10 @@ class pgPool(BasePool):
         if "numeric_as_float" in kwargs:
             self._numeric_as_float = kwargs['numeric_as_float']
         # Connection Configuration:
-        self._connection_config = params.pop('connection_config', {})
+        try:
+            self._connection_config = params.pop('connection_config', {})
+        except AttributeError:
+            self._connection_config = {}
         # set the JSON encoder:
         self._encoder = DefaultEncoder()
         ### SSL Support:
@@ -522,7 +525,10 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         # set the JSON encoder:
         self._encoder = DefaultEncoder()
         # Connection Configuration:
-        self._connection_config = params.pop('connection_config', {})
+        try:
+            self._connection_config = params.pop('connection_config', {})
+        except AttributeError:
+            self._connection_config = {}
         ### SSL Support:
         self.ssl: bool = False
         if params and 'ssl' in params:
