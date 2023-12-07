@@ -627,7 +627,6 @@ class mysqlclient(SQLDriver, DBCursorBackend):
     async def use(self, database: str):
         raise NotImplementedError # pragma: no cover
 
-
     """
     Cursor Iterator Context
     """
