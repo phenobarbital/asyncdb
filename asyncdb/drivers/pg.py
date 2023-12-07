@@ -521,6 +521,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             self._numeric_as_float = False
         # set the JSON encoder:
         self._encoder = DefaultEncoder()
+        # Connection Configuration:
+        self._connection_config = params.pop('connection_config', {})
         ### SSL Support:
         self.ssl: bool = False
         if params and 'ssl' in params:
@@ -638,8 +640,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
 
         server_settings = {
             "application_name": self.application_name,
-            "idle_session_timeout": "60min",
-            # "tcp_keepalives_idle": "3600",
+            "idle_session_timeout": "120min",
+            "tcp_keepalives_idle": "36000",
             "max_parallel_workers": "512"
         }
         server_settings = {**server_settings, **self._server_settings}
@@ -655,10 +657,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             else:
                 self._connection = await asyncpg.connect(
                     dsn=self._dsn,
-                    # command_timeout=self._timeout,
                     timeout=self._timeout,
-                    # max_cached_statement_lifetime=max_cached_statement_lifetime,
-                    # max_cacheable_statement_size=max_cacheable_statement_size,
                     statement_cache_size=36000,
                     server_settings=server_settings,
                     connection_class=NAVConnection,
@@ -705,6 +704,15 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 )
             if self._connection:
                 self._connected = True
+                if self._connection_config and isinstance(self._connection_config, dict):
+                    for key, value in self._connection_config.items():
+                        config = f"SELECT set_config('{key}', '{value}', false);"
+                        try:
+                            r = await self._connection.execute(config)
+                        except RuntimeError as err:
+                            self._logger.warning(
+                                f"Pg: Error on Connection Configuration: {err}"
+                            )
                 if self._init_func is not None and callable(self._init_func):
                     try:
                         await self._init_func(self._connection)  # pylint: disable=E1102
