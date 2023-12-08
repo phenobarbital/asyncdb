@@ -103,7 +103,7 @@ setup(
         "wheel==0.42.0"
     ],
     install_requires=[
-        "numpy==1.24.2",
+        "numpy==1.26.2",
         "cryptography==41.0.7",
         "aiohttp==3.9.1",
         "asyncpg==0.29.0",
