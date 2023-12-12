@@ -187,7 +187,7 @@ setup(
             "aiomysql==0.2.0"
         ],
         "boto3": [
-            "botocore==1.31.64",
+            "botocore==1.33.12",
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0"
         ],
@@ -273,7 +273,7 @@ setup(
             "hazelcast-python-client==5.3.0",
             "duckdb==0.8.1",
             "deltalake==0.13.0",
-            "botocore==1.31.64",
+            "botocore==1.33.12",
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
             "acsylla==0.1.8b0",
