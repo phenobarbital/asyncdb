@@ -109,7 +109,7 @@ setup(
         "asyncpg==0.29.0",
         "uvloop==0.19.0",
         "asyncio==3.4.3",
-        "pandas==2.1.1",
+        "pandas==2.1.4",
         "xlrd==2.0.1",
         "openpyxl==3.1.2",
         "lz4==4.3.2",
