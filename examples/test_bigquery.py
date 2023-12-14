@@ -15,6 +15,7 @@ async def connect(loop):
     print(
         f"Connected: {bq.is_connected()}"
     )
+    print('TEST ', await bq.test_connection())
     query = """
         SELECT corpus AS title, COUNT(word) AS unique_words
         FROM `bigquery-public-data.samples.shakespeare`
