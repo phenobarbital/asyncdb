@@ -977,6 +977,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         finally:
             self.generated_at()
 
+    fetchall = fetch_all
+
     async def fetch_one(self, sentence: str, *args, **kwargs):
         result = None
         self.start_timing()
@@ -1356,13 +1358,12 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             result = await stmt.fetchrow(*source, timeout=2)
             self._logger.debug(stmt.get_statusmsg())
             if result:
+                _model.reset_values()
                 for f, val in result.items():
                     setattr(_model, f, val)
                 return _model
-        except UniqueViolationError as err:
-            raise StatementError(
-                message=f"Constraint Error: {err!r}",
-            ) from err
+        except UniqueViolationError:
+            raise
         except Exception as err:
             raise DriverError(
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
@@ -1397,7 +1398,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 value
             )
             n += 1
-            if pk := self._get_attribute(field, value, attr='primary_key'):
+            curval = _model.old_value(column)
+            if pk := self._get_attribute(field, curval, attr='primary_key'):
                 if column in _filter:
                     # already this value on delete:
                     continue
@@ -1434,6 +1436,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         cols = []
         source = []
         _filter = {}
+        _updated = {}
         n = 1
         fields = _model.columns()
         for name, field in fields.items():
@@ -1443,6 +1446,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 continue
             ## getting the value of column:
             value = self._get_value(field, val)
+
             column = field.name
             # validating required field
             try:
@@ -1472,23 +1476,26 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             cols.append("{} = {}".format(name, "${}".format(n)))  # pylint: disable=C0209
             source.append(value)
             n += 1
-            if pk := self._get_attribute(field, value, attr='primary_key'):
+            curval = _model.old_value(name)
+            if pk := self._get_attribute(field, curval, attr='primary_key'):
                 _filter[column] = pk
+            if pk := self._get_attribute(field, value, attr='primary_key'):
+                _updated[column] = pk
         try:
             set_fields = ", ".join(cols)
             condition = self._where(fields, **_filter)
             _update = f"UPDATE {table} SET {set_fields} {condition}"
             self._logger.debug(f'UPDATE: {_update}')
-
             stmt = await self._connection.prepare(_update)
             result = await stmt.fetchrow(*source, timeout=2)
-            self._logger.debug(stmt.get_statusmsg())
-
-            condition = self._where(fields, **_filter)
+            self._logger.debug(
+                f'STATUS {stmt.get_statusmsg()}'
+            )
+            condition = self._where(fields, **_updated)
             get = f"SELECT * FROM {table} {condition}"
-
             result = await self._connection.fetchrow(get)
             if result:
+                _model.reset_values()
                 for f, val in result.items():
                     setattr(_model, f, val)
                 return _model
@@ -1497,10 +1504,14 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
             ) from err
 
-    async def _save_(self, model: Model, *args, **kwargs):
+    async def _save_(self, _model: Model, *args, **kwargs):
         """
         Save a row in a Model, using Insert-or-Update methodology.
         """
+        try:
+            return await self._insert_(_model, *args, **kwargs)
+        except UniqueViolationError:
+            return await self._update_(_model, *args, **kwargs)
 
     async def _fetch_(self, _model: Model, *args, **kwargs):
         """
