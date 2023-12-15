@@ -231,7 +231,7 @@ setup(
         ],
         "scylla": [
             "acsylla==0.1.8b0",
-            "scylla_driver==3.26.2",
+            "scylla_driver==3.26.3",
             "cqlsh==6.1.2"
         ],
         "all": [
