@@ -189,19 +189,23 @@ class Model(BaseModel):
         """
         if not self.Meta.connection:
             self.get_connection()
-        async with await self.Meta.connection.connection() as conn:
-            try:
-                result = await self.Meta.connection._save_(
-                    _model=self, **kwargs
-                )
-                return result
-            except DriverError:
-                raise
-            except Exception as err:
-                logging.debug(traceback.format_exc())
-                raise ModelError(
-                    f"Error on SAVE {self.Meta.name}: {err}"
-                ) from err
+        if not self.Meta.connection.is_connected():
+            await self.Meta.connection.connection()
+        result = None
+        try:
+            result = await self.Meta.connection._save_(
+                _model=self, **kwargs
+            )
+            return result
+        except StatementError:
+            raise
+        except DriverError:
+            raise
+        except Exception as err:
+            logging.debug(traceback.format_exc())
+            raise ModelError(
+                f"Error on DELETE {self.Meta.name}: {err}"
+            ) from err
 
     async def fetch(self, **kwargs):
         """

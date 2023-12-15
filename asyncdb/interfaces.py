@@ -823,7 +823,6 @@ class ModelBackend(ABC):
         """
 
 ## Aux Methods:
-
     def _get_value(self, field: Field, value: Any) -> Any:
         datatype = field.type
         new_val = None
