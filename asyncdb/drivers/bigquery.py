@@ -48,6 +48,7 @@ class bigquery(SQLDriver):
                     credentials=self.credentials,
                     project=self._project_id
                 )
+                self._connected = True
             else:
                 self.credentials = self._account
                 self._connection = bq.Client(
@@ -59,7 +60,7 @@ class bigquery(SQLDriver):
 
     async def close(self):
         # BigQuery client does not maintain persistent connections, so nothing to close here.
-        pass
+        self._connected = False
 
     disconnect = close
 
@@ -110,9 +111,9 @@ class bigquery(SQLDriver):
         args = {**kwargs, **args}
         return bq.LoadJobConfig(**args)
 
-    async def create_dataset(self, dataset: str):
+    async def create_dataset(self, dataset_id: str):
         try:
-            dataset_ref = self._connection.dataset(dataset)
+            dataset_ref = bq.DatasetReference(self._connection.project, dataset_id)
             dataset_obj = bq.Dataset(dataset_ref)
             dataset_obj = self._connection.create_dataset(dataset_obj)
             return dataset_obj
@@ -139,7 +140,7 @@ class bigquery(SQLDriver):
         if not self._connection:
             await self.connection()
 
-        dataset_ref = self._connection.dataset(dataset_id)
+        dataset_ref = bq.DatasetReference(self._connection.project, dataset_id)
         table_ref = dataset_ref.table(table_id)
         table = bq.Table(table_ref, schema=schema)
         try:
@@ -165,7 +166,8 @@ class bigquery(SQLDriver):
         if not self._connection:
             await self.connection()
 
-        dataset_ref = self._connection.dataset(dataset_id)
+        # Construct a reference to the dataset
+        dataset_ref = bq.DatasetReference(self._connection.project, dataset_id)
         table_ref = dataset_ref.table(table_id)
         table = self._connection.get_table(table_ref)  # API request to fetch the table schema
 
@@ -369,7 +371,7 @@ class bigquery(SQLDriver):
         return self._connection is not None
 
     def is_connected(self):
-        return self.connected
+        return self._connected
 
     def tables(self, schema: str = "") -> Iterable[Any]:
         raise NotImplementedError
