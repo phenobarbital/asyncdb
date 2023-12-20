@@ -367,6 +367,7 @@ class Model(BaseModel):
                 _model=cls, *args, **kwargs
             )
             if result:
+                cls.reset_values(cls)
                 return [cls(**dict(r)) for r in result]
             else:
                 return []
@@ -401,6 +402,7 @@ class Model(BaseModel):
                 _model=cls, *args, **kwargs
             )
             if result:
+                cls.reset_values(cls)
                 return [cls(**dict(r)) for r in result]
             else:
                 return []
@@ -436,6 +438,7 @@ class Model(BaseModel):
             if result:
                 fields = cls.get_fields(cls)
                 result = {k:v for k,v in dict(result).items() if k in fields}
+                cls.reset_values(cls)
                 return cls(**result)
             else:
                 raise NoDataFound(
@@ -472,6 +475,7 @@ class Model(BaseModel):
             result = await cls.Meta.connection._all_(
                 _model=cls, **kwargs
             )
+            cls.reset_values(cls)
             return [cls(**dict(row)) for row in result]
         except ValidationError:
             raise
