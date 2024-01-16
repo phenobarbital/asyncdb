@@ -38,14 +38,6 @@ jobs:
         cibuildwheel --output-dir wheelhouse
         # You may need to adjust the above command based on your package's specific requirements
 
-    - name: Publish wheels to Test PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
-      run: |
-        twine upload -r testpypi dist/*-manylinux*.whl
-        twine upload -r testpypi wheelhouse/*.whl
-
     - name: Publish wheels to Production PyPI
       env:
         TWINE_USERNAME: __token__
