@@ -15,7 +15,6 @@ from abc import (
 )
 from typing import (
     Any,
-    List,
     Optional,
     Union
 )
@@ -621,8 +620,7 @@ class CursorBackend(ABC):
 
             raise: StopAsyncIteration when done.
         """
-        row = await self._cursor.fetchone()
-        if row is not None:
+        if row := await self._cursor.fetchone() is not None:
             return row
         else:
             raise StopAsyncIteration
@@ -632,8 +630,7 @@ class CursorBackend(ABC):
 
             raise: StopAsyncIteration when done.
         """
-        row = self._cursor.fetchone()
-        if row is not None:
+        if row := self._cursor.fetchone() is not None:
             return row
         else:
             raise StopAsyncIteration
@@ -718,8 +715,7 @@ class DBCursorBackend(ABC):
         Returns:
             _type_: Single record for iteration.
         """
-        data = await self._cursor.fetchrow()
-        if data is not None:
+        if data := await self._cursor.fetchrow() is not None:
             return data
         else:
             raise StopAsyncIteration
@@ -869,7 +865,7 @@ class ModelBackend(ABC):
                 datatype = f.type
                 if value is None or value == "null" or value == "NULL":
                     _cond.append(f"{key} is NULL")
-                elif value == "!null" or value == "!NULL":
+                elif value in {"!null", "!NULL"}:
                     _cond.append(f"{key} is NOT NULL")
                 elif isinstance(value, bool):
                     val = str(value)
@@ -883,15 +879,15 @@ class ModelBackend(ABC):
                     _cond.append(
                         f"({key} = ANY(ARRAY[{values}]){null_vals})"
                     )
-                elif isinstance(datatype, (list, List)):
+                elif isinstance(datatype, list):
                     val = ", ".join(
-                        map(str, [Entity.escapeLiteral(v, type(v)) for v in value])
+                        [str(Entity.escapeLiteral(v, type(v))) for v in value]
                     )
                     _cond.append(
                         f"ARRAY[{val}]<@ {key}::character varying[]")
                 elif Entity.is_array(datatype):
                     val = ", ".join(
-                        map(str, [Entity.escapeLiteral(v, type(v)) for v in value])
+                        [str(Entity.escapeLiteral(v, type(v))) for v in value]
                     )
                     _cond.append(f"{key} IN ({val})")
                 else:
