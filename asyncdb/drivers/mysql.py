@@ -14,43 +14,41 @@ from asyncdb.exceptions import (
     StatementError,
 )
 from asyncdb.interfaces import DBCursorBackend
-from .abstract import (
-    BasePool
-)
+from .abstract import BasePool
 from .sql import SQLCursor, SQLDriver
+
 
 class mysqlCursor(SQLCursor):
     _connection: Any = None
+
 
 class mysqlPool(BasePool):
     _setup_func: Optional[Callable] = None
     _init_func: Optional[Callable] = None
 
-    def __init__(self, dsn: str = None, loop: asyncio.AbstractEventLoop = None, params: Optional[dict] = None, **kwargs):
-        self._test_query = 'SELECT 1'
+    def __init__(
+        self, dsn: str = None, loop: asyncio.AbstractEventLoop = None, params: Optional[dict] = None, **kwargs
+    ):
+        self._test_query = "SELECT 1"
         self._max_clients = 300
         self._min_size = 10
-        self._dsn = 'mysql://{user}:{password}@{host}:{port}/{database}'
-        self._init_command = kwargs.pop('init_command', None)
-        self._sql_modes = kwargs.pop('sql_modes', None)
-        super(mysqlPool, self).__init__(
-            dsn=dsn, loop=loop, params=params, **kwargs
-        )
+        self._dsn = "mysql://{user}:{password}@{host}:{port}/{database}"
+        self._init_command = kwargs.pop("init_command", None)
+        self._sql_modes = kwargs.pop("sql_modes", None)
+        super(mysqlPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
     async def connect(self):
         """
         Create a database connection pool.
         """
-        self._logger.debug(
-            "MySQL: Connecting to {}".format(self._params)
-        )
+        self._logger.debug("MySQL: Connecting to {}".format(self._params))
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             params = {}
             if self._init_command:
-                params['init_command'] = self._init_command
+                params["init_command"] = self._init_command
             if self._sql_modes:
-                params['sql_mode'] = self._sql_modes
+                params["sql_mode"] = self._sql_modes
             self._pool = await asyncmy.create_pool(
                 host=self._params["host"],
                 port=int(self._params["port"]),
@@ -58,20 +56,14 @@ class mysqlPool(BasePool):
                 password=self._params["password"],
                 database=self._params["database"],
                 connect_timeout=self._timeout,
-                **params
+                **params,
             )
         except TimeoutError as err:
-            raise ConnectionTimeout(
-                f"MySQL: Unable to connect to database: {err}"
-            )
+            raise ConnectionTimeout(f"MySQL: Unable to connect to database: {err}")
         except ConnectionRefusedError as err:
-            raise DriverError(
-                f"MySQL: Unable to connect to database, connection Refused: {err}"
-            )
+            raise DriverError(f"MySQL: Unable to connect to database, connection Refused: {err}")
         except Exception as err:
-            raise DriverError(
-                f"Unknown Error: {err}"
-            )
+            raise DriverError(f"Unknown Error: {err}")
         # is connected
         if self._pool:
             self._connected = True
@@ -85,9 +77,7 @@ class mysqlPool(BasePool):
         try:
             self._connection = await self._pool.acquire()
         except Exception as err:
-            raise DriverError(
-                f"MySQL: Unable to acquire a connection from the pool: {err}"
-            )
+            raise DriverError(f"MySQL: Unable to acquire a connection from the pool: {err}")
         if self._connection:
             db = mysql(pool=self)
             db.set_connection(self._connection)
@@ -106,9 +96,7 @@ class mysqlPool(BasePool):
         try:
             await self._pool.release(conn)
         except Exception as err:
-            raise DriverError(
-                f"MySQL: Unable to release a connection from the pool: {err}"
-            )
+            raise DriverError(f"MySQL: Unable to release a connection from the pool: {err}")
 
     async def wait_close(self, gracefully=True):
         """
@@ -121,16 +109,12 @@ class mysqlPool(BasePool):
                 if self._connection:
                     await self._pool.release(self._connection)
             except Exception as err:
-                raise DriverError(
-                    f"MySQL: Unable to release a connection from the pool: {err}"
-                )
+                raise DriverError(f"MySQL: Unable to release a connection from the pool: {err}")
             # at now, try to closing pool
             try:
                 self._pool.close()
             except Exception as err:
-                raise DriverError(
-                    f"Closing Error: {err}"
-                )
+                raise DriverError(f"Closing Error: {err}")
             finally:
                 self._pool.terminate()
                 self._pool = None
@@ -143,9 +127,7 @@ class mysqlPool(BasePool):
             await self._pool.clear()
             self._pool.close()
         except Exception as err:
-            print(
-                f"MySQL: Unable to close the pool: {err}"
-            )
+            print(f"MySQL: Unable to close the pool: {err}")
             self._pool.terminate()
 
     disconnect = close
@@ -163,9 +145,7 @@ class mysqlPool(BasePool):
                     result = await cursor.execute(sentence, *args)
             return result
         except Exception as err:
-            raise DriverError(
-                f"MySQL: Unable to Execute: {err}"
-            )
+            raise DriverError(f"MySQL: Unable to Execute: {err}")
 
     async def test_connection(self, *args):
         """Test Connnection.
@@ -182,19 +162,13 @@ class mysqlPool(BasePool):
         finally:
             return [result, error]  # pylint: disable=W0150
 
-class mysql(SQLDriver, DBCursorBackend):
 
+class mysql(SQLDriver, DBCursorBackend):
     _provider = "mysql"
     _syntax = "sql"
     _test_query = "SELECT 1"
 
-    def __init__(
-            self,
-            dsn: str = '',
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict = None,
-            **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._dsn = "mysql://{user}:{password}@{host}:{port}/{database}"
         self._prepared = None
         self._cursor = None
@@ -203,49 +177,36 @@ class mysql(SQLDriver, DBCursorBackend):
         SQLDriver.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
         DBCursorBackend.__init__(self)
         if "pool" in kwargs:
-            self._pool = kwargs['pool']
+            self._pool = kwargs["pool"]
             self._loop = self._pool.get_loop()
         ### SSL Support:
         self.ssl: bool = False
-        if params and 'ssl' in params:
-            ssloptions = params['ssl']
-        elif 'ssl' in kwargs:
-            ssloptions = kwargs['ssl']
+        if params and "ssl" in params:
+            ssloptions = params["ssl"]
+        elif "ssl" in kwargs:
+            ssloptions = kwargs["ssl"]
         else:
             ssloptions = None
         if ssloptions:
             self.ssl: bool = True
             try:
-                check_hostname = ssloptions['check_hostname']
+                check_hostname = ssloptions["check_hostname"]
             except KeyError:
                 check_hostname = False
             ### certificate Support:
             try:
-                ca_file = ssloptions['cafile']
+                ca_file = ssloptions["cafile"]
             except KeyError:
                 ca_file = None
-            args = {
-                "cafile": ca_file
-            }
-            self.sslctx = ssl.create_default_context(
-                ssl.Purpose.SERVER_AUTH,
-                **args
-            )
+            args = {"cafile": ca_file}
+            self.sslctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, **args)
             # Certificate Chain:
             try:
-                certs = {
-                    "certfile": ssloptions['certfile'],
-                    "keyfile": ssloptions['keyfile']
-                }
+                certs = {"certfile": ssloptions["certfile"], "keyfile": ssloptions["keyfile"]}
             except KeyError:
-                certs = {
-                    "certfile": None,
-                    "keyfile": None
-                }
-            if certs['certfile']:
-                self.sslctx.load_cert_chain(
-                    **certs
-                )
+                certs = {"certfile": None, "keyfile": None}
+            if certs["certfile"]:
+                self.sslctx.load_cert_chain(**certs)
             self.sslctx.check_hostname = check_hostname
 
     async def close(self):
@@ -260,9 +221,7 @@ class mysql(SQLDriver, DBCursorBackend):
                 else:
                     self._connection.close()
         except Exception as err:
-            raise DriverError(
-                f"Error on Close Connection: {err}"
-            )
+            raise DriverError(f"Error on Close Connection: {err}")
         finally:
             self._connection = None
             self._connected = False
@@ -287,7 +246,7 @@ class mysql(SQLDriver, DBCursorBackend):
                     password=self._params["password"],
                     database=self._params["database"],
                     connect_timeout=self._timeout,
-                    **params
+                    **params,
                 )
             else:
                 self._connection = await self._pool.acquire()
@@ -297,9 +256,7 @@ class mysql(SQLDriver, DBCursorBackend):
         except Exception as err:
             self._connection = None
             self._cursor = None
-            raise DriverError(
-                f"Connection Error: {err}"
-            )
+            raise DriverError(f"Connection Error: {err}")
         finally:
             return self
 
@@ -310,17 +267,13 @@ class mysql(SQLDriver, DBCursorBackend):
         try:
             if not await self._connection._closed:
                 if self._pool:
-                    release = asyncio.create_task(
-                        self._pool.release(self._connection, timeout=10)
-                    )
+                    release = asyncio.create_task(self._pool.release(self._connection, timeout=10))
                     asyncio.ensure_future(release, loop=self._loop)
                     return await release
                 else:
                     self._connection.close()
         except Exception as err:
-            raise DriverError(
-                f"Release Error: {err}"
-            )
+            raise DriverError(f"Release Error: {err}")
         finally:
             self._connected = False
             self._connection = None
@@ -403,13 +356,9 @@ class mysql(SQLDriver, DBCursorBackend):
         except NoDataFound:
             raise
         except RuntimeError as err:
-            raise DriverError(
-                f"MySQL Runtime Error: {err}"
-            )
+            raise DriverError(f"MySQL Runtime Error: {err}")
         except Exception as err:
-            raise DriverError(
-                f"MySQL: Error on Query: {err}"
-            )
+            raise DriverError(f"MySQL: Error on Query: {err}")
         finally:
             self.generated_at()
 
@@ -426,13 +375,9 @@ class mysql(SQLDriver, DBCursorBackend):
         except NoDataFound:
             raise
         except RuntimeError as err:
-            raise DriverError(
-                f"MySQL Runtime Error: {err}"
-            )
+            raise DriverError(f"MySQL Runtime Error: {err}")
         except Exception as err:
-            raise DriverError(
-                f"MySQL: Error on Query: {err}"
-            )
+            raise DriverError(f"MySQL: Error on Query: {err}")
         finally:
             self.generated_at()
 
@@ -449,13 +394,9 @@ class mysql(SQLDriver, DBCursorBackend):
         except NoDataFound:
             raise
         except RuntimeError as err:
-            raise DriverError(
-                f"MySQL Runtime Error: {err}"
-            )
+            raise DriverError(f"MySQL Runtime Error: {err}")
         except Exception as err:
-            raise DriverError(
-                f"MySQL: Error on Query: {err}"
-            )
+            raise DriverError(f"MySQL: Error on Query: {err}")
         finally:
             self.generated_at()
 
@@ -486,9 +427,7 @@ class mysql(SQLDriver, DBCursorBackend):
                 result = await cursor.executemany(sentence, args)
             return result
         except Exception as err:
-            raise DriverError(
-                f"MySQL: Error on Execute: {err}"
-            )
+            raise DriverError(f"MySQL: Error on Execute: {err}")
         finally:
             self.generated_at()
 
@@ -501,8 +440,7 @@ class mysql(SQLDriver, DBCursorBackend):
         raise NotImplementedError
 
     async def use(self, database: str):
-        raise NotImplementedError # pragma: no cover
-
+        raise NotImplementedError  # pragma: no cover
 
     """
     Cursor Iterator Context

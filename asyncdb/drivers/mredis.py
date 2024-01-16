@@ -10,13 +10,8 @@ TODO:
 import asyncio
 import time
 import redis
-from asyncdb.exceptions import (
-    DriverError,
-    ConnectionTimeout
-)
-from asyncdb.interfaces import (
-    ConnectionDSNBackend
-)
+from asyncdb.exceptions import DriverError, ConnectionTimeout
+from asyncdb.interfaces import ConnectionDSNBackend
 from .abstract import (
     InitDriver,
 )
@@ -27,32 +22,17 @@ class mredis(InitDriver, ConnectionDSNBackend):
     _syntax = "json"
     _encoding = "utf-8"
 
-    def __init__(
-            self,
-            dsn: str = '',
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict = None,
-            **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._dsn = "redis://{host}:{port}/{db}"
-        InitDriver.__init__(
-            self,
-            loop=loop,
-            params=params,
-            **kwargs
-        )
-        ConnectionDSNBackend.__init__(
-            self,
-            dsn=dsn,
-            params=params
-        )
+        InitDriver.__init__(self, loop=loop, params=params, **kwargs)
+        ConnectionDSNBackend.__init__(self, dsn=dsn, params=params)
         try:
             self._encoding = params["encoding"]
             del params["encoding"]
         except KeyError:
             pass
 
-### Context magic Methods
+    ### Context magic Methods
     def __enter__(self):
         if not self._connection:
             self.connection()
@@ -66,7 +46,7 @@ class mredis(InitDriver, ConnectionDSNBackend):
         return self._connection
 
     # Create a redis connection
-    def connection(self, **kwargs): # pylint: disable=W0236
+    def connection(self, **kwargs):  # pylint: disable=W0236
         """
         __init redis initialization.
         """
@@ -77,35 +57,24 @@ class mredis(InitDriver, ConnectionDSNBackend):
                 "decode_responses": True,
             }
             if self._dsn:
-                self._pool = redis.ConnectionPool.from_url(
-                    url=self._dsn, **args)
+                self._pool = redis.ConnectionPool.from_url(url=self._dsn, **args)
             else:
                 self._pool = redis.ConnectionPool(**self._params)
             args = {**args, **kwargs}
-            self._logger.debug(
-                f"Redis: Connecting to {self._params}"
-            )
+            self._logger.debug(f"Redis: Connecting to {self._params}")
             self._connection = redis.Redis(connection_pool=self._pool, **args)
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
             return self
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def release(self, connection=None):
         """
@@ -115,20 +84,20 @@ class mredis(InitDriver, ConnectionDSNBackend):
             connection = self._connection
         try:
             self._pool.release(connection=connection)
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             self._logger.exception(err)
         self._connection = None
 
-    def close(self): # pylint: disable=W0236,W0221
+    def close(self):  # pylint: disable=W0236,W0221
         if self._connection:
             try:
                 self._connection.close()
-            except Exception as err: # pylint: disable=W0703
+            except Exception as err:  # pylint: disable=W0703
                 self._logger.exception(err)
         if self._pool:
             try:
                 self._pool.disconnect(inuse_connections=True)
-            except Exception as err: # pylint: disable=W0703
+            except Exception as err:  # pylint: disable=W0703
                 self._logger.exception(err)
         self._pool = None
         self._connected = False
@@ -138,65 +107,47 @@ class mredis(InitDriver, ConnectionDSNBackend):
 
     disconnect = close
 
-    def execute(self, sentence, *args): # pylint: disable=W0236,W0221
+    def execute(self, sentence, *args):  # pylint: disable=W0236,W0221
         try:
             result = self._connection.send_command(*args)
             return result
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     execute_many = execute
 
-    def use(self, database): # pylint: disable=W0236,W0221
+    def use(self, database):  # pylint: disable=W0236,W0221
         raise NotImplementedError
 
-    def prepare(self): # pylint: disable=W0236,W0221
+    def prepare(self):  # pylint: disable=W0236,W0221
         raise NotImplementedError
 
     def get(self, key):
         try:
             return self._connection.get(key)
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
-    def query(self, sentence): # pylint: disable=W0236,W0221
+    def query(self, sentence):  # pylint: disable=W0236,W0221
         return self.get(sentence)
 
     fetch_all = query
 
-    def queryrow(self, sentence): # pylint: disable=W0236,W0221
+    def queryrow(self, sentence):  # pylint: disable=W0236,W0221
         result = self.get(sentence)
         if isinstance(result, list):
             result = result[0]
@@ -207,26 +158,16 @@ class mredis(InitDriver, ConnectionDSNBackend):
     def set(self, key, value):
         try:
             return self._connection.set(key, value)
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def clear_redis(self, host: bool = True):
         """
@@ -238,33 +179,21 @@ class mredis(InitDriver, ConnectionDSNBackend):
             else:
                 return self._connection.flushdb()
         except Exception as ex:
-            raise DriverError(
-                f"Redis: Error cleaning DB: {ex!s}"
-            ) from ex
+            raise DriverError(f"Redis: Error cleaning DB: {ex!s}") from ex
 
     def exists(self, key, *keys):
         try:
             return bool(self._connection.exists(key, *keys))
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def delete(self, key, *keys):
         try:
@@ -272,62 +201,36 @@ class mredis(InitDriver, ConnectionDSNBackend):
                 return self._connection.delete(*keys)
             else:
                 return self._connection.delete(key, *keys)
-        except (redis.exceptions.ReadOnlyError) as err:
-            raise DriverError(
-                f"Redis is Read Only: {err}"
-            ) from err
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ReadOnlyError as err:
+            raise DriverError(f"Redis is Read Only: {err}") from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def expire_at(self, key, timestamp):
         try:
             return self._connection.expireat(key, timestamp)
         except TypeError as ex:
-            raise DriverError(
-                f"Redis: wrong Expiration timestamp {timestamp}: {ex}"
-            ) from ex
-        except (redis.exceptions.ReadOnlyError) as err:
-            raise DriverError(
-                f"Redis is Read Only: {err}"
-            ) from err
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Redis: wrong Expiration timestamp {timestamp}: {ex}") from ex
+        except redis.exceptions.ReadOnlyError as err:
+            raise DriverError(f"Redis is Read Only: {err}") from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def setex(self, key, value, timeout):
         """
@@ -345,33 +248,19 @@ class mredis(InitDriver, ConnectionDSNBackend):
         try:
             self._connection.setex(key, expiration, value)
         except TypeError as ex:
-            raise DriverError(
-                f"Redis: wrong Expiration timestamp {expiration}: {ex}"
-            ) from ex
-        except (redis.exceptions.ReadOnlyError) as err:
-            raise DriverError(
-                f"Redis is Read Only: {err}"
-            ) from err
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Redis: wrong Expiration timestamp {expiration}: {ex}") from ex
+        except redis.exceptions.ReadOnlyError as err:
+            raise DriverError(f"Redis is Read Only: {err}") from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def persist(self, key):
         """
@@ -381,13 +270,9 @@ class mredis(InitDriver, ConnectionDSNBackend):
         try:
             return self._connection.persist(key)
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Redis Protocol Error: {err}"
-            ) from err
+            raise DriverError(f"Redis Protocol Error: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def set_key(self, key, value):
         self.set(key, value)
@@ -395,37 +280,25 @@ class mredis(InitDriver, ConnectionDSNBackend):
     def get_key(self, key):
         return self.get(key)
 
-### Hash functions
+    ### Hash functions
     def hmset(self, key, value):
         """
         set the value of a key in field (redis dict)
         """
         try:
             self._connection.hmset(key, value)
-        except (redis.exceptions.ReadOnlyError) as err:
-            raise DriverError(
-                f"Redis is Read Only: {err}"
-            ) from err
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ReadOnlyError as err:
+            raise DriverError(f"Redis is Read Only: {err}") from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def hgetall(self, key):
         """
@@ -433,26 +306,16 @@ class mredis(InitDriver, ConnectionDSNBackend):
         """
         try:
             return self._connection.hgetall(key)
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def set_hash(self, key, *args, **kwargs):
         self.hmset(key, *args, **kwargs)
@@ -466,26 +329,16 @@ class mredis(InitDriver, ConnectionDSNBackend):
         """
         try:
             return self._connection.hkeys(key)
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def hvals(self, key):
         """
@@ -493,26 +346,16 @@ class mredis(InitDriver, ConnectionDSNBackend):
         """
         try:
             return self._connection.hvals(key)
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def keys(self, key):
         return self.hkeys(key)
@@ -526,30 +369,18 @@ class mredis(InitDriver, ConnectionDSNBackend):
         """
         try:
             return self._connection.hset(key, field, value)
-        except (redis.exceptions.ReadOnlyError) as err:
-            raise DriverError(
-                f"Redis is Read Only: {err}"
-            ) from err
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ReadOnlyError as err:
+            raise DriverError(f"Redis is Read Only: {err}") from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def hget(self, key, field):
         """
@@ -557,26 +388,16 @@ class mredis(InitDriver, ConnectionDSNBackend):
         """
         try:
             return self._connection.hget(key, field)
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def hexists(self, key, field):
         """
@@ -584,26 +405,16 @@ class mredis(InitDriver, ConnectionDSNBackend):
         """
         try:
             return self._connection.hexists(key, field)
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
     def hdel(self, key, field, *fields):
         """
@@ -614,39 +425,27 @@ class mredis(InitDriver, ConnectionDSNBackend):
                 return self._connection.hdel(key, *fields)
             else:
                 return self._connection.hdel(key, field)
-        except (redis.exceptions.ReadOnlyError) as err:
-            raise DriverError(
-                f"Redis is Read Only: {err}"
-            ) from err
-        except (redis.exceptions.ResponseError) as err:
-            raise DriverError(
-                f"Redis Response Error: {err}"
-            ) from err
-        except (redis.exceptions.ConnectionError) as err:
-            raise DriverError(
-                f"Unable to connect to Redis, connection Refused: {err}"
-            ) from err
-        except (redis.exceptions.TimeoutError) as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+        except redis.exceptions.ReadOnlyError as err:
+            raise DriverError(f"Redis is Read Only: {err}") from err
+        except redis.exceptions.ResponseError as err:
+            raise DriverError(f"Redis Response Error: {err}") from err
+        except redis.exceptions.ConnectionError as err:
+            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+        except redis.exceptions.TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except redis.exceptions.RedisError as err:
-            raise DriverError(
-                f"Unable to connect to Redis: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Redis Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Redis Error: {err}") from err
 
-    def test_connection(self, key: str = 'test_123', optional: int = 1): # pylint: disable=W0221,W0236
+    def test_connection(self, key: str = "test_123", optional: int = 1):  # pylint: disable=W0221,W0236
         result = None
         error = None
         try:
             self.set(key, optional)
             result = self.get(key)
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = err
         finally:
             self.delete(key)
-            return [result, error] # pylint: disable=W0150
+            return [result, error]  # pylint: disable=W0150

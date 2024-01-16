@@ -7,14 +7,12 @@ class pandasFormat(OutputFormat):
     """
     Returns a Pandas Dataframe from a Resultset
     """
+
     async def serialize(self, result, error, *args, **kwargs):
         df = None
         try:
             result = [dict(row) for row in result]
-            df = pandas.DataFrame(
-                data=result,
-                **kwargs
-            )
+            df = pandas.DataFrame(data=result, **kwargs)
             self._result = df
         except pandas.errors.EmptyDataError as err:
             error = Exception(f"Error with Empty Data: error: {err}")

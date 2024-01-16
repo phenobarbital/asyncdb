@@ -12,25 +12,24 @@ from google.oauth2 import service_account
 from asyncdb.exceptions import DriverError
 from .sql import SQLDriver
 
+
 class bigquery(SQLDriver):
     _provider = "bigquery"
     _syntax = "sql"
     _test_query = "SELECT 1"
 
-    def __init__(self, dsn: str = '', loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
-        self._credentials = params.get('credentials', None)
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
+        self._credentials = params.get("credentials", None)
         if self._credentials:
             self._credentials = Path(self._credentials).expanduser().resolve()
         self._account = None
-        self._dsn = ''
-        self._project_id = params.get('project_id', None)
+        self._dsn = ""
+        self._project_id = params.get("project_id", None)
         super().__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         if not self._credentials:
-            self._account = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS', None)
+            self._account = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", None)
         if self._account is None and self._credentials is None:
-            raise DriverError(
-                "BigQuery: Missing account Credentials"
-            )
+            raise DriverError("BigQuery: Missing account Credentials")
         self._connection = None  # BigQuery does not use traditional connections
 
     async def connection(self):
@@ -38,22 +37,15 @@ class bigquery(SQLDriver):
         # Assuming that authentication is handled outside (via environment variables or similar)
         """
         try:
-            if self._credentials: # usage of explicit credentials
-                self.credentials = service_account.Credentials.from_service_account_file(
-                    self._credentials
-                )
+            if self._credentials:  # usage of explicit credentials
+                self.credentials = service_account.Credentials.from_service_account_file(self._credentials)
                 if not self._project_id:
                     self._project_id = self.credentials.project_id
-                self._connection = bq.Client(
-                    credentials=self.credentials,
-                    project=self._project_id
-                )
+                self._connection = bq.Client(credentials=self.credentials, project=self._project_id)
                 self._connected = True
             else:
                 self.credentials = self._account
-                self._connection = bq.Client(
-                    project=self._project_id
-                )
+                self._connection = bq.Client(project=self._project_id)
         except Exception as e:
             raise DriverError(f"BigQuery: Error initializing client: {e}")
         return self
@@ -75,9 +67,7 @@ class bigquery(SQLDriver):
             result = job.result()  # Waits for the query to finish
             return result
         except Exception as e:
-            raise DriverError(
-                f"BigQuery: Error executing query: {e}"
-            )
+            raise DriverError(f"BigQuery: Error executing query: {e}")
 
     async def execute_many(self, query, **kwargs):
         """
@@ -90,9 +80,7 @@ class bigquery(SQLDriver):
             result = job.result()  # Waits for the query to finish
             return result
         except Exception as e:
-            raise DriverError(
-                f"BigQuery: Error executing query: {e}"
-            )
+            raise DriverError(f"BigQuery: Error executing query: {e}")
 
     async def prepare(self, sentence: str, **kwargs):
         pass
@@ -102,12 +90,9 @@ class bigquery(SQLDriver):
 
     def get_load_config(self, **kwargs):
         args = {}
-        _type = kwargs.pop('type', 'json')
-        if _type == 'json':
-            args = {
-                "source_format": bq.SourceFormat.NEWLINE_DELIMITED_JSON,
-                "autodetect": True
-            }
+        _type = kwargs.pop("type", "json")
+        if _type == "json":
+            args = {"source_format": bq.SourceFormat.NEWLINE_DELIMITED_JSON, "autodetect": True}
         args = {**kwargs, **args}
         return bq.LoadJobConfig(**args)
 
@@ -118,17 +103,11 @@ class bigquery(SQLDriver):
             dataset_obj = self._connection.create_dataset(dataset_obj)
             return dataset_obj
         except Conflict:
-            self._logger.warning(
-                f"Dataset {self._connection.project}.{dataset_obj.dataset_id} already exists"
-            )
+            self._logger.warning(f"Dataset {self._connection.project}.{dataset_obj.dataset_id} already exists")
             return dataset_obj
         except Exception as exc:
-            self._logger.error(
-                f"Error creating Dataset: {exc}"
-            )
-            raise DriverError(
-                f"Error creating Dataset: {exc}"
-            )
+            self._logger.error(f"Error creating Dataset: {exc}")
+            raise DriverError(f"Error creating Dataset: {exc}")
 
     async def create_table(self, dataset_id, table_id, schema):
         """
@@ -145,19 +124,13 @@ class bigquery(SQLDriver):
         table = bq.Table(table_ref, schema=schema)
         try:
             table = self._connection.create_table(table)  # API request
-            self._logger.info(
-                f"Created table {table.project}.{table.dataset_id}.{table.table_id}"
-            )
+            self._logger.info(f"Created table {table.project}.{table.dataset_id}.{table.table_id}")
             return table
         except Conflict:
-            self._logger.warning(
-                f"Table {table.project}.{table.dataset_id}.{table.table_id} already exists"
-            )
+            self._logger.warning(f"Table {table.project}.{table.dataset_id}.{table.table_id} already exists")
             return table
         except Exception as e:
-            raise DriverError(
-                f"BigQuery: Error creating table: {e}"
-            )
+            raise DriverError(f"BigQuery: Error creating table: {e}")
 
     async def truncate_table(self, table_id: str, dataset_id: str):
         """
@@ -176,19 +149,11 @@ class bigquery(SQLDriver):
         job_config.write_disposition = bq.WriteDisposition.WRITE_TRUNCATE
 
         try:
-            job = self._connection.query(
-                f"SELECT * FROM `{table_ref}` WHERE FALSE",
-                job_config=job_config
-            )
+            job = self._connection.query(f"SELECT * FROM `{table_ref}` WHERE FALSE", job_config=job_config)
             job.result()  # Wait for the job to finish
-            self._logger.info(
-                f"Truncated table {dataset_id}.{table_id}"
-            )
+            self._logger.info(f"Truncated table {dataset_id}.{table_id}")
         except Exception as e:
-            raise DriverError(
-                f"BigQuery: Error truncating table: {e}"
-            )
-
+            raise DriverError(f"BigQuery: Error truncating table: {e}")
 
     async def query(self, sentence: str, **kwargs):
         if not self._connection:
@@ -230,13 +195,10 @@ class bigquery(SQLDriver):
                     credentials=self.credentials,
                     dialect="standard",
                     use_bqstorage_api=True,
-                    **kwargs
+                    **kwargs,
                 )
             else:
-                result = self._connection.query(
-                    sentence,
-                    **kwargs
-                ).to_dataframe()
+                result = self._connection.query(sentence, **kwargs).to_dataframe()
         except Exception as e:
             error = f"BigQuery: Error executing Fetch: {e}"
         finally:
@@ -267,7 +229,7 @@ class bigquery(SQLDriver):
         use_streams: bool = False,
         use_pandas: bool = False,
         if_exists: str = "append",
-        **kwargs
+        **kwargs,
     ):
         """
         Write data to a BigQuery table
@@ -278,65 +240,38 @@ class bigquery(SQLDriver):
             if isinstance(data, pd.DataFrame):
                 if use_pandas is True:
                     job = await self._thread_func(
-                        self._connection.load_table_from_dataframe,
-                        data,
-                        table_id,
-                        if_exists=if_exists,
-                        **kwargs
+                        self._connection.load_table_from_dataframe, data, table_id, if_exists=if_exists, **kwargs
                     )
                 else:
                     job = await self._thread_func(
-                        data.to_gbq,
-                        table_id,
-                        project_id=self._project_id,
-                        if_exists=if_exists
+                        data.to_gbq, table_id, project_id=self._project_id, if_exists=if_exists
                     )
             elif isinstance(data, list):
                 dataset_ref = self._connection.dataset(dataset_id)
                 table_ref = dataset_ref.table(table_id)
                 table = bq.Table(table_ref)
                 if use_streams is True:
-                    errors = await self._thread_func(
-                        self._connection.insert_rows_json,
-                        table,
-                        data,
-                        **kwargs
-                    )
+                    errors = await self._thread_func(self._connection.insert_rows_json, table, data, **kwargs)
                     if errors:
-                        raise RuntimeError(
-                            f"Errors occurred while inserting rows: {errors}"
-                        )
+                        raise RuntimeError(f"Errors occurred while inserting rows: {errors}")
                 else:
-                    job = await self._thread_func(
-                        self._connection.load_table_from_json,
-                        table,
-                        data,
-                        **kwargs
-                    )
+                    job = await self._thread_func(self._connection.load_table_from_json, table, data, **kwargs)
                     loop = asyncio.get_event_loop()
                     await loop.run_in_executor(None, job.result)
                     if job.errors and len(job.errors) > 0:
-                        raise RuntimeError(
-                            f"Job failed with errors: {job.errors}"
-                        )
+                        raise RuntimeError(f"Job failed with errors: {job.errors}")
                     else:
-                        self._logger.info(
-                            f"Loaded {len(data)} rows into {table_id}"
-                        )
+                        self._logger.info(f"Loaded {len(data)} rows into {table_id}")
 
-            self._logger.info(
-                f"Inserted rows into {table_id}"
-            )
+            self._logger.info(f"Inserted rows into {table_id}")
         except Exception as e:
-            raise DriverError(
-                f"BigQuery: Error writing to table: {e}"
-            )
+            raise DriverError(f"BigQuery: Error writing to table: {e}")
 
     async def load_table_from_uri(
         self,
         source_uri: str,
         table: Any = None,
-        job_config = None,
+        job_config=None,
         dataset_id: str = None,
         table_id: str = None,
     ):
@@ -351,20 +286,13 @@ class bigquery(SQLDriver):
             table = bq.Table(table_ref)
         try:
             job = await self._thread_func(
-                self._connection.load_table_from_uri,
-                source_uri,
-                table,
-                job_config=job_config
+                self._connection.load_table_from_uri, source_uri, table, job_config=job_config
             )
             job.result()  # Waits for table load to complete.
-            self._logger.info(
-                f"Loaded {job.output_rows} rows into {table.project}.{table.dataset_id}.{table.table_id}"
-            )
+            self._logger.info(f"Loaded {job.output_rows} rows into {table.project}.{table.dataset_id}.{table.table_id}")
             return job
         except Exception as e:
-            raise DriverError(
-                f"BigQuery: Error loading table from URI: {e}"
-            )
+            raise DriverError(f"BigQuery: Error loading table from URI: {e}")
 
     @property
     def connected(self):
@@ -380,4 +308,4 @@ class bigquery(SQLDriver):
         raise NotImplementedError
 
     async def use(self, database: str):
-        raise NotImplementedError # pragma: no cover
+        raise NotImplementedError  # pragma: no cover

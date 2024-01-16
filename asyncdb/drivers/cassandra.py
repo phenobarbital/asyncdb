@@ -8,10 +8,7 @@ TODO: migrate to Asyncio version (when available).
 import time
 import logging
 import asyncio
-from typing import (
-    Any,
-    Union
-)
+from typing import Any, Union
 from ssl import PROTOCOL_TLSv1
 import pandas as pd
 from cassandra import ReadTimeout
@@ -21,6 +18,7 @@ from cassandra.io.asyncioreactor import AsyncioConnection
 
 try:
     from cassandra.io.libevreactor import LibevConnection
+
     LIBEV = True
 except ImportError:
     LIBEV = False
@@ -40,13 +38,10 @@ from cassandra.query import (
     PreparedStatement,
     BatchStatement,
     SimpleStatement,
-    BatchType
+    BatchType,
 )
 from asyncdb.meta import Recordset
-from asyncdb.exceptions import (
-    NoDataFound,
-    DriverError
-)
+from asyncdb.exceptions import NoDataFound, DriverError
 from .abstract import InitDriver
 
 
@@ -56,10 +51,7 @@ def pandas_factory(colnames, rows):
 
 
 def record_factory(colnames, rows):
-    return Recordset(
-        result=[dict(zip(colnames, values)) for values in rows],
-        columns=colnames
-    )
+    return Recordset(result=[dict(zip(colnames, values)) for values in rows], columns=colnames)
 
 
 class cassandra(InitDriver):
@@ -79,7 +71,7 @@ class cassandra(InitDriver):
         except KeyError:
             self._hosts = ["127.0.0.1"]
         try:
-            self.whitelist = kwargs['whitelist']
+            self.whitelist = kwargs["whitelist"]
         except KeyError:
             self.whitelist = None
         try:
@@ -103,13 +95,9 @@ class cassandra(InitDriver):
                 except Exception as err:
                     self._cluster.shutdown()
                     self._connection = None
-                    raise DriverError(
-                        message=f"Connection Error, Terminated: {err}"
-                    ) from err
+                    raise DriverError(message=f"Connection Error, Terminated: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Close Error: {err}"
-            ) from err
+            raise DriverError(f"Close Error: {err}") from err
         finally:
             self._connection = None
             self._connected = False
@@ -123,12 +111,12 @@ class cassandra(InitDriver):
         self._cluster = None
         try:
             try:
-                if self.params['ssl'] is not None:
+                if self.params["ssl"] is not None:
                     ssl_opts = {
-                        'ca_certs': self.params['ssl']['certfile'],
-                        'ssl_version': PROTOCOL_TLSv1,
-                        'keyfile': self.params['ssl']['userkey'],
-                        'certfile': self.params['ssl']['usercert']
+                        "ca_certs": self.params["ssl"]["certfile"],
+                        "ssl_version": PROTOCOL_TLSv1,
+                        "keyfile": self.params["ssl"]["userkey"],
+                        "certfile": self.params["ssl"]["usercert"],
                     }
             except KeyError:
                 ssl_opts = {}
@@ -178,10 +166,10 @@ class cassandra(InitDriver):
             )
             profiles = {
                 EXEC_PROFILE_DEFAULT: defaultprofile,
-                'pandas': pandasprofile,
-                'ordered': orderedprofile,
-                'default': tupleprofile,
-                'recordset': recordprofile
+                "pandas": pandasprofile,
+                "ordered": orderedprofile,
+                "default": tupleprofile,
+                "recordset": recordprofile,
             }
             params = {
                 "port": self.params["port"],
@@ -190,7 +178,7 @@ class cassandra(InitDriver):
                 "protocol_version": 4,
                 "connect_timeout": 60,
                 "idle_heartbeat_interval": 0,
-                "ssl_options": ssl_opts
+                "ssl_options": ssl_opts,
             }
             if LIBEV is True:
                 params["connection_class"] = LibevConnection
@@ -207,13 +195,11 @@ class cassandra(InitDriver):
             try:
                 self._connection = self._cluster.connect(keyspace=keyspace)
             except NoHostAvailable as ex:
-                raise DriverError(
-                    message=f'Not able to connect to any of the Cassandra contact points: {ex}'
-                ) from ex
+                raise DriverError(message=f"Not able to connect to any of the Cassandra contact points: {ex}") from ex
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
-            if 'database' in self.params:
+            if "database" in self.params:
                 await self.use(self.params["database"])
             else:
                 self._keyspace = keyspace
@@ -224,20 +210,18 @@ class cassandra(InitDriver):
             logging.exception(f"connection Error, Terminated: {err}")
             self._connection = None
             self._cursor = None
-            raise DriverError(
-                message=f"connection Error, Terminated: {err}"
-            ) from err
+            raise DriverError(message=f"connection Error, Terminated: {err}") from err
 
-    async def test_connection(self): # pylint: disable=W0221
+    async def test_connection(self):  # pylint: disable=W0221
         result = None
         error = None
         try:
             response = self._connection.execute(self._test_query)
             result = [row for row in response]
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = err
         finally:
-            return [result, error] # pylint: disable=W0150
+            return [result, error]  # pylint: disable=W0150
 
     async def use(self, database: str):
         try:
@@ -248,18 +232,18 @@ class cassandra(InitDriver):
             raise
         return self
 
-### Preparing a sentence
+    ### Preparing a sentence
     def prepared_statement(self):
         return self._prepared
 
     def prepared_smt(self):
         return self._prepared
 
-    async def prepare(self, sentence: str, consistency: str = 'quorum'):
+    async def prepare(self, sentence: str, consistency: str = "quorum"):
         await self.valid_operation(sentence)
         try:
             self._prepared = self._connection.prepare(sentence)
-            if consistency == 'quorum':
+            if consistency == "quorum":
                 self._prepared.consistency_level = ConsistencyLevel.QUORUM
             else:
                 self._prepared.consistency_level = ConsistencyLevel.ALL
@@ -269,8 +253,8 @@ class cassandra(InitDriver):
         except Exception as ex:
             raise DriverError(f"Error on Query: {ex}") from ex
 
-    def create_query(self, sentence: str, consistency: str = 'quorum'):
-        if consistency == 'quorum':
+    def create_query(self, sentence: str, consistency: str = "quorum"):
+        if consistency == "quorum":
             cl = ConsistencyLevel.QUORUM
         else:
             cl = ConsistencyLevel.ALL
@@ -281,7 +265,7 @@ class cassandra(InitDriver):
         sentence: Union[str, SimpleStatement, PreparedStatement],
         params: list = None,
         factory: str = EXEC_PROFILE_DEFAULT,
-        **kwargs
+        **kwargs,
     ) -> Union[ResultSet, None]:
         error = None
         self._result = None
@@ -298,27 +282,24 @@ class cassandra(InitDriver):
             fut = self._connection.execute_async(smt, params, execution_profile=factory)
             try:
                 self._result = fut.result()
-                if factory in ('pandas', 'record', 'recordset'):
+                if factory in ("pandas", "record", "recordset"):
                     self._result.result = self._result._current_rows
             except ReadTimeout:
-                error = f'Timeout reading Data from {sentence}'
+                error = f"Timeout reading Data from {sentence}"
             if not self._result:
                 raise NoDataFound("Cassandra: No Data was Found")
         except NoDataFound:
             raise
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
         finally:
             self.generated_at()
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def fetch_all(
-        self,
-        sentence: Union[str, SimpleStatement, PreparedStatement],
-        params: list = None,
-        **kwargs
+        self, sentence: Union[str, SimpleStatement, PreparedStatement], params: list = None, **kwargs
     ) -> ResultSet:
         self._result = None
         try:
@@ -341,11 +322,7 @@ class cassandra(InitDriver):
             params = []
         return self.fetch_all(sentence, params)
 
-    async def queryrow(
-        self,
-        sentence: Union[str, SimpleStatement, PreparedStatement],
-        params: list = None
-    ):
+    async def queryrow(self, sentence: Union[str, SimpleStatement, PreparedStatement], params: list = None):
         error = None
         self._result = None
         try:
@@ -355,11 +332,11 @@ class cassandra(InitDriver):
                 raise NoDataFound("Cassandra: No Data was Found")
         except RuntimeError as err:
             error = f"Runtime on Query Row Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query Row: {err}"
-        return [self._result, error] # pylint: disable=W0150
+        return [self._result, error]  # pylint: disable=W0150
 
-    async def fetch_one( # pylint: disable=W0221
+    async def fetch_one(  # pylint: disable=W0221
         self,
         sentence: Union[str, SimpleStatement, PreparedStatement],
         params: list = None,
@@ -371,13 +348,9 @@ class cassandra(InitDriver):
             if not self._result:
                 raise NoDataFound("Cassandra: No Data was Found")
         except RuntimeError as err:
-            raise DriverError (
-                message=f"Runtime on Query Row Error: {err}"
-            ) from err
+            raise DriverError(message=f"Runtime on Query Row Error: {err}") from err
         except Exception as err:
-            raise Exception(
-                f"Error on Query Row: {err}"
-            ) from err
+            raise Exception(f"Error on Query Row: {err}") from err
         return self._result
 
     async def fetchrow(self, sentence, params: list = None):
@@ -385,12 +358,9 @@ class cassandra(InitDriver):
             params = []
         return self.fetch_one(sentence=sentence, params=params)
 
-    async def execute( # pylint: disable=W0221
-            self,
-            sentence: Union[str, SimpleStatement, PreparedStatement],
-            params: list = None,
-            **kwargs
-        ) -> Any:
+    async def execute(  # pylint: disable=W0221
+        self, sentence: Union[str, SimpleStatement, PreparedStatement], params: list = None, **kwargs
+    ) -> Any:
         """Execute a transaction
         get a CQL sentence and execute
         returns: results of the execution
@@ -409,19 +379,17 @@ class cassandra(InitDriver):
             try:
                 self._result = fut.result()
             except ReadTimeout:
-                error = 'Timeout executing sentences'
+                error = "Timeout executing sentences"
             if not self._result:
                 error = NoDataFound("Cassandra: No Data was Found")
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Execute: {err}"
         finally:
-            return [self._result, error] # pylint: disable=W0150
+            return [self._result, error]  # pylint: disable=W0150
 
-    async def execute_many( # pylint: disable=W0221
-            self,
-            sentence: Union[str, SimpleStatement, PreparedStatement],
-            params: list = None
-        ) -> Any:
+    async def execute_many(  # pylint: disable=W0221
+        self, sentence: Union[str, SimpleStatement, PreparedStatement], params: list = None
+    ) -> Any:
         """execute_many.
 
         Execute a transaction many times using Batch prepared statements.
@@ -452,14 +420,13 @@ class cassandra(InitDriver):
             fut = self._connection.execute_async(batch)
             result = fut.result()
         except ReadTimeout:
-            error = 'Timeout executing sentences'
-        except Exception as err: # pylint: disable=W0703
+            error = "Timeout executing sentences"
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Execute: {err}"
         finally:
-            return [result, error] # pylint: disable=W0150
+            return [result, error]  # pylint: disable=W0150
 
-
-### Model Logic:
+    ### Model Logic:
     async def column_info(self, table: str, schema: str = None):
         """Column Info.
 
@@ -479,9 +446,5 @@ class cassandra(InitDriver):
             colinfo = self._connection.execute(cql)
             return [d for d in colinfo]
         except Exception as err:
-            self._logger.exception(
-                f"Wrong Table information {table!s}: {err}"
-            )
-            raise DriverError(
-                f"Wrong Table information {table!s}: {err}"
-            ) from err
+            self._logger.exception(f"Wrong Table information {table!s}: {err}")
+            raise DriverError(f"Wrong Table information {table!s}: {err}") from err

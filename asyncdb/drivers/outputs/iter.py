@@ -10,6 +10,7 @@ class iterFormat(OutputFormat):
     """
     Most Basic Definition of Format.
     """
+
     async def serialize(self, result, error, *args, **kwargs):
         try:
             if isinstance(result, list):

@@ -1,7 +1,4 @@
-from .functions import (
-    Msg,
-    cPrint
-)
+from .functions import Msg, cPrint
 from .uv import install_uvloop
 
 __all__ = (
