@@ -13,7 +13,12 @@ from abc import (
     ABC,
     abstractmethod,
 )
-from typing import Any, List, Optional, Union
+from typing import (
+    Any,
+    List,
+    Optional,
+    Union
+)
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from datamodel.exceptions import ValidationError
@@ -559,8 +564,7 @@ class CursorBackend(ABC):
 
         raise: StopAsyncIteration when done.
         """
-        row = await self._cursor.fetchone()
-        if row is not None:
+        if row := await self._cursor.fetchone() is not None:
             return row
         else:
             raise StopAsyncIteration
@@ -570,8 +574,7 @@ class CursorBackend(ABC):
 
         raise: StopAsyncIteration when done.
         """
-        row = self._cursor.fetchone()
-        if row is not None:
+        if row := self._cursor.fetchone() is not None:
             return row
         else:
             raise StopAsyncIteration
@@ -640,8 +643,7 @@ class DBCursorBackend(ABC):
         Returns:
             _type_: Single record for iteration.
         """
-        data = await self._cursor.fetchrow()
-        if data is not None:
+        if data := await self._cursor.fetchrow() is not None:
             return data
         else:
             raise StopAsyncIteration
@@ -826,3 +828,4 @@ class ModelBackend(ABC):
             return result
         else:
             return result
+
