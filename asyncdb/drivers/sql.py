@@ -4,15 +4,10 @@ SQLProvider.
 Abstract class covering all major functionalities for Relational SQL-based databases.
 """
 import asyncio
-from typing import (
-    Any
-)
+from typing import Any
 from collections.abc import Iterable
-from asyncdb.exceptions import (
-    DriverError
-)
+from asyncdb.exceptions import DriverError
 from .abstract import BaseDBDriver, BaseCursor
-
 
 
 class SQLCursor(BaseCursor):
@@ -20,17 +15,14 @@ class SQLCursor(BaseCursor):
 
     Base class for all SQL-based Drivers.
     """
+
     _connection = None
 
     async def __aenter__(self) -> "BaseCursor":
         try:
-            self._cursor = await self._connection.cursor(
-                self._sentence, self._params
-            )
+            self._cursor = await self._connection.cursor(self._sentence, self._params)
         except Exception as e:
-            raise DriverError(
-                f"SQLCursor Error: {e}"
-            ) from e
+            raise DriverError(f"SQLCursor Error: {e}") from e
         return self
 
 
@@ -39,20 +31,13 @@ class SQLDriver(BaseDBDriver):
 
     Driver for SQL-based providers.
     """
+
     _syntax = "sql"
     _test_query = "SELECT 1"
 
-    def __init__(
-            self,
-            dsn: str = "",
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict = None,
-            **kwargs
-        ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
-        super(SQLDriver, self).__init__(
-            dsn=dsn, loop=loop, params=params, **kwargs
-        )
+        super(SQLDriver, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
     async def close(self, timeout: int = 5) -> None:
         """
@@ -62,17 +47,11 @@ class SQLDriver(BaseDBDriver):
             if self._connection:
                 if self._cursor:
                     await self._cursor.close()
-                await asyncio.wait_for(
-                    self._connection.close(), timeout=timeout
-                )
+                await asyncio.wait_for(self._connection.close(), timeout=timeout)
         except asyncio.TimeoutError as e:
-            self._logger.warning(
-                f"Close timed out: {e}"
-            )
+            self._logger.warning(f"Close timed out: {e}")
         except Exception as err:
-            raise DriverError(
-                message=f"{__name__!s}: Closing Error: {err!s}"
-            ) from err
+            raise DriverError(message=f"{__name__!s}: Closing Error: {err!s}") from err
         finally:
             self._connection = None
             self._connected = False
@@ -80,11 +59,7 @@ class SQLDriver(BaseDBDriver):
     # alias for connection
     disconnect = close
 
-    async def column_info(
-            self,
-            tablename: str,
-            schema: str = ''
-    ) -> Iterable[Any]:
+    async def column_info(self, tablename: str, schema: str = "") -> Iterable[Any]:
         """
         column_info
           get column information about a table

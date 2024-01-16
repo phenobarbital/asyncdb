@@ -7,20 +7,9 @@ This provider implements a basic set of funcionalities from SQLAlchemy core
 """
 
 import asyncio
-from typing import (
-    Any,
-    Dict,
-    List,
-    Optional
-)
+from typing import Any, Dict, List, Optional
 from collections.abc import Callable, Iterable
-from sqlalchemy.exc import (
-    DatabaseError,
-    OperationalError,
-    SQLAlchemyError,
-    ProgrammingError,
-    InvalidRequestError
-)
+from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError, ProgrammingError, InvalidRequestError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from asyncdb.meta import Record
@@ -31,9 +20,7 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from asyncdb.interfaces import (
-    DBCursorBackend
-)
+from asyncdb.interfaces import DBCursorBackend
 from asyncdb.utils.encoders import json_encoder, json_decoder
 from .sql import SQLDriver, SQLCursor
 
@@ -43,13 +30,9 @@ class saCursor(SQLCursor):
 
     async def __aenter__(self) -> "SQLCursor":
         try:
-            self._cursor = await self._connection.execute(
-                self._sentence, self._params
-            )
+            self._cursor = await self._connection.execute(self._sentence, self._params)
         except Exception as e:
-            raise DriverError(
-                f"SQLAlchemy Error: {e}"
-            ) from e
+            raise DriverError(f"SQLAlchemy Error: {e}") from e
         return self
 
 
@@ -59,24 +42,16 @@ class sa(SQLDriver, DBCursorBackend):
     _test_query = "SELECT 1 as one"
     _engine_options: Dict = {
         "connect_args": {"timeout": 360},
-        "execution_options": {
-            "isolation_level": "AUTOCOMMIT"
-        },
+        "execution_options": {"isolation_level": "AUTOCOMMIT"},
         "echo": False,
         "future": True,
         "json_deserializer": json_decoder,
-        "json_serializer": json_encoder
+        "json_serializer": json_encoder,
     }
     setup_func: Optional[Callable] = None
     init_func: Optional[Callable] = None
 
-    def __init__(
-            self,
-            dsn: str = "",
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict = None,
-            **kwargs
-        ):
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
         """sql_alchemy.
 
         Args:
@@ -87,9 +62,9 @@ class sa(SQLDriver, DBCursorBackend):
         self._session = None
         self._dsn = "{driver}://{user}:{password}@{host}:{port}/{database}"
         self._transaction = None
-        self._driver = 'postgresql'
+        self._driver = "postgresql"
         self.__cursor__ = None
-        self._row_format = 'dict'
+        self._row_format = "dict"
         if params:
             try:
                 if not params["driver"]:
@@ -120,9 +95,7 @@ class sa(SQLDriver, DBCursorBackend):
                 await self._connection.dispose()
             except Exception as err:
                 self._connection = None
-                raise DriverError(
-                    f"Engine Error, Terminated: {err!s}"
-                )
+                raise DriverError(f"Engine Error, Terminated: {err!s}")
             finally:
                 self._connection = None
                 self._connected = False
@@ -131,32 +104,21 @@ class sa(SQLDriver, DBCursorBackend):
         """
         Get a connection
         """
-        self._logger.info(
-            f"SQLAlchemy: Connecting to {self._dsn}"
-        )
+        self._logger.info(f"SQLAlchemy: Connecting to {self._dsn}")
         self._connection = None
         self._connected = False
         try:
-            self._connection = create_async_engine(
-                self._dsn,
-                **self._options
-            )
-            self._session = AsyncSession(
-                bind=self._connection
-            )
+            self._connection = create_async_engine(self._dsn, **self._options)
+            self._session = AsyncSession(bind=self._connection)
             self._connected = True
         except (SQLAlchemyError, OperationalError) as err:
             print(err)
             self._connection = None
-            raise DriverError(
-                f"Connection Error: {err!s}"
-            )
+            raise DriverError(f"Connection Error: {err!s}")
         except Exception as err:
             print(err)
             self._connection = None
-            raise DriverError(
-                f"Engine Error, Terminated: {err!s}"
-            )
+            raise DriverError(f"Engine Error, Terminated: {err!s}")
         finally:
             return self
 
@@ -168,13 +130,13 @@ class sa(SQLDriver, DBCursorBackend):
 
     async def get_result(self, resultset):
         result = None
-        if self._row_format == 'native':
+        if self._row_format == "native":
             result = resultset.fetchone()
-        if self._row_format == 'dict':
+        if self._row_format == "dict":
             result = dict(resultset.mappings().one())
-        elif self._row_format == 'iterable':
+        elif self._row_format == "iterable":
             result = resultset.mappings().one()
-        elif self._row_format == 'record':
+        elif self._row_format == "record":
             row = resultset.mappings().one()
             result = Record(row, row.keys())
         else:
@@ -183,11 +145,11 @@ class sa(SQLDriver, DBCursorBackend):
 
     async def get_resultset(self, resultset):
         result = None
-        if self._row_format == 'list':
+        if self._row_format == "list":
             result = resultset.mappings().all()
-        elif self._row_format == 'iterable':
+        elif self._row_format == "iterable":
             result = resultset.mappings().all()
-        elif self._row_format == 'record':
+        elif self._row_format == "record":
             rows = resultset.mappings().all()
             result = [Record(row, row.keys()) for row in rows]
         else:
@@ -209,9 +171,7 @@ class sa(SQLDriver, DBCursorBackend):
                 result = await conn.execute(text(self._test_query))
                 row = await self.get_result(result)
             if error:
-                self._logger.info(
-                    f"Test Error: {err!s}"
-                )
+                self._logger.info(f"Test Error: {err!s}")
         except Exception as err:
             error = str(err)
             raise DriverError(message=str(err), code=0)
@@ -224,9 +184,7 @@ class sa(SQLDriver, DBCursorBackend):
         TODO: add some validations.
         """
         if not sentence:
-            raise EmptyStatement(
-                f"{__name__!s} Error: cannot use an empty SQL sentence"
-            )
+            raise EmptyStatement(f"{__name__!s} Error: cannot use an empty SQL sentence")
         if not self._connection:
             self.connection()
 
@@ -243,9 +201,9 @@ class sa(SQLDriver, DBCursorBackend):
             result = self._connection.execute(sentence, params)
             if result:
                 rows = result.fetchall()
-                if self._row_format == 'dict' or self._row_format == 'iterable':
+                if self._row_format == "dict" or self._row_format == "iterable":
                     self._result = [dict(zip(row.keys(), row)) for row in rows]
-                elif self._row_format == 'record':
+                elif self._row_format == "record":
                     self._result = [Record(row, row.keys()) for row in rows]
                 else:
                     self._result = rows
@@ -271,11 +229,11 @@ class sa(SQLDriver, DBCursorBackend):
             result = self._connection.execute(sentence)
             if result:
                 row = result.fetchone()
-                if self._row_format == 'dict':
+                if self._row_format == "dict":
                     self._result = dict(row)
-                elif self._row_format == 'iterable':
+                elif self._row_format == "iterable":
                     self._result = dict(zip(row.keys(), row))
-                elif self._row_format == 'record':
+                elif self._row_format == "record":
                     self._result = Record(row, row.keys())
                 else:
                     self._result = row
@@ -300,9 +258,9 @@ class sa(SQLDriver, DBCursorBackend):
             result = self._connection.execute(sentence, params)
             if result:
                 rows = result.fetchall()
-                if self._row_format == 'dict' or self._row_format == 'iterable':
+                if self._row_format == "dict" or self._row_format == "iterable":
                     result = [dict(zip(row.keys(), row)) for row in rows]
-                elif self._row_format == 'record':
+                elif self._row_format == "record":
                     result = [Record(row, row.keys()) for row in rows]
                 else:
                     result = rows
@@ -327,11 +285,11 @@ class sa(SQLDriver, DBCursorBackend):
             result = self._connection.execute(sentence)
             if result:
                 row = result.fetchone()
-                if self._row_format == 'dict':
+                if self._row_format == "dict":
                     result = dict(row)
-                elif self._row_format == 'iterable':
+                elif self._row_format == "iterable":
                     result = dict(zip(row.keys(), row))
-                elif self._row_format == 'record':
+                elif self._row_format == "record":
                     result = Record(row, row.keys())
                 else:
                     result = row
@@ -368,8 +326,7 @@ class sa(SQLDriver, DBCursorBackend):
             return [self._result, error]
 
     def execute_many(self, sentence, params: List):
-        """Execute multiples transactions.
-        """
+        """Execute multiples transactions."""
         self._result = None
         error = None
         self.valid_operation(sentence)
@@ -435,16 +392,12 @@ class sa(SQLDriver, DBCursorBackend):
     """
     DDL Information.
     """
-    def create(
-        self,
-        obj: str = 'table',
-        name: str = '',
-        fields: Optional[List] = None
-    ) -> bool:
+
+    def create(self, obj: str = "table", name: str = "", fields: Optional[List] = None) -> bool:
         """
         Create is a generic method for Database Objects Creation.
         """
-        if obj == 'table':
+        if obj == "table":
             sql = "CREATE TABLE IF NOT EXISTS {name}({columns});"
             columns = ", ".join(["{name} {type}".format(**e) for e in fields])
             sql = sql.format(name=name, columns=columns)
@@ -455,15 +408,11 @@ class sa(SQLDriver, DBCursorBackend):
                 else:
                     return False
             except ProgrammingError as err:
-                raise DriverError(
-                    f"SQLAlchemy: Relation already exists: {err!s}"
-                )
+                raise DriverError(f"SQLAlchemy: Relation already exists: {err!s}")
             except Exception as err:
-                raise DriverError(
-                    f"SQLAlchemy: Error in Object Creation: {err!s}"
-                )
+                raise DriverError(f"SQLAlchemy: Error in Object Creation: {err!s}")
         else:
-            raise RuntimeError(f'SQLAlchemy: invalid Object type {object!s}')
+            raise RuntimeError(f"SQLAlchemy: invalid Object type {object!s}")
 
     """
     Model Logic:
@@ -481,7 +430,7 @@ class sa(SQLDriver, DBCursorBackend):
             table = f"{schema}.{tablename}"
         else:
             table = tablename
-        if self._driver == 'postgresql':
+        if self._driver == "postgresql":
             sql = f"SELECT a.attname AS name, a.atttypid::regtype AS type, \
             format_type(a.atttypid, a.atttypmod) as format_type, a.attnotnull::boolean as notnull, \
             coalesce((SELECT true FROM pg_index i WHERE i.indrelid = a.attrelid \
@@ -495,18 +444,17 @@ class sa(SQLDriver, DBCursorBackend):
             self.connection()
         try:
             f = self._row_format
-            self._row_format = 'dict'
+            self._row_format = "dict"
             colinfo = self.fetch_all(sql)
             self._row_format == f
             return colinfo
         except Exception as err:
-            self._logger.exception(
-                f"Wrong Table information {tablename!s}: {err}"
-            )
+            self._logger.exception(f"Wrong Table information {tablename!s}: {err}")
 
     """
     Metadata information.
     """
+
     def tables(self, schema: str = "") -> Iterable[Any]:
         raise NotImplementedError
 
@@ -514,6 +462,4 @@ class sa(SQLDriver, DBCursorBackend):
         raise NotImplementedError
 
     def use(self, tablename: str):
-        raise NotImplementedError(
-            'SQLAlchemy Error: There is no Database.'
-        )
+        raise NotImplementedError("SQLAlchemy Error: There is no Database.")

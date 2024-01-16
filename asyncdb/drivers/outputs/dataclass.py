@@ -11,10 +11,11 @@ class dataclassFormat(OutputFormat):
     """
     Most Basic Definition of Format.
     """
+
     def __init__(self, **kwargs):
         self._model = None
-        if 'model' in kwargs:
-            self._model = kwargs['model']
+        if "model" in kwargs:
+            self._model = kwargs["model"]
         else:
             # TODO: making analysis of resultset:
             pass

@@ -17,7 +17,7 @@ from datamodel.types import MODEL_TYPES, DB_TYPES
 from asyncdb.exceptions import ConnectionMissing, NoDataFound, DriverError, ModelError, StatementError
 from asyncdb.utils.modules import module_exists
 
-DB_TYPES[int64] = 'bigint'
+DB_TYPES[int64] = "bigint"
 
 
 def is_missing(value):
@@ -30,12 +30,14 @@ def is_missing(value):
     else:
         return False
 
+
 class Model(BaseModel):
     """
     Model.
 
     DataModel representing connection to databases.
     """
+
     def set_connection(self, connection: Awaitable) -> None:
         """
         Manually Set the connection of Dataclass.
@@ -43,9 +45,7 @@ class Model(BaseModel):
         try:
             self.Meta.connection = connection
         except Exception as err:
-            raise ModelError(
-                f"{err}"
-            ) from err
+            raise ModelError(f"{err}") from err
 
     def get_connection(self) -> Awaitable:
         """get_connection.
@@ -60,9 +60,7 @@ class Model(BaseModel):
             try:
                 obj = module_exists(driver, provider)
             except Exception as err:
-                raise ModelError(
-                    f"{err}"
-                ) from err
+                raise ModelError(f"{err}") from err
             if self.Meta.dsn is not None:
                 try:
                     self.Meta.connection = obj(dsn=self.Meta.dsn)
@@ -70,9 +68,7 @@ class Model(BaseModel):
                     raise
                 except Exception as err:
                     logging.exception(err)
-                    raise ModelError(
-                        f"{err}"
-                    ) from err
+                    raise ModelError(f"{err}") from err
             elif hasattr(self.Meta, "credentials"):
                 params = self.Meta.credentials
                 try:
@@ -81,13 +77,10 @@ class Model(BaseModel):
                     raise
                 except Exception as err:
                     logging.exception(err)
-                    raise ModelError(
-                        f"{err}"
-                    ) from err
+                    raise ModelError(f"{err}") from err
         return self.Meta.connection
 
-
-###  Magic Methods
+    ###  Magic Methods
     async def __aenter__(self) -> BaseModel:
         if not self.Meta.connection:
             self.get_connection()
@@ -106,11 +99,9 @@ class Model(BaseModel):
             await self.Meta.connection.close()
         except Exception as err:
             logging.exception(err)
-            raise RuntimeError(
-                f"{err}"
-            ) from err
+            raise RuntimeError(f"{err}") from err
 
-### Instance method for Dataclasses.
+    ### Instance method for Dataclasses.
     async def insert(self, **kwargs):
         """
         Insert a new Dataclass Model to Database.
@@ -121,9 +112,7 @@ class Model(BaseModel):
             await self.Meta.connection.connection()
         result = None
         try:
-            result = await self.Meta.connection._insert_(
-                _model=self, **kwargs
-            )
+            result = await self.Meta.connection._insert_(_model=self, **kwargs)
             return result
         except StatementError:
             raise
@@ -131,9 +120,7 @@ class Model(BaseModel):
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise ModelError(
-                f"Error on INSERT {self.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error on INSERT {self.Meta.name}: {err}") from err
 
     async def update(self, **kwargs):
         """
@@ -145,17 +132,13 @@ class Model(BaseModel):
             await self.Meta.connection.connection()
         result = None
         try:
-            result = await self.Meta.connection._update_(
-                _model=self, **kwargs
-            )
+            result = await self.Meta.connection._update_(_model=self, **kwargs)
             return result
         except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise ModelError(
-                f"Error on UPDATE {self.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error on UPDATE {self.Meta.name}: {err}") from err
 
     async def delete(self, _filter: dict = None, **kwargs):
         """
@@ -167,11 +150,7 @@ class Model(BaseModel):
             await self.Meta.connection.connection()
         result = None
         try:
-            result = await self.Meta.connection._delete_(
-                _model=self,
-                _filter=_filter,
-                **kwargs
-            )
+            result = await self.Meta.connection._delete_(_model=self, _filter=_filter, **kwargs)
             return result
         except StatementError:
             raise
@@ -179,9 +158,7 @@ class Model(BaseModel):
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise ModelError(
-                f"Error on DELETE {self.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error on DELETE {self.Meta.name}: {err}") from err
 
     async def save(self, **kwargs):
         """
@@ -193,9 +170,7 @@ class Model(BaseModel):
             await self.Meta.connection.connection()
         result = None
         try:
-            result = await self.Meta.connection._save_(
-                _model=self, **kwargs
-            )
+            result = await self.Meta.connection._save_(_model=self, **kwargs)
             return result
         except StatementError:
             raise
@@ -203,9 +178,7 @@ class Model(BaseModel):
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise ModelError(
-                f"Error on DELETE {self.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error on DELETE {self.Meta.name}: {err}") from err
 
     async def fetch(self, **kwargs):
         """
@@ -216,140 +189,97 @@ class Model(BaseModel):
         if not self.Meta.connection.is_connected():
             await self.Meta.connection.connection()
         try:
-            result = await self.Meta.connection._fetch_(
-                _model=self,
-                **kwargs
-            )
+            result = await self.Meta.connection._fetch_(_model=self, **kwargs)
             if result:
                 for f, val in result.items():
                     setattr(self, f, val)
                 return self
             else:
-                raise NoDataFound(
-                    f"{self.Meta.name}: Data Not found"
-                )
+                raise NoDataFound(f"{self.Meta.name}: Data Not found")
         except ValidationError:
             raise
         except NoDataFound:
             raise
         except (AttributeError, StatementError) as err:
-            raise StatementError(
-                f"Error on Attribute {self.Meta.name}: {err}"
-            ) from err
+            raise StatementError(f"Error on Attribute {self.Meta.name}: {err}") from err
         except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise ModelError(
-                f"Error on get {self.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error on get {self.Meta.name}: {err}") from err
 
-
-### Class-based methods for Dataclasses.
+    ### Class-based methods for Dataclasses.
     @classmethod
     async def create(cls, records: list):
         if not cls.Meta.connection:
-            raise ConnectionMissing(
-                f"Missing Connection for Model: {cls}"
-            )
+            raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         # working always with native format:
-        cls.Meta.connection.output_format('native')
+        cls.Meta.connection.output_format("native")
         try:
-            result = await cls.Meta.connection._create_(
-                _model=cls,
-                rows=records
-            )
+            result = await cls.Meta.connection._create_(_model=cls, rows=records)
             if result:
                 return result
         except ValidationError:
             raise
         except (AttributeError, StatementError) as err:
-            raise StatementError(
-                f"Error on Attribute {cls.Meta.name}: {err}"
-            ) from err
+            raise StatementError(f"Error on Attribute {cls.Meta.name}: {err}") from err
         except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise ModelError(
-                f"Error Updating Table {cls.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error Updating Table {cls.Meta.name}: {err}") from err
 
     @classmethod
     async def remove(cls, **kwargs):
         if not cls.Meta.connection:
-            raise ConnectionMissing(
-                f"Missing Connection for Model: {cls}"
-            )
+            raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         result = []
         try:
-            result = await cls.Meta.connection._remove_(
-                _model=cls, **kwargs
-            )
+            result = await cls.Meta.connection._remove_(_model=cls, **kwargs)
             return result
         except (AttributeError, StatementError) as err:
-            raise StatementError(
-                f"Error on Attribute {cls.Meta.name}: {err}"
-            ) from err
+            raise StatementError(f"Error on Attribute {cls.Meta.name}: {err}") from err
         except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise ModelError(
-                f"Error Deleting Table {cls.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error Deleting Table {cls.Meta.name}: {err}") from err
 
     @classmethod
     async def updating(cls, *args, _filter: dict = None, **kwargs):
         if not cls.Meta.connection:
-            raise ConnectionMissing(
-                f"Missing Connection for Model: {cls}"
-            )
+            raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         try:
-            result = await cls.Meta.connection._updating_(
-                _model=cls, _filter=_filter, *args, **kwargs
-            )
+            result = await cls.Meta.connection._updating_(_model=cls, _filter=_filter, *args, **kwargs)
             if result:
                 return result
             else:
                 return []
         except (AttributeError, StatementError) as err:
-            raise StatementError(
-                f"Error on Attribute {cls.Meta.name}: {err}"
-            ) from err
+            raise StatementError(f"Error on Attribute {cls.Meta.name}: {err}") from err
         except DriverError:
             raise
         except Exception as err:
             print(traceback.format_exc())
-            raise ModelError(
-                f"Error Updating Table {cls.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error Updating Table {cls.Meta.name}: {err}") from err
 
     @classmethod
     async def deleting(cls, *args, _filter: dict = None, **kwargs):
         if not cls.Meta.connection:
-            raise ConnectionMissing(
-                f"Missing Connection for Model: {cls}"
-            )
+            raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         try:
-            result = await cls.Meta.connection._deleting_(
-                _model=cls, _filter=_filter, *args, **kwargs
-            )
+            result = await cls.Meta.connection._deleting_(_model=cls, _filter=_filter, *args, **kwargs)
             if result:
                 return result
             else:
                 return []
         except (AttributeError, StatementError) as err:
-            raise StatementError(
-                f"Error on Attribute {cls.Meta.name}: {err}"
-            ) from err
+            raise StatementError(f"Error on Attribute {cls.Meta.name}: {err}") from err
         except DriverError:
             raise
         except Exception as err:
             print(traceback.format_exc())
-            raise ModelError(
-                f"Error Updating Table {cls.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error Updating Table {cls.Meta.name}: {err}") from err
 
     @classmethod
     async def select(cls, *args, **kwargs):
@@ -358,14 +288,10 @@ class Model(BaseModel):
         :raises DriverError, Exception
         """
         if not cls.Meta.connection:
-            raise ConnectionMissing(
-                f"Missing Connection for Model: {cls}"
-            )
+            raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         result = []
         try:
-            result = await cls.Meta.connection._select_(
-                _model=cls, *args, **kwargs
-            )
+            result = await cls.Meta.connection._select_(_model=cls, *args, **kwargs)
             if result:
                 cls.reset_values(cls)
                 return [cls(**dict(r)) for r in result]
@@ -376,16 +302,12 @@ class Model(BaseModel):
         except NoDataFound:
             raise
         except (AttributeError, StatementError) as err:
-            raise StatementError(
-                f"Error on Attribute {cls.Meta.name}: {err}"
-            ) from err
+            raise StatementError(f"Error on Attribute {cls.Meta.name}: {err}") from err
         except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise ModelError(
-                f"Error on Select {cls.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error on Select {cls.Meta.name}: {err}") from err
 
     @classmethod
     async def filter(cls, *args, **kwargs):
@@ -393,14 +315,10 @@ class Model(BaseModel):
         Need to return a ***collection*** of nested DataClasses
         """
         if not cls.Meta.connection:
-            raise ConnectionMissing(
-                f"Missing Connection for Model: {cls}"
-            )
+            raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         result = []
         try:
-            result = await cls.Meta.connection._filter_(
-                _model=cls, *args, **kwargs
-            )
+            result = await cls.Meta.connection._filter_(_model=cls, *args, **kwargs)
             if result:
                 cls.reset_values(cls)
                 return [cls(**dict(r)) for r in result]
@@ -411,16 +329,12 @@ class Model(BaseModel):
         except NoDataFound:
             raise
         except (AttributeError, StatementError) as err:
-            raise StatementError(
-                f"Error on Attribute {cls.Meta.name}: {err}"
-            ) from err
+            raise StatementError(f"Error on Attribute {cls.Meta.name}: {err}") from err
         except DriverError:
             raise
         except Exception as err:
             logging.debug(traceback.format_exc())
-            raise ModelError(
-                f"Error on filter {cls.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error on filter {cls.Meta.name}: {err}") from err
 
     @classmethod
     async def get(cls, **kwargs):
@@ -428,53 +342,35 @@ class Model(BaseModel):
         Return a new single record based on filter criteria
         """
         if not cls.Meta.connection:
-            raise ConnectionMissing(
-                f"Missing Connection for Model: {cls}"
-            )
+            raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         try:
-            result = await cls.Meta.connection._get_(
-                _model=cls, **kwargs
-            )
+            result = await cls.Meta.connection._get_(_model=cls, **kwargs)
             if result:
                 fields = cls.get_fields(cls)
-                result = {k:v for k,v in dict(result).items() if k in fields}
+                result = {k: v for k, v in dict(result).items() if k in fields}
                 cls.reset_values(cls)
                 return cls(**result)
             else:
-                raise NoDataFound(
-                    message=f"Data not found over {cls.Meta.name!s}"
-                )
+                raise NoDataFound(message=f"Data not found over {cls.Meta.name!s}")
         except ValidationError:
             raise
         except NoDataFound as e:
-            raise NoDataFound(
-                message=f"Data not found over {cls.Meta.name!s}"
-            ) from e
+            raise NoDataFound(message=f"Data not found over {cls.Meta.name!s}") from e
         except AttributeError as err:
-            raise StatementError(
-                f"Error on Attribute {cls.Meta.name}: {err}"
-            ) from err
+            raise StatementError(f"Error on Attribute {cls.Meta.name}: {err}") from err
         except (StatementError, DriverError) as err:
-            raise DriverError(
-                f"Error on get {cls.Meta.name}: {err}"
-            ) from err
+            raise DriverError(f"Error on get {cls.Meta.name}: {err}") from err
         except Exception as err:
             print(traceback.format_exc())
-            raise ModelError(
-                f"Error on get {cls.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error on get {cls.Meta.name}: {err}") from err
 
     # get all data of a model
     @classmethod
     async def all(cls, **kwargs):
         if not cls.Meta.connection:
-            raise ConnectionMissing(
-                f"Missing Connection for Model: {cls}"
-            )
+            raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         try:
-            result = await cls.Meta.connection._all_(
-                _model=cls, **kwargs
-            )
+            result = await cls.Meta.connection._all_(_model=cls, **kwargs)
             cls.reset_values(cls)
             return [cls(**dict(row)) for row in result]
         except ValidationError:
@@ -485,9 +381,7 @@ class Model(BaseModel):
             raise
         except Exception as err:
             print(traceback.format_exc())
-            raise ModelError(
-                f"Error on query_all over table {cls.Meta.name}: {err}"
-            ) from err
+            raise ModelError(f"Error on query_all over table {cls.Meta.name}: {err}") from err
 
     @classmethod
     async def makeModel(
@@ -530,7 +424,6 @@ class Model(BaseModel):
         obj.Meta = m
         return obj
 
-
     @classmethod
     def model(cls, dialect: str = "sql") -> str:
         clsname = cls.__name__
@@ -553,11 +446,7 @@ class Model(BaseModel):
                 except KeyError:
                     if field.default is not None:
                         default = f"{field.default!r}"
-                default = (
-                    f"DEFAULT {default!s}"
-                    if isinstance(default, (str, int))
-                    else ""
-                )
+                default = f"DEFAULT {default!s}" if isinstance(default, (str, int)) else ""
                 if is_dataclass(field.type):
                     tp = "jsonb"
                     nn = ""
@@ -568,7 +457,7 @@ class Model(BaseModel):
                         # print(err)
                         tp = "varchar"
                     nn = "NOT NULL" if field.required() is True else ""
-                if hasattr(field, 'primary_key'):
+                if hasattr(field, "primary_key"):
                     if field.primary_key is True:
                         pk.append(key)
                 # print(key, tp, nn, default)
@@ -577,9 +466,7 @@ class Model(BaseModel):
             if len(pk) >= 1:
                 primary = ", ".join(pk)
                 cname = f"pk_{schema}_{table}_pkey"
-                doc = "{},\n{}".format(
-                    doc, f"CONSTRAINT {cname} PRIMARY KEY ({primary})"
-                )
+                doc = "{},\n{}".format(doc, f"CONSTRAINT {cname} PRIMARY KEY ({primary})")
             doc = doc + "\n);"
             return doc
         else:

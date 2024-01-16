@@ -2,21 +2,11 @@
 import asyncio
 import time
 import logging
-from typing import (
-    Any,
-    Optional
-)
+from typing import Any, Optional
 from collections.abc import Iterable
 import pymssql
-from asyncdb.exceptions import (
-    DataError,
-    EmptyStatement,
-    NoDataFound,
-    DriverError
-)
-from .sql import (
-    SQLCursor
-)
+from asyncdb.exceptions import DataError, EmptyStatement, NoDataFound, DriverError
+from .sql import SQLCursor
 from .mssql import mssql
 
 
@@ -61,26 +51,16 @@ class sqlserver(mssql):
 
     Microsoft SQL Server using DB-API connection
     """
+
     _provider = "sqlserver"
 
-    def __init__(
-            self,
-            dsn: str = '',
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict = None,
-            **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         try:
-            self.tds_version = kwargs['tds_version']
+            self.tds_version = kwargs["tds_version"]
             del kwargs["tds_version"]
         except KeyError:
             self.tds_version = "8.0"
-        super(sqlserver, self).__init__(
-            dsn=dsn,
-            loop=loop,
-            params=params,
-            **kwargs
-        )
+        super(sqlserver, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
     async def connection(self) -> Any:
         """
@@ -98,16 +78,14 @@ class sqlserver(mssql):
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
-            if 'database' in self.params:
+            if "database" in self.params:
                 await self.use(self.params["database"])
             return self
         except Exception as err:
             print(err)
             self._connection = None
             self._cursor = None
-            raise DriverError(
-                f"connection Error, Terminated: {err}"
-            ) from err
+            raise DriverError(f"connection Error, Terminated: {err}") from err
 
     async def use(self, database: str):
         try:
@@ -115,13 +93,9 @@ class sqlserver(mssql):
             self._cursor.execute(f"USE {database!s}")
             return self
         except pymssql.Warning as warn:
-            logging.warning(
-                f"SQL Server Warning: {warn!s}"
-            )
+            logging.warning(f"SQL Server Warning: {warn!s}")
         except (pymssql.StandardError, pymssql.Error) as err:
-            raise DriverError(
-                message=f"SQL Server Error: {err}"
-            ) from err
+            raise DriverError(message=f"SQL Server Error: {err}") from err
 
     async def execute(self, sentence, *args, **kwargs):
         """
@@ -207,12 +181,8 @@ class sqlserver(mssql):
         await self.valid_operation(sentence)
         try:
             self._cursor = self._connection.cursor()
-            params = tuple(
-                kwargs.values()
-            )
-            self._cursor.callproc(
-                sentence, params
-            )
+            params = tuple(kwargs.values())
+            self._cursor.callproc(sentence, params)
             self._cursor.nextset()
             self._result = self._cursor.fetchall()
             self._cursor.close()
@@ -268,17 +238,11 @@ class sqlserver(mssql):
                 raise NoDataFound("SQL Server: No Data was Found")
             return self._result
         except (pymssql.StandardError, pymssql.Error) as err:
-            raise DataError(
-                f"SQL Server Query Error: {err}"
-            ) from err
+            raise DataError(f"SQL Server Query Error: {err}") from err
         except RuntimeError as err:
-            raise DriverError(
-                f"Runtime Error: {err}"
-            ) from err
+            raise DriverError(f"Runtime Error: {err}") from err
         except Exception as err:  # pylint: disable=W0703
-            raise DriverError(
-                f"Error on Query: {err}"
-            ) from err
+            raise DriverError(f"Error on Query: {err}") from err
 
     fetchone = fetch_one
 
@@ -295,17 +259,11 @@ class sqlserver(mssql):
                 raise NoDataFound("SQL Server: No Data was Found")
             return self._result
         except (pymssql.StandardError, pymssql.Error) as err:
-            raise DataError(
-                f"SQL Server Query Error: {err}"
-            ) from err
+            raise DataError(f"SQL Server Query Error: {err}") from err
         except RuntimeError as err:
-            raise DriverError(
-                f"Runtime Error: {err}"
-            ) from err
+            raise DriverError(f"Runtime Error: {err}") from err
         except Exception as err:  # pylint: disable=W0703
-            raise DriverError(
-                f"Error on Query: {err}"
-            ) from err
+            raise DriverError(f"Error on Query: {err}") from err
 
     async def fetch(self, sentence, *args, size: int = 1, **kwargs):
         self._result = None
@@ -320,27 +278,13 @@ class sqlserver(mssql):
             if not self._result:
                 raise NoDataFound("SQL Server: No Data was Found")
         except (pymssql.StandardError, pymssql.Error) as err:
-            raise DataError(
-                f"SQL Server Query Error: {err}"
-            ) from err
+            raise DataError(f"SQL Server Query Error: {err}") from err
         except RuntimeError as err:
-            raise DriverError(
-                f"Runtime Error: {err}"
-            ) from err
+            raise DriverError(f"Runtime Error: {err}") from err
         except Exception as err:  # pylint: disable=W0703
-            raise DriverError(
-                f"Error on Query: {err}"
-            ) from err
+            raise DriverError(f"Error on Query: {err}") from err
 
-    async def exec(
-        self,
-        sentence,
-        *args,
-        paginated: bool = False,
-        page: str = None,
-        idx: str = None,
-        **kwargs
-    ):
+    async def exec(self, sentence, *args, paginated: bool = False, page: str = None, idx: str = None, **kwargs):
         """exec.
 
         Calling an Stored Function with parameters.
@@ -362,10 +306,10 @@ class sqlserver(mssql):
             if idx is not None and idx not in kwargs:
                 kwargs[idx] = 1
             if kwargs:
-                params = ', '.join([f'{k}={v}' for k, v in kwargs.items() if k is not None])
+                params = ", ".join([f"{k}={v}" for k, v in kwargs.items() if k is not None])
             else:
-                params = ''
-            procedure = f'EXEC {sentence} {params}'
+                params = ""
+            procedure = f"EXEC {sentence} {params}"
             self._cursor.execute(procedure, *args)
             # result = self._cursor.fetchall()
             if not (result := self._cursor.fetchall()):

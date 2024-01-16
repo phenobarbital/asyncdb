@@ -9,9 +9,7 @@ import asyncio
 import time
 from typing import Any
 import pylibmc
-from asyncdb.exceptions import (
-    DriverError
-)
+from asyncdb.exceptions import DriverError
 from .abstract import (
     InitDriver,
 )
@@ -22,19 +20,12 @@ class mcache(InitDriver):
     _syntax = "nosql"
     _behaviors = {"tcp_nodelay": True, "ketama": True}
 
-    def __init__(
-            self,
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict = None,
-            **kwargs
-    ) -> None:
+    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         super(mcache, self).__init__(loop=loop, params=params, **kwargs)
         try:
             host = params["host"]
         except KeyError as ex:
-            raise DriverError(
-                "Memcache: Unable to find *host* in parameters."
-            ) from ex
+            raise DriverError("Memcache: Unable to find *host* in parameters.") from ex
         try:
             port = params["port"]
         except KeyError:
@@ -42,13 +33,11 @@ class mcache(InitDriver):
         self._server = [f"{host}:{port}"]
         try:
             if kwargs["behaviors"]:
-                self._behaviors = {
-                    **self._behaviors, **kwargs["behaviors"]
-                }
+                self._behaviors = {**self._behaviors, **kwargs["behaviors"]}
         except KeyError:
             pass
 
-### Context magic Methods
+    ### Context magic Methods
     def __enter__(self):
         return self
 
@@ -56,27 +45,17 @@ class mcache(InitDriver):
         self.release()
 
     # Create a memcache Connection
-    def connection(self): # pylint: disable=W0236
+    def connection(self):  # pylint: disable=W0236
         """
         __init Memcache initialization.
         """
-        self._logger.info(
-            f"Memcache: Connecting to {self._server}"
-        )
+        self._logger.info(f"Memcache: Connecting to {self._server}")
         try:
-            self._connection = pylibmc.Client(
-                self._server,
-                binary=True,
-                behaviors=self._behaviors
-            )
-        except (pylibmc.Error) as err:
-            raise DriverError(
-                message=f"Connection Error: {err}"
-            ) from err
+            self._connection = pylibmc.Client(self._server, binary=True, behaviors=self._behaviors)
+        except pylibmc.Error as err:
+            raise DriverError(message=f"Connection Error: {err}") from err
         except Exception as err:
-            raise DriverError(
-                message=f"Unknown Memcache Error: {err}"
-            ) from err
+            raise DriverError(message=f"Unknown Memcache Error: {err}") from err
         # is connected
         if self._connection:
             self._connected = True
@@ -89,20 +68,16 @@ class mcache(InitDriver):
         """
         self._connection.disconnect_all()
 
-    def close(self): # pylint: disable=W0221,W0236
+    def close(self):  # pylint: disable=W0221,W0236
         """
         Closing memcache Connection
         """
         try:
             self._connection.disconnect_all()
-        except (pylibmc.Error) as err:
-            raise DriverError(
-                f"Close Error: {err}"
-            ) from err
+        except pylibmc.Error as err:
+            raise DriverError(f"Close Error: {err}") from err
         except Exception as err:
-            raise DriverError(
-               f"Unknown Memcache Closing Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Memcache Closing Error: {err}") from err
 
     disconnect = close
 
@@ -113,31 +88,27 @@ class mcache(InitDriver):
         try:
             if self._connection:
                 self._connection.flush_all()
-        except (pylibmc.Error) as err:
-            raise DriverError(
-                f"Close Error: {err}"
-            ) from err
+        except pylibmc.Error as err:
+            raise DriverError(f"Close Error: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Memcache Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Memcache Error: {err}") from err
 
-    def test_connection(self, key: str = 'test_123', optional: int = 1): # pylint: disable=W0221,W0236
+    def test_connection(self, key: str = "test_123", optional: int = 1):  # pylint: disable=W0221,W0236
         result = None
         error = None
         try:
             self.set(key, optional)
             result = self.get(key)
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = err
         finally:
             self.delete(key)
-            return [result, error] # pylint: disable=W0150
+            return [result, error]  # pylint: disable=W0150
 
-    def execute(self, sentence: Any): # pylint: disable=W0221,W0236
+    def execute(self, sentence: Any):  # pylint: disable=W0221,W0236
         raise NotImplementedError
 
-    async def execute_many(self, sentence=""): # pylint: disable=W0221,W0236
+    async def execute_many(self, sentence=""):  # pylint: disable=W0221,W0236
         raise NotImplementedError
 
     async def prepare(self, sentence=""):
@@ -146,12 +117,12 @@ class mcache(InitDriver):
     async def use(self, database=""):
         raise NotImplementedError
 
-    def query(self, key: str, *val): # pylint: disable=W0221,W0236
+    def query(self, key: str, *val):  # pylint: disable=W0221,W0236
         return self.get_multi(key, val)
 
     fetch_all = query
 
-    def queryrow(self, key: str, *args): # pylint: disable=W0221,W0236
+    def queryrow(self, key: str, *args):  # pylint: disable=W0221,W0236
         return self.get(key, *args)
 
     fetch_one = queryrow
@@ -159,27 +130,19 @@ class mcache(InitDriver):
     def set(self, key, value, timeout=None):
         try:
             if timeout:
-                return self._connection.set(
-                    bytes(key, "utf-8"), bytes(value, "utf-8"), time=timeout
-                )
+                return self._connection.set(bytes(key, "utf-8"), bytes(value, "utf-8"), time=timeout)
             else:
                 return self._connection.set(bytes(key, "utf-8"), bytes(value, "utf-8"))
-        except (pylibmc.Error) as err:
-            raise DriverError(
-                f"Set Memcache Error: {err}"
-            ) from err
+        except pylibmc.Error as err:
+            raise DriverError(f"Set Memcache Error: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Memcache Unknown Error: {err}"
-            ) from err
+            raise DriverError(f"Memcache Unknown Error: {err}") from err
 
     def set_multi(self, mapping, timeout=0):
         try:
             self._connection.set_multi(mapping, timeout)
-        except (pylibmc.Error) as err:
-            raise DriverError(
-                f"Set Memcache Error: {err}"
-            ) from err
+        except pylibmc.Error as err:
+            raise DriverError(f"Set Memcache Error: {err}") from err
 
     def get(self, key, default=None):
         try:
@@ -188,14 +151,10 @@ class mcache(InitDriver):
                 return result.decode("utf-8")
             else:
                 return None
-        except (pylibmc.Error) as err:
-            raise DriverError(
-                f"Get Memcache Error: {err}"
-            ) from err
+        except pylibmc.Error as err:
+            raise DriverError(f"Get Memcache Error: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Memcache Unknown Error: {err}"
-            ) from err
+            raise DriverError(f"Memcache Unknown Error: {err}") from err
 
     def get_multi(self, *kwargs):
         return self.multiget(kwargs)
@@ -203,28 +162,20 @@ class mcache(InitDriver):
     def delete(self, key):
         try:
             return self._connection.delete(bytes(key, "utf-8"))
-        except (pylibmc.Error) as err:
-            raise DriverError(
-                f"DELETE Memcache Error: {err}"
-            ) from err
+        except pylibmc.Error as err:
+            raise DriverError(f"DELETE Memcache Error: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"DELETE Unknown Error: {err}"
-            ) from err
+            raise DriverError(f"DELETE Unknown Error: {err}") from err
 
     def delete_multi(self, *kwargs):
         try:
             ky = [bytes(key, "utf-8") for key in kwargs]
             result = self._connection.delete_multi(ky)
             return result
-        except (pylibmc.Error) as err:
-            raise DriverError(
-                f"DELETE Memcache Error: {err}"
-            ) from err
+        except pylibmc.Error as err:
+            raise DriverError(f"DELETE Memcache Error: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"DELETE Unknown Error: {err}"
-            ) from err
+            raise DriverError(f"DELETE Unknown Error: {err}") from err
 
     def multiget(self, *kwargs):
         try:
@@ -232,11 +183,7 @@ class mcache(InitDriver):
             result = self._connection.get_multi(ky)
             if result:
                 return {key.decode("utf-8"): value for key, value in result.items()}
-        except (pylibmc.Error) as err:
-            raise DriverError(
-                f"MULTI Memcache Error: {err}"
-            ) from err
+        except pylibmc.Error as err:
+            raise DriverError(f"MULTI Memcache Error: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"MULTI Unknown Error: {err}"
-            ) from err
+            raise DriverError(f"MULTI Unknown Error: {err}") from err
