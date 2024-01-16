@@ -1,12 +1,7 @@
 import json
 from datamodel.parsers.encoders import DefaultEncoder
 from asyncpg import Range
-from numpy import (
-    integer,
-    int64,
-    floating,
-    ndarray
-)
+from numpy import integer, int64, floating, ndarray
 
 
 class pgRangeEncoder(json.JSONEncoder):
@@ -32,6 +27,7 @@ class DBEncoder(DefaultEncoder):
     """
     Basic Encoder for PostgreSQL
     """
+
     def default(self, obj):
         if isinstance(obj, Range):
             return [obj.lower, obj.upper]

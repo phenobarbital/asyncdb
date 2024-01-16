@@ -12,4 +12,4 @@ from datamodel import Field, Column
 from .model import Model, is_missing, DB_TYPES
 
 
-__all__ = ('Field', 'Column', 'Model', 'is_dataclass', 'is_missing', 'DB_TYPES')
+__all__ = ("Field", "Column", "Model", "is_dataclass", "is_missing", "DB_TYPES")

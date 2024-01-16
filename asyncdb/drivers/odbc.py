@@ -34,20 +34,14 @@ class odbc(SQLDriver, DBCursorBackend):
     _provider = "odbc"
     _dsn = "Driver={driver};Database={database}"
 
-    def __init__(
-            self,
-            dsn: str = '',
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict = None,
-            **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         if "host" in params:
             self._dsn = "DRIVER={driver};Database={database};server={host};uid={user};pwd={password}"
         SQLDriver.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
         DBCursorBackend.__init__(self)
 
     async def prepare(self):
-        raise NotImplementedError('Prepared Statements not supported yet.')
+        raise NotImplementedError("Prepared Statements not supported yet.")
 
     async def connection(self, **kwargs):
         """
