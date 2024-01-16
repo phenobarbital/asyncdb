@@ -8,6 +8,7 @@ from threading import Thread
 from psycopg2.extras import NamedTupleCursor
 from sqlalchemy import create_engine, select
 from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
+
 # from sqlalchemy_aio import ASYNCIO_STRATEGY
 from asyncdb.exceptions import (
     ConnectionTimeout,
@@ -20,6 +21,7 @@ from asyncdb.exceptions import (
 )
 
 from .sql import SQLDriver
+
 
 class sa(SQLDriver, Thread):
     _provider = "sqlalchemy"
@@ -83,9 +85,7 @@ class sa(SQLDriver, Thread):
         self._logger.debug("Running Close")
         if self._loop:
             try:
-                self._loop.run_until_complete(
-                    asyncio.wait_for(self.terminate(), timeout=5)
-                )
+                self._loop.run_until_complete(asyncio.wait_for(self.terminate(), timeout=5))
             finally:
                 # close loop
                 self._loop.close()
@@ -154,9 +154,7 @@ class sa(SQLDriver, Thread):
             raise NotImplementedError()
         self._logger.debug("{}: Running Test".format(self._provider))
         try:
-            result = self._loop.run_until_complete(
-                self._connection.execute(self._test_query)
-            )
+            result = self._loop.run_until_complete(self._connection.execute(self._test_query))
             row = self._loop.run_until_complete(result.fetchone())
             if row:
                 row = dict(row)

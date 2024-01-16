@@ -8,13 +8,11 @@ class csvFormat(OutputFormat):
     Returns a CSV string from a Resultset
     TODO: migrate to aiocsv
     """
+
     async def serialize(self, result, error, *args, **kwargs):
         df = None
         try:
-            df = pandas.DataFrame(
-                data=result,
-                **kwargs
-            )
+            df = pandas.DataFrame(data=result, **kwargs)
             csv_buffer = StringIO()
             df.to_csv(csv_buffer)
             self._result = csv_buffer.getvalue()

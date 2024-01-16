@@ -10,7 +10,7 @@ from asyncdb.exceptions import (
     NoDataFound,
     DriverError,
     StatementError,
-    TooManyConnections
+    TooManyConnections,
 )
 from .abstract import BaseDriver
 
@@ -24,13 +24,7 @@ class mongo(BaseDriver):
     _timeout: int = 5
     _databases: list = []
 
-    def __init__(
-            self,
-            dsn: str = '',
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict = None,
-            **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         if "username" in params:
             self._dsn = "mongodb://{username}:{password}@{host}:{port}"
         if "database" in params:
@@ -56,9 +50,7 @@ class mongo(BaseDriver):
             try:
                 self._databases = await self._connection.list_database_names()
             except Exception as err:
-                raise DriverError(
-                    f"Error Connecting to Mongo: {err}"
-                ) from err
+                raise DriverError(f"Error Connecting to Mongo: {err}") from err
             if len(self._databases) > 0:
                 self._connected = True
                 self._initialized_on = time.time()
@@ -67,9 +59,7 @@ class mongo(BaseDriver):
             self._connection = None
             self._cursor = None
             print(err)
-            raise DriverError(
-                f"connection Error, Terminated: {err}"
-            ) from err
+            raise DriverError(f"connection Error, Terminated: {err}") from err
 
     async def close(self):
         """
@@ -82,9 +72,7 @@ class mongo(BaseDriver):
                     self._connection.close()
                 except Exception as err:
                     self._connection = None
-                    raise DriverError(
-                        "Connection Error, Terminated: {}".format(str(err))
-                    )
+                    raise DriverError("Connection Error, Terminated: {}".format(str(err)))
         except Exception as err:
             raise DriverError("Close Error: {}".format(str(err)))
         finally:

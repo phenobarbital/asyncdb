@@ -15,6 +15,7 @@ from abc import (
 )
 from typing import (
     Any,
+    List,
     Optional,
     Union
 )
@@ -22,28 +23,21 @@ from functools import partial
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from datamodel.exceptions import ValidationError
 from .meta import Record, Recordset
-from .exceptions import (
-    default_exception_handler,
-    DriverError,
-    EmptyStatement
-)
+from .exceptions import default_exception_handler, DriverError, EmptyStatement
 from .models import Model, Field, is_missing, is_dataclass
 from .utils.types import Entity, SafeDict
+
 
 class PoolBackend(ABC):
     """
     Basic Interface for Pool-based Connectors.
     """
+
     _provider: str = "base"
-    _syntax: str = ''  # Used by QueryParser for parsing queries
+    _syntax: str = ""  # Used by QueryParser for parsing queries
     _init_func: Optional[Callable] = None
 
-    def __init__(
-            self,
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict[Any] = None,
-            **kwargs
-    ) -> None:
+    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict[Any] = None, **kwargs) -> None:
         self._pool = None
         try:
             self._encoding = kwargs["encoding"]
@@ -65,9 +59,7 @@ class PoolBackend(ABC):
             self._loop = asyncio.get_running_loop()
             asyncio.set_event_loop(self._loop)
         # exception handler
-        self._loop.set_exception_handler(
-            default_exception_handler
-        )
+        self._loop.set_exception_handler(default_exception_handler)
         try:
             self._debug = bool(params.get("DEBUG", False))
         except (TypeError, KeyError, AttributeError):
@@ -102,14 +94,10 @@ class PoolBackend(ABC):
         raise NotImplementedError()  # pragma: no cover
 
     @abstractmethod
-    async def release(
-        self,
-        connection: "ConnectionBackend" = None,
-        timeout: int = 10
-    ) -> None:
+    async def release(self, connection: "ConnectionBackend" = None, timeout: int = 10) -> None:
         raise NotImplementedError()  # pragma: no cover
 
-### Magic Methods
+    ### Magic Methods
     async def __aenter__(self) -> "PoolBackend":
         if not self._pool:
             await self.connect()
@@ -118,10 +106,7 @@ class PoolBackend(ABC):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         # clean up anything you need to clean up
-        return await self.release(
-            connection=self._connection,
-            timeout=5
-        )
+        return await self.release(connection=self._connection, timeout=5)
 
     @property
     def log(self):
@@ -162,16 +147,12 @@ class ConnectionBackend(ABC):
     """
     Basic Interface with basic methods for connect and disconnect.
     """
-    _provider: str = "base"
-    _syntax: str = ''  # Used by QueryParser for parsing queries
-    _init_func: Optional[Callable] = None # a function called when connection is made
 
-    def __init__(
-            self,
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict[Any] = Any,
-            **kwargs
-    ) -> None:
+    _provider: str = "base"
+    _syntax: str = ""  # Used by QueryParser for parsing queries
+    _init_func: Optional[Callable] = None  # a function called when connection is made
+
+    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict[Any] = Any, **kwargs) -> None:
         self._connection: Callable = None
         self._connected: bool = False
         self._cursor = None
@@ -199,9 +180,7 @@ class ConnectionBackend(ABC):
         #     self._loop = asyncio.get_running_loop()
         asyncio.set_event_loop(self._loop)
         # exception handler
-        self._loop.set_exception_handler(
-            default_exception_handler
-        )
+        self._loop.set_exception_handler(default_exception_handler)
         try:
             self._debug = bool(params["DEBUG"])
         except KeyError:
@@ -285,7 +264,7 @@ class ConnectionBackend(ABC):
     def dialect(cls):
         return cls._syntax
 
-### Async Context magic Methods
+    ### Async Context magic Methods
     async def __aenter__(self) -> "ConnectionBackend":
         if not self._connection:
             await self.connection()
@@ -296,23 +275,17 @@ class ConnectionBackend(ABC):
         try:
             await asyncio.wait_for(self.close(), timeout=20)
         except asyncio.TimeoutError as e:
-            self._logger.warning(
-                f"Close timed out: {e}"
-            )
+            self._logger.warning(f"Close timed out: {e}")
         except RuntimeError as e:
-            self._logger.error(
-                str(e)
-            )
+            self._logger.error(str(e))
         except Exception as err:
-            self._logger.exception(
-                f'Closing Error: {err}'
-            )
+            self._logger.exception(f"Closing Error: {err}")
             raise
 
-    def get_executor(self, executor = 'thread', max_workers: int = 2) -> Any:
-        if executor == 'thread':
+    def get_executor(self, executor="thread", max_workers: int = 2) -> Any:
+        if executor == "thread":
             return ThreadPoolExecutor(max_workers=max_workers)
-        elif executor == 'process':
+        elif executor == "process":
             return ProcessPoolExecutor(max_workers=max_workers)
         else:
             return None
@@ -333,17 +306,15 @@ class ConnectionBackend(ABC):
             self._logger.exception(e, stack_info=True)
             raise
 
+
 class ConnectionDSNBackend(ABC):
     """
     Interface for Databases with DSN Support.
     """
+
     _logger: Any = None
 
-    def __init__(
-            self,
-            dsn: str = None,
-            params: Optional[dict] = None
-    ) -> None:
+    def __init__(self, dsn: str = None, params: Optional[dict] = None) -> None:
         if dsn:
             self._dsn = dsn
         else:
@@ -363,17 +334,15 @@ class ConnectionDSNBackend(ABC):
                 return None
         except TypeError as err:
             self._logger.exception(err)
-            raise DriverError(
-                f"Error creating DSN connection: {err}"
-            ) from err
+            raise DriverError(f"Error creating DSN connection: {err}") from err
 
     def get_dsn(self):
         return self._dsn
 
-    def get_executor(self, executor = 'thread', max_workers: int = 2) -> Any:
-        if executor == 'thread':
+    def get_executor(self, executor="thread", max_workers: int = 2) -> Any:
+        if executor == "thread":
             return ThreadPoolExecutor(max_workers=max_workers)
-        elif executor == 'process':
+        elif executor == "process":
             return ProcessPoolExecutor(max_workers=max_workers)
         else:
             return None
@@ -394,6 +363,7 @@ class ConnectionDSNBackend(ABC):
             self._logger.exception(e, stack_info=True)
             raise
 
+
 class TransactionBackend(ABC):
     """
     Interface for Drivers with Transaction Support.
@@ -410,9 +380,7 @@ class TransactionBackend(ABC):
         """
         raise NotImplementedError()  # pragma: no cover
 
-    async def transaction_start(
-        self, options: dict
-    ) -> None:
+    async def transaction_start(self, options: dict) -> None:
         """
         Starts a Transaction.
         """
@@ -431,11 +399,10 @@ class DatabaseBackend(ABC):
     """
     Interface for Basic Methods on Databases (query, fetch, execute).
     """
+
     _test_query: Optional[Any] = None
 
-    def __init__(
-            self
-    ) -> None:
+    def __init__(self) -> None:
         self._columns: list = []
         self._attributes = None
         self._result: list = []
@@ -464,9 +431,7 @@ class DatabaseBackend(ABC):
         try:
             return await self.query(self._test_query, **kwargs)
         except Exception as err:
-            raise DriverError(
-                message=str(err)
-            ) from err
+            raise DriverError(message=str(err)) from err
 
     @abstractmethod
     async def use(self, database: str) -> None:
@@ -483,11 +448,7 @@ class DatabaseBackend(ABC):
         raise NotImplementedError()  # pragma: no cover
 
     @abstractmethod
-    async def execute_many(
-            self,
-            sentence: list,
-            *args
-    ) -> Optional[Any]:
+    async def execute_many(self, sentence: list, *args) -> Optional[Any]:
         """
         Execute many sentences at once.
         """
@@ -534,18 +495,12 @@ class DatabaseBackend(ABC):
         pass
 
     @abstractmethod
-    async def fetch_one(
-            self,
-            sentence: str,
-            **kwargs
-    ) -> Optional[dict]:
+    async def fetch_one(self, sentence: str, **kwargs) -> Optional[dict]:
         """
         Fetch only one record, optional getting an offset using "number".
         """
 
-    async def fetch_val(
-        self, sentence: str, column: Any = None, number: int = None
-    ) -> Any:
+    async def fetch_val(self, sentence: str, column: Any = None, number: int = None) -> Any:
         """
         Fetch the value of a Column in a record.
         """
@@ -559,12 +514,7 @@ class CursorBackend(ABC):
     """
 
     def __init__(
-        self,
-        provider: Any,
-        sentence: str,
-        result: Optional[Any] = None,
-        parameters: Iterable[Any] = None,
-        **kwargs
+        self, provider: Any, sentence: str, result: Optional[Any] = None, parameters: Iterable[Any] = None, **kwargs
     ):
         self._cursor = None
         self._provider = provider
@@ -574,21 +524,15 @@ class CursorBackend(ABC):
         self._connection = self._provider.engine()
         self._kwargs = kwargs
 
-### Magic Context Methods for Cursors.
+    ### Magic Context Methods for Cursors.
     async def __aenter__(self) -> "CursorBackend":
         self._cursor = await self._connection.cursor()
-        await self._cursor.execute(
-            self._sentence,
-            self._params
-        )
+        await self._cursor.execute(self._sentence, self._params)
         return self
 
     def __enter__(self) -> "CursorBackend":
         self._cursor = self._connection.cursor()
-        self._cursor.execute(
-            self._sentence,
-            self._params
-        )
+        self._cursor.execute(self._sentence, self._params)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -618,7 +562,7 @@ class CursorBackend(ABC):
     async def __anext__(self):
         """Use `cursor.fetchrow()` to provide an async iterable.
 
-            raise: StopAsyncIteration when done.
+        raise: StopAsyncIteration when done.
         """
         if row := await self._cursor.fetchone() is not None:
             return row
@@ -628,14 +572,14 @@ class CursorBackend(ABC):
     def __next__(self):
         """Use `cursor.fetchrow()` to provide an iterable.
 
-            raise: StopAsyncIteration when done.
+        raise: StopAsyncIteration when done.
         """
         if row := self._cursor.fetchone() is not None:
             return row
         else:
             raise StopAsyncIteration
 
-### Cursor Methods.
+    ### Cursor Methods.
     async def fetch_one(self) -> Optional[Sequence]:
         return await self._cursor.fetchone()
 
@@ -650,11 +594,10 @@ class DBCursorBackend(ABC):
     """
     Interface for Backends with Cursor Support.
     """
+
     _provider: str = "base"
 
-    def __init__(
-        self
-    ) -> None:
+    def __init__(self) -> None:
         self._columns: list = []
         self._attributes = None
         self._result: Iterable[Any] = None
@@ -669,40 +612,25 @@ class DBCursorBackend(ABC):
         except ModuleNotFoundError as e:
             logging.exception(f"Error Loading Cursor Class: {e}")
             self.__cursor__ = None
-        except (ImportError) as err:
+        except ImportError as err:
             logging.exception(f"Error Loading Cursor Class: {err}")
             self.__cursor__ = None
 
-
-    def cursor(
-        self,
-        sentence: Union[str, any],
-        params: Iterable[Any] = None,
-        **kwargs
-    ) -> Optional["DBCursorBackend"]:
-        """ Returns an iterable Cursor Object """
+    def cursor(self, sentence: Union[str, any], params: Iterable[Any] = None, **kwargs) -> Optional["DBCursorBackend"]:
+        """Returns an iterable Cursor Object"""
         if not sentence:
-            raise EmptyStatement(
-                f"{__name__!s} Error: Cannot use an empty Sentence."
-            )
+            raise EmptyStatement(f"{__name__!s} Error: Cannot use an empty Sentence.")
         if params is None:
             params = []
         try:
-            return self.__cursor__(
-                provider=self,
-                sentence=sentence,
-                parameters=params,
-                **kwargs
-            )
+            return self.__cursor__(provider=self, sentence=sentence, parameters=params, **kwargs)
         except (TypeError, AttributeError, ValueError) as e:
-            raise TypeError(
-                f"{__name__}: No support for Cursors."
-            ) from e
+            raise TypeError(f"{__name__}: No support for Cursors.") from e
         except Exception as err:
             logging.exception(err)
             raise
 
-### Cursor Iterator Context
+    ### Cursor Iterator Context
     def __aiter__(self):
         return self
 
@@ -720,12 +648,13 @@ class DBCursorBackend(ABC):
         else:
             raise StopAsyncIteration
 
+
 class ModelBackend(ABC):
     """
     Interface for Backends with Dataclass-based Models Support.
     """
 
-# ## Class-based Methods.
+    # ## Class-based Methods.
     async def _create_(self, _model: Model, rows: list):
         """
         Create all records based on a dataset and return result.
@@ -739,17 +668,13 @@ class ModelBackend(ABC):
             try:
                 record = _model(**row)
             except (ValueError, ValidationError) as e:
-                raise ValueError(
-                    f"Invalid Row for Model {_model}: {e}"
-                ) from e
+                raise ValueError(f"Invalid Row for Model {_model}: {e}") from e
             if record:
                 try:
                     result = await record.insert()
                     results.append(result)
                 except Exception as e:
-                    raise DriverError(
-                        f"Error on Creation {table}: {e}"
-                    ) from e
+                    raise DriverError(f"Error on Creation {table}: {e}") from e
         return results
 
     @abstractmethod
@@ -818,7 +743,7 @@ class ModelBackend(ABC):
         insert a row from model.
         """
 
-## Aux Methods:
+    ## Aux Methods:
     def _get_value(self, field: Field, value: Any) -> Any:
         datatype = field.type
         new_val = None
@@ -832,7 +757,7 @@ class ModelBackend(ABC):
                 try:
                     new_val = datatype()
                 except (TypeError, ValueError, AttributeError):
-                    self._logger.error(f'Error Calling {datatype} in Field {field}')
+                    self._logger.error(f"Error Calling {datatype} in Field {field}")
                     new_val = None
         elif callable(datatype) and value is None:
             new_val = None
@@ -840,7 +765,7 @@ class ModelBackend(ABC):
             new_val = value
         return new_val
 
-    def _get_attribute(self, field: Field, value: Any, attr: str = 'primary_key') -> Any:
+    def _get_attribute(self, field: Field, value: Any, attr: str = "primary_key") -> Any:
         if hasattr(field, attr):
             datatype = field.type
             if field.primary_key is True:
@@ -865,30 +790,34 @@ class ModelBackend(ABC):
                 datatype = f.type
                 if value is None or value == "null" or value == "NULL":
                     _cond.append(f"{key} is NULL")
-                elif value in {"!null", "!NULL"}:
+                elif value == "!null" or value == "!NULL":
                     _cond.append(f"{key} is NOT NULL")
                 elif isinstance(value, bool):
                     val = str(value)
                     _cond.append(f"{key} is {value}")
                 elif isinstance(value, list):
                     if None in value:
-                        null_vals = f' OR {key} is NULL'
+                        null_vals = f" OR {key} is NULL"
                     else:
-                        null_vals = ''
-                    values = ','.join([f"'{v}'" if isinstance(v, str) and v is not None else f"uuid('{v}')" if isinstance(v, uuid.UUID) and v is not None else str(v) if v is not None else 'NULL' for v in value])
-                    _cond.append(
-                        f"({key} = ANY(ARRAY[{values}]){null_vals})"
+                        null_vals = ""
+                    values = ",".join(
+                        [
+                            f"'{v}'"
+                            if isinstance(v, str) and v is not None
+                            else f"uuid('{v}')"
+                            if isinstance(v, uuid.UUID) and v is not None
+                            else str(v)
+                            if v is not None
+                            else "NULL"
+                            for v in value
+                        ]
                     )
-                elif isinstance(datatype, list):
-                    val = ", ".join(
-                        [str(Entity.escapeLiteral(v, type(v))) for v in value]
-                    )
-                    _cond.append(
-                        f"ARRAY[{val}]<@ {key}::character varying[]")
+                    _cond.append(f"({key} = ANY(ARRAY[{values}]){null_vals})")
+                elif isinstance(datatype, (list, List)):
+                    val = ", ".join(map(str, [Entity.escapeLiteral(v, type(v)) for v in value]))
+                    _cond.append(f"ARRAY[{val}]<@ {key}::character varying[]")
                 elif Entity.is_array(datatype):
-                    val = ", ".join(
-                        [str(Entity.escapeLiteral(v, type(v))) for v in value]
-                    )
+                    val = ", ".join(map(str, [Entity.escapeLiteral(v, type(v)) for v in value]))
                     _cond.append(f"{key} IN ({val})")
                 else:
                     # is an scalar value
@@ -899,3 +828,4 @@ class ModelBackend(ABC):
             return result
         else:
             return result
+

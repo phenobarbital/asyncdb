@@ -11,10 +11,7 @@ import json
 import threading
 import time
 from threading import Thread
-from typing import (
-    Any,
-    Optional
-)
+from typing import Any, Optional
 from collections.abc import Iterable
 from dateutil.relativedelta import relativedelta
 import asyncpg
@@ -29,7 +26,7 @@ from asyncpg.exceptions import (
     TooManyConnectionsError,
     UndefinedColumnError,
     InvalidSQLStatementNameError,
-    UndefinedTableError
+    UndefinedTableError,
 )
 from asyncdb.exceptions import (
     UninitializedError,
@@ -38,7 +35,7 @@ from asyncdb.exceptions import (
     NoDataFound,
     DriverError,
     StatementError,
-    TooManyConnections
+    TooManyConnections,
 )
 
 from asyncdb.utils.encoders import (
@@ -46,6 +43,7 @@ from asyncdb.utils.encoders import (
 )
 from asyncdb.meta import Recordset
 from .sql import SQLDriver
+
 # from .abstract import BaseCursor
 
 
@@ -58,15 +56,9 @@ class postgres(threading.Thread, SQLDriver):
     _syntax = "sql"
     _test_query = "SELECT 1"
 
-    def __init__(
-            self,
-            dsn: str = '',
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict = None,
-            **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
-        self.application_name = os.getenv('APP_NAME', "NAV")
+        self.application_name = os.getenv("APP_NAME", "NAV")
         self._is_started = False
         self._error = None
         self._params = params
@@ -85,7 +77,7 @@ class postgres(threading.Thread, SQLDriver):
         self.join(timeout=self._timeout)
         return self._connection
 
-## Thread Methodss
+    ## Thread Methodss
     def start(self, target=None, args=()):
         if target:
             Thread.__init__(self, target=target, args=args)
@@ -99,8 +91,7 @@ class postgres(threading.Thread, SQLDriver):
     def stop(self):
         self.stop_event.set()
 
-
-## Async Context magic Methods
+    ## Async Context magic Methods
     async def __aenter__(self):
         if not self._connection:
             await self.connection()
@@ -110,7 +101,7 @@ class postgres(threading.Thread, SQLDriver):
         # clean up anything you need to clean up
         await self.close(timeout=5)
 
-### Context magic Methods
+    ### Context magic Methods
     def __enter__(self):
         return self
 
@@ -132,25 +123,15 @@ class postgres(threading.Thread, SQLDriver):
             return (
                 ndelta.years * 12 + ndelta.months,
                 ndelta.days,
-                (
-                    (ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds)
-                    * 1000000
-                    + ndelta.microseconds
-                ),
+                ((ndelta.hours * 3600 + ndelta.minutes * 60 + ndelta.seconds) * 1000000 + ndelta.microseconds),
             )
 
         def interval_decoder(tup):
             return relativedelta(months=tup[0], days=tup[1], microseconds=tup[2])
 
-        await connection.set_type_codec(
-            "json", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
-        )
-        await connection.set_type_codec(
-            "jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
-        )
-        await connection.set_builtin_type_codec(
-            "hstore", codec_name="pg_contrib.hstore"
-        )
+        await connection.set_type_codec("json", encoder=_encoder, decoder=_decoder, schema="pg_catalog")
+        await connection.set_type_codec("jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog")
+        await connection.set_builtin_type_codec("hstore", codec_name="pg_contrib.hstore")
         await connection.set_type_codec(
             "interval",
             schema="pg_catalog",
@@ -160,11 +141,9 @@ class postgres(threading.Thread, SQLDriver):
         )
         if self._init_func and callable(self._init_func):
             try:
-                await self._init_func(connection) # pylint: disable=E1102
+                await self._init_func(connection)  # pylint: disable=E1102
             except (RuntimeError, ValueError) as err:
-                self._logger.debug(
-                    f"Error on Init Connection: {err}"
-                )
+                self._logger.debug(f"Error on Init Connection: {err}")
 
     def disconnect(self):
         if self._loop.is_running():
@@ -201,9 +180,7 @@ class postgres(threading.Thread, SQLDriver):
 
     def _connect(self):
         if not self._connection:
-            self._loop.run_until_complete(
-                self.connection()
-            )
+            self._loop.run_until_complete(self.connection())
 
     async def connection(self):
         """
@@ -226,52 +203,27 @@ class postgres(threading.Thread, SQLDriver):
                 self._initialized_on = time.time()
             return self
         except ConnectionRefusedError as err:
-            raise UninitializedError(
-                f"Unable to connect to database, connection Refused: {err}"
-            ) from err
+            raise UninitializedError(f"Unable to connect to database, connection Refused: {err}") from err
         except TooManyConnectionsError as err:
-            self._logger.error(
-                f"Too Many Connections Error: {err}"
-            )
-            raise TooManyConnections(
-                f"Too Many Connections Error: {err}"
-            ) from err
+            self._logger.error(f"Too Many Connections Error: {err}")
+            raise TooManyConnections(f"Too Many Connections Error: {err}") from err
         except TimeoutError as err:
-            raise ConnectionTimeout(
-                f"Unable to connect to database: {err}"
-            ) from err
+            raise ConnectionTimeout(f"Unable to connect to database: {err}") from err
         except ConnectionDoesNotExistError as err:
-            raise DriverError(
-                f"Connection Error: {err}"
-            ) from err
+            raise DriverError(f"Connection Error: {err}") from err
         except ConnectionError as ex:
-            self._logger.error(
-                f"Connection Error: {ex}"
-            )
-            raise UninitializedError(
-                f"Connection Error: {ex}"
-            ) from ex
+            self._logger.error(f"Connection Error: {ex}")
+            raise UninitializedError(f"Connection Error: {ex}") from ex
         except InternalClientError as err:
-            raise DriverError(
-                f"Internal Error: {err}"
-            ) from err
+            raise DriverError(f"Internal Error: {err}") from err
         except InterfaceError as err:
-            raise DriverError(
-                f"Interface Error: {err}"
-            ) from err
+            raise DriverError(f"Interface Error: {err}") from err
         except InterfaceWarning as err:
-            self._logger.warning(
-                f"Interface Warning: {err}"
-            )
+            self._logger.warning(f"Interface Warning: {err}")
             return False
         except Exception as ex:
-            self._logger.exception(
-                f"Asyncpg Unknown Error: {ex}",
-                stack_info=True
-            )
-            raise DriverError(
-                f"Asyncpg Unknown Error: {ex}"
-            ) from ex
+            self._logger.exception(f"Asyncpg Unknown Error: {ex}", stack_info=True)
+            raise DriverError(f"Asyncpg Unknown Error: {ex}") from ex
         finally:
             if not self._is_started:
                 self.start()  # start a thread
@@ -288,15 +240,11 @@ class postgres(threading.Thread, SQLDriver):
                     await self._connection.close(timeout=timeout)
                     self.join(timeout=timeout)
         except InterfaceError as err:
-            raise DriverError(
-                f"Close Error: {err}"
-            ) from err
+            raise DriverError(f"Close Error: {err}") from err
         except Exception as err:
             await self._connection.terminate()
             self._connection = None
-            raise DriverError(
-                f"Connection Error, Terminated: {err}"
-            ) from err
+            raise DriverError(f"Connection Error, Terminated: {err}") from err
         finally:
             self._connection = None
             self._connected = False
@@ -308,17 +256,11 @@ class postgres(threading.Thread, SQLDriver):
         if self._connection:
             try:
                 if not self._connection.is_closed():
-                    self._loop.run_until_complete(
-                        self._connection.close(timeout=wait_close)
-                    )
+                    self._loop.run_until_complete(self._connection.close(timeout=wait_close))
             except (InterfaceError, RuntimeError) as err:
-                raise DriverError(
-                    message=f"Release Interface Error: {err!s}"
-                ) from err
+                raise DriverError(message=f"Release Interface Error: {err!s}") from err
             except Exception as err:
-                raise DriverError(
-                    f"Connection Error, Terminated: {err}"
-                ) from err
+                raise DriverError(f"Connection Error, Terminated: {err}") from err
             finally:
                 self._connected = False
                 self._connection = None
@@ -342,30 +284,17 @@ class postgres(threading.Thread, SQLDriver):
             self._columns = [a.name for a in stmt.get_attributes()]
             self._prepared = stmt
         except RuntimeError as err:
-            raise DriverError(
-                f"Runtime on Query Row Error: {err}"
-            ) from err
-        except (
-                PostgresSyntaxError,
-                UndefinedColumnError,
-                InvalidSQLStatementNameError,
-                UndefinedTableError
-            ) as err:
-            raise StatementError(
-                f"Sentence on Query Row Error: {err}"
-            ) from err
+            raise DriverError(f"Runtime on Query Row Error: {err}") from err
+        except (PostgresSyntaxError, UndefinedColumnError, InvalidSQLStatementNameError, UndefinedTableError) as err:
+            raise StatementError(f"Sentence on Query Row Error: {err}") from err
         except PostgresError as err:
-            raise DriverError(
-                f"Postgres Error: {err}"
-            ) from err
+            raise DriverError(f"Postgres Error: {err}") from err
         except Exception as err:
-            raise Exception(
-                f"Error on prepare Row: {err}"
-            ) from err
+            raise Exception(f"Error on prepare Row: {err}") from err
         finally:
-            return [self._prepared, error] # pylint: disable=W0150
+            return [self._prepared, error]  # pylint: disable=W0150
 
-    async def columns(self, sentence, *args): # pylint: disable=W0236,W0221
+    async def columns(self, sentence, *args):  # pylint: disable=W0236,W0221
         self._columns = []
         if not self._connection:
             await self.connection()
@@ -373,26 +302,13 @@ class postgres(threading.Thread, SQLDriver):
             stmt = await self._connection.prepare(sentence, *args)
             self._columns = [a.name for a in stmt.get_attributes()]
         except RuntimeError as err:
-            raise DriverError(
-                f"Runtime on Query Row Error: {err}"
-            ) from err
-        except (
-                PostgresSyntaxError,
-                UndefinedColumnError,
-                InvalidSQLStatementNameError,
-                UndefinedTableError
-            ) as err:
-            raise StatementError(
-                f"Sentence Error: {err}"
-            ) from err
+            raise DriverError(f"Runtime on Query Row Error: {err}") from err
+        except (PostgresSyntaxError, UndefinedColumnError, InvalidSQLStatementNameError, UndefinedTableError) as err:
+            raise StatementError(f"Sentence Error: {err}") from err
         except PostgresError as err:
-            raise DriverError(
-                f"Postgres Error: {err}"
-            ) from err
+            raise DriverError(f"Postgres Error: {err}") from err
         except Exception as err:
-            raise Exception(
-                f"Error on Column: {err}"
-            ) from err
+            raise Exception(f"Error on Column: {err}") from err
 
     async def query(self, sentence: Any, **kwargs):
         """
@@ -409,25 +325,14 @@ class postgres(threading.Thread, SQLDriver):
             if not self._result:
                 return [None, NoDataFound("No data was found")]
         except RuntimeError as err:
-            raise DriverError(
-                f"Runtime on Query Error: {err}"
-            ) from err
-        except (
-                PostgresSyntaxError,
-                UndefinedColumnError,
-                InvalidSQLStatementNameError,
-                UndefinedTableError
-            ) as err:
-            raise StatementError(
-                f"Sentence Error: {err}"
-            ) from err
+            raise DriverError(f"Runtime on Query Error: {err}") from err
+        except (PostgresSyntaxError, UndefinedColumnError, InvalidSQLStatementNameError, UndefinedTableError) as err:
+            raise StatementError(f"Sentence Error: {err}") from err
         except Exception as err:
-            raise Exception(
-                f"Error on Query: {err}"
-            ) from err
+            raise Exception(f"Error on Query: {err}") from err
         finally:
             self.generated_at()
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def queryrow(self, sentence: Any):
         """
@@ -444,25 +349,14 @@ class postgres(threading.Thread, SQLDriver):
             self._columns = [a.name for a in stmt.get_attributes()]
             self._result = await stmt.fetchrow()
         except RuntimeError as err:
-            raise DriverError(
-                f"Runtime on Query Row Error: {err}"
-            ) from err
-        except (
-                PostgresSyntaxError,
-                UndefinedColumnError,
-                InvalidSQLStatementNameError,
-                UndefinedTableError
-            ) as err:
-            raise StatementError(
-                f"Sentence Error: {err}"
-            ) from err
+            raise DriverError(f"Runtime on Query Row Error: {err}") from err
+        except (PostgresSyntaxError, UndefinedColumnError, InvalidSQLStatementNameError, UndefinedTableError) as err:
+            raise StatementError(f"Sentence Error: {err}") from err
         except Exception as err:
-            raise Exception(
-                f"Error on Query Row: {err}"
-            ) from err
+            raise Exception(f"Error on Query Row: {err}") from err
         finally:
             self.generated_at()
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def execute(self, sentence: Any, *args, **kwargs):
         """execute.
@@ -481,24 +375,13 @@ class postgres(threading.Thread, SQLDriver):
             self._result = await self._connection.execute(sentence, *args)
             return [self._result, None]
         except RuntimeError as err:
-            raise DriverError(
-                f"Runtime on Execute Error: {err}"
-            ) from err
-        except (
-                PostgresSyntaxError,
-                UndefinedColumnError,
-                InvalidSQLStatementNameError,
-                UndefinedTableError
-            ) as err:
-            raise StatementError(
-                f"Execute Sentence Error: {err}"
-            ) from err
+            raise DriverError(f"Runtime on Execute Error: {err}") from err
+        except (PostgresSyntaxError, UndefinedColumnError, InvalidSQLStatementNameError, UndefinedTableError) as err:
+            raise StatementError(f"Execute Sentence Error: {err}") from err
         except Exception as err:
-            raise Exception(
-                f"Error on Execute: {err}"
-            ) from err
+            raise Exception(f"Error on Execute: {err}") from err
         finally:
-            return [self._result, self._error] # pylint: disable=W0150
+            return [self._result, self._error]  # pylint: disable=W0150
 
     async def execute_many(self, sentence: Any, *args, timeout=None):
         """execute.
@@ -518,24 +401,13 @@ class postgres(threading.Thread, SQLDriver):
                 await self._connection.executemany(sentence, timeout=timeout, *args)
             return [True, None]
         except RuntimeError as err:
-            raise DriverError(
-                f"Runtime on Execute Error: {err}"
-            ) from err
-        except (
-                PostgresSyntaxError,
-                UndefinedColumnError,
-                InvalidSQLStatementNameError,
-                UndefinedTableError
-            ) as err:
-            raise StatementError(
-                f"Execute Sentence Error: {err}"
-            ) from err
+            raise DriverError(f"Runtime on Execute Error: {err}") from err
+        except (PostgresSyntaxError, UndefinedColumnError, InvalidSQLStatementNameError, UndefinedTableError) as err:
+            raise StatementError(f"Execute Sentence Error: {err}") from err
         except Exception as err:
-            raise Exception(
-                f"Error on Execute: {err}"
-            ) from err
+            raise Exception(f"Error on Execute: {err}") from err
         finally:
-            return [True, self._error] # pylint: disable=W0150
+            return [True, self._error]  # pylint: disable=W0150
 
     executemany = execute_many
 
@@ -558,8 +430,7 @@ class postgres(threading.Thread, SQLDriver):
         if self._transaction:
             await self._transaction.rollback()
 
-
-### Cursor Context
+    ### Cursor Context
     async def cursor(self, sentence):
         if not sentence:
             raise EmptyStatement("Sentence is an empty string")
@@ -574,28 +445,21 @@ class postgres(threading.Thread, SQLDriver):
         try:
             return await self._cursor.forward(number)
         except Exception as err:
-            raise Exception(
-                f"Error forward Cursor: {err}"
-            ) from err
+            raise Exception(f"Error forward Cursor: {err}") from err
 
     async def get(self, number=1):
         try:
             return await self._cursor.fetch(number)
         except Exception as err:
-            raise Exception(
-                f"Error Fetch Cursor: {err}"
-            ) from err
+            raise Exception(f"Error Fetch Cursor: {err}") from err
 
     async def getrow(self):
         try:
             return await self._cursor.fetchrow()
         except Exception as err:
-            raise Exception(
-                f"Error Fetchrow Cursor: {err}"
-            ) from err
+            raise Exception(f"Error Fetchrow Cursor: {err}") from err
 
-
-### Cursor Iterator Context
+    ### Cursor Iterator Context
     def __aiter__(self):
         return self
 
@@ -606,13 +470,13 @@ class postgres(threading.Thread, SQLDriver):
         else:
             raise StopAsyncIteration
 
-### Non-Async Methods
+    ### Non-Async Methods
     async def test_connection(self, **kwargs):
         result = None
         error = None
         try:
             result = await self.queryrow(self._test_query)
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = err
         return [result, error]
 
@@ -650,32 +514,18 @@ class postgres(threading.Thread, SQLDriver):
             self._error = error
             if stmt:
                 result = self._loop.run_until_complete(stmt.fetch())
-                self._result = Recordset(
-                    result=result, columns=self._columns)
+                self._result = Recordset(result=result, columns=self._columns)
         except RuntimeError as err:
             self._error = f"Fetch Error: {err}"
-            raise DriverError(
-                message=self._error
-            ) from err
-        except (
-                PostgresSyntaxError,
-                UndefinedColumnError,
-                InvalidSQLStatementNameError,
-                UndefinedTableError
-            ) as err:
-            raise StatementError(
-                f"Execute Sentence Error: {err}"
-            ) from err
+            raise DriverError(message=self._error) from err
+        except (PostgresSyntaxError, UndefinedColumnError, InvalidSQLStatementNameError, UndefinedTableError) as err:
+            raise StatementError(f"Execute Sentence Error: {err}") from err
         except PostgresError as err:
-            raise DriverError(
-                f"Error on Fetch: {err}"
-            ) from err
+            raise DriverError(f"Error on Fetch: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Error on Execute: {err}"
-            ) from err
+            raise DriverError(f"Error on Execute: {err}") from err
         finally:
-            return [self._result, self._error] # pylint: disable=W0150
+            return [self._result, self._error]  # pylint: disable=W0150
 
     def fetchone(self, sentence):
         self.start(target=self._fetchone, args=(sentence,))
@@ -688,19 +538,16 @@ class postgres(threading.Thread, SQLDriver):
         self._error = None
         self._result = None
         try:
-            row = self._loop.run_until_complete(
-                self._connection.fetchrow(sentence))
+            row = self._loop.run_until_complete(self._connection.fetchrow(sentence))
             if row:
                 self._result = row
         except Exception as err:
             self._error = f"Error on Query Row: {err}"
-            raise Exception(
-                self._error
-            ) from err
+            raise Exception(self._error) from err
         finally:
-            return [self._result, self._error] # pylint: disable=W0150
+            return [self._result, self._error]  # pylint: disable=W0150
 
-### Model Logic:
+    ### Model Logic:
     async def column_info(self, tablename: str, schema: str = None):
         """Column Info.
 
@@ -725,24 +572,17 @@ class postgres(threading.Thread, SQLDriver):
         try:
             colinfo = await self._connection.fetch(sql)
             return colinfo
-        except Exception as err: # pylint: disable=W0703
-            self._logger.exception(
-                f"Wrong Table information {tablename!s}: {err}"
-            )
+        except Exception as err:  # pylint: disable=W0703
+            self._logger.exception(f"Wrong Table information {tablename!s}: {err}")
 
-### DDL Information.
-    async def create(
-        self,
-        obj: str = 'table',
-        name: str = '',
-        fields: Optional[list] = None
-    ) -> bool:
+    ### DDL Information.
+    async def create(self, obj: str = "table", name: str = "", fields: Optional[list] = None) -> bool:
         """
         Create is a generic method for Database Objects Creation.
         """
-        if obj == 'table':
+        if obj == "table":
             sql = "CREATE TABLE {name}({columns});"
-            columns = ", ".join(["{name} {type}".format(**e) for e in fields]) # pylint: disable=C0209
+            columns = ", ".join(["{name} {type}".format(**e) for e in fields])  # pylint: disable=C0209
             sql = sql.format(name=name, columns=columns)
             try:
                 result = await self._connection.execute(sql)
@@ -752,13 +592,9 @@ class postgres(threading.Thread, SQLDriver):
                 else:
                     return False
             except Exception as err:
-                raise DriverError(
-                    f"Error in Object Creation: {err!s}"
-                ) from err
+                raise DriverError(f"Error in Object Creation: {err!s}") from err
         else:
-            raise RuntimeError(
-                f'Pg: invalid Object type {object!s}'
-            )
+            raise RuntimeError(f"Pg: invalid Object type {object!s}")
 
     def tables(self, schema: str = "") -> Iterable[Any]:
         raise NotImplementedError
@@ -767,6 +603,4 @@ class postgres(threading.Thread, SQLDriver):
         raise NotImplementedError
 
     async def use(self, database: str):
-        raise NotImplementedError(
-            'AsyncPg Error: You cannot change database on realtime.'
-        )
+        raise NotImplementedError("AsyncPg Error: You cannot change database on realtime.")

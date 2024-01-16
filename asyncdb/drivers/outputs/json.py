@@ -6,6 +6,7 @@ class jsonFormat(OutputFormat):
     """
     Most Basic Definition of Format.
     """
+
     _encoder = DefaultEncoder()
 
     async def serialize(self, result, error, *args, **kwargs):

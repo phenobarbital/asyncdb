@@ -20,9 +20,7 @@ from deltalake import DeltaTable
 from deltalake import PyDeltaTableError
 from deltalake.table import DeltaTableProtocolError
 from deltalake.writer import write_deltalake
-from asyncdb.exceptions import (
-    DriverError
-)
+from asyncdb.exceptions import DriverError
 from .abstract import (
     InitDriver,
 )
@@ -32,12 +30,7 @@ class delta(InitDriver):
     _provider = "delta"
     _syntax = "nosql"
 
-    def __init__(
-            self,
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict = None,
-            **kwargs
-    ) -> None:
+    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         try:
             self.storage_options = params["storage_options"]
             del params["storage_options"]
@@ -47,15 +40,11 @@ class delta(InitDriver):
             self.filename = params["filename"]
             del params["filename"]
         except KeyError as ex:
-            raise DriverError(
-                "Delta: Missing Filename on Parameters"
-            ) from ex
-        super().__init__(
-            loop=loop, params=params, **kwargs
-        )
+            raise DriverError("Delta: Missing Filename on Parameters") from ex
+        super().__init__(loop=loop, params=params, **kwargs)
         self.kwargs = params
 
-### Context magic Methods
+    ### Context magic Methods
     def __enter__(self):
         return self
 
@@ -63,50 +52,40 @@ class delta(InitDriver):
         self.close()
 
     # Create a memcache Connection
-    async def connection(self, version: int = None): # pylint: disable=W0236
+    async def connection(self, version: int = None):  # pylint: disable=W0236
         """
         __init Memcache initialization.
         """
-        self._logger.info(
-            f"DeltaTable: Connecting to {self.filename}"
-        )
+        self._logger.info(f"DeltaTable: Connecting to {self.filename}")
         try:
             if version is not None:
                 self.kwargs["version"] = version
-            if self.filename.startswith('s3:'):
+            if self.filename.startswith("s3:"):
                 raw_fs, normalized_path = fs.FileSystem.from_uri(self.filename)
                 filesystem = fs.SubTreeFileSystem(normalized_path, raw_fs)
                 self._connection = DeltaTable(self.filename)
                 self._storage = self._connection.to_pyarrow_dataset(filesystem=filesystem)
             # filesystem = fs.SubTreeFileSystem(self.filename, fs.LocalFileSystem())
             else:
-                self._connection = DeltaTable(
-                    self.filename, storage_options=self.storage_options, **self.kwargs
-                )
+                self._connection = DeltaTable(self.filename, storage_options=self.storage_options, **self.kwargs)
         except PyDeltaTableError as exc:
-            raise DriverError(
-                message=f"{exc}"
-            ) from exc
+            raise DriverError(message=f"{exc}") from exc
         except Exception as err:
-            raise DriverError(
-                message=f"Unknown DataTable Error: {err}"
-            ) from err
+            raise DriverError(message=f"Unknown DataTable Error: {err}") from err
         # is connected
         if self._connection:
             self._connected = True
             self._initialized_on = time.time()
         return self
 
-    async def close(self): # pylint: disable=W0221,W0236
+    async def close(self):  # pylint: disable=W0221,W0236
         """
         Closing DeltaTable Connection
         """
         try:
-            pass # TODO
+            pass  # TODO
         except Exception as err:
-            raise DriverError(
-               f"Unknown Closing Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Closing Error: {err}") from err
 
     disconnect = close
 
@@ -123,19 +102,21 @@ class delta(InitDriver):
     def schema(self):
         return self._connection.schema()
 
-    def test_connection(self, key: str = 'test_123', optional: int = 1): # pylint: disable=W0221,W0236
+    def test_connection(self, key: str = "test_123", optional: int = 1):  # pylint: disable=W0221,W0236
         result = None
         error = None
         try:
             self.set(key, optional)
             result = self.get(key)
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = err
         finally:
             self.delete(key)
-            return [result, error] # pylint: disable=W0150
+            return [result, error]  # pylint: disable=W0150
 
-    async def create(self, path: Union[str, Path], data: Any, name: Optional[str] = None, mode: str = 'append', **kwargs):
+    async def create(
+        self, path: Union[str, Path], data: Any, name: Optional[str] = None, mode: str = "append", **kwargs
+    ):
         if isinstance(path, str):
             path = Path(str).resolve()
         if isinstance(data, str):
@@ -143,47 +124,32 @@ class delta(InitDriver):
         if isinstance(data, Path):
             # open this file with Pandas or Arrow
             ext = data.suffix
-            if ext == '.csv':
+            if ext == ".csv":
                 read_options = pcsv.ReadOptions()
                 parse_options = pcsv.ParseOptions()
                 convert_options = pcsv.ConvertOptions()
                 data = pcsv.read_csv(
-                    data,
-                    read_options=read_options,
-                    parse_options=parse_options,
-                    convert_options=convert_options
+                    data, read_options=read_options, parse_options=parse_options, convert_options=convert_options
                 )
-            elif ext in ['.xls', '.xlsx']:
-                if ext == '.xls':
-                    engine = 'xlrd'
+            elif ext in [".xls", ".xlsx"]:
+                if ext == ".xls":
+                    engine = "xlrd"
                 else:
-                    engine = 'openpyxl'
-                data = pd.read_excel(
-                    data,
-                    engine=engine
-                )
-            elif ext == '.parquet':
-                data = pq.read_table(
-                    data
-                )
+                    engine = "openpyxl"
+                data = pd.read_excel(data, engine=engine)
+            elif ext == ".parquet":
+                data = pq.read_table(data)
         try:
-            write_deltalake(
-                path, data, name=name, mode=mode, **kwargs
-            )
+            write_deltalake(path, data, name=name, mode=mode, **kwargs)
         except PyDeltaTableError as exc:
-            raise DriverError(
-                f"Delta: can't create a table in path {path}, error: {exc}"
-            ) from exc
+            raise DriverError(f"Delta: can't create a table in path {path}, error: {exc}") from exc
         except Exception as exc:
-            raise DriverError(
-                f"Delta Error: {exc}"
-            ) from exc
+            raise DriverError(f"Delta Error: {exc}") from exc
 
-
-    def execute(self, sentence: Any): # pylint: disable=W0221,W0236
+    def execute(self, sentence: Any):  # pylint: disable=W0221,W0236
         raise NotImplementedError
 
-    async def execute_many(self, sentence=""): # pylint: disable=W0221,W0236
+    async def execute_many(self, sentence=""):  # pylint: disable=W0221,W0236
         raise NotImplementedError
 
     async def prepare(self, sentence=""):
@@ -196,9 +162,9 @@ class delta(InitDriver):
         self,
         partitions: Optional[list] = None,
         columns: Optional[list] = None,
-        factory: Optional[str] = 'pandas',
-        **kwargs
-    ): # pylint: disable=W0221,W0236
+        factory: Optional[str] = "pandas",
+        **kwargs,
+    ):  # pylint: disable=W0221,W0236
         """get.
         Getting Data from Delta using columns and
         partitions.
@@ -206,42 +172,30 @@ class delta(InitDriver):
         result = None
         args = {}
         if partitions:
-            args = {
-                "partitions": partitions
-            }
+            args = {"partitions": partitions}
         if columns:
-            args['columns'] = columns
+            args["columns"] = columns
         try:
-            if factory == 'pandas':
-                result = self._connection.to_pandas(
-                    **args
-                )
-            elif factory == 'arrow':
-                result = self._connection.to_pyarrow_table(
-                    **args
-                )
-            elif factory == 'arrow_dataset':
-                result = self._connection.to_pyarrow_dataset(
-                    **args, **kwargs
-                )
+            if factory == "pandas":
+                result = self._connection.to_pandas(**args)
+            elif factory == "arrow":
+                result = self._connection.to_pyarrow_table(**args)
+            elif factory == "arrow_dataset":
+                result = self._connection.to_pyarrow_dataset(**args, **kwargs)
             return result
         except (PyDeltaTableError, DeltaTableProtocolError) as exc:
-            raise DriverError(
-                f"DeltaTable Error: {exc}"
-            ) from exc
+            raise DriverError(f"DeltaTable Error: {exc}") from exc
         except Exception as exc:
-            raise DriverError(
-                f"Query Error: {exc}"
-            ) from exc
+            raise DriverError(f"Query Error: {exc}") from exc
 
     async def query(
-            self,
-            sentence: Optional[str] = None,
-            partitions: Optional[list] = None,
-            columns: Optional[list] = None,
-            factory: Optional[str] = 'pandas',
-            **kwargs
-    ): # pylint: disable=W0221,W0236
+        self,
+        sentence: Optional[str] = None,
+        partitions: Optional[list] = None,
+        columns: Optional[list] = None,
+        factory: Optional[str] = "pandas",
+        **kwargs,
+    ):  # pylint: disable=W0221,W0236
         """query.
         Getting Data from Delta using a query (with DuckDB) or via columns and
         partitions.
@@ -250,50 +204,33 @@ class delta(InitDriver):
         error = None
         args = {}
         if partitions:
-            args = {
-                "partitions": partitions
-            }
+            args = {"partitions": partitions}
         if columns:
-            args['columns'] = columns
+            args["columns"] = columns
         try:
-            if factory == 'pandas':
-                result = self._connection.to_pandas(
-                    **args
-                )
-            elif factory == 'arrow':
-                result = self._connection.to_pyarrow_table(
-                    **args
-                )
-            elif factory == 'arrow_dataset':
-                result = self._connection.to_pyarrow_dataset(
-                    **args, **kwargs
-                )
+            if factory == "pandas":
+                result = self._connection.to_pandas(**args)
+            elif factory == "arrow":
+                result = self._connection.to_pyarrow_table(**args)
+            elif factory == "arrow_dataset":
+                result = self._connection.to_pyarrow_dataset(**args, **kwargs)
         except (PyDeltaTableError, DeltaTableProtocolError) as exc:
             error = exc
-            raise DriverError(
-                f"DeltaTable Error: {exc}"
-            ) from exc
+            raise DriverError(f"DeltaTable Error: {exc}") from exc
         except Exception as exc:
             error = exc
-            raise DriverError(
-                f"Query Error: {exc}"
-            ) from exc
+            raise DriverError(f"Query Error: {exc}") from exc
         finally:
             return [result, error]  # pylint: disable=W0150
 
     fetch_all = query
 
-    def queryrow(self, key: str, *args): # pylint: disable=W0221,W0236
+    def queryrow(self, key: str, *args):  # pylint: disable=W0221,W0236
         return self.get(key, *args)
 
     fetch_one = queryrow
 
-    async def file_to_parquet(
-            self, filename: Union[str, Path],
-            parquet: str,
-            factory: str = 'pandas',
-            **kwargs
-    ):
+    async def file_to_parquet(self, filename: Union[str, Path], parquet: str, factory: str = "pandas", **kwargs):
         """csv_to_parquet.
 
         Creating a parquet file from a CSV object.
@@ -301,45 +238,38 @@ class delta(InitDriver):
         if isinstance(filename, str):
             filename = Path(filename).resolve()
         ext = filename.suffix
-        arguments = kwargs.get('pd_args', {})
+        arguments = kwargs.get("pd_args", {})
         df = None
-        if ext in ('.csv', '.txt', '.TXT', '.CSV'):
-            if factory == 'pandas':
+        if ext in (".csv", ".txt", ".TXT", ".CSV"):
+            if factory == "pandas":
                 df = pd.read_csv(
                     filename,
                     quotechar='"',
-                    decimal=',',
-                    engine='c',
+                    decimal=",",
+                    engine="c",
                     keep_default_na=False,
-                    na_values=['NULL', 'TBD'],
+                    na_values=["NULL", "TBD"],
                     na_filter=True,
                     skipinitialspace=True,
-                    **arguments
+                    **arguments,
                 )
-            elif factory == 'datatable':
+            elif factory == "datatable":
                 frame = dt.fread(filename, **arguments)
                 df = frame.to_pandas()
-            elif factory == 'arrow':
+            elif factory == "arrow":
                 atable = pcsv.read_csv(filename, **arguments)
-        elif ext in ['.xls', '.xlsx']:
-            if ext == '.xls':
-                engine = 'xlrd'
+        elif ext in [".xls", ".xlsx"]:
+            if ext == ".xls":
+                engine = "xlrd"
             else:
-                engine = 'openpyxl'
+                engine = "openpyxl"
             df = pd.read_excel(
-                filename,
-                na_values=['NULL', 'TBD'],
-                na_filter=True,
-                engine=engine,
-                keep_default_na=False,
-                **arguments
+                filename, na_values=["NULL", "TBD"], na_filter=True, engine=engine, keep_default_na=False, **arguments
             )
         try:
             if df is not None:
-                df.to_parquet(parquet, engine='pyarrow', compression='snappy')
+                df.to_parquet(parquet, engine="pyarrow", compression="snappy")
             elif atable is not None:
-                pq.write_table(atable, parquet, compression='snappy')
+                pq.write_table(atable, parquet, compression="snappy")
         except Exception as exc:
-            raise DriverError(
-                f"Query Error: {exc}"
-            ) from exc
+            raise DriverError(f"Query Error: {exc}") from exc

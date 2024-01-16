@@ -12,6 +12,7 @@ class recordFormat(OutputFormat):
     """
     Returns a List of Records from a Resultset
     """
+
     async def serialize(self, result, error, *args, **kwargs):
         self._result = None
         if error:
@@ -26,10 +27,7 @@ class recordFormat(OutputFormat):
                 _set = Record.from_dict(result)
             self._result = _set
         except (TypeError, ValueError, AttributeError) as err:
-            logging.exception(
-                f'Record Serialization Error: {err}',
-                stack_info=True
-            )
+            logging.exception(f"Record Serialization Error: {err}", stack_info=True)
             error = Exception(f"recordFormat Error: {err}")
         finally:
             return (self._result, error)

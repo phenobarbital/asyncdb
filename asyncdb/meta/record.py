@@ -4,10 +4,7 @@ Record Object.
 Physical representation of a row in a class-based object.
 """
 from collections.abc import MutableMapping, Iterator
-from typing import (
-    Any,
-    Union
-)
+from typing import Any, Union
 
 
 class Record(MutableMapping):
@@ -18,7 +15,8 @@ class Record(MutableMapping):
       params:
           row: any resultset
     """
-    __slots__ = ('_row', '_columns')
+
+    __slots__ = ("_row", "_columns")
 
     def __init__(self, row: Any, columns: list = None):
         self._row = row
@@ -39,7 +37,7 @@ class Record(MutableMapping):
 
     @classmethod
     def from_dict(cls, row: dict) -> "Record":
-        return cls(row = row, columns = row.keys())
+        return cls(row=row, columns=row.keys())
         # keys, values = zip(*row.items())
         # return cls(row = values, columns = [[name] for name in keys])
 
@@ -56,12 +54,12 @@ class Record(MutableMapping):
     def keys(self) -> list:
         return self._columns
 
-### Section: Simple magic methods
+    ### Section: Simple magic methods
     def __len__(self) -> int:
         return len(self._row)
 
     def __str__(self) -> str:
-        return ' '.join(f"{key}={val!r}" for key, val in self._row.items())
+        return " ".join(f"{key}={val!r}" for key, val in self._row.items())
 
     def __repr__(self) -> str:
         return f"<Record {self._row!r}>"
@@ -95,13 +93,9 @@ class Record(MutableMapping):
             try:
                 return self._row[attr]
             except KeyError as err:
-                raise KeyError(
-                    f"Record Error: invalid column name {attr} on {self._row!r}"
-                ) from err
+                raise KeyError(f"Record Error: invalid column name {attr} on {self._row!r}") from err
             except TypeError as err:
-                raise TypeError(
-                    f"Record Error: invalid Result on {self._row!r} for {attr}"
-                ) from err
+                raise TypeError(f"Record Error: invalid Result on {self._row!r} for {attr}") from err
         else:
             return False
 

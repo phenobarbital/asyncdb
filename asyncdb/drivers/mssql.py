@@ -3,37 +3,27 @@ import os
 import asyncio
 import time
 import logging
-from typing import (
-    Union,
-    Optional,
-    Any
-)
+from typing import Union, Optional, Any
 from collections.abc import Iterable
 import pymssql
 from pymssql import _mssql
 from asyncdb.interfaces import DBCursorBackend
-from asyncdb.exceptions import (
-    DataError,
-    EmptyStatement,
-    NoDataFound,
-    DriverError,
-    StatementError
-)
+from asyncdb.exceptions import DataError, EmptyStatement, NoDataFound, DriverError, StatementError
 from .sql import SQLDriver, SQLCursor
 
 types_map = {
-    1: 'string',
-    2: 'nvarchar',
+    1: "string",
+    2: "nvarchar",
     # Type #3 supposed to be an integer, but in some cases decimals are returned
     # with this type. To be on safe side, marking it as float.
-    3: 'integer',
-    4: 'datetime',
-    5: 'float',
+    3: "integer",
+    4: "datetime",
+    5: "float",
 }
 
 
 class mssqlCursor(SQLCursor):
-    """ MS SQL Server Cursor. """
+    """MS SQL Server Cursor."""
 
 
 class mssql(SQLDriver, DBCursorBackend):
@@ -47,21 +37,15 @@ class mssql(SQLDriver, DBCursorBackend):
     _test_query = "SELECT 1 as one"
     _charset: str = "UTF8"
 
-    def __init__(
-            self,
-            dsn: str = '',
-            loop: asyncio.AbstractEventLoop = None,
-            params: dict = None,
-            **kwargs
-    ) -> None:
-        self._dsn = ''
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
+        self._dsn = ""
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
         self._version: str = None
-        self.application_name = os.getenv('APP_NAME', "NAV")
+        self.application_name = os.getenv("APP_NAME", "NAV")
         self._server_settings: dict = []
         self._connected: bool = False
         try:
-            self.tds_version = kwargs['tds_version']
+            self.tds_version = kwargs["tds_version"]
             del kwargs["tds_version"]
         except KeyError:
             self.tds_version = "7.3"
@@ -69,21 +53,17 @@ class mssql(SQLDriver, DBCursorBackend):
         DBCursorBackend.__init__(self)
         try:
             if "host" in self.params:
-                self.params["server"] = "{}:{}".format(
-                    self.params["host"], self.params["port"]
-                )
+                self.params["server"] = "{}:{}".format(self.params["host"], self.params["port"])
                 del self.params["host"]
         except (TypeError, KeyError) as err:
-            raise DriverError(
-                f"MS SQL: Invalid Settings: {err}"
-            ) from err
+            raise DriverError(f"MS SQL: Invalid Settings: {err}") from err
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if "application_name" in self._server_settings:
             self.application_name = self._server_settings["application_name"]
             del self._server_settings["application_name"]
 
-    async def close(self): # pylint: disable=W0221
+    async def close(self):  # pylint: disable=W0221
         """
         Closing a Connection
         """
@@ -94,13 +74,9 @@ class mssql(SQLDriver, DBCursorBackend):
                     self._connection.close()
                 except Exception as err:
                     self._connection = None
-                    raise DriverError(
-                        message=f"Connection Error, Terminated: {err}"
-                    ) from err
+                    raise DriverError(message=f"Connection Error, Terminated: {err}") from err
         except Exception as err:
-            raise DriverError(
-                message=f"Close Error: {err}"
-            ) from err
+            raise DriverError(message=f"Close Error: {err}") from err
         finally:
             self._connection = None
             self._connected = False
@@ -108,9 +84,7 @@ class mssql(SQLDriver, DBCursorBackend):
     disconnect = close
 
     async def prepare(self, sentence: Union[str, list]) -> Any:
-        raise NotImplementedError(
-            "Prepared Sentences are not supported yet."
-        )
+        raise NotImplementedError("Prepared Sentences are not supported yet.")
 
     async def connection(self):
         """
@@ -124,37 +98,31 @@ class mssql(SQLDriver, DBCursorBackend):
             self.params["tds_version"] = self.tds_version
             if self._server_settings:
                 self.params["conn_properties"] = self._server_settings
-            self._connection = _mssql.connect(**self.params) # pylint: disable=I1101
+            self._connection = _mssql.connect(**self.params)  # pylint: disable=I1101
             if self._connection.connected:
                 self._connected = True
                 self._initialized_on = time.time()
             return self
-        except _mssql.MSSQLDatabaseException as ex: # pylint: disable=I1101
+        except _mssql.MSSQLDatabaseException as ex:  # pylint: disable=I1101
             num = ex.number
             state = ex.state
             msg = ex.message
-            raise DriverError(
-                f"MSSQL Error {num}: {msg}, state={state}"
-            ) from ex
-        except _mssql.MSSQLDriverException as ex: # pylint: disable=I1101
-            raise DriverError(
-                message=f"connection Error: {ex}"
-            ) from ex
+            raise DriverError(f"MSSQL Error {num}: {msg}, state={state}") from ex
+        except _mssql.MSSQLDriverException as ex:  # pylint: disable=I1101
+            raise DriverError(message=f"connection Error: {ex}") from ex
         except Exception as err:
             self._connection = None
             self._cursor = None
-            raise DriverError(
-                message=f"connection Error, Terminated: {err}"
-            ) from err
+            raise DriverError(message=f"connection Error, Terminated: {err}") from err
 
-    async def use(self, database: str): # pylint: disable=W0236
+    async def use(self, database: str):  # pylint: disable=W0236
         self._connection.select_db(database)
 
     @property
     async def identity(self):
         return self._connection.identity
 
-    async def test_connection(self): # pylint: disable=W0221
+    async def test_connection(self):  # pylint: disable=W0221
         """
         Test Connnection.
         """
@@ -164,10 +132,10 @@ class mssql(SQLDriver, DBCursorBackend):
             raise NotImplementedError()
         try:
             result = await self.fetchone(self._test_query)
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = str(err)
         finally:
-            return [result, error] # pylint: disable=W0150
+            return [result, error]  # pylint: disable=W0150
 
     async def execute(self, sentence: str, *args, **kwargs):
         """
@@ -180,13 +148,13 @@ class mssql(SQLDriver, DBCursorBackend):
             await self.connection()
         try:
             self._result = self._connection.execute_non_query(sentence, args)
-        except (_mssql.MSSQLDatabaseException) as ex: # pylint: disable=I1101
+        except _mssql.MSSQLDatabaseException as ex:  # pylint: disable=I1101
             num = ex.number
             state = ex.state
             msg = ex.message
             error = f"MSSQL Database Error {num}: {msg}, state={state}"
-        except _mssql.MSSQLDriverException as ex: # pylint: disable=I1101
-            error=f"connection Error: {ex}"
+        except _mssql.MSSQLDriverException as ex:  # pylint: disable=I1101
+            error = f"connection Error: {ex}"
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
@@ -194,10 +162,10 @@ class mssql(SQLDriver, DBCursorBackend):
             error = f"SQL Server Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
         finally:
-            return [self._result, error] # pylint: disable=W0150
+            return [self._result, error]  # pylint: disable=W0150
 
     async def execute_many(self, sentence, *args):
         """
@@ -217,13 +185,13 @@ class mssql(SQLDriver, DBCursorBackend):
         try:
             self._connection.execute_query(sentence, args)
             self._result = self._connection
-        except (_mssql.MSSQLDatabaseException) as ex: # pylint: disable=I1101
+        except _mssql.MSSQLDatabaseException as ex:  # pylint: disable=I1101
             num = ex.number
             state = ex.state
             msg = ex.message
             error = f"MSSQL Database Error {num}: {msg}, state={state}"
-        except _mssql.MSSQLDriverException as ex: # pylint: disable=I1101
-            error=f"connection Error: {ex}"
+        except _mssql.MSSQLDriverException as ex:  # pylint: disable=I1101
+            error = f"connection Error: {ex}"
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
@@ -231,10 +199,10 @@ class mssql(SQLDriver, DBCursorBackend):
             error = f"SQL Server Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
         finally:
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def queryrow(self, sentence, *args):
         error = None
@@ -245,13 +213,13 @@ class mssql(SQLDriver, DBCursorBackend):
             if not self._result:
                 # raise NoDataFound("SQL Server: No Data was Found")
                 return [None, NoDataFound("SQL Server: No Data was Found")]
-        except (_mssql.MSSQLDatabaseException) as ex: # pylint: disable=I1101
+        except _mssql.MSSQLDatabaseException as ex:  # pylint: disable=I1101
             num = ex.number
             state = ex.state
             msg = ex.message
             error = f"MSSQL Database Error {num}: {msg}, state={state}"
-        except _mssql.MSSQLDriverException as ex: # pylint: disable=I1101
-            error=f"connection Error: {ex}"
+        except _mssql.MSSQLDriverException as ex:  # pylint: disable=I1101
+            error = f"connection Error: {ex}"
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
@@ -259,10 +227,10 @@ class mssql(SQLDriver, DBCursorBackend):
             error = f"SQL Server Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
         finally:
-            return await self._serializer(self._result, error) # pylint: disable=W0150
+            return await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def fetch_one(self, sentence, *args, **kwargs):
         self._result = None
@@ -274,14 +242,14 @@ class mssql(SQLDriver, DBCursorBackend):
                 raise NoDataFound("SQL Server: No Data was Found")
             else:
                 return self._result
-        except (_mssql.MSSQLDatabaseException) as ex: # pylint: disable=I1101
+        except _mssql.MSSQLDatabaseException as ex:  # pylint: disable=I1101
             num = ex.number
             state = ex.state
             msg = ex.message
             error = f"MSSQL Database Error {num}: {msg}, state={state}"
             raise StatementError(error) from ex
-        except _mssql.MSSQLDriverException as ex: # pylint: disable=I1101
-            error=f"connection Error: {ex}"
+        except _mssql.MSSQLDriverException as ex:  # pylint: disable=I1101
+            error = f"connection Error: {ex}"
             raise DataError(error) from ex
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
@@ -292,7 +260,7 @@ class mssql(SQLDriver, DBCursorBackend):
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
             raise DriverError(error) from err
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
             raise DriverError(error) from err
 
@@ -310,14 +278,14 @@ class mssql(SQLDriver, DBCursorBackend):
             if not self._result:
                 raise NoDataFound("SQL Server: No Data was Found")
             return self._result
-        except (_mssql.MSSQLDatabaseException) as ex: # pylint: disable=I1101
+        except _mssql.MSSQLDatabaseException as ex:  # pylint: disable=I1101
             num = ex.number
             state = ex.state
             msg = ex.message
             error = f"MSSQL Database Error {num}: {msg}, state={state}"
             raise StatementError(error) from ex
-        except _mssql.MSSQLDriverException as ex: # pylint: disable=I1101
-            error=f"connection Error: {ex}"
+        except _mssql.MSSQLDriverException as ex:  # pylint: disable=I1101
+            error = f"connection Error: {ex}"
             raise DataError(error) from ex
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
@@ -328,7 +296,7 @@ class mssql(SQLDriver, DBCursorBackend):
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
             raise DriverError(error) from err
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
             raise DriverError(error) from err
 
@@ -343,14 +311,14 @@ class mssql(SQLDriver, DBCursorBackend):
             if not self._result:
                 raise NoDataFound("SQL Server: No Data was Found")
             return self._result
-        except (_mssql.MSSQLDatabaseException) as ex: # pylint: disable=I1101
+        except _mssql.MSSQLDatabaseException as ex:  # pylint: disable=I1101
             num = ex.number
             state = ex.state
             msg = ex.message
             error = f"MSSQL Database Error {num}: {msg}, state={state}"
             raise StatementError(error) from ex
-        except _mssql.MSSQLDriverException as ex: # pylint: disable=I1101
-            error=f"connection Error: {ex}"
+        except _mssql.MSSQLDriverException as ex:  # pylint: disable=I1101
+            error = f"connection Error: {ex}"
             raise DataError(error) from ex
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
@@ -361,13 +329,13 @@ class mssql(SQLDriver, DBCursorBackend):
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
             raise DriverError(error) from err
-        except Exception as err: # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
             error = f"Error on Query: {err}"
             raise DriverError(error) from err
 
     fetchval = fetch_scalar
 
-### Model Logic:
+    ### Model Logic:
     async def column_info(self, tablename: str, schema: str = None):
         """Column Info.
 
@@ -393,21 +361,14 @@ class mssql(SQLDriver, DBCursorBackend):
             colinfo = await self._connection.fetch(sql)
             return colinfo
         except Exception as err:
-            self._logger.exception(
-                f"Wrong Table information {tablename!s}: {err}"
-            )
+            self._logger.exception(f"Wrong Table information {tablename!s}: {err}")
 
-### DDL Information.
-    async def create(
-        self,
-        obj: str = 'table',
-        name: str = '',
-        fields: Optional[list] = None
-    ) -> bool:
+    ### DDL Information.
+    async def create(self, obj: str = "table", name: str = "", fields: Optional[list] = None) -> bool:
         """
         Create is a generic method for Database Objects Creation.
         """
-        if obj == 'table':
+        if obj == "table":
             sql = "CREATE TABLE {name}({columns});"
             columns = ", ".join(["{name} {type}".format(**e) for e in fields])
             sql = sql.format(name=name, columns=columns)
@@ -419,11 +380,9 @@ class mssql(SQLDriver, DBCursorBackend):
                 else:
                     return False
             except Exception as err:
-                raise DriverError(
-                    message=f"Error in Object Creation: {err!s}"
-                ) from err
+                raise DriverError(message=f"Error in Object Creation: {err!s}") from err
         else:
-            raise RuntimeError(f'SQLite: invalid Object type {object!s}')
+            raise RuntimeError(f"SQLite: invalid Object type {object!s}")
 
     def tables(self, schema: str = "") -> Iterable[Any]:
         raise NotImplementedError

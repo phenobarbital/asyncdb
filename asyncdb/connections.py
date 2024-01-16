@@ -8,12 +8,14 @@ from .utils import install_uvloop
 
 install_uvloop()
 
+
 class AsyncPool:
     """
     AsyncPool.
        Base class for Asyncio-based DB Pools.
        Factory interface for Pool-based connectors.
     """
+
     def __new__(cls, driver: str = "dummy", **kwargs) -> PoolBackend:
         classpath = f"asyncdb.drivers.{driver}"
         pool = f"{driver}Pool"
@@ -23,9 +25,7 @@ class AsyncPool:
             return obj
         except Exception as err:
             logging.exception(err)
-            raise DriverError(
-                message=f"Cannot Load Backend Pool: {pool}"
-            ) from err
+            raise DriverError(message=f"Cannot Load Backend Pool: {pool}") from err
 
 
 class AsyncDB:
@@ -33,6 +33,7 @@ class AsyncDB:
 
     Factory Proxy Interface for Database Providers.
     """
+
     def __new__(cls, driver: str = "dummy", **kwargs) -> ConnectionBackend:
         classpath = f"asyncdb.drivers.{driver}"
         try:
@@ -41,6 +42,4 @@ class AsyncDB:
             return obj
         except Exception as err:
             logging.exception(err)
-            raise DriverError(
-                message=f"Cannot Load Backend {driver}"
-            ) from err
+            raise DriverError(message=f"Cannot Load Backend {driver}") from err

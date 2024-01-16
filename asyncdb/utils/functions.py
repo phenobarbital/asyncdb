@@ -2,6 +2,7 @@
 Various functions for asyncdb
 """
 
+
 class colors:
     """
     Colors class.
@@ -76,5 +77,6 @@ class cPrint(object):
         else:
             coloring = colors.reset
         print(coloring + message, colors.reset)
+
 
 Msg = cPrint

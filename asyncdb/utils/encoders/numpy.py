@@ -1,10 +1,5 @@
 import json
-from numpy import (
-    integer,
-    int64,
-    floating,
-    ndarray
-)
+from numpy import integer, int64, floating, ndarray
 
 
 class NpEncoder(json.JSONEncoder):
@@ -13,6 +8,7 @@ class NpEncoder(json.JSONEncoder):
 
        Numpy number encoder for json
     """
+
     def default(self, o):
         if isinstance(o, (integer, int64)):
             return int(o)

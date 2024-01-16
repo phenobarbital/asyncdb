@@ -4,10 +4,7 @@ Recordset.
 Sequence of Records.
 """
 from collections.abc import Sequence, Iterator
-from typing import (
-    Any,
-    Union
-)
+from typing import Any, Union
 from .record import Record
 
 
@@ -19,7 +16,8 @@ class Recordset(Sequence):
       params:
           result: any resultset
     """
-    __slots__ = ('_idx', '_columns', '_result')
+
+    __slots__ = ("_idx", "_columns", "_result")
 
     def __init__(self, result: Any, columns: list = None):
         self._columns = columns
@@ -33,23 +31,21 @@ class Recordset(Sequence):
     def from_result(cls, result: Iterator) -> "Recordset":
         cols = []
         try:
-            if hasattr(result, 'one'): # Cassandra Resulset
+            if hasattr(result, "one"):  # Cassandra Resulset
                 if callable(result.one):
                     cols = result.one().keys
                     result = list(result)
             else:
                 cols = result[0].keys()
-            return cls(result, columns = cols)
+            return cls(result, columns=cols)
         except Exception as err:
-            raise ValueError(
-                f"Recordset: Invalid data set {err}"
-            ) from err
+            raise ValueError(f"Recordset: Invalid data set {err}") from err
 
-### Section: Simple magic methods
+    ### Section: Simple magic methods
     def __getitem__(self, key: Union[int, str]):
         if isinstance(key, int):
             if key >= len(self._result):
-                raise IndexError('Recordset: Result Index out of Range')
+                raise IndexError("Recordset: Result Index out of Range")
             return self._result[key]
         elif isinstance(key, slice):
             # works with slices
