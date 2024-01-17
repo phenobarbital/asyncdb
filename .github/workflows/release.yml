@@ -59,6 +59,19 @@ jobs:
         run: |
           find dist -name '*.whl' -exec mv {} dist \;
 
+      - name: Check for wheel types
+        id: check_wheels
+        run: |
+          echo "Checking for wheel types..."
+          if ls dist/*-manylinux*.whl 1> /dev/null 2>&1; then
+            echo "Found manylinux wheels."
+            echo "HAS_MANYLINUX_WHEELS=true" >> $GITHUB_ENV
+          fi
+          if ls dist/*-win_*.whl 1> /dev/null 2>&1; then
+            echo "Found Windows wheels."
+            echo "HAS_WINDOWS_WHEELS=true" >> $GITHUB_ENV
+          fi
+
       - name: List files in dist
         run: ls -l dist
 
@@ -71,14 +84,14 @@ jobs:
         run: pip install twine
 
       - name: Publish manylinux wheels to Production PyPI
-        if: contains(steps.list_files.outputs.files, 'manylinux')
+        if: env.HAS_MANYLINUX_WHEELS == 'true'
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.ASYNCDB_PYPI_API_TOKEN }}
         run: twine upload dist/*-manylinux*.whl
 
       - name: Publish Windows wheels to Production PyPI
-        if: contains(steps.list_files.outputs.files, 'win')
+        if: env.HAS_WINDOWS_WHEELS == 'true'
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.ASYNCDB_PYPI_API_TOKEN }}
