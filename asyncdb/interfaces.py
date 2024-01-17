@@ -791,18 +791,18 @@ class ModelBackend(ABC):
 
     def _get_condition(self, key: str, field: Field, value: Any, datatype: Any) -> str:
         condition = ""
-        if value is None or value in null_values:
+        if isinstance(value, list):
+            null_vals = " OR {key} is NULL" if None in value else ""
+            values = ",".join(self._format_value(v) for v in value)
+            condition = f"({key} = ANY(ARRAY[{values}]){null_vals})"
+        elif value is None or value in null_values:
             condition = f"{key} is NULL"
         elif value in not_null_values:
             condition = f"{key} is NOT NULL"
         elif isinstance(value, bool):
             val = str(value)
             condition = f"{key} is {val}"
-        elif isinstance(value, list):
-            null_vals = " OR {key} is NULL" if None in value else ""
-            values = ",".join(self._format_value(v) for v in value)
-            condition = f"({key} = ANY(ARRAY[{values}]){null_vals})"
-        elif isinstance(datatype, (list, List)):
+        elif isinstance(datatype, (list, List)):  # pylint: disable=W6001
             val = ", ".join([str(Entity.escapeLiteral(v, type(v))) for v in value])
             condition = f"ARRAY[{val}]<@ {key}::character varying[]"
         elif Entity.is_array(datatype):
