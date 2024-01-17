@@ -47,13 +47,16 @@ class colors:
         lightcyan = "\033[96m"
 
 
-class cPrint(object):
+info_level = {"INFO", "info"}
+debug_level =  {"DEBUG", "debug"}
+warn_level = {"WARN", "warn", "WARNING", "warning"}
+class cPrint:
     def __init__(self, message: str = "", level: str = "INFO"):
-        if level == "INFO" or level == "info":
+        if level in info_level:
             coloring = colors.bold + colors.fg.green
-        elif level == "DEBUG" or level == "debug":
+        elif level in debug_level:
             coloring = colors.fg.lightblue
-        elif level == "WARN" or level == "warning":
+        elif level in warn_level:
             coloring = colors.bold + colors.fg.yellow
         elif level == "ERROR":
             coloring = colors.fg.lightred
@@ -64,11 +67,11 @@ class cPrint(object):
         print(coloring + message, colors.reset)
 
     def __call__(self, message: str, *args, level: str = "INFO", **kwargs):
-        if level == "INFO" or level == "info":
+        if level in info_level:
             coloring = colors.bold + colors.fg.green
-        elif level == "DEBUG" or level == "debug":
+        elif level in debug_level:
             coloring = colors.fg.lightblue
-        elif level == "WARN" or level == "warning":
+        elif level in warn_level:
             coloring = colors.bold + colors.fg.yellow
         elif level == "ERROR":
             coloring = colors.fg.lightred
