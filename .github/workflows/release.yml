@@ -5,43 +5,53 @@ on:
     types: [created]
 
 jobs:
-  deploy:
+  build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install twine
+      - name: Build wheels on Ubuntu
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          # Your commands to build wheels for Ubuntu
+          # Store the output in 'dist' folder
+      - name: Build wheels on Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          # Your commands to build wheels for Windows
+          # Store the output in 'dist' folder
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: dist/*.whl
 
-    - name: Set up Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install twine
-
-    - name: Build wheels
-      if: matrix.os == 'ubuntu-latest'
-      uses: RalfG/python-wheels-manylinux-build@v0.5.0-manylinux2014_x86_64
-      with:
-        python-versions: 'cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312'
-        build-requirements: 'cython numpy'
-
-    - name: Build wheels for Windows
-      if: matrix.os == 'windows-latest'
-      run: |
-        pip install cibuildwheel
-        cibuildwheel --output-dir wheelhouse
-        # You may need to adjust the above command based on your package's specific requirements
-
-    - name: Publish wheels to Production PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.ASYNCDB_PYPI_API_TOKEN }}
-      run: |
-        twine upload  dist/*-manylinux*.whl
-        twine upload  wheelhouse/*.whl
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          path: dist
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.x'
+      - name: Install twine
+        run: pip install twine
+      - name: Publish wheels to Production PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.ASYNCDB_PYPI_API_TOKEN }}
+        run: twine upload dist/*.whl
