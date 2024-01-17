@@ -70,8 +70,16 @@ jobs:
       - name: Install twine
         run: pip install twine
 
-      - name: Publish wheels to Production PyPI
+      - name: Publish manylinux wheels to Production PyPI
+        if: contains(steps.list_files.outputs.files, 'manylinux')
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.ASYNCDB_PYPI_API_TOKEN }}
-        run: twine upload dist/*.whl
+        run: twine upload dist/*-manylinux*.whl
+
+      - name: Publish Windows wheels to Production PyPI
+        if: contains(steps.list_files.outputs.files, 'win')
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.ASYNCDB_PYPI_API_TOKEN }}
+        run: twine upload dist/*-win_*.whl
