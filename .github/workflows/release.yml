@@ -50,14 +50,17 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # Download all artifacts into the same directory
       - name: Download all artifacts
         uses: actions/download-artifact@v2
         with:
           path: dist
 
+      - name: Move wheel files to 'dist' directory
+        run: |
+          find dist -name '*.whl' -exec mv {} dist \;
+
       - name: List files in dist
-        run: ls dist
+        run: ls -l dist
 
       - name: Set up Python
         uses: actions/setup-python@v1
