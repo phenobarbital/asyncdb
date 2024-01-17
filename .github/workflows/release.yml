@@ -41,15 +41,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+
+      # Download all artifacts into the same directory
+      - name: Download all artifacts
+        uses: actions/download-artifact@v2
         with:
           path: dist
+
+      - name: List files in dist
+        run: ls dist
+
       - name: Set up Python
         uses: actions/setup-python@v1
         with:
           python-version: '3.x'
+
       - name: Install twine
         run: pip install twine
+
       - name: Publish wheels to Production PyPI
         env:
           TWINE_USERNAME: __token__
