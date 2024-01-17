@@ -777,6 +777,10 @@ class ModelBackend(ABC):
         return None
 
     def _where(self, fields: dict[Field], **where):
+        """
+        TODO: add conditions for BETWEEN, NOT NULL, NULL, etc
+           Re-think functionality for parsing where conditions.
+        """
         if not fields or not where or not isinstance(where, dict):
             return ""
         _cond = []
@@ -792,7 +796,7 @@ class ModelBackend(ABC):
     def _get_condition(self, key: str, field: Field, value: Any, datatype: Any) -> str:
         condition = ""
         if isinstance(value, list):
-            null_vals = " OR {key} is NULL" if None in value else ""
+            null_vals = f" OR {key} is NULL" if None in value else ""
             values = ",".join(self._format_value(v) for v in value)
             condition = f"({key} = ANY(ARRAY[{values}]){null_vals})"
         elif value is None or value in null_values:
@@ -822,64 +826,3 @@ class ModelBackend(ABC):
         elif value is not None:
             return str(value)
         return "NULL"
-
-    # def _where(self, fields: dict[Field], **where):
-    #     """
-    #     TODO: add conditions for BETWEEN, NOT NULL, NULL, etc
-    #        Re-think functionality for parsing where conditions.
-    #     """
-    #     result = ""
-    #     if not fields:
-    #         fields = {}
-    #     if not where:
-    #         return result
-    #     elif isinstance(where, dict):
-    #         _cond = []
-    #         for key, value in where.items():
-    #             f = fields[key]
-    #             datatype = f.type
-    #             if value is None or value in null_values:
-    #                 _cond.append(f"{key} is NULL")
-    #             elif value in not_null_values:
-    #                 _cond.append(f"{key} is NOT NULL")
-    #             elif isinstance(value, bool):
-    #                 val = str(value)
-    #                 _cond.append(f"{key} is {value}")
-    #             elif isinstance(value, list):
-    #                 if None in value:
-    #                     null_vals = f" OR {key} is NULL"
-    #                 else:
-    #                     null_vals = ""
-    #                 values = ",".join(
-    #                     [
-    #                         f"'{v}'"
-    #                         if isinstance(v, str) and v is not None
-    #                         else f"uuid('{v}')"
-    #                         if isinstance(v, uuid.UUID) and v is not None
-    #                         else str(v)
-    #                         if v is not None
-    #                         else "NULL"
-    #                         for v in value
-    #                     ]
-    #                 )
-    #                 _cond.append(f"({key} = ANY(ARRAY[{values}]){null_vals})")
-    #             elif isinstance(datatype, (list, List)):
-    #                 # val = ", ".join(map(str, [Entity.escapeLiteral(v, type(v)) for v in value]))
-    #                 # _cond.append(f"ARRAY[{val}]<@ {key}::character varying[]")
-    #                 val = ", ".join([str(Entity.escapeLiteral(v, type(v))) for v in value])
-    #                 _cond.append(f"ARRAY[{val}]<@ {key}::character varying[]")
-
-    #             elif Entity.is_array(datatype):
-    #                 # val = ", ".join(map(str, [Entity.escapeLiteral(v, type(v)) for v in value]))
-    #                 # _cond.append(f"{key} IN ({val})")
-    #                 val = ", ".join([str(Entity.escapeLiteral(v, type(v))) for v in value])
-    #                 _cond.append(f"{key} IN ({val})")
-    #             else:
-    #                 # is an scalar value
-    #                 val = Entity.escapeLiteral(value, datatype)
-    #                 _cond.append(f"{key}={val}")
-    #         _and = " AND ".join(_cond)
-    #         result = f"\nWHERE {_and}"
-    #         return result
-    #     else:
-    #         return result
