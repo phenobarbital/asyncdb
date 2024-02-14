@@ -215,7 +215,6 @@ class mysql(SQLDriver, DBCursorBackend):
         """
         try:
             if self._connection:
-                self._logger.debug("Closing Connection")
                 if self._pool:
                     await self._pool.release(self._connection)
                 else:

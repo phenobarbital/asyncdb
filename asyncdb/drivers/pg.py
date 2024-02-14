@@ -455,7 +455,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         if self._connection:
             try:
                 if not self._connection.is_closed():
-                    self._logger.debug(f"Closing Connection, id: {self._connection.get_server_pid()}")
+                    # self._logger.debug(f"Closing Connection, id: {self._connection.get_server_pid()}")
                     if self._pool:
                         await self._pool.release(self._connection)
                     else:
