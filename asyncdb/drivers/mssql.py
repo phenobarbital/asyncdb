@@ -69,7 +69,6 @@ class mssql(SQLDriver, DBCursorBackend):
         """
         try:
             if self._connection:
-                self._logger.debug("SQL Server: Closing Connection")
                 try:
                     self._connection.close()
                 except Exception as err:

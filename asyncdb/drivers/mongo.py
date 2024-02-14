@@ -67,7 +67,6 @@ class mongo(BaseDriver):
         """
         try:
             if self._connection:
-                self._logger.debug("Closing Connection")
                 try:
                     self._connection.close()
                 except Exception as err:
