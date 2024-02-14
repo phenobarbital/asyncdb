@@ -82,7 +82,6 @@ class scylladb(InitDriver):
     def sync_close(self):
         # gracefully closing underlying connection
         if self._connection:
-            self._logger.debug("Closing Connection")
             try:
                 self._connection.shutdown()
             except Exception as err:
@@ -97,7 +96,6 @@ class scylladb(InitDriver):
 
     async def async_close(self):
         if self._connection:
-            self._logger.debug("Closing Connection")
             try:
                 await self._connection.close()
             except Exception as err:

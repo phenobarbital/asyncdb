@@ -89,7 +89,6 @@ class cassandra(InitDriver):
         try:
             # gracefully closing underlying connection
             if self._connection:
-                self._logger.debug("Closing Connection")
                 try:
                     self._connection.shutdown()
                 except Exception as err:
