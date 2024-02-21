@@ -301,6 +301,8 @@ class pgPool(BasePool):
         try:
             await self._pool.release(conn, timeout=timeout)
             return True
+        except asyncio.exceptions.CancelledError:
+            pass
         except InterfaceError as err:
             raise ProviderError(message=f"Release Interface Error: {err}") from err
         except InternalClientError as err:
@@ -323,6 +325,8 @@ class pgPool(BasePool):
                 if self._connection:
                     await self._pool.release(self._connection, timeout=timeout)
                     self._connection = None
+            except asyncio.exceptions.CancelledError:
+                pass
             except (InternalClientError, InterfaceError) as err:
                 raise ProviderError(f"Release Interface Error: {err}") from err
             except Exception as err:
