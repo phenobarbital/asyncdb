@@ -4,7 +4,7 @@ build==1.0.3
 coverage[toml]==7.2.7
 flit==3.9.0
 hypothesis==6.91.0
-ipython==8.14.0
+ipython==8.22.0
 lint==1.2.1
 mypy==1.7.1
 pylint==3.0.2
