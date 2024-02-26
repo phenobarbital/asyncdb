@@ -255,7 +255,7 @@ setup(
             "psycopg-binary>=3.1.8",
             "cassandra-driver==3.28.0",
             "influxdb==5.3.1",
-            "influxdb-client==1.36.1",
+            "influxdb-client==1.39.0",
             "aioodbc==0.3.3",
             "JayDeBeApi==1.2.3",
             "pyodbc==4.0.35",
