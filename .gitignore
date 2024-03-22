@@ -23,6 +23,8 @@ bin/jar/
 env/
 .venv/
 .venv/*
+.venv12/
+.venv12/*
 .troc/
 develop-eggs/
 dist/

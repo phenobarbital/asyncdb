@@ -117,9 +117,8 @@ setup(
         "pgpy==0.6.0",
         "python-magic==0.4.27",
         "dateparser==1.1.8",
-        "python-datamodel>=0.6.20",
+        "python-datamodel>=0.6.23",
         "aiosqlite>=0.18.0",
-        "pendulum==2.1.2",
         "looseversion==1.3.0",
         "aiofiles==23.2.1"
     ],
