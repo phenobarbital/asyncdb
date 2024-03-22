@@ -104,7 +104,7 @@ setup(
     ],
     install_requires=[
         "cryptography==42.0.4",
-        "aiohttp==3.9.2",
+        "aiohttp==3.9.3",
         "asyncpg==0.29.0",
         "uvloop==0.19.0",
         "asyncio==3.4.3",
@@ -117,9 +117,8 @@ setup(
         "pgpy==0.6.0",
         "python-magic==0.4.27",
         "dateparser==1.1.8",
-        "python-datamodel>=0.6.20",
+        "python-datamodel>=0.6.23",
         "aiosqlite>=0.18.0",
-        "pendulum==2.1.2",
         "looseversion==1.3.0",
         "aiofiles==23.2.1"
     ],
