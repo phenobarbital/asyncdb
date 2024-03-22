@@ -103,7 +103,6 @@ setup(
         "wheel==0.42.0"
     ],
     install_requires=[
-        "numpy==1.24.2",
         "cryptography==42.0.4",
         "aiohttp==3.9.2",
         "asyncpg==0.29.0",
@@ -113,13 +112,12 @@ setup(
         "xlrd==2.0.1",
         "openpyxl==3.1.2",
         "lz4==4.3.2",
-        "typing_extensions==4.8.0",
         "charset-normalizer>=2.0.7",
         "iso8601==2.1.0",
         "pgpy==0.6.0",
         "python-magic==0.4.27",
         "dateparser==1.1.8",
-        "python-datamodel>=0.6.3",
+        "python-datamodel>=0.6.20",
         "aiosqlite>=0.18.0",
         "pendulum==2.1.2",
         "looseversion==1.3.0",
