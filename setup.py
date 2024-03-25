@@ -226,7 +226,6 @@ setup(
             "hazelcast-python-client==5.3.0"
         ],
         "scylla": [
-            # "acsylla==0.1.8b0",
             "scylla_driver==3.26.8",
             "cqlsh==6.1.2"
         ],
@@ -270,7 +269,6 @@ setup(
             "botocore==1.31.64",
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
-            "acsylla==0.1.8b0",
             "google-cloud-bigquery==3.13.0",
             "pandas-gbq==0.19.2",
             "tqdm==4.66.1"
