@@ -84,7 +84,7 @@ Every Driver has a simple name to call it:
 * postgres: aiopg (PostgreSQL)
 * mysql: aiomysql (mySQL)
 * influx: influxdb (InfluxDB)
-* redis: aioredis (Redis)
+* redis: redis-py (Redis)
 * mcache: aiomcache (Memcache)
 * odbc: aiodbc (ODBC)
 

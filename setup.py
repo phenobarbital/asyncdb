@@ -124,7 +124,6 @@ setup(
     ],
     extras_require={
         "default": [
-            "aioredis==2.0.1",
             "pylibmc==1.6.3",
             "aiomcache==0.8.1",
             "aiosqlite>=0.18.0",
@@ -143,7 +142,7 @@ setup(
             "python-datatable==1.1.3",
             "polars==0.20.4",
             "pyarrow==14.0.2",
-            "connectorx==0.3.2",
+            "connectorx==0.2.3",
             "pyspark==3.5.0",
             "deltalake==0.13.0"
         ],
@@ -161,7 +160,6 @@ setup(
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
             "redis==5.0.1",
-            "aioredis==2.0.1",
             "hiredis==2.2.3",
             "objectpath==0.6.1",
         ],
@@ -199,8 +197,8 @@ setup(
             "influxdb-client[async]==1.39.0",
         ],
         "odbc": [
-            "aioodbc==0.3.3",
-            "pyodbc==4.0.35",
+            "aioodbc==0.5.0",
+            "pyodbc==5.1.0",
         ],
         "jdbc": [
             "JayDeBeApi==1.2.3"
@@ -228,8 +226,8 @@ setup(
             "hazelcast-python-client==5.3.0"
         ],
         "scylla": [
-            "acsylla==0.1.8b0",
-            "scylla_driver==3.26.3",
+            # "acsylla==0.1.8b0",
+            "scylla_driver==3.26.8",
             "cqlsh==6.1.2"
         ],
         "all": [
@@ -238,13 +236,12 @@ setup(
             "python-datatable==1.1.3",
             "polars==0.20.4",
             "pyarrow==14.0.2",
-            "connectorx==0.3.2",
+            "connectorx==0.2.3",
             "aiosqlite>=0.18.0",
             "pylibmc==1.6.3",
             "aiomcache==0.8.1",
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
-            "aioredis==2.0.1",
             "redis==5.0.1",
             "objectpath==0.6.1",
             "rethinkdb==2.4.10.post1",
@@ -253,9 +250,9 @@ setup(
             "cassandra-driver==3.28.0",
             "influxdb==5.3.1",
             "influxdb-client==1.39.0",
-            "aioodbc==0.3.3",
+            "aioodbc==0.5.0",
             "JayDeBeApi==1.2.3",
-            "pyodbc==4.0.35",
+            "pyodbc==5.1.0",
             "sqlalchemy[asyncio]==2.0.23",
             "elasticsearch[async]==8.11.0",
             "pymongo==4.6.1",
