@@ -133,7 +133,7 @@ setup(
             "influxdb-client[async]==1.39.0",
             "pymssql==2.2.11",
             "redis==5.0.1",
-            "duckdb==0.9.2",
+            "duckdb==0.10.1",
             "deltalake==0.13.0"
         ],
         "dataframe": [
@@ -204,7 +204,7 @@ setup(
             "JayDeBeApi==1.2.3"
         ],
         "oracle": [
-            "oracledb==1.2.2"
+            "oracledb==2.1.1"
         ],
         "sqlalchemy": [
             "sqlalchemy[asyncio]==2.0.23",
@@ -262,9 +262,9 @@ setup(
             "mysqlclient==2.2.0",
             "aiomysql==0.2.0",
             "pyspark==3.5.0",
-            "oracledb==1.2.2",
+            "oracledb==2.1.1",
             "hazelcast-python-client==5.3.0",
-            "duckdb==0.9.2",
+            "duckdb==0.10.1",
             "deltalake==0.13.0",
             "botocore==1.31.64",
             "aiobotocore==2.7.0",
