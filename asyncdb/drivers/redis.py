@@ -11,10 +11,8 @@ import asyncio
 import time
 from typing import Any, Union
 from redis import asyncio as aioredis
-from aioredis.exceptions import AuthenticationError, RedisError
-
+from redis.exceptions import AuthenticationError, RedisError
 from asyncdb.exceptions import ConnectionTimeout, DriverError
-
 from .abstract import BaseDriver, BasePool
 
 
@@ -106,7 +104,7 @@ class redisPool(BasePool):
                 return result
             except TypeError as err:
                 raise DriverError(f"Execute Error: {err}") from err
-            except aioredis.exceptions.ConnectionError as err:
+            except (ConnectionError, redis.exceptions.ConnectionError) as err:
                 raise DriverError(f"Connection cannot be decoded or is broken, Error: {err}") from err
             except RedisError as err:
                 raise DriverError(f"Connection close Error: {err}") from err
@@ -150,7 +148,7 @@ class redis(BaseDriver):
             raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
         except ConnectionError as err:
             raise DriverError(f"Connection Error: {err}") from err
-        except (aioredis.RedisError, asyncio.TimeoutError) as err:
+        except (RedisError, asyncio.TimeoutError) as err:
             raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
         except Exception as err:
             raise DriverError(f"Unknown Redis Error: {err}") from err
@@ -224,7 +222,7 @@ class redis(BaseDriver):
     async def get(self, key):
         try:
             return await self._connection.get(key)
-        except aioredis.RedisError as err:
+        except RedisError as err:
             raise DriverError(f"Redis Error: {err}") from err
         except Exception as err:
             raise DriverError(f"Redis Unknown Error: {err}") from err
@@ -241,7 +239,7 @@ class redis(BaseDriver):
     async def set(self, key, value, **kwargs):
         try:
             return await self._connection.set(key, value, **kwargs)
-        except aioredis.RedisError as err:
+        except RedisError as err:
             raise DriverError(f"Redis Error: {err}") from err
         except Exception as err:
             raise DriverError(f"Redis Unknown Error: {err}") from err
