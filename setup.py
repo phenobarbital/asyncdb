@@ -99,7 +99,7 @@ setup(
     license=__license__,
     setup_requires=[
         "setuptools==67.6.1",
-        "Cython==3.0.6",
+        "Cython==3.0.9",
         "wheel==0.42.0"
     ],
     install_requires=[
