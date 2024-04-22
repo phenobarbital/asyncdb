@@ -141,7 +141,7 @@ setup(
             'datatable==1.1.0',
             "python-datatable==1.1.3",
             "polars==0.20.4",
-            "pyarrow==14.0.2",
+            "pyarrow==16.0.0",
             "connectorx==0.2.3",
             "pyspark==3.5.0",
             "deltalake==0.13.0"
@@ -234,7 +234,7 @@ setup(
             "datatable==1.1.0",
             "python-datatable==1.1.3",
             "polars==0.20.4",
-            "pyarrow==14.0.2",
+            "pyarrow==16.0.0",
             "connectorx==0.2.3",
             "aiosqlite>=0.18.0",
             "pylibmc==1.6.3",
