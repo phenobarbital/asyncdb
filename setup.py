@@ -127,7 +127,7 @@ setup(
             "pylibmc==1.6.3",
             "aiomcache==0.8.1",
             "aiosqlite>=0.18.0",
-            "cassandra-driver==3.28.0",
+            "cassandra-driver==3.29.1",
             "rethinkdb==2.4.10.post1",
             "influxdb==5.3.1",
             "influxdb-client[async]==1.39.0",
@@ -190,7 +190,7 @@ setup(
           "pandas-gbq==0.19.2"
         ],
         "cassandra": [
-            "cassandra-driver==3.28.0",
+            "cassandra-driver==3.29.1",
         ],
         "influxdb": [
             "influxdb==5.3.1",
@@ -246,7 +246,7 @@ setup(
             "rethinkdb==2.4.10.post1",
             "aiopg==1.4.0",
             "psycopg-binary>=3.1.8",
-            "cassandra-driver==3.28.0",
+            "cassandra-driver==3.29.1",
             "influxdb==5.3.1",
             "influxdb-client==1.39.0",
             "aioodbc==0.5.0",
