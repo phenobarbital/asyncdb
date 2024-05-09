@@ -9,7 +9,7 @@ import asyncio
 import time
 from typing import Any
 import pylibmc
-from asyncdb.exceptions import DriverError
+from ..exceptions import DriverError
 from .abstract import (
     InitDriver,
 )
@@ -20,7 +20,12 @@ class mcache(InitDriver):
     _syntax = "nosql"
     _behaviors = {"tcp_nodelay": True, "ketama": True}
 
-    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
+    def __init__(
+        self,
+        loop: asyncio.AbstractEventLoop = None,
+        params: dict = None,
+        **kwargs
+    ) -> None:
         super(mcache, self).__init__(loop=loop, params=params, **kwargs)
         try:
             host = params["host"]

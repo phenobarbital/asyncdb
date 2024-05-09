@@ -72,7 +72,7 @@ setup(
     python_requires=">=3.9.13",
     url="https://github.com/phenobarbital/asyncdb",
     description=__description__,
-    keywords=['asyncio', 'asyncpg', 'aioredis', 'aiomcache', 'cassandra'],
+    keywords=['asyncio', 'asyncpg', 'aioredis', 'aiomcache', 'cassandra', 'scylladb'],
     platforms=['POSIX'],
     long_description=readme(),
     long_description_content_type='text/markdown',
@@ -227,6 +227,8 @@ setup(
         ],
         "scylla": [
             "scylla_driver==3.26.8",
+            "cassandra-driver==3.29.1",
+            "acsylla==0.1.8b0",
             "cqlsh==6.1.2"
         ],
         "all": [
@@ -247,6 +249,7 @@ setup(
             "aiopg==1.4.0",
             "psycopg-binary>=3.1.8",
             "cassandra-driver==3.29.1",
+            "scylla_driver==3.26.8",
             "influxdb==5.3.1",
             "influxdb-client==1.39.0",
             "aioodbc==0.5.0",

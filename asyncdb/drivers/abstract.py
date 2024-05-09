@@ -8,8 +8,14 @@ from abc import (
 )
 from typing import Optional, Any
 from collections.abc import Iterable
-from asyncdb.exceptions import EmptyStatement
-from asyncdb.interfaces import PoolBackend, ConnectionDSNBackend, ConnectionBackend, DatabaseBackend, CursorBackend
+from ..exceptions import EmptyStatement
+from ..interfaces import (
+    PoolBackend,
+    ConnectionDSNBackend,
+    ConnectionBackend,
+    DatabaseBackend,
+    CursorBackend
+)
 from .outputs import OutputFactory
 
 

@@ -12,16 +12,16 @@ from collections.abc import Callable, Iterable
 from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError, ProgrammingError, InvalidRequestError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from asyncdb.meta import Record
-from asyncdb.exceptions import (
+from ..meta import Record
+from ..exceptions import (
     EmptyStatement,
     NoDataFound,
     DriverError,
     StatementError,
     TooManyConnections,
 )
-from asyncdb.interfaces import DBCursorBackend
-from asyncdb.utils.encoders import json_encoder, json_decoder
+from ..interfaces import DBCursorBackend
+from ..utils.encoders import json_encoder, json_decoder
 from .sql import SQLDriver, SQLCursor
 
 
@@ -171,7 +171,7 @@ class sa(SQLDriver, DBCursorBackend):
                 result = await conn.execute(text(self._test_query))
                 row = await self.get_result(result)
             if error:
-                self._logger.info(f"Test Error: {err!s}")
+                self._logger.info(f"Test Error: {error!s}")
         except Exception as err:
             error = str(err)
             raise DriverError(message=str(err), code=0)

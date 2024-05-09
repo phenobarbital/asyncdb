@@ -1,7 +1,7 @@
 """Dummy Driver.
 """
 from datetime import datetime
-from asyncdb.exceptions import DriverError
+from ..exceptions import DriverError
 from .abstract import BaseDriver
 
 

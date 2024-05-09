@@ -7,8 +7,8 @@ from collections.abc import Iterable
 import time
 from datetime import datetime
 import oracledb
-from asyncdb.utils.encoders import DefaultEncoder
-from asyncdb.exceptions import DriverError, NoDataFound
+from ..utils.encoders import DefaultEncoder
+from ..exceptions import DriverError, NoDataFound
 from .sql import SQLDriver
 
 

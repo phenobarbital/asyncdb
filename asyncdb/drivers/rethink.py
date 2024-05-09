@@ -26,8 +26,8 @@ from rethinkdb.errors import (
 )
 from rethinkdb import r
 from datamodel import BaseModel
-from asyncdb.interfaces import DBCursorBackend, CursorBackend
-from asyncdb.exceptions import DriverError, DataError, NoDataFound, StatementError
+from ..interfaces import DBCursorBackend, CursorBackend
+from ..exceptions import DriverError, DataError, NoDataFound, StatementError
 from .abstract import InitDriver, BaseCursor
 
 

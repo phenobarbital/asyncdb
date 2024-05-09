@@ -3,8 +3,8 @@ from collections.abc import Iterable, Sequence
 import asyncio
 import time
 import duckdb as db
-from asyncdb.exceptions import NoDataFound, DriverError
-from asyncdb.interfaces import DBCursorBackend
+from ..exceptions import NoDataFound, DriverError
+from ..interfaces import DBCursorBackend
 from .sql import SQLCursor, SQLDriver
 
 

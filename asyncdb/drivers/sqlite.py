@@ -4,10 +4,10 @@ import asyncio
 from typing import Any, Optional, Union
 from collections.abc import Sequence, Iterable
 import aiosqlite
-from asyncdb.exceptions import NoDataFound, DriverError
-from asyncdb.interfaces import DBCursorBackend, ModelBackend
-from asyncdb.models import Model
-from asyncdb.utils.types import Entity
+from ..exceptions import NoDataFound, DriverError
+from ..interfaces import DBCursorBackend, ModelBackend
+from ..models import Model
+from ..utils.types import Entity
 from .sql import SQLDriver, SQLCursor
 
 

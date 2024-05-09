@@ -1,4 +1,4 @@
-from asyncdb.utils.encoders import DefaultEncoder
+from ...utils.encoders import DefaultEncoder
 from .base import OutputFormat
 
 

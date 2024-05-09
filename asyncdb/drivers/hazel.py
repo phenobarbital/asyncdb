@@ -11,8 +11,8 @@ from datamodel import BaseModel, Field
 import hazelcast
 from hazelcast.serialization.api import Portable
 from hazelcast.errors import HazelcastError, HazelcastClientNotActiveError
-from asyncdb.utils.types import Entity
-from asyncdb.exceptions import (
+from ..utils.types import Entity
+from ..exceptions import (
     DriverError,
     NoDataFound,
 )
