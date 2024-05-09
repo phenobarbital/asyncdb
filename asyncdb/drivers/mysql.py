@@ -7,13 +7,13 @@ from collections.abc import Callable, Iterable
 import ssl
 import asyncmy
 from asyncmy.cursors import DictCursor
-from asyncdb.exceptions import (
+from ..exceptions import (
     ConnectionTimeout,
     NoDataFound,
     DriverError,
     StatementError,
 )
-from asyncdb.interfaces import DBCursorBackend
+from ..interfaces import DBCursorBackend
 from .abstract import BasePool
 from .sql import SQLCursor, SQLDriver
 
@@ -27,7 +27,11 @@ class mysqlPool(BasePool):
     _init_func: Optional[Callable] = None
 
     def __init__(
-        self, dsn: str = None, loop: asyncio.AbstractEventLoop = None, params: Optional[dict] = None, **kwargs
+        self,
+        dsn: str = None,
+        loop: asyncio.AbstractEventLoop = None,
+        params: Optional[dict] = None,
+        **kwargs
     ):
         self._test_query = "SELECT 1"
         self._max_clients = 300

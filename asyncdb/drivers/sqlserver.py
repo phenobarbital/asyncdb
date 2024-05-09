@@ -5,7 +5,7 @@ import logging
 from typing import Any, Optional
 from collections.abc import Iterable
 import pymssql
-from asyncdb.exceptions import DataError, EmptyStatement, NoDataFound, DriverError
+from ..exceptions import DataError, EmptyStatement, NoDataFound, DriverError
 from .sql import SQLCursor
 from .mssql import mssql
 

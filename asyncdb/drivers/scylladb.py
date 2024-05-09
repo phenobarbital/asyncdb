@@ -1,3 +1,4 @@
+import os
 from typing import Union, Any
 import asyncio
 import time
@@ -7,16 +8,34 @@ import logging
 from pathlib import PurePath
 import aiofiles
 import pandas as pd
-
 # async driver:
 import acsylla as c
-
 # Cassandra:
 from cassandra import ReadTimeout
+from cassandra.io.asyncorereactor import AsyncoreConnection
+# from cassandra.io.asyncioreactor import AsyncioConnection
+try:
+    from cassandra.io.libevreactor import LibevConnection
+    LIBEV = True
+except ImportError:
+    LIBEV = False
 from cassandra.concurrent import execute_concurrent
-from cassandra.policies import DCAwareRoundRobinPolicy, WhiteListRoundRobinPolicy, DowngradingConsistencyRetryPolicy
-from cassandra.cluster import Cluster, EXEC_PROFILE_DEFAULT, ExecutionProfile, NoHostAvailable, ResultSet
+from cassandra.policies import (
+    DCAwareRoundRobinPolicy,
+    WhiteListRoundRobinPolicy,
+    DowngradingConsistencyRetryPolicy,
+    TokenAwarePolicy,
+    RoundRobinPolicy
+)
+from cassandra.cluster import (
+    Cluster,
+    EXEC_PROFILE_DEFAULT,
+    ExecutionProfile,
+    NoHostAvailable,
+    ResultSet
+)
 from cassandra.query import (
+    tuple_factory,
     dict_factory,
     ordered_dict_factory,
     named_tuple_factory,
@@ -26,7 +45,6 @@ from cassandra.query import (
     SimpleStatement,
     BatchType,
 )
-from cassandra.io.libevreactor import LibevConnection
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.query import SimpleStatement
 from cassandra import ConsistencyLevel
@@ -52,8 +70,15 @@ class scylladb(InitDriver):
     _provider = "scylladb"
     _syntax = "cql"
 
-    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
+    def __init__(
+        self,
+        loop: asyncio.AbstractEventLoop = None,
+        params: dict = None,
+        **kwargs
+    ):
         self.hosts: list = []
+        self.application_name = os.getenv("APP_NAME", "NAV")
+        self._enable_shard_awareness = kwargs.pop("shard_awareness", True)
         self._test_query = "SELECT release_version FROM system.local"
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
         self._cluster = None
@@ -61,6 +86,7 @@ class scylladb(InitDriver):
         self._protocol: int = kwargs.pop("protocol", 4)
         self._driver: str = kwargs.pop("driver", "cassandra")
         self.heartbeat_interval: int = kwargs.pop("heartbeat_interval", 0)
+        self._row_factory = kwargs.pop("row_factory", 'dict_factory')
         super(scylladb, self).__init__(loop=loop, params=params, **kwargs)
         try:
             if "host" in self.params:
@@ -156,7 +182,9 @@ class scylladb(InitDriver):
         }
         try:
             self._cluster = c.create_cluster(self._hosts, **params)
-            self._connection = await self._cluster.connect(keyspace=keyspace)
+            self._connection = await self._cluster.connect(
+                keyspace=keyspace
+            )
             self._driver = "async"
             if self._connection:
                 self._connected = True
@@ -171,7 +199,9 @@ class scylladb(InitDriver):
             self._logger.exception(f"Scylla Connection Error: {err}")
             self._connection = None
             self._cursor = None
-            raise DriverError(message=f"Scylla Connection Error: {err}") from err
+            raise DriverError(
+                message=f"Scylla Connection Error: {err}"
+            ) from err
 
     async def connect(self, keyspace=None):
         """
@@ -191,18 +221,46 @@ class scylladb(InitDriver):
                     }
             except KeyError:
                 ssl_opts = {}
+            if self._enable_shard_awareness:
+                policy = TokenAwarePolicy(RoundRobinPolicy())
             if self.whitelist:
                 policy = WhiteListRoundRobinPolicy(self.whitelist)
             else:
                 policy = DCAwareRoundRobinPolicy()
+            # defining row factory:
+            if self._row_factory == "dict_factory":
+                row_factory = dict_factory
+            elif self._row_factory == "pandas_factory":
+                row_factory = pandas_factory
+            elif self._row_factory == "tuple_factory":
+                row_factory = tuple_factory
+            elif self._row_factory == "named_tuple_factory":
+                row_factory = named_tuple_factory
+            elif self._row_factory == "ordered_dict_factory":
+                row_factory = ordered_dict_factory
+            elif self._row_factory == "record_factory":
+                row_factory = record_factory
+            else:
+                # Set Dict Factory by default
+                row_factory = named_tuple_factory
             defaultprofile = ExecutionProfile(
                 load_balancing_policy=policy,
                 retry_policy=DowngradingConsistencyRetryPolicy(),
-                request_timeout=self._timeout,
-                row_factory=dict_factory,
                 consistency_level=ConsistencyLevel.LOCAL_QUORUM,
                 serial_consistency_level=ConsistencyLevel.LOCAL_SERIAL,
+                request_timeout=self._timeout,
+                row_factory=row_factory,
             )
+            # Long-term execution profile:
+            longprofile = ExecutionProfile(
+                load_balancing_policy=policy,
+                retry_policy=DowngradingConsistencyRetryPolicy(),
+                consistency_level=ConsistencyLevel.LOCAL_QUORUM,
+                serial_consistency_level=ConsistencyLevel.LOCAL_SERIAL,
+                request_timeout=180,
+                row_factory=row_factory,
+            )
+            # Pandas Profile
             pandasprofile = ExecutionProfile(
                 load_balancing_policy=policy,
                 retry_policy=DowngradingConsistencyRetryPolicy(),
@@ -241,11 +299,18 @@ class scylladb(InitDriver):
                 "ordered": orderedprofile,
                 "default": tupleprofile,
                 "recordset": recordprofile,
+                "long": longprofile,
             }
+            # TODO: migrate to asyncio when available.
+            if LIBEV is True:
+                conn_class = LibevConnection
+            else:
+                conn_class = AsyncoreConnection
             params = {
+                "application_name": self.application_name,
                 "port": self.params["port"],
                 "compression": True,
-                "connection_class": LibevConnection,
+                "connection_class": conn_class,
                 "protocol_version": self._protocol,
                 "connect_timeout": self._timeout,
                 "idle_heartbeat_interval": self.heartbeat_interval,
@@ -264,7 +329,9 @@ class scylladb(InitDriver):
             try:
                 self._connection = self._cluster.connect(keyspace=keyspace)
             except NoHostAvailable as ex:
-                raise DriverError(message=f"Not able to connect to any of the Scylla contact points: {ex}") from ex
+                raise DriverError(
+                    message=f"Not able to connect to any of the Scylla contact points: {ex}"
+                ) from ex
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
@@ -275,10 +342,14 @@ class scylladb(InitDriver):
         except DriverError:
             raise
         except Exception as err:
-            self._logger.exception(f"Scylla Connection Error: {err}")
+            self._logger.exception(
+                f"Scylla Connection Error: {err}"
+            )
             self._connection = None
             self._cursor = None
-            raise DriverError(message=f"Scylla Connection Error: {err}") from err
+            raise DriverError(
+                message=f"Scylla Connection Error: {err}"
+            ) from err
 
     async def connection(self, keyspace: str = None):
         if self._driver == "async":
@@ -287,7 +358,12 @@ class scylladb(InitDriver):
             await self.connect(keyspace)
         return self
 
-    async def table_exists(self, table: str, keyspace: str = None, schema: str = None) -> bool:
+    async def table_exists(
+        self,
+        table: str,
+        keyspace: str = None,
+        schema: str = None
+    ) -> bool:
         """
         Ensure the table exists. Optional If not, create it.
 
@@ -321,7 +397,10 @@ class scylladb(InitDriver):
         return result
 
     async def execute(  # pylint: disable=W0221
-        self, sentence: Union[str, SimpleStatement, PreparedStatement], params: list = None, **kwargs
+        self,
+        sentence: Union[str, SimpleStatement, PreparedStatement],
+        params: list = None,
+        **kwargs
     ) -> Any:
         """Execute a transaction
         get a CQL sentence and execute
@@ -349,7 +428,9 @@ class scylladb(InitDriver):
             return [self._result, error]  # pylint: disable=W0150
 
     async def execute_many(  # pylint: disable=W0221
-        self, sentence: Union[str, SimpleStatement, PreparedStatement], params: list = None
+        self,
+        sentence: Union[str, SimpleStatement, PreparedStatement],
+        params: list = None
     ) -> Any:
         """execute_many.
 
@@ -442,7 +523,14 @@ class scylladb(InitDriver):
 
     create_database = create_keyspace
 
-    async def create_table(self, table: str, schema: str = None, data: Any = None, pk: str = None):
+    async def create_table(
+        self,
+        table: str,
+        schema: str = None,
+        data: Any = None,
+        pk: str = None,
+        optionals: dict = None
+    ):
         if schema:
             await self.use(schema)
 
@@ -458,12 +546,10 @@ class scylladb(InitDriver):
                 "datetime64[ns]": "timestamp"
                 # Add more type mappings as needed
             }
-
             columns = []
             for col, dtype in data.dtypes.items():
                 scylla_type = dtype_mapping.get(str(dtype), "text")
                 columns.append(f"{col} {scylla_type}")
-
             # Assuming the first column is the primary key for simplicity
             # Adjust as needed
             if pk is None:
@@ -471,8 +557,30 @@ class scylladb(InitDriver):
             else:
                 columns.append(f"PRIMARY KEY ({pk})")
 
-            create_stmt += ", ".join(columns) + ");"
-
+            create_stmt += ", ".join(columns) + ")"
+        elif isinstance(data, dict):
+            columns = []
+            for col, dtype in data.items():
+                columns.append(f"{col} {dtype}")
+            if pk is None:
+                columns.append(f"PRIMARY KEY ({list(data.keys())[0]})")
+            else:
+                columns.append(f"PRIMARY KEY ({pk})")
+            create_stmt += ", ".join(columns) + ")"
+        if optionals:
+            if isinstance(optionals, dict):
+                for k, v in optionals.items():
+                    create_stmt += f" {k}={v}"
+            elif isinstance(optionals, list):
+                for item in optionals:
+                    create_stmt += f" {item}"
+            elif isinstance(optionals, str):
+                create_stmt += f" {optionals}"
+            else:
+                raise ValueError(
+                    "Optional WITH must be a list, dict or string"
+                )
+        create_stmt += ";"
         # Execute the CREATE TABLE statement
         self._logger.debug(f"CREATE TABLE: {create_stmt}")
         if self._driver == "async":
@@ -502,7 +610,10 @@ class scylladb(InitDriver):
         return SimpleStatement(sentence, consistency_level=cl)
 
     async def get_sentence(
-        self, sentence: Union[str, SimpleStatement, PreparedStatement], prepared: bool = False, params: list = None
+        self,
+        sentence: Union[str, SimpleStatement, PreparedStatement],
+        prepared: bool = False,
+        params: list = None
     ):
         if isinstance(sentence, PreparedStatement):
             if params:
@@ -520,7 +631,7 @@ class scylladb(InitDriver):
                 smt = prepared.bind(*params)
         else:
             if self._driver == "async":
-                smt = c.Statement(sentence, params)
+                smt = c.Statement(sentence, params)  # pylint: disable=E0110
             else:
                 smt = SimpleStatement(sentence)
         return smt
@@ -571,7 +682,9 @@ class scylladb(InitDriver):
             self.start_timing()
             self._result = self._connection.execute(sentence, params)
             if not self._result:
-                raise NoDataFound("Cassandra: No Data was Found")
+                raise NoDataFound(
+                    "Cassandra: No Data was Found"
+                )
             self.generated_at()
             return self._result
         except NoDataFound:
@@ -586,13 +699,17 @@ class scylladb(InitDriver):
             params = []
         return self.fetch_all(sentence, params)
 
-    async def queryrow(self, sentence: Union[str, SimpleStatement, PreparedStatement], params: list = None):
+    async def queryrow(
+        self,
+        sentence: Union[str, SimpleStatement, PreparedStatement],
+        params: list = None
+    ):
         error = None
         self._result = None
         try:
             await self.valid_operation(sentence)
             if self._driver == "async":
-                smt = c.Statement(sentence, params)
+                smt = c.Statement(sentence, params)  # pylint: disable=E0110
                 self._result = await self._connection.execute(smt)
             else:
                 smt = SimpleStatement(sentence)
@@ -673,7 +790,12 @@ class scylladb(InitDriver):
         return stdout, stderr, process.returncode
 
     async def write(
-        self, data: Union[list, dict], sentence: str = None, table: str = None, keyspace: str = None, **kwargs
+        self,
+        data: Union[list, dict],
+        sentence: str = None,
+        table: str = None,
+        keyspace: str = None,
+        **kwargs
     ):
         """
         Write data into ScyllaDB.
@@ -739,3 +861,5 @@ class scylladb(InitDriver):
             execute_concurrent(self._connection, ((stmt, row) for row in _data), concurrency=concurrency)
 
     copy = write
+
+# async def _all_(self, _model: Model, *args, **kwargs):  # pylint: disable=W0613
