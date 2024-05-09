@@ -12,7 +12,7 @@ The main goal of AsyncDB is using asyncio-based technologies.
 
 ## Requirements
 
-Python 3.8+
+Python 3.9+
 
 ## Installation
 

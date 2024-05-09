@@ -230,7 +230,7 @@ class rethink(InitDriver, DBCursorBackend):
 
     create_index = createindex
 
-    async def create_table(self, table: str, pk: Union[str, list] = None):
+    async def create_table(self, table: str, pk: Union[str, list] = None, exists_ok: bool = True):
         """
         create_table
            Create a new table with optional primary key
@@ -241,6 +241,8 @@ class rethink(InitDriver, DBCursorBackend):
             else:
                 return await self._engine.db(self._db).table_create(table).run(self._connection)
         except ReqlOpFailedError as ex:
+            if 'already exists in' in str(ex):
+                return True
             raise DriverError(f"Cannot create Table {table}, {ex}") from ex
         except (ReqlDriverError, ReqlRuntimeError) as ex:
             raise DriverError(f"Error crating Table {table}, {ex}") from ex
