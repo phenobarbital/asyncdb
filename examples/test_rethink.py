@@ -95,10 +95,12 @@ async def test_connect(event_loop):
         if not error:
             print('ROW ', site2)
         # return distance between site1 and 2:
-        p1 = Point(*site1['coordinates'].values())
-        p2 = Point(*site2['coordinates'].values())
-        distance = await conn.distance(p1, p2, unit='km')
-        print(f'::: Distance between {p1} and {p2}: {distance} km.')
+        if site1:
+            p1 = Point(*site1['coordinates'].values())
+        if site2:
+            p2 = Point(*site2['coordinates'].values())
+            distance = await conn.distance(p1, p2, unit='km')
+            print(f'::: Distance between {p1} and {p2}: {distance} km.')
         await conn.drop_database('testing')
 
 

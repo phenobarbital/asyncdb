@@ -1,12 +1,6 @@
 from typing import Any
 import asyncio
 import logging
-import uvloop
-
-
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-uvloop.install()
-
 
 def handle_done_tasks(task: asyncio.Task, logger: logging.Logger, *args: tuple[Any, ...]) -> None:
     try:
@@ -14,7 +8,9 @@ def handle_done_tasks(task: asyncio.Task, logger: logging.Logger, *args: tuple[A
     except asyncio.CancelledError:
         return True  # Task cancellation should not be logged as an error.
     except Exception as err:  # pylint: disable=broad-except
-        logger.exception(f"Exception raised by Task {task}, error: {err}", *args)
+        logger.exception(
+            f"Exception raised by Task {task}, error: {err}"
+        )
         return None
 
 
@@ -44,29 +40,25 @@ async def shutdown(loop: asyncio.AbstractEventLoop, signal=None):
 
 def default_exception_handler(loop: asyncio.AbstractEventLoop, context):
     logging.debug(f"Asyncio Exception Handler Caught: {context!s}")
-    # first, handle with default handler
-    if isinstance(context, Exception):
-        # is a basic exception
-        logging.exception(f"Exception {context!s}", stack_info=True)
-        raise type(context)
+
     exception = context.get("exception")
-    msg = context.get("message", None)
+    msg = context.get("message", "")
+    task = context.get("task") or context.get("future")
+
+    # Call the default exception handler
     loop.default_exception_handler(context)
+
     if exception:
         logging.error(f"AsyncDB: Caught exception: {exception}")
         if not isinstance(exception, asyncio.CancelledError):
-            task = context.get("task", context["future"])
-            exc = type(task.exception())
             try:
-                logging.error(f"{exc.__name__!s}: *{msg}* over task {task}")
+                exc_name = type(exception).__name__
+                logging.error(f"{exc_name}: *{msg}* over task {task}")
             except Exception as ex:
-                logging.exception(ex, stack_info=True)
+                logging.exception("Handler Error", exc_info=True)
                 raise RuntimeError(f"Handler Error: {ex}") from ex
     else:
         logging.error(f"AsyncDB: Caught an error: {context}")
-        try:
-            task = context.get("task", context["future"])
-        except KeyError:
-            task = None
-        logging.exception(f"Exception raised by Task {task}, Error: {msg}")
+        if task:
+            logging.exception(f"Exception raised by Task {task}, Error: {msg}")
         raise RuntimeError(f"{msg}: task: {task}")
