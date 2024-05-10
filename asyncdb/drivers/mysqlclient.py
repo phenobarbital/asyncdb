@@ -13,7 +13,7 @@ from asyncdb.exceptions import (
     NoDataFound,
     DriverError,
 )
-from asyncdb.interfaces import DBCursorBackend
+from ..interfaces import DBCursorBackend
 from .abstract import BasePool
 from .sql import SQLCursor, SQLDriver
 
@@ -157,6 +157,7 @@ class mysqlclientPool(BasePool):
         Execute a connection into the Pool
         """
         error = None
+        result = None
         try:
             loop = asyncio.get_running_loop()
             conn = await self._connection_()

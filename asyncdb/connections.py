@@ -1,5 +1,4 @@
 import logging
-
 from .exceptions import DriverError
 from .interfaces import ConnectionBackend, PoolBackend
 from .utils.modules import module_exists

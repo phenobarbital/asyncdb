@@ -8,11 +8,11 @@ from pathlib import Path, PurePath
 from functools import partial
 import jaydebeapi
 import jpype
-from asyncdb.exceptions import DriverError, NoDataFound
+from ..exceptions import DriverError, NoDataFound
 from asyncdb import ABS_PATH
-from asyncdb.models import Model
-from asyncdb.utils.types import Entity
-from asyncdb.interfaces import DatabaseBackend, ModelBackend
+from ..models import Model
+from ..utils.types import Entity
+from ..interfaces import DatabaseBackend, ModelBackend
 from .sql import SQLDriver
 
 

@@ -137,7 +137,7 @@ async def test_operations(conn):
     db = await conn.list_databases()
     pytest.assume('test' in db)
     await conn.use('test')
-    await conn.create_table('scorecard')
+    await conn.create_table('scorecard', exists_ok=True)
     inserted = await conn.insert('scorecard', data)
     print(inserted)
     result, error = await conn.query('scorecard', {"company_id": 1})

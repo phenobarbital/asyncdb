@@ -12,7 +12,7 @@ import time
 from typing import Any, Union
 from redis import asyncio as aioredis
 from redis.exceptions import AuthenticationError, RedisError
-from asyncdb.exceptions import ConnectionTimeout, DriverError
+from ..exceptions import ConnectionTimeout, DriverError
 from .abstract import BaseDriver, BasePool
 
 

@@ -10,8 +10,8 @@ TODO:
 import asyncio
 import time
 import redis
-from asyncdb.exceptions import DriverError, ConnectionTimeout
-from asyncdb.interfaces import ConnectionDSNBackend
+from ..exceptions import DriverError, ConnectionTimeout
+from ..interfaces import ConnectionDSNBackend
 from .abstract import (
     InitDriver,
 )

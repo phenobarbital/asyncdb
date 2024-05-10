@@ -8,8 +8,7 @@ import pandas as pd
 from google.cloud import bigquery as bq
 from google.cloud.exceptions import Conflict
 from google.oauth2 import service_account
-
-from asyncdb.exceptions import DriverError
+from ..exceptions import DriverError
 from .sql import SQLDriver
 
 
@@ -161,6 +160,7 @@ class bigquery(SQLDriver):
         await self.valid_operation(sentence)
         self.start_timing()
         error = None
+        result = None
         try:
             job = self._connection.query(sentence, **kwargs)
             result = job.result()  # Waits for the query to finish
@@ -187,6 +187,7 @@ class bigquery(SQLDriver):
         await self.valid_operation(sentence)
         self.start_timing()
         error = None
+        result = None
         try:
             if use_pandas is True:
                 result = pandas_gbq.read_gbq(

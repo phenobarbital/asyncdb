@@ -8,7 +8,7 @@ import asyncio
 import time
 import aiomcache
 from aiomcache.exceptions import ClientException
-from asyncdb.exceptions import DriverError
+from ..exceptions import DriverError
 from .abstract import (
     BasePool,
     BaseDriver,
@@ -20,7 +20,13 @@ class memcachePool(BasePool):
     Pool-based version of Memcached connector.
     """
 
-    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
+    def __init__(
+        self,
+        dsn: str = "",
+        loop: asyncio.AbstractEventLoop = None,
+        params: dict = None,
+        **kwargs
+    ) -> None:
         self._dsn = None
         self._connection = None
         self._max_queries = 10

@@ -31,7 +31,7 @@ from asyncpg.exceptions import (
 )
 from asyncpg.pgproto import pgproto
 
-from asyncdb.exceptions import (
+from ..exceptions import (
     ConnectionTimeout,
     DriverError,
     EmptyStatement,
@@ -40,10 +40,10 @@ from asyncdb.exceptions import (
     TooManyConnections,
     UninitializedError,
 )
-from asyncdb.interfaces import DBCursorBackend, ModelBackend
-from asyncdb.models import Model
-from asyncdb.utils.encoders import DefaultEncoder
-from asyncdb.utils.types import Entity
+from ..interfaces import DBCursorBackend, ModelBackend
+from ..models import Model
+from ..utils.encoders import DefaultEncoder
+from ..utils.types import Entity
 
 from .abstract import BasePool
 from .sql import SQLCursor, SQLDriver

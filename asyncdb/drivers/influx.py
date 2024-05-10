@@ -11,17 +11,14 @@ from datetime import datetime, timezone
 from datamodel.parsers.json import json_decoder
 from influxdb_client import InfluxDBClient, Dialect, BucketRetentionRules
 from influxdb_client.client.write_api import ASYNCHRONOUS, PointSettings
-
 from influxdb_client import Point
 from influxdb_client.client.influxdb_client_async import InfluxDBClientAsync
-
-
 from influxdb_client.client.exceptions import InfluxDBError
 from influxdb_client.client.flux_table import FluxStructureEncoder
 from influxdb_client.rest import _BaseRESTClient
 import pandas
-from asyncdb.exceptions import NoDataFound, DriverError
-from asyncdb.interfaces import ConnectionDSNBackend
+from ..exceptions import NoDataFound, DriverError
+from ..interfaces import ConnectionDSNBackend
 from .abstract import InitDriver
 
 
@@ -105,7 +102,6 @@ class influx(InitDriver, ConnectionDSNBackend):
                 params = {
                     "timeout": self._timeout * 1000,
                     "connection_pool_maxsize": 5,
-                    "enable_gzip": True,
                     "debug": self._debug,
                     "org": self._org,
                     "enable_gzip": self._enable_gzip,
