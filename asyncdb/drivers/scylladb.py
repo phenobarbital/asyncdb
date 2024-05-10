@@ -51,6 +51,9 @@ from cassandra import ConsistencyLevel
 from asyncdb.meta import Recordset
 from asyncdb.exceptions import NoDataFound, DriverError
 from .abstract import InitDriver
+from ..interfaces import ModelBackend
+from ..models import Model, Field
+from ..utils.types import Entity
 
 
 logging.getLogger("cassandra").setLevel(logging.INFO)
@@ -66,7 +69,7 @@ def record_factory(colnames, rows):
     return Recordset(result=[dict(zip(colnames, values)) for values in rows], columns=colnames)
 
 
-class scylladb(InitDriver):
+class scylladb(InitDriver, ModelBackend):
     _provider = "scylladb"
     _syntax = "cql"
 
@@ -427,6 +430,52 @@ class scylladb(InitDriver):
         finally:
             return [self._result, error]  # pylint: disable=W0150
 
+    async def execute_batch(
+        self,
+        sentences: list,
+        params: list = None,
+    ) -> Any:
+        """execute_batch.
+
+        Execute a transaction using Batch prepared statements.
+
+        Args:
+            sentences (List): List of parametrized CQL sentences.
+            params (List, optional): List of dicts with parameters.
+
+        Returns:
+            Any: Resultset of execution.
+        """
+        result = None
+        error = None
+        await self.valid_operation(sentences)
+        try:
+            if self._driver == "async":
+                batch = self._connection.create_batch_unlogged()
+            else:
+                batch = BatchStatement(batch_type=BatchType.UNLOGGED)
+            for idx, sentence in enumerate(sentences):
+                args = ()
+                if params:
+                    args = params[idx]
+                if isinstance(sentence, PreparedStatement):
+                    bound_statement = sentence.bind(args)
+                    batch.add(bound_statement)
+                else:
+                    smt = SimpleStatement(sentence)
+                    batch.add(smt, args)
+            if self._driver == "async":
+                result = await self._connection.execute(batch)
+            else:
+                fut = self._connection.execute_async(batch)
+                result = fut.result()
+        except ReadTimeout:
+            error = "Timeout executing sentences"
+        except Exception as err:
+            error = f"Error on Execute: {err}"
+        finally:
+            return [result, error]
+
     async def execute_many(  # pylint: disable=W0221
         self,
         sentence: Union[str, SimpleStatement, PreparedStatement],
@@ -507,6 +556,17 @@ class scylladb(InitDriver):
             raise
         return self
 
+    async def drop_keyspace(self, keyspace: str):
+        db = f"DROP KEYSPACE IF EXISTS {keyspace};"
+        try:
+            if self._driver == "async":
+                result = await self._connection.execute(db)
+            else:
+                result = self._connection.execute(db)
+            self._logger.debug(f"DROP {db}: {result!r}")
+        except Exception as err:
+            raise DriverError(f"Error: {err}") from err
+
     async def create_keyspace(self, keyspace: str, use: bool = True):
         db = "CREATE KEYSPACE IF NOT EXISTS {keyspace} WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': 1}};"
         db = db.format(keyspace=keyspace)
@@ -522,6 +582,17 @@ class scylladb(InitDriver):
             await self.use(keyspace)
 
     create_database = create_keyspace
+
+    async def drop_table(self, table: str):
+        db = f"DROP TABLE IF EXISTS {table};"
+        try:
+            if self._driver == "async":
+                result = await self._connection.execute(db)
+            else:
+                result = self._connection.execute(db)
+            self._logger.debug(f"DROP {db}: {result!r}")
+        except Exception as err:
+            raise DriverError(f"Error: {err}") from err
 
     async def create_table(
         self,
@@ -858,8 +929,539 @@ class scylladb(InitDriver):
         else:
             concurrency = kwargs.get("concurrency", 50)
             stmt = SimpleStatement(sentence)
-            execute_concurrent(self._connection, ((stmt, row) for row in _data), concurrency=concurrency)
+            execute_concurrent(
+                self._connection, ((stmt, row) for row in _data),
+                concurrency=concurrency
+            )
 
     copy = write
 
-# async def _all_(self, _model: Model, *args, **kwargs):  # pylint: disable=W0613
+    ## Model Logic:
+    async def _insert_(self, _model: Model, **kwargs):  # pylint: disable=W0613
+        """
+        insert a row from model.
+        """
+        try:
+            schema = ""
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
+        except AttributeError:
+            table = _model.__name__
+        cols = []
+        columns = []
+        source = []
+        _filter = {}
+        n = 1
+        fields = _model.columns()
+        for name, field in fields.items():
+            try:
+                val = getattr(_model, field.name)
+            except AttributeError:
+                continue
+            ## getting the value of column:
+            value = self._get_value(field, val)
+            column = field.name
+            columns.append(column)
+            # validating required field
+            try:
+                required = field.required()
+            except AttributeError:
+                required = False
+            pk = self._get_attribute(field, value, attr="primary_key")
+            if pk is True and value is None:
+                if "db_default" in field.metadata:
+                    continue
+            if required is False and value is None or value == "None":
+                if "db_default" in field.metadata:
+                    continue
+                else:
+                    # get default value
+                    default = field.default
+                    if callable(default):
+                        value = default()
+                    else:
+                        continue
+            elif required is True and value is None or value == "None":
+                if "db_default" in field.metadata:
+                    # field get a default value from database
+                    continue
+                else:
+                    raise ValueError(
+                        f"Field {name} is required and value is null over {_model.Meta.name}"
+                    )
+            elif is_dataclass(value):
+                if isinstance(value, Model):
+                    ### get value for primary key associated with.
+                    try:
+                        value = getattr(value, name)
+                    except AttributeError:
+                        value = None
+            source.append(value)
+            cols.append(column)
+            n += 1
+            if pk := self._get_attribute(field, value, attr="primary_key"):
+                _filter[column] = pk
+        try:
+            cols = ",".join(cols)
+            values = ",".join(["?" for a in range(1, n)])  # pylint: disable=C0209
+            insert = f"INSERT INTO {table}({cols}) VALUES({values}) IF NOT EXISTS;"
+            self._logger.debug(f"INSERT: {insert}")
+            stmt = self._connection.prepare(insert)
+            result = self._connection.execute(stmt, source)
+            if result.was_applied:
+                # get the row inserted again:
+                condition = self._where(fields, **_filter)
+                stmt = SimpleStatement(f"SELECT * FROM {table} {condition}")
+                result = self._connection.execute(stmt).one()
+            if result:
+                _model.reset_values()
+                for f, val in result.items():
+                    setattr(_model, f, val)
+                return _model
+        except Exception as err:
+            raise DriverError(message=f"Error on Insert over table {_model.Meta.name}: {err!s}") from err
+
+    async def _delete_(self, _model: Model, _filter: dict = None, **kwargs):  # pylint: disable=W0613
+        """
+        delete a row from model.
+        """
+        try:
+            schema = ""
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
+        except AttributeError:
+            table = _model.__name__
+        source = []
+        if not _filter:
+            _filter = {}
+        n = 1
+        fields = _model.columns()
+        for _, field in fields.items():
+            try:
+                val = getattr(_model, field.name)
+            except AttributeError:
+                continue
+            ## getting the value of column:
+            value = self._get_value(field, val)
+            column = field.name
+            source.append(value)
+            n += 1
+            curval = _model.old_value(column)
+            if pk := self._get_attribute(field, curval, attr="primary_key"):
+                if column in _filter:
+                    # already this value on delete:
+                    continue
+                _filter[column] = pk
+        try:
+            condition = self._where(fields, **_filter)
+            if not condition:
+                raise DriverError(f"Avoid DELETE without WHERE conditions: {_filter}")
+            _delete = f"DELETE FROM {table} {condition};"
+            self._logger.debug(f"DELETE: {_delete}")
+            result = self._connection.execute(_delete)
+            return f"DELETE {result}: {_filter!s}"
+        except Exception as err:
+            raise DriverError(message=f"Error on Insert over table {_model.Meta.name}: {err!s}") from err
+
+    async def _update_(self, _model: Model, **kwargs):  # pylint: disable=W0613
+        """
+        Updating a row in a Model.
+        TODO: How to update when if primary key changed.
+        Alternatives: Saving *dirty* status and previous value on dict
+        """
+        try:
+            schema = ""
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
+        except AttributeError:
+            table = _model.__name__
+        cols = []
+        source = []
+        _filter = {}
+        _updated = {}
+        _primary = []
+        n = 1
+        fields = _model.columns()
+        for name, field in fields.items():
+            try:
+                val = getattr(_model, field.name)
+            except AttributeError:
+                continue
+            ## getting the value of column:
+            value = self._get_value(field, val)
+
+            column = field.name
+            # validating required field
+            try:
+                required = field.required()
+            except AttributeError:
+                required = False
+            if required is False and value is None or value == "None":
+                default = field.default
+                if callable(default):
+                    value = default()
+                else:
+                    continue
+            elif required is True and value is None or value == "None":
+                if "db_default" in field.metadata:
+                    # field get a default value from database
+                    continue
+                raise ValueError(f"Field {name} is required and value is null over {_model.Meta.name}")
+            elif is_dataclass(value):
+                if isinstance(value, Model):
+                    ### get value for primary key associated with.
+                    try:
+                        value = getattr(value, name)
+                    except AttributeError:
+                        value = None
+            curval = _model.old_value(name)
+            if pk := self._get_attribute(field, curval, attr="primary_key"):
+                _filter[column] = pk
+                _primary.append(column)
+            if pk := self._get_attribute(field, value, attr="primary_key"):
+                _updated[column] = pk
+                _primary.append(column)
+            if curval == value:
+                continue  # no changes
+            cols.append(name)  # pylint: disable=C0209
+            source.append(value)
+            n += 1
+        try:
+            if any(col in _primary for col in cols):
+                # in Cassandra we need to delete and insert again
+                condition = self._where(fields, **_filter)
+                _delete = f"DELETE FROM {table} {condition}"
+                result = self._connection.execute(
+                    SimpleStatement(_delete)
+                )
+                return await self._insert_(_model, **kwargs)
+            set_fields = ", ".join(cols)
+            condition = self._where(fields, **_filter)
+            _update = f"UPDATE {table} SET {set_fields} {condition}"
+            self._logger.debug(f"UPDATE: {_update}")
+            stmt = await self.get_sentence(_update, prepared=True)
+            self._connection.execute(stmt, source)
+            condition = self._where(fields, **_updated)
+            stmt = SimpleStatement(f"SELECT * FROM {table} {condition}")
+            result = self._connection.execute(stmt).one()
+            if result:
+                _model.reset_values()
+                for f, val in result.items():
+                    setattr(_model, f, val)
+                return _model
+        except Exception as err:
+            raise DriverError(
+                message=f"Error on Update over table {_model.Meta.name}: {err!s}"
+            ) from err
+
+    async def _save_(self, _model: Model, *args, **kwargs):
+        """
+        Save a row in a Model, using Insert-or-Update methodology.
+        """
+        raise NotImplementedError("Method not implemented")
+
+    async def _fetch_(self, _model: Model, *args, **kwargs):
+        """
+        Returns one single Row using Model.
+        """
+        try:
+            schema = ""
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
+        except AttributeError:
+            table = _model.__name__
+        fields = _model.columns()
+        _filter = {}
+        for name, field in fields.items():
+            if name in kwargs:
+                try:
+                    val = kwargs[name]
+                except AttributeError:
+                    continue
+                ## getting the value of column:
+                datatype = field.type
+                value = Entity.toSQL(val, datatype)
+                _filter[name] = value
+        condition = self._where(fields, **_filter)
+        _get = f"SELECT * FROM {table} {condition}"
+        try:
+            smt = SimpleStatement(_get)
+            return self._connection.execute(smt).one()
+        except Exception as e:
+            raise DriverError(f"Error: Model Fetch over {table}: {e}") from e
+
+    async def _filter_(self, _model: Model, *args, **kwargs):
+        """
+        Filter a Model using Fields.
+        """
+        try:
+            schema = ""
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
+        except AttributeError:
+            table = _model.__name__
+        fields = _model.columns(_model)
+        _filter = {}
+        if args:
+            columns = ",".join(args)
+        else:
+            columns = "*"
+        for name, field in fields.items():
+            if name in kwargs:
+                try:
+                    val = kwargs[name]
+                except AttributeError:
+                    continue
+                ## getting the value of column:
+                datatype = field.type
+                value = Entity.toSQL(val, datatype)
+                _filter[name] = value
+        condition = self._where(fields, **_filter)
+        _get = f"SELECT {columns} FROM {table} {condition}"
+        try:
+            stmt = SimpleStatement(_get)
+            fut = self._connection.execute_async(stmt)
+            result = fut.result()
+            return result
+        except Exception as e:
+            raise DriverError(f"Error: Model GET over {table}: {e}") from e
+
+    async def _select_(self, *args, **kwargs):
+        """
+        Get a query from Model.
+        """
+        try:
+            model = kwargs["_model"]
+        except KeyError as e:
+            raise DriverError(f"Missing Model for SELECT {kwargs!s}") from e
+        try:
+            schema = ""
+            sc = model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        if args:
+            condition = "{}".join(args)
+        else:
+            condition = None
+        if "fields" in kwargs:
+            columns = ",".join(kwargs["fields"])
+        else:
+            columns = "*"
+        _get = f"SELECT {columns} FROM {table} {condition}"
+        try:
+            smt = SimpleStatement(_get)
+            return self._connection.execute(smt)
+        except Exception as e:
+            raise DriverError(f"Error: Model SELECT over {table}: {e}") from e
+
+    async def _get_(self, _model: Model, *args, **kwargs):
+        """
+        Get one row from model.
+        """
+        try:
+            schema = ""
+            sc = _model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
+        except AttributeError:
+            table = _model.__name__
+        fields = _model.columns(_model)
+        _filter = {}
+        if args:
+            columns = ",".join(args)
+        else:
+            columns = ",".join(fields)  # getting only selected fields
+        for name, field in fields.items():
+            if name in kwargs:
+                try:
+                    val = kwargs[name]
+                except AttributeError:
+                    continue
+                ## getting the value of column:
+                datatype = field.type
+                value = Entity.toSQL(val, datatype)
+                _filter[name] = value
+        condition = self._where(fields, **_filter)
+        _get = f"SELECT {columns} FROM {table} {condition}"
+        print('SELECT ', _get)
+        try:
+            smt = SimpleStatement(_get)
+            return self._connection.execute(smt).one()
+        except Exception as e:
+            raise DriverError(
+                f"Error: Model GET over {table}: {e}"
+            ) from e
+
+    async def _all_(self, _model: Model, *args, **kwargs):  # pylint: disable=W0613
+        """
+        Get all rows on a Model.
+        """
+        try:
+            schema = ""
+            # sc = _model.Meta.schema
+            if sc := _model.Meta.schema:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
+        except AttributeError:
+            table = _model.__name__
+        if "fields" in kwargs:
+            columns = ",".join(kwargs["fields"])
+        else:
+            columns = "*"
+        _all = f"SELECT {columns} FROM {table}"
+        try:
+            smt = SimpleStatement(_all)
+            return self._connection.execute(smt)
+        except Exception as e:
+            raise DriverError(f"Error: Model All over {table}: {e}") from e
+
+    async def _remove_(self, _model: Model, **kwargs):
+        """
+        Deleting some records using Model.
+        """
+        try:
+            schema = ""
+            if sc := _model.Meta.schema:
+                schema = f"{sc}."
+            table = f"{schema}{_model.Meta.name}"
+        except AttributeError:
+            table = _model.__name__
+        fields = _model.columns(_model)
+        _filter = {}
+        for name, field in fields.items():
+            datatype = field.type
+            if name in kwargs:
+                val = kwargs[name]
+                value = Entity.toSQL(val, datatype)
+                _filter[name] = value
+        condition = self._where(fields, **_filter)
+        if not condition:
+            raise ValueError(
+                "Avoid DELETE without WHERE conditions"
+            )
+        _delete = f"DELETE FROM {table} {condition}"
+        try:
+            self._logger.debug(f"DELETE: {_delete}")
+            smt = SimpleStatement(_delete)
+            result = self._connection.execute(smt)
+            return f"DELETE {result}: {_filter!s}"
+        except Exception as err:
+            raise DriverError(message=f"Error on DELETE {_model.Meta.name}: {err!s}") from err
+
+    async def _updating_(self, *args, _filter: dict = None, **kwargs):
+        """
+        Updating records using Model.
+        """
+        try:
+            model = kwargs["_model"]
+        except KeyError as e:
+            raise DriverError(f"Missing Model for SELECT {kwargs!s}") from e
+        try:
+            schema = ""
+            sc = model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        fields = model.columns(model)
+        if _filter is None:
+            if args:
+                _filter = args[0]
+        cols = []
+        source = []
+        new_cond = {}
+        n = 1
+        for name, field in fields.items():
+            try:
+                val = kwargs[name]
+            except (KeyError, AttributeError):
+                continue
+            ## getting the value of column:
+            value = self._get_value(field, val)
+            source.append(value)
+            if name in _filter:
+                new_cond[name] = value
+            cols.append("{} = {}".format(name, "?".format(n)))  # pylint: disable=C0209
+            n += 1
+        try:
+            set_fields = ", ".join(cols)
+            condition = self._where(fields, **_filter)
+            _update = f"UPDATE {table} SET {set_fields} {condition}"
+            self._logger.debug(f"UPDATE: {_update}")
+            stmt = await self.get_sentence(_update, prepared=True)
+            result = self._connection.execute(stmt, source)
+            print(f"UPDATE {result}: {_filter!s}")
+
+            new_conditions = {**_filter, **new_cond}
+            condition = self._where(fields, **new_conditions)
+
+            _all = f"SELECT * FROM {table} {condition}"
+            stmt = await self.get_sentence(_all)
+            result = self._connection.execute(stmt)
+            return [model(**dict(r)) for r in result]
+        except Exception as err:
+            raise DriverError(
+                message=f"Error on UPDATE over table {model.Meta.name}: {err!s}"
+            ) from err
+
+    async def _deleting_(self, *args, _filter: dict = None, **kwargs):
+        """
+        Deleting records using Model.
+        """
+        try:
+            model = kwargs["_model"]
+        except KeyError as e:
+            raise DriverError(f"Missing Model for SELECT {kwargs!s}") from e
+        try:
+            schema = ""
+            sc = model.Meta.schema
+            if sc:
+                schema = f"{sc}."
+            table = f"{schema}{model.Meta.name}"
+        except AttributeError:
+            table = model.__name__
+        fields = model.columns(model)
+        if _filter is None:
+            if args:
+                _filter = args[0]
+        cols = []
+        source = []
+        new_cond = {}
+        n = 1
+        for name, field in fields.items():
+            try:
+                val = kwargs[name]
+            except (KeyError, AttributeError):
+                continue
+            ## getting the value of column:
+            value = self._get_value(field, val)
+            source.append(value)
+            if name in _filter:
+                new_cond[name] = value
+            cols.append("{} = {}".format(name, "?".format(n)))  # pylint: disable=C0209
+            n += 1
+        try:
+            condition = self._where(fields, **_filter)
+            _delete = f"DELETE FROM {table} {condition}"
+            self._logger.debug(f"DELETE: {_delete}")
+            stmt = await self.get_sentence(_delete)
+            result = self._connection.excute(stmt, source)
+            print(f"DELETE {result}: {_filter!s}")
+            return f'DELETED: {_filter}'
+        except Exception as err:
+            raise DriverError(message=f"Error on DELETE over table {model.Meta.name}: {err!s}") from err
