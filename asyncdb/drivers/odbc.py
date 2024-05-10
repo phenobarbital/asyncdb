@@ -9,7 +9,7 @@ from collections.abc import Iterable
 import aioodbc
 from aioodbc.cursor import Cursor
 import pyodbc
-from asyncdb.exceptions import (
+from ..exceptions import (
     ConnectionTimeout,
     DataError,
     EmptyStatement,
@@ -18,7 +18,7 @@ from asyncdb.exceptions import (
     StatementError,
     TooManyConnections,
 )
-from asyncdb.interfaces import DBCursorBackend
+from ..interfaces import DBCursorBackend
 from .sql import SQLDriver, SQLCursor
 
 

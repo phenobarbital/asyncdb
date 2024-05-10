@@ -6,7 +6,7 @@ Abstract class covering all major functionalities for Relational SQL-based datab
 import asyncio
 from typing import Any
 from collections.abc import Iterable
-from asyncdb.exceptions import DriverError
+from ..exceptions import DriverError
 from .abstract import BaseDBDriver, BaseCursor
 
 

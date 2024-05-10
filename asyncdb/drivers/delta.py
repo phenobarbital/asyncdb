@@ -20,7 +20,7 @@ from deltalake import DeltaTable
 from deltalake import PyDeltaTableError
 from deltalake.table import DeltaTableProtocolError
 from deltalake.writer import write_deltalake
-from asyncdb.exceptions import DriverError
+from ..exceptions import DriverError
 from .abstract import (
     InitDriver,
 )

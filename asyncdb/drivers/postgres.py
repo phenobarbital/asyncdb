@@ -28,7 +28,7 @@ from asyncpg.exceptions import (
     InvalidSQLStatementNameError,
     UndefinedTableError,
 )
-from asyncdb.exceptions import (
+from ..exceptions import (
     UninitializedError,
     EmptyStatement,
     ConnectionTimeout,
@@ -38,10 +38,10 @@ from asyncdb.exceptions import (
     TooManyConnections,
 )
 
-from asyncdb.utils.encoders import (
+from ..utils.encoders import (
     BaseEncoder,
 )
-from asyncdb.meta import Recordset
+from ..meta import Recordset
 from .sql import SQLDriver
 
 # from .abstract import BaseCursor

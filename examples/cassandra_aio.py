@@ -1,6 +1,7 @@
 import asyncio
 from cassandra.cluster import Cluster, EXEC_PROFILE_DEFAULT, ExecutionProfile, NoHostAvailable, ResultSet
 from cassandra.io.asyncioreactor import AsyncioConnection
+from cassandra.io.asyncorereactor import AsyncoreConnection
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.query import (
     dict_factory,
@@ -17,11 +18,6 @@ from cassandra.policies import (
     DowngradingConsistencyRetryPolicy,
     # RetryPolicy
 )
-try:
-    from cassandra.io.libevreactor import LibevConnection
-    LIBEV = True
-except ImportError:
-    LIBEV = False
 
 
 def main():
@@ -50,7 +46,7 @@ def main():
     params = {
         "port": params["port"],
         "compression": True,
-        "connection_class": AsyncioConnection,
+        "connection_class": AsyncoreConnection,
         "protocol_version": 4,
         "connect_timeout": 60,
         "idle_heartbeat_interval": 0

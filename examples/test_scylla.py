@@ -79,11 +79,11 @@ async def test_operations():
     result, error = await db.query('SELECT * from tests LIMIT 10000')
     print(result)
     # change output format to iter generator
-    # db.output_format('datatable')
-    # # TODO: error when a python list is on a column
-    # result, error = await db.query('SELECT * from tests LIMIT 10000')
-    # print(result)
-    # print(type(result))
+    db.output_format('dt')
+    # TODO: error when a python list is on a column
+    result, error = await db.query('SELECT * from tests LIMIT 10000')
+    print(result)
+    print(type(result))
     db.output_format('record')   # change output format to iter generator
     result, error = await db.query('SELECT * from tests LIMIT 10000')
     print(type(result))

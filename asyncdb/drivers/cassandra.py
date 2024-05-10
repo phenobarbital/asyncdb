@@ -12,16 +12,15 @@ from typing import Any, Union
 from ssl import PROTOCOL_TLSv1
 import pandas as pd
 from cassandra import ReadTimeout
-from cassandra.cluster import Cluster, EXEC_PROFILE_DEFAULT, ExecutionProfile, NoHostAvailable, ResultSet
+from cassandra.cluster import (
+    Cluster,
+    EXEC_PROFILE_DEFAULT,
+    ExecutionProfile,
+    NoHostAvailable,
+    ResultSet
+)
 from cassandra.io.asyncorereactor import AsyncoreConnection
 from cassandra.io.asyncioreactor import AsyncioConnection
-
-try:
-    from cassandra.io.libevreactor import LibevConnection
-
-    LIBEV = True
-except ImportError:
-    LIBEV = False
 
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.policies import (
@@ -179,8 +178,6 @@ class cassandra(InitDriver):
                 "idle_heartbeat_interval": 0,
                 "ssl_options": ssl_opts,
             }
-            if LIBEV is True:
-                params["connection_class"] = LibevConnection
             auth_provider = None
             if self._auth:
                 auth_provider = PlainTextAuthProvider(**self._auth)

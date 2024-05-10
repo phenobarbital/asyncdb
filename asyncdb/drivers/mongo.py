@@ -3,7 +3,7 @@
 import asyncio
 import time
 import motor.motor_asyncio
-from asyncdb.exceptions import (
+from ..exceptions import (
     ConnectionTimeout,
     DataError,
     EmptyStatement,
