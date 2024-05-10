@@ -784,10 +784,10 @@ class ModelBackend(ABC):
         if not fields or not where or not isinstance(where, dict):
             return ""
         _cond = []
-        for key, value in where.items():
-            f = fields[key]
+        for k, v in where.items():
+            f = fields[k]
             datatype = f.type
-            condition = self._get_condition(key, f, value, datatype)
+            condition = self._get_condition(k, f, v, datatype)
             _cond.append(condition)
         _and = " AND ".join(_cond)
         result = f"\nWHERE {_and}"
