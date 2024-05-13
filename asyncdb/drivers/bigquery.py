@@ -7,7 +7,13 @@ import asyncio
 import aiofiles
 import pandas_gbq
 import pandas as pd
-from google.cloud import storage
+try:
+    from google.cloud import storage
+except ImportError:
+    raise ImportError(
+        "BigQuery: google-cloud-storage library not found. Hint: Please install it using 'pip install google-cloud-storage'"
+    )
+
 from google.cloud import bigquery as bq
 from google.cloud.exceptions import Conflict
 from google.cloud.bigquery import LoadJobConfig, SourceFormat
