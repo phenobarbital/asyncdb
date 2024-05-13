@@ -1,8 +1,8 @@
 import pytest
 import asyncio
-from asyncdb import AsyncDB
 from google.cloud import bigquery as gbq
 from google.cloud.bigquery.table import RowIterator
+from asyncdb import AsyncDB
 from asyncdb.drivers.bigquery import bigquery
 
 # create a pool with parameters
