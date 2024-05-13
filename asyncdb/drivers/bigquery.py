@@ -267,19 +267,21 @@ class bigquery(SQLDriver):
         """
         if not self._connection:
             await self.connection()
+        table = f"{self._connection.project}.{dataset_id}.{table_id}"
         try:
             if isinstance(data, pd.DataFrame):
                 if use_pandas is True:
                     job = await self._thread_func(
                         self._connection.load_table_from_dataframe,
                         data,
-                        table_id,
+                        table,
                         **kwargs
                     )
                 else:
+                    table = f"{dataset_id}.{table_id}"
                     job = await self._thread_func(
                         data.to_gbq,
-                        table_id,
+                        table,
                         project_id=self._project_id,
                         if_exists=if_exists
                     )
@@ -313,7 +315,7 @@ class bigquery(SQLDriver):
                         self._logger.info(f"Loaded {len(data)} rows into {table_id}")
 
             self._logger.info(
-                f"Inserted rows into {table_id}"
+                f"Inserted rows into {dataset_id}.{table_id}"
             )
         except Exception as e:
             raise DriverError(
