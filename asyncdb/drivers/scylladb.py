@@ -970,9 +970,11 @@ class scylladb(InitDriver, ModelBackend):
             except AttributeError:
                 required = False
             pk = self._get_attribute(field, value, attr="primary_key")
-            if pk is True and value is None:
-                if "db_default" in field.metadata:
-                    continue
+            # if pk is True and value is None:
+            #     if "db_default" in field.metadata:
+            #         continue
+            if pk is True and value is None and "db_default" in field.metadata:
+                continue
             if required is False and value is None or value == "None":
                 if "db_default" in field.metadata:
                     continue
@@ -1379,9 +1381,8 @@ class scylladb(InitDriver, ModelBackend):
         except AttributeError:
             table = model.__name__
         fields = model.columns(model)
-        if _filter is None:
-            if args:
-                _filter = args[0]
+        if _filter is None and args:
+            _filter = args[0]
         cols = []
         source = []
         new_cond = {}
@@ -1436,9 +1437,8 @@ class scylladb(InitDriver, ModelBackend):
         except AttributeError:
             table = model.__name__
         fields = model.columns(model)
-        if _filter is None:
-            if args:
-                _filter = args[0]
+        if _filter is None and args:
+            _filter = args[0]
         cols = []
         source = []
         new_cond = {}

@@ -37,7 +37,9 @@ class User(Model):
     birth_date: Union[datetime, str] = Column(required=False)
     avatar: str = Column(max=512)
     associate_id: str = Column(required=False)
-    associateoid: str = Column(required=False)
+    associate_oid: str = Column(required=False)
+    job_code: str = Column(required=False)
+    position_id: str = Column(required=False)
     company: str
     department: str
     position_id: str
@@ -55,7 +57,7 @@ class User(Model):
     class Meta:
         driver = "pg"
         name = 'vw_users'
-        schema = "public"
+        schema = "auth"
         strict = True
         frozen = False
         connection = None
