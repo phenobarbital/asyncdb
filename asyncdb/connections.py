@@ -41,4 +41,6 @@ class AsyncDB:
             return obj
         except Exception as err:
             logging.exception(err)
-            raise DriverError(message=f"Cannot Load Backend {driver}") from err
+            raise DriverError(
+                message=f"Cannot Load Backend {driver}"
+            ) from err

@@ -7,13 +7,7 @@ import asyncio
 import aiofiles
 import pandas_gbq
 import pandas as pd
-try:
-    from google.cloud import storage
-except ImportError:
-    raise ImportError(
-        "BigQuery: google-cloud-storage library not found. Hint: Please install it using 'pip install google-cloud-storage'"
-    )
-
+from google.cloud import storage
 from google.cloud import bigquery as bq
 from google.cloud.exceptions import Conflict
 from google.cloud.bigquery import LoadJobConfig, SourceFormat
@@ -38,7 +32,9 @@ class bigquery(SQLDriver):
         if not self._credentials:
             self._account = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", None)
         if self._account is None and self._credentials is None:
-            raise DriverError("BigQuery: Missing account Credentials")
+            raise DriverError(
+                "BigQuery: Missing account Credentials"
+            )
         self._connection = None  # BigQuery does not use traditional connections
 
     async def connection(self):
@@ -47,14 +43,20 @@ class bigquery(SQLDriver):
         """
         try:
             if self._credentials:  # usage of explicit credentials
-                self.credentials = service_account.Credentials.from_service_account_file(self._credentials)
+                self.credentials = service_account.Credentials.from_service_account_file(
+                    self._credentials
+                )
                 if not self._project_id:
                     self._project_id = self.credentials.project_id
-                self._connection = bq.Client(credentials=self.credentials, project=self._project_id)
+                self._connection = bq.Client(
+                    credentials=self.credentials,
+                    project=self._project_id
+                )
                 self._connected = True
             else:
                 self.credentials = self._account
                 self._connection = bq.Client(project=self._project_id)
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(self._credentials)
         except Exception as e:
             raise DriverError(
                 f"BigQuery: Error initializing client: {e}"
@@ -258,7 +260,7 @@ class bigquery(SQLDriver):
         data,
         dataset_id: str = None,
         use_streams: bool = False,
-        use_pandas: bool = False,
+        use_pandas: bool = True,  # by default using BigQuery
         if_exists: str = "append",
         **kwargs,
     ):
@@ -267,7 +269,8 @@ class bigquery(SQLDriver):
         """
         if not self._connection:
             await self.connection()
-        table = f"{self._connection.project}.{dataset_id}.{table_id}"
+        job = None
+        table = f"{self._project_id}.{dataset_id}.{table_id}"
         try:
             if isinstance(data, pd.DataFrame):
                 if use_pandas is True:
@@ -278,11 +281,20 @@ class bigquery(SQLDriver):
                         **kwargs
                     )
                 else:
+                    object_cols = data.select_dtypes(include=['object']).columns
+                    for column in object_cols:
+                        dtype = str(type(data[column].values[0]))
+                        if dtype == "<class 'datetime.date'>":
+                            data[column]  = pd.to_datetime(
+                                data[column],
+                                infer_datetime_format=True
+                            )
                     table = f"{dataset_id}.{table_id}"
                     job = await self._thread_func(
                         data.to_gbq,
                         table,
                         project_id=self._project_id,
+                        credentials=self.credentials,
                         if_exists=if_exists
                     )
             elif isinstance(data, list):
@@ -313,10 +325,11 @@ class bigquery(SQLDriver):
                         raise RuntimeError(f"Job failed with errors: {job.errors}")
                     else:
                         self._logger.info(f"Loaded {len(data)} rows into {table_id}")
-
             self._logger.info(
                 f"Inserted rows into {dataset_id}.{table_id}"
             )
+            # return Job object
+            return job
         except Exception as e:
             raise DriverError(
                 f"BigQuery: Error writing to table: {e}"
@@ -377,9 +390,14 @@ class bigquery(SQLDriver):
         bucket_name: str,
         object_name: str,
         csv_data: Union[bytes, PurePath, pd.DataFrame],
+        overwrite: bool = False,
         **kwargs
-    ):
+    ) -> tuple:
         """Creates a GCS object from CSV data."""
+        # we cannot import directly at the top level
+        credentials = service_account.Credentials.from_service_account_file(
+            self._credentials
+        )
         if isinstance(csv_data, PurePath) and csv_data.is_file():
             async with aiofiles.open(csv_data, mode="rb") as file:
                 csv_data = await file.read()
@@ -388,14 +406,24 @@ class bigquery(SQLDriver):
         elif not isinstance(csv_data, bytes):
             raise DriverError("BigQuery: Invalid file object")
         try:
-            storage_client = storage.Client()
+            storage_client = storage.Client(
+                credentials=credentials,
+                project=credentials.project_id
+            )
             bucket = storage_client.bucket(bucket_name)
             blob = bucket.blob(object_name)
-            # Option 1: Upload from a string
+            if blob.exists():
+                if not overwrite:
+                    return f"gs://{bucket_name}/{object_name}", "Object already exists and overwrite is set to False."
+                else:
+                    self._logger.info(
+                        f"Object {object_name} exists in {bucket_name} and will be overwritten."
+                    )
+            # Upload from a string
             blob.upload_from_string(csv_data, content_type='text/csv')
             # If successful, return the GCS URI
             gcs_uri = f"gs://{bucket_name}/{object_name}"
-            return gcs_uri
+            return gcs_uri, None
         except Exception as e:
             raise DriverError(
                 f"BigQuery: Error creating GCS object: {e}"
@@ -405,21 +433,26 @@ class bigquery(SQLDriver):
         self,
         table_id: str,
         dataset_id: str,
-        bucket_name: str,
-        object_name: str,
+        bucket_uri: str = None,
+        bucket_name: str = None,
+        object_name: str = None,
         **kwargs
     ):
         """Load data into a BigQuery table from a CSV file in GCS."""
         try:
-            gcs_uri = f"gs://{bucket_name}/{object_name}"
+            if not bucket_uri:
+                gcs_uri = f"gs://{bucket_name}/{object_name}"
+            else:
+                gcs_uri = bucket_uri
             job_config = LoadJobConfig(
                 source_format=SourceFormat.CSV,
                 autodetect=True,
                 **kwargs
             )
+            table = f"{self._project_id}.{dataset_id}.{table_id}"
             job = self._connection.load_table_from_uri(
                 gcs_uri,
-                table_id,
+                table,
                 job_config=job_config
             )
             job.result()  # Wait for the job to complete
