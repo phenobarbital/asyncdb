@@ -274,7 +274,6 @@ class bigquery(SQLDriver):
                         self._connection.load_table_from_dataframe,
                         data,
                         table_id,
-                        if_exists=if_exists,
                         **kwargs
                     )
                 else:
