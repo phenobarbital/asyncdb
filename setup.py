@@ -133,8 +133,8 @@ setup(
             "influxdb-client[async]==1.39.0",
             "pymssql==2.2.11",
             "redis==5.0.1",
-            "duckdb==0.10.1",
             "deltalake==0.17.4"
+            "duckdb==0.10.2",
         ],
         "dataframe": [
             "dask==2023.3.0",
@@ -215,7 +215,7 @@ setup(
         ],
         "mongodb": [
             "pymongo==4.6.1",
-            "motor==3.3.2",
+            "motor==3.4.0",
         ],
         "msqlserver": [
             "pymssql==2.2.11",
@@ -259,7 +259,7 @@ setup(
             "sqlalchemy[asyncio]==2.0.23",
             "elasticsearch[async]==8.13.0",
             "pymongo==4.6.1",
-            "motor==3.3.2",
+            "motor==3.4.0",
             "pymssql==2.2.11",
             "aiocouch==3.0.0",
             "asyncmy==0.2.9",
@@ -268,8 +268,8 @@ setup(
             "pyspark==3.5.0",
             "oracledb==2.1.1",
             "hazelcast-python-client==5.3.0",
-            "duckdb==0.10.1",
             "deltalake==0.17.4",
+            "duckdb==0.10.2",
             "botocore==1.31.64",
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
