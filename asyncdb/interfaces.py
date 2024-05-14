@@ -178,9 +178,17 @@ class ConnectionBackend(ABC):
         if loop:
             self._loop = loop
         else:
-            self._loop = asyncio.get_event_loop()
-        # if self._loop.is_closed():
-        #     self._loop = asyncio.get_running_loop()
+            try:
+                self._loop = asyncio.get_event_loop()
+            except RuntimeError:
+                self._loop = asyncio.new_event_loop()
+        if self._loop.is_closed():
+            try:
+                self._loop = asyncio.get_running_loop()
+            except RuntimeError:
+                raise RuntimeError(
+                    "No Event Loop running. Please, run this code inside an asyncio loop."
+                )
         asyncio.set_event_loop(self._loop)
         # exception handler
         self._loop.set_exception_handler(default_exception_handler)

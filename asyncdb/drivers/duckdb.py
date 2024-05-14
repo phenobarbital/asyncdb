@@ -1,8 +1,9 @@
+from pathlib import Path, PurePath
 from typing import Any, Optional, Union
 from collections.abc import Iterable, Sequence
 import asyncio
 import time
-import duckdb as db
+import duckdb as duck
 from ..exceptions import NoDataFound, DriverError
 from ..interfaces import DBCursorBackend
 from .sql import SQLCursor, SQLDriver
@@ -14,7 +15,7 @@ class duckdbCursor(SQLCursor):
     """
 
     _provider: "duckdb"
-    _connection: db.DuckDBPyConnection = None
+    _connection: duck.DuckDBPyConnection = None
 
     async def __aenter__(self) -> "duckdbCursor":
         self._cursor = self._connection.execute(self._sentence, parameters=self._params)
@@ -46,9 +47,16 @@ class duckdb(SQLDriver, DBCursorBackend):
     _syntax: str = "sql"
     _dsn: str = "{database}"
 
-    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
+    def __init__(
+        self,
+        dsn: str = "",
+        loop: asyncio.AbstractEventLoop = None,
+        params: dict = None,
+        **kwargs
+    ) -> None:
         SQLDriver.__init__(self, dsn, loop, params, **kwargs)
         DBCursorBackend.__init__(self)
+        self._memory_limit: str = kwargs.get('memory_limit', '1GB')
 
     async def connection(self, **kwargs):
         """
@@ -56,22 +64,36 @@ class duckdb(SQLDriver, DBCursorBackend):
         """
         self._connection = None
         self._connected = False
+        if not self._dsn:
+            self._dsn = ':memory:'
         try:
-            self._connection = db.connect(database=self._dsn, **kwargs)
+            self._connection = duck.connect(
+                database=self._dsn,
+                **kwargs
+            )
             if self._connection:
+                self._connection.execute(
+                    f"SET memory_limit='{self._memory_limit}'"
+                )
                 if self._init_func is not None and callable(self._init_func):
                     try:
                         await self._init_func(self._connection)  # pylint: disable=E1102
                     except RuntimeError as err:
-                        self._logger.exception(f"Error on Init Connection: {err!s}")
+                        self._logger.exception(
+                            f"Error on Init Connection: {err!s}"
+                        )
                 self._connected = True
                 self._initialized_on = time.time()
             return self
         except duckdb.ConnectionException as e:
-            raise DriverError(f"Unable to Open Database: {self._dsn}, {e}") from e
+            raise DriverError(
+                f"Unable to Open Database: {self._dsn}, {e}"
+            ) from e
         except Exception as e:
             self._logger.exception(e, stack_info=True)
-            raise DriverError(f"SQLite Unknown Error: {e!s}") from e
+            raise DriverError(
+                f"SQLite Unknown Error: {e!s}"
+            ) from e
 
     connect = connection
 
@@ -96,7 +118,9 @@ class duckdb(SQLDriver, DBCursorBackend):
             if self._connection:
                 self._connection.close()
         except Exception as err:
-            raise DriverError(message=f"{__name__!s}: Closing Error: {err!s}") from err
+            raise DriverError(
+                message=f"{__name__!s}: Closing Error: {err!s}"
+            ) from err
         finally:
             self._connection = None
             self._connected = False
@@ -284,3 +308,40 @@ class duckdb(SQLDriver, DBCursorBackend):
                 raise DriverError(f"Error in Object Creation: {err!s}") from err
         else:
             raise RuntimeError(f"DuckDB: invalid Object type {object!s}")
+
+    async def copy_to(self, sentence: Union[str, Path], destination: str, **kwargs) -> bool:
+        """
+        Copy to a file from a query (or other file).
+        """
+        if isinstance(sentence, PurePath):
+            # SELECT from a File:
+            if sentence.exists():
+                query = f"SELECT * FROM '{sentence}'"
+            else:
+                raise FileNotFoundError(
+                    f"DuckDB: File {sentence} not found"
+                )
+        elif isinstance(sentence, str) and sentence.strip().upper().startswith("SELECT"):
+            query = sentence
+        else:
+            query = f"SELECT * FROM {sentence!s}"
+        # Destination:
+        if destination.stem == '.csv':
+            dest = f"'{destination!s}' (FORMAT CSV, HEADER)"
+        else:
+            dest = f"'{destination!s}' (FORMAT PARQUET, CODEC 'SNAPPY', ROW_GROUP_SIZE 100000);"
+        try:
+            qry = f"COPY ({query}) TO {dest}"
+            result = self._connection.execute(
+                qry
+            )
+            if result:
+                self._connection.commit()
+                # return the name of created file:
+                return destination
+            else:
+                return False
+        except Exception as err:
+            raise DriverError(
+                f"DuckDB: Error on COPY: {err!s}"
+            ) from err
