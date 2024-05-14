@@ -15,9 +15,9 @@ async def connect(db):
             ]
         )
         many = "INSERT INTO tests VALUES(?, ?)"
-        examples = [(2, "def"), (3, "ghi"), (4, "jkl")]
+        examples = [[2, "def"], [3, "ghi"], [4, "jkl"]]
         print(": Executing Insert of many entries: ")
-        await conn.execute_many(many, *examples)
+        await conn.execute_many(many, examples)
         result, error = await conn.query("SELECT * FROM tests")
         if error:
             print(error)
@@ -33,15 +33,15 @@ async def connect(db):
         result = await conn.execute(table)
         print('CREATED ?: ', result)
         data = [
-            ("ORD", "Chicago", "United States"),
-            ("JFK", "New York City", "United States"),
-            ("CDG", "Paris", "France"),
-            ("LHR", "London", "United Kingdom"),
-            ("DME", "Moscow", "Russia"),
-            ("SVO", "Moscow", "Russia"),
+            ["ORD", "Chicago", "United States"],
+            ["JFK", "New York City", "United States"],
+            ["CDG", "Paris", "France"],
+            ["LHR", "London", "United Kingdom"],
+            ["DME", "Moscow", "Russia"],
+            ["SVO", "Moscow", "Russia"],
         ]
         airports = "INSERT INTO airports VALUES(?, ?, ?)"
-        await conn.executemany(airports, *data)
+        await conn.executemany(airports, data)
         # a_country = "United States"
         # a_city = "Moscow"
         query = "SELECT * FROM airports WHERE country=? OR city=?"

@@ -133,8 +133,8 @@ setup(
             "influxdb-client[async]==1.39.0",
             "pymssql==2.2.11",
             "redis==5.0.1",
+            "deltalake==0.17.4"
             "duckdb==0.10.2",
-            "deltalake==0.13.0"
         ],
         "dataframe": [
             "dask==2023.3.0",
@@ -144,7 +144,7 @@ setup(
             "pyarrow==16.0.0",
             "connectorx==0.2.3",
             "pyspark==3.5.0",
-            "deltalake==0.13.0"
+            "deltalake==0.17.4"
         ],
         "pyspark": [
             "pyspark==3.5.0"
@@ -187,7 +187,7 @@ setup(
         ],
         "bigquery": [
           "google-cloud-bigquery==3.13.0",
-          "pandas-gbq==0.19.2",
+          "pandas-gbq==0.22.0",
           "google-cloud-storage==2.16.0"
         ],
         "cassandra": [
@@ -268,14 +268,14 @@ setup(
             "pyspark==3.5.0",
             "oracledb==2.1.1",
             "hazelcast-python-client==5.3.0",
+            "deltalake==0.17.4",
             "duckdb==0.10.2",
-            "deltalake==0.13.0",
             "botocore==1.31.64",
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
             "google-cloud-bigquery==3.13.0",
             "google-cloud-storage==2.16.0",
-            "pandas-gbq==0.19.2",
+            "pandas-gbq==0.22.0",
             "tqdm==4.66.1"
         ]
     },
