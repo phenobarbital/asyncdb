@@ -327,7 +327,9 @@ class delta(InitDriver):
             elif atable is not None:
                 pq.write_table(atable, parquet, compression="snappy")
         except Exception as exc:
-            raise DriverError(f"Query Error: {exc}") from exc
+            raise DriverError(
+                f"Query Error: {exc}"
+            ) from exc
 
     async def write(
         self,
@@ -425,4 +427,78 @@ class delta(InitDriver):
         finally:
             return [result, error]  # pylint: disable=W0150
 
-    fetch_all = query
+    async def copy_to(
+        self,
+        source: Union[str, Path],
+        destination: Union[str, Path],
+        columns: list[str],
+        separator: str = ",",
+        has_header: bool = True,
+        lazy: bool = True,
+        replace_destination: bool = False,
+        compression: str = 'zstd',
+        **kwargs
+    ) -> Path:
+        """
+        Copy a CSV file efficiently to Parquet using Polars.
+
+        Returns:
+        - Path: Path to the created Parquet file.
+        """
+        if isinstance(source, str):
+            source = Path(source)
+        if isinstance(destination, str):
+            destination = Path(destination)
+
+        if not source.exists():
+            raise FileNotFoundError(
+                f"Parquet: File {source} not found"
+            )
+
+        if destination.exists():
+            if replace_destination is True:
+                destination.unlink()
+            else:
+                raise FileExistsError(
+                    f"Parquet: File {destination} already exists"
+                )
+        else:
+            if destination.parent.exists() is False:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+
+        if lazy is True:
+            mtd = pl.scan_csv
+        else:
+            mtd = pl.read_csv
+        try:
+            df = mtd(
+                source,
+                separator=separator,
+                has_header=has_header,
+                new_columns=columns,  # Pass the column names
+                infer_schema_length=0,     # Infer schema from the first batch of rows
+                low_memory=True,            # Enable low memory mode for large files
+                **kwargs
+            )
+            if lazy is True:
+                df.sink_parquet(
+                    destination,
+                    compression=compression,
+                    row_group_size=100_000
+                )
+            else:
+                df.write_parquet(
+                    destination,
+                    compression=compression,
+                    row_group_size=100_000
+                )
+            # Read the Parquet file metadata
+            pq_file = pq.ParquetFile(destination)
+            metadata = pq_file.metadata
+            return destination, metadata
+        except FileExistsError:
+            raise
+        except Exception as err:
+            raise DriverError(
+                f"Delta: Error on COPY to Parquet: {err!s}"
+            ) from err
