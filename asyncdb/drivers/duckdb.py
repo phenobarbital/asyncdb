@@ -214,11 +214,12 @@ class duckdb(SQLDriver, DBCursorBackend):
         finally:
             return (result, error)
 
-    async def execute_many(self, sentence: Union[str, list], *args) -> Optional[Any]:
+    async def execute_many(self, sentence: Union[str, list], args: list) -> Optional[Any]:
         error = None
         await self.valid_operation(sentence)
         try:
-            result = self._connection.executemany(sentence, parameters=args)
+            print('THIS > ', sentence, args)
+            result = self._connection.executemany(sentence, args)
             if result:
                 self._connection.commit()
         except Exception as err:
