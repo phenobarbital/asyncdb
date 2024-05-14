@@ -65,13 +65,23 @@ async def saving_into_bigquery(pg_dsn, params):
             )
             print(read_csv_from_gcs)
 
+async def duckdb_parquet():
+    # Create a connection to DuckDB:
+    dt = AsyncDB('duckdb')
+    async with await dt.connection() as conn:
+        # Create a parquet file:
+        result = await conn.copy_to(CSV_FILE, BASE_DIR.joinpath('docs', 'test.parquet'))
+        print('PARQUET FILE: ', result)
 
 if __name__ == "__main__":
-    print('CONNECT TO BIGQUERY:')
-    params = {
-        "credentials": "~/proyectos/navigator/navigator-ai/env/key.json",
-        "project_id": "unique-decker-385015"
-    }
+    # print('CONNECT TO BIGQUERY:')
+    # params = {
+    #     "credentials": "~/proyectos/navigator/navigator-ai/env/key.json",
+    #     "project_id": "unique-decker-385015"
+    # }
+    # asyncio.run(
+    #     saving_into_bigquery(default_dsn, params)
+    # )
     asyncio.run(
-        saving_into_bigquery(default_dsn, params)
+        duckdb_parquet()
     )
