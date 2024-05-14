@@ -133,7 +133,7 @@ setup(
             "influxdb-client[async]==1.39.0",
             "pymssql==2.2.11",
             "redis==5.0.1",
-            "deltalake==0.17.4"
+            "deltalake==0.17.4",
             "duckdb==0.10.2",
         ],
         "dataframe": [
@@ -144,7 +144,8 @@ setup(
             "pyarrow==16.0.0",
             "connectorx==0.2.3",
             "pyspark==3.5.0",
-            "deltalake==0.17.4"
+            "deltalake==0.17.4",
+            "duckdb==0.10.2",
         ],
         "pyspark": [
             "pyspark==3.5.0"
