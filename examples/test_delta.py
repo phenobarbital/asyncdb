@@ -6,7 +6,7 @@ from asyncdb import AsyncDB
 
 async def test_connection(evt: asyncio.AbstractEventLoop):
     params = {
-        "filename": "docs/nyc.taxi/"
+        "path": "docs/nyc.taxi/"
     }
     dt = delta(params=params, loop=evt)
     ## first: create delta-table
@@ -19,13 +19,26 @@ async def test_connection(evt: asyncio.AbstractEventLoop):
 
 async def test_data(evt: asyncio.AbstractEventLoop):
     params = {
-        "filename": "docs/nyc.taxi/"
+        "path": "docs/nyc.taxi/"
     }
     dt = AsyncDB('delta', params=params, loop=evt)
     async with await dt.connection() as conn:
         # querying data:
-        result, error = await conn.query(
+        result, error = await conn.to_df(
             columns=['tpep_pickup_datetime', 'tpep_dropoff_datetime', 'passenger_count'],
+            factory='pandas'
+        )
+        print(result, error)
+        # Querying with DuckDB:
+        result, error = await conn.query(
+            sentence="passenger_count > 5",
+            factory='pandas'
+        )
+        print(result, error)
+        # Querying with DuckDB using SQL Syntax:
+        result, error = await conn.query(
+            sentence="SELECT * FROM NYC_TAXI WHERE passenger_count > 5 LIMIT 100",
+            tablename='NYC_TAXI',
             factory='pandas'
         )
         print(result, error)
@@ -56,7 +69,7 @@ async def test_epson(evt: asyncio.AbstractEventLoop):
         }
     }
     params = {
-        "filename": "docs/epson.sales/"
+        "path": "docs/epson.sales/"
     }
     dt = delta(params=params, loop=evt)
     filename = '/home/ubuntu/symbits/epson/files/sales/SELLTHRU_TROC_2020.TXT'
@@ -67,10 +80,10 @@ async def test_epson(evt: asyncio.AbstractEventLoop):
     async with await dt.connection() as conn:
         # querying data:
         result, error = await conn.query(
-            columns=['customer_id', 'week_end_date', 'store_number', 'product_type', 'model'],
+            sentence="passenger_count > 2",
             factory='pandas'
         )
-        print('ERROR > ', error)
+        print('ERROR > ',result, error)
         group = result.groupby(['customer_id']).count()
         print(group)
         print(result)
@@ -82,12 +95,12 @@ if __name__ == '__main__':
     # loop.run_until_complete(
     #     test_connection(evt=loop)
     # )
-    # loop.run_until_complete(
-    #     test_data(evt=loop)
-    # )
     loop.run_until_complete(
-        test_epson(evt=loop)
+        test_data(evt=loop)
     )
+    # loop.run_until_complete(
+    #     test_epson(evt=loop)
+    # )
     end_time = time.time()  # Record the end time
     duration_seconds = end_time - start_time
     print(f"Duration: {duration_seconds} seconds")
