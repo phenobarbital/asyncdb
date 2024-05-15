@@ -101,7 +101,7 @@ class rethink(InitDriver, DBCursorBackend):
         self.qry_options = None
         self._group = None
         self.distinct = None
-        self._db: str = None
+        self._db: str = "test"
         InitDriver.__init__(self, loop=loop, params=params, **kwargs)
         DBCursorBackend.__init__(self)
         # set rt object
