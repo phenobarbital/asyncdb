@@ -260,7 +260,7 @@ class rethink(InitDriver, DBCursorBackend):
                 creation = self._engine.db(self._db).table_create(table)
             return await creation.run(self._connection)
         except ReqlOpFailedError as ex:
-            if 'already exists in' in str(ex) and exists_ok is True:
+            if 'already exists in' in str(ex) and exists_ok:
                 return True
             raise DriverError(f"Cannot create Table {table}, {ex}") from ex
         except (ReqlDriverError, ReqlRuntimeError) as ex:
