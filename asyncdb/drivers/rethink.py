@@ -10,7 +10,6 @@ TODO:
 
 """
 import asyncio
-import logging
 import time
 from typing import Any, Optional, Union
 from collections.abc import Iterable
@@ -24,7 +23,7 @@ from rethinkdb.errors import (
     ReqlResourceLimitError,
     ReqlRuntimeError,
 )
-from rethinkdb import r
+from rethinkdb import RethinkDB, r
 from datamodel import BaseModel
 from ..interfaces import DBCursorBackend, CursorBackend
 from ..exceptions import DriverError, DataError, NoDataFound, StatementError
@@ -50,14 +49,14 @@ class rethinkCursor(BaseCursor):
         try:
             self._cursor = await self._sentence.run(self._connection)
         except Exception as err:  # pylint: disable=W0703
-            logging.exception(err)
+            self._logger.exception(err)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         try:
             return await self._cursor.close()
         except Exception as err:  # pylint: disable=W0703
-            logging.exception(err)
+            self._logger.exception(err)
 
     async def __anext__(self):
         """Use `cursor.fetchrow()` to provide an async iterable."""
@@ -86,7 +85,12 @@ class rethink(InitDriver, DBCursorBackend):
     _provider = "rethink"
     _syntax = "rql"
 
-    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
+    def __init__(
+        self,
+        loop: asyncio.AbstractEventLoop = None,
+        params: dict = None,
+        **kwargs
+    ):
         self.conditions = {}
         self.fields = []
         self.conditions = {}
@@ -97,38 +101,38 @@ class rethink(InitDriver, DBCursorBackend):
         self.qry_options = None
         self._group = None
         self.distinct = None
+        self._db: str = "test"
         InitDriver.__init__(self, loop=loop, params=params, **kwargs)
         DBCursorBackend.__init__(self)
         # set rt object
-        self._engine = r
+        self._engine = RethinkDB()
         # set asyncio type
         self._engine.set_loop_type("asyncio")
-        asyncio.set_event_loop(self._loop)
         # rethink understand "database" as db
-        try:
-            self.params["db"] = self.params["database"]
-            del self.params["database"]
-        except KeyError:
-            pass
+        self.params["db"] = self.params.get("database", None)
 
     async def connection(self):
-        self._logger.debug(f'RT Connection to host {self.params["host"]}:{self.params["port"]}')
+        self._logger.debug(
+            f'RT Connection to host {self.params["host"]}:{self.params["port"]}'
+        )
         self._connection = None
         self.params["timeout"] = self._timeout
-        print(self.params)
         try:
             self._connection = await self._engine.connect(**self.params)
             if self.params["db"]:
                 await self.db(self.params["db"])
         except ReqlRuntimeError as err:
-            error = f"No database connection could be established: {err!s}"
-            raise DriverError(message=error) from err
+            raise DriverError(
+                f"No database connection could be established: {err!s}"
+            ) from err
         except ReqlDriverError as err:
-            error = f"No database connection could be established: {err!s}"
-            raise DriverError(message=error) from err
+            raise DriverError(
+                f"No database connection could be established: {err!s}"
+            ) from err
         except Exception as err:
-            error = f"Exception on RethinkDB: {err!s}"
-            raise DriverError(message=error) from err
+            raise DriverError(
+                f"Exception on RethinkDB: {err!s}"
+            ) from err
         finally:
             if self._connection:
                 self._connected = True
@@ -156,7 +160,9 @@ class rethink(InitDriver, DBCursorBackend):
         try:
             self._connection.use(self._db)
         except ReqlError as err:
-            raise DriverError(message=f"Error connecting to database: {database}") from err
+            raise DriverError(
+                message=f"Error connecting to database: {database}"
+            ) from err
         return self
 
     db = use
@@ -169,14 +175,14 @@ class rethink(InitDriver, DBCursorBackend):
         """
         try:
             if database not in await self._engine.db_list().run(self._connection):
-                self._db = database
-                await self._engine.db_create(self._db).run(self._connection)
+                await self._engine.db_create(database).run(self._connection)
             if use is True:
+                self._db = database
                 self._connection.use(self._db)
         except Exception as ex:
-            error = f"Unable to create database: {ex}"
-            logging.exception(error)
-            raise DriverError(error) from ex
+            raise DriverError(
+                f"Unable to create database: {ex}"
+            ) from ex
 
     create_database = createdb
 
@@ -189,6 +195,7 @@ class rethink(InitDriver, DBCursorBackend):
             return self
         finally:
             if database == self._db:  # current database
+                self._db = None
                 self._connection.use("test")
 
     drop_database = dropdb
@@ -202,7 +209,14 @@ class rethink(InitDriver, DBCursorBackend):
         if table in await self._engine.db(self._db).table_list().run(self._connection):
             return await self._engine.table(table).sync().run(self._connection)
 
-    async def createindex(self, table: str, field: str, name: str = "", fields: list = None, multi: bool = True):
+    async def createindex(
+        self,
+        table: str,
+        field: str,
+        name: str,
+        fields: list = None,
+        multi: bool = True
+    ):
         """
         CreateIndex
               create and index into a field or multiple fields
@@ -218,13 +232,17 @@ class rethink(InitDriver, DBCursorBackend):
                 try:
                     return await self._engine.table(table).index_create(name, idx).run(self._connection)
                 except (ReqlDriverError, ReqlRuntimeError) as ex:
-                    logging.error(f"Failed to create index: {ex}")
+                    self._logger.error(f"Failed to create index: {ex}")
                     return False
             else:
                 try:
-                    return await self._engine.table(table).index_create(field, multi=multi).run(self._connection)
+                    return await self._engine.table(table).index_create(
+                        field, multi=multi
+                    ).run(self._connection)
                 except ReqlOpFailedError as ex:
-                    raise DriverError(f"Failed to create index: {ex}") from ex
+                    raise DriverError(
+                        f"Failed to create index: {ex}"
+                    ) from ex
         else:
             return False
 
@@ -237,11 +255,12 @@ class rethink(InitDriver, DBCursorBackend):
         """
         try:
             if pk:
-                return await self._engine.db(self._db).table_create(table, primary_key=pk).run(self._connection)
+                creation = self._engine.db(self._db).table_create(table, primary_key=pk)
             else:
-                return await self._engine.db(self._db).table_create(table).run(self._connection)
+                creation = self._engine.db(self._db).table_create(table)
+            return await creation.run(self._connection)
         except ReqlOpFailedError as ex:
-            if 'already exists in' in str(ex):
+            if 'already exists in' in str(ex) and exists_ok:
                 return True
             raise DriverError(f"Cannot create Table {table}, {ex}") from ex
         except (ReqlDriverError, ReqlRuntimeError) as ex:
@@ -313,7 +332,12 @@ class rethink(InitDriver, DBCursorBackend):
         raise NotImplementedError
 
     async def query(
-        self, table: str, columns: list = None, order_by: list = None, limit: int = None, **kwargs
+        self,
+        table: str,
+        columns: list = None,
+        order_by: list = None,
+        limit: int = None,
+        **kwargs
     ):  # pylint: disable=W0221,W0237
         """
         query
@@ -328,16 +352,16 @@ class rethink(InitDriver, DBCursorBackend):
             self.start_timing()
             _filter = kwargs.get("filter", kwargs)
             # table:
-            table = self._engine.db(self._db).table(table)
+            tbl = self._engine.db(self._db).table(table)
             if not columns:
-                self._columns = await self._engine.table(table).nth(0).default(None).keys().run(self._connection)
+                self._columns = await tbl.nth(0).default(None).keys().run(self._connection)
             else:
                 self._columns = columns
-                table = table.with_fields(*columns)
+                tbl = tbl.with_fields(*columns)
             if _filter:
-                result = table.filter(_filter)
+                result = tbl.filter(_filter)
             else:
-                result = table
+                result = tbl
             if isinstance(order_by, list):
                 order = [r.asc(o) for o in order_by]
                 result = result.order_by(*order)
@@ -353,7 +377,10 @@ class rethink(InitDriver, DBCursorBackend):
                 if data:
                     self._result = data
                 else:
-                    raise NoDataFound(message=f"RethinkDB: Empty Result on {table!s}", code=404)
+                    raise NoDataFound(
+                        message=f"RethinkDB: Empty Result on {table!s}",
+                        code=404
+                    )
         except ReqlResourceLimitError as err:
             error = f"Query Limit Error: {err!s}"
         except ReqlOpIndeterminateError as err:
@@ -393,7 +420,10 @@ class rethink(InitDriver, DBCursorBackend):
             if data:
                 return data
             else:
-                raise NoDataFound(message=f"RethinkDB: Empty Result on {table!s}", code=404)
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Result on {table!s}",
+                    code=404
+                )
         except ReqlResourceLimitError as err:
             raise StatementError(f"Query Limit Error: {err!s}") from err
         except ReqlOpIndeterminateError as err:
@@ -411,7 +441,13 @@ class rethink(InitDriver, DBCursorBackend):
 
     fetchall = fetch_all
 
-    async def queryrow(self, table: str, columns: list = None, nth: int = 0, **kwargs):  # pylint: disable=W0221,W0237
+    async def queryrow(
+        self,
+        table: str,
+        columns: list = None,
+        nth: int = 0,
+        **kwargs
+    ):  # pylint: disable=W0221,W0237
         """
         queryrow
             get only one row.
@@ -438,7 +474,10 @@ class rethink(InitDriver, DBCursorBackend):
             if data:
                 self._result = data
             else:
-                raise NoDataFound(message=f"RethinkDB: Empty Row Result on {table!s}", code=404)
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Row Result on {table!s}",
+                    code=404
+                )
         except ReqlResourceLimitError as err:
             error = f"Query Limit Error: {err!s}"
         except ReqlOpIndeterminateError as err:
@@ -457,7 +496,12 @@ class rethink(InitDriver, DBCursorBackend):
 
     query_row = queryrow
 
-    async def fetch_one(self, table: str, nth: int = 0, **kwargs):  # pylint: disable=W0221,W0237
+    async def fetch_one(
+        self,
+        table: str,
+        nth: int = 0,
+        **kwargs
+    ):  # pylint: disable=W0221,W0237
         """
         fetch_one
             get only one row.
@@ -467,14 +511,18 @@ class rethink(InitDriver, DBCursorBackend):
         try:
             _filter = kwargs.get("filter", kwargs)
             self.start_timing()
+            table = self._engine.db(self._db).table(table)
             if kwargs:
-                data = await self._engine.table(table).filter(_filter).nth(nth).run(self._connection)
+                action = table.filter(_filter).nth(nth)
             else:
-                data = await self._engine.table(table).nth(nth).run(self._connection)
-            if data:
-                return data
-            else:
-                raise NoDataFound(message=f"RethinkDB: Empty Row Result on {table!s}", code=404)
+                action = table.nth(nth)
+            data = await action.run(self._connection)
+            if not data:
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Row Result on {table!s}",
+                    code=404
+                )
+            return data
         except ReqlResourceLimitError as err:
             raise StatementError(f"Query Limit Error: {err!s}") from err
         except ReqlOpIndeterminateError as err:
@@ -503,7 +551,10 @@ class rethink(InitDriver, DBCursorBackend):
             if data:
                 self._result = data
             else:
-                raise NoDataFound(message=f"RethinkDB: Empty Row Result on {table!s}", code=404)
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Row Result on {table!s}",
+                    code=404
+                )
         except ReqlResourceLimitError as err:
             error = f"Query Limit Error: {err!s}"
         except ReqlOpIndeterminateError as err:
@@ -542,7 +593,10 @@ class rethink(InitDriver, DBCursorBackend):
             if data:
                 self._result = data
             else:
-                raise NoDataFound(message=f"RethinkDB: Empty Row Result on {table!s}", code=404)
+                raise NoDataFound(
+                    message=f"RethinkDB: Empty Row Result on {table!s}",
+                    code=404
+                )
         except ReqlResourceLimitError as err:
             error = f"Query Limit Error: {err!s}"
         except ReqlOpIndeterminateError as err:
@@ -588,7 +642,14 @@ class rethink(InitDriver, DBCursorBackend):
         finally:
             return await self._serializer(self._result, error)  # pylint: disable=W0150
 
-    async def insert(self, table: str, data: dict, on_conflict: str = "replace", changes: bool = True):
+    async def insert(
+        self,
+        table: str,
+        data: Union[dict, list],
+        on_conflict: str = "replace",
+        changes: bool = True,
+        durability: str = 'soft'
+    ):
         """
         insert.
              create a record (insert)
@@ -597,7 +658,7 @@ class rethink(InitDriver, DBCursorBackend):
         try:
             inserted = (
                 await self._engine.table(table)
-                .insert(data, conflict=on_conflict, durability="soft", return_changes=changes)
+                .insert(data, conflict=on_conflict, durability=durability, return_changes=changes)
                 .run(self._connection)
             )
             if inserted["errors"] > 0:
@@ -616,14 +677,22 @@ class rethink(InitDriver, DBCursorBackend):
         except Exception as err:  # pylint: disable=W0703
             raise DriverError(f"Unknown RT error: {err}") from err
 
-    async def replace(self, table: str, data: dict, idx: int = 0):
+    async def replace(
+        self,
+        table: str,
+        data: Union[dict, list],
+        idx: int = 0,
+        durability: str = 'soft'
+    ):
         """
         replace
              replace a record (insert, update or delete)
         -----
         """
         try:
-            replaced = await self._engine.table(table).get(idx).replace(data, durability="soft").run(self._connection)
+            replaced = await self._engine.table(table).get(idx).replace(
+                data, durability=durability
+            ).run(self._connection)
             if replaced["errors"] > 0:
                 raise DriverError(f"REPLACE Error: {replaced['first_error']}")
             return replaced
@@ -640,7 +709,15 @@ class rethink(InitDriver, DBCursorBackend):
         except Exception as err:  # pylint: disable=W0703
             raise DriverError(f"Unknown RT error: {err}") from err
 
-    async def update(self, table: str, data: dict, idx: str = None, **kwargs):
+    async def update(
+        self,
+        table: str,
+        data: dict,
+        idx: str = None,
+        return_changes: bool = False,
+        durability: str = 'soft',
+        **kwargs
+    ):
         """
         update
              update a record based on filter match
@@ -650,10 +727,18 @@ class rethink(InitDriver, DBCursorBackend):
         if idx:
             sentence = self._engine.table(table).get(id).update(data)
         elif isinstance(_filter, dict) and len(_filter) > 0:
-            sentence = self._engine.table(table).filter(_filter).update(data, return_changes=False, durability="soft")
+            sentence = self._engine.table(table).filter(_filter).update(
+                data,
+                return_changes=return_changes,
+                durability=durability
+            )
         else:
             # update all documents in table
-            sentence = self._engine.table(table).update(data, durability="soft", return_changes=False)
+            sentence = self._engine.table(table).update(
+                data,
+                durability=durability,
+                return_changes=return_changes
+            )
         try:
             self._result = await sentence.run(self._connection)
             return self._result
@@ -724,7 +809,14 @@ class rethink(InitDriver, DBCursorBackend):
         except Exception as err:  # pylint: disable=W0703
             raise DriverError(f"Unknown RT error: {err}") from err
 
-    async def delete(self, table: str, idx: str = None, changes: bool = True, **kwargs):
+    async def delete(
+        self,
+        table: str,
+        idx: str = None,
+        return_changes: bool = True,
+        durability: str = 'soft',
+        **kwargs
+    ):
         """
         delete
              delete a record based on id or filter search
@@ -732,11 +824,16 @@ class rethink(InitDriver, DBCursorBackend):
         """
         _filter = kwargs.get("filter", kwargs)
         if idx:
-            sentence = self._engine.table(table).get(idx).delete(return_changes=changes, durability="soft")
+            sentence = self._engine.table(table).get(idx).delete(
+                return_changes=return_changes,
+                durability=durability
+            )
         elif isinstance(_filter, dict):
-            sentence = self._engine.table(table).filter(_filter).delete(return_changes=changes)
+            sentence = self._engine.table(table).filter(_filter).delete(
+                return_changes=return_changes
+            )
         else:
-            sentence = self._engine.table(table).delete(return_changes=changes)
+            sentence = self._engine.table(table).delete(return_changes=return_changes)
         try:
             self._result = await sentence.run(self._connection)
             return self._result

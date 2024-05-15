@@ -534,6 +534,7 @@ class CursorBackend(ABC):
         self._params = parameters
         self._connection = self._provider.engine()
         self._kwargs = kwargs
+        self._logger = logging.getLogger(f"DB.{self.__class__.__name__}")
 
     ### Magic Context Methods for Cursors.
     async def __aenter__(self) -> "CursorBackend":
@@ -550,16 +551,16 @@ class CursorBackend(ABC):
         try:
             return await self._provider.close()
         except RuntimeError as e:
-            logging.error(str(e))
+            self._logger.error(str(e))
         except DriverError as err:
-            logging.exception(err)
+            self._logger.exception(err)
             raise
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         try:
             return self._provider.close()
         except DriverError as err:
-            logging.exception(err)
+            self._logger.exception(err)
             raise
 
     def __aiter__(self) -> "CursorBackend":
