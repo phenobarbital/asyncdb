@@ -98,7 +98,7 @@ setup(
     package_data={"asyncdb": ["py.typed"]},
     license=__license__,
     setup_requires=[
-        "setuptools==67.6.1",
+        "setuptools==70.0.0",
         "Cython==3.0.9",
         "wheel==0.42.0"
     ],
