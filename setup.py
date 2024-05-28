@@ -251,6 +251,8 @@ setup(
             "psycopg-binary>=3.1.8",
             "cassandra-driver==3.29.1",
             "scylla_driver==3.26.8",
+            "acsylla==0.1.8b0",
+            "cqlsh==6.1.2",
             "influxdb==5.3.1",
             "influxdb-client==1.39.0",
             "aioodbc==0.5.0",
