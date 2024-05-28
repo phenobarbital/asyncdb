@@ -212,8 +212,8 @@ class rethink(InitDriver, DBCursorBackend):
     async def createindex(
         self,
         table: str,
-        field: str,
-        name: str,
+        name: str = None,
+        field: str = None,
         fields: list = None,
         multi: bool = True
     ):
@@ -225,10 +225,10 @@ class rethink(InitDriver, DBCursorBackend):
         await self.valid_operation(table)
         if table in await self._engine.db(self._db).table_list().run(self._connection):
             # check for a single index
-            if isinstance(fields, list) and len(fields) > 0:
+            if isinstance(fields, (list, tuple)) and len(fields) > 0:
                 idx = []
                 for f in fields:
-                    idx.append(self._engine.row(f))
+                    idx.append(self._engine.row[f])
                 try:
                     return await self._engine.table(table).index_create(name, idx).run(self._connection)
                 except (ReqlDriverError, ReqlRuntimeError) as ex:
@@ -354,7 +354,10 @@ class rethink(InitDriver, DBCursorBackend):
             # table:
             tbl = self._engine.db(self._db).table(table)
             if not columns:
-                self._columns = await tbl.nth(0).default(None).keys().run(self._connection)
+                try:
+                    self._columns = await tbl.nth(0).default(None).keys().run(self._connection)
+                except rethinkdb.errors.ReqlQueryLogicError:
+                    self._columns = []
             else:
                 self._columns = columns
                 tbl = tbl.with_fields(*columns)
@@ -378,9 +381,10 @@ class rethink(InitDriver, DBCursorBackend):
                     self._result = data
                 else:
                     raise NoDataFound(
-                        message=f"RethinkDB: Empty Result on {table!s}",
-                        code=404
+                        message=f"RethinkDB: Empty Result on {table!s}"
                     )
+        except NoDataFound:
+            raise
         except ReqlResourceLimitError as err:
             error = f"Query Limit Error: {err!s}"
         except ReqlOpIndeterminateError as err:
@@ -409,7 +413,10 @@ class rethink(InitDriver, DBCursorBackend):
         try:
             self.start_timing()
             _filter = kwargs.get("filter", kwargs)
-            self._columns = await self._engine.table(table).nth(0).default(None).keys().run(self._connection)
+            try:
+                self._columns = await self._engine.table(table).nth(0).default(None).keys().run(self._connection)
+            except rethinkdb.errors.ReqlQueryLogicError:
+                self._columns = []
             if not _filter:
                 cursor = await self._engine.db(self._db).table(table).run(self._connection)
             else:
@@ -421,9 +428,10 @@ class rethink(InitDriver, DBCursorBackend):
                 return data
             else:
                 raise NoDataFound(
-                    message=f"RethinkDB: Empty Result on {table!s}",
-                    code=404
+                    message=f"RethinkDB: Empty Result on {table!s}"
                 )
+        except NoDataFound:
+            raise
         except ReqlResourceLimitError as err:
             raise StatementError(f"Query Limit Error: {err!s}") from err
         except ReqlOpIndeterminateError as err:
@@ -459,7 +467,10 @@ class rethink(InitDriver, DBCursorBackend):
             self.start_timing()
             _filter = kwargs.get("filter", kwargs)
             if not columns:
-                self._columns = await self._engine.table(table).nth(0).default(None).keys().run(self._connection)
+                try:
+                    self._columns = await self._engine.table(table).nth(0).default(None).keys().run(self._connection)
+                except rethinkdb.errors.ReqlQueryLogicError:
+                    self._columns = []
             else:
                 self._columns = columns
             # table:
@@ -475,9 +486,10 @@ class rethink(InitDriver, DBCursorBackend):
                 self._result = data
             else:
                 raise NoDataFound(
-                    message=f"RethinkDB: Empty Row Result on {table!s}",
-                    code=404
+                    message=f"RethinkDB: Empty Row Result on {table!s}"
                 )
+        except NoDataFound:
+            raise
         except ReqlResourceLimitError as err:
             error = f"Query Limit Error: {err!s}"
         except ReqlOpIndeterminateError as err:
@@ -523,12 +535,16 @@ class rethink(InitDriver, DBCursorBackend):
                     code=404
                 )
             return data
+        except NoDataFound:
+            raise
+        except ReqlNonExistenceError as err:
+            raise NoDataFound(
+                f"Object doesn't exist {table}: {err!s}"
+            )
         except ReqlResourceLimitError as err:
             raise StatementError(f"Query Limit Error: {err!s}") from err
         except ReqlOpIndeterminateError as err:
             raise StatementError(f"Operation indeterminated: {err!s}") from err
-        except ReqlNonExistenceError as err:
-            raise DriverError(f"Object doesn't exist {table}: {err!s}") from err
         except rethinkdb.errors.ReqlPermissionError as err:
             raise DataError(f"Permission error over {table}: {err}") from err
         except ReqlRuntimeError as err:
@@ -536,8 +552,11 @@ class rethink(InitDriver, DBCursorBackend):
         except Exception as err:  # pylint: disable=W0703
             raise DriverError(f"Unknown RT error: {err}") from err
 
+
+    fetch_row = fetch_one
+
     ### New Methods
-    async def get(self, table: str, idx: int = 0):
+    async def get(self, table: str, idx: int = 0, **kwargs):
         """
         get
            get only one row based on primary key or filtering,
@@ -546,15 +565,20 @@ class rethink(InitDriver, DBCursorBackend):
         """
         error = None
         await self.valid_operation(table)
+        _filter = kwargs.get("filter", kwargs)
         try:
-            data = await self._engine.table(table).get(idx).run(self._connection)
+            if _filter:
+                data = await self._engine.table(table).get_all(_filter).get(idx).run(self._connection)
+            else:
+                data = await self._engine.table(table).get(idx).run(self._connection)
             if data:
                 self._result = data
             else:
                 raise NoDataFound(
-                    message=f"RethinkDB: Empty Row Result on {table!s}",
-                    code=404
+                    message=f"RethinkDB: Empty Row Result on {table!s}"
                 )
+        except NoDataFound:
+            raise
         except ReqlResourceLimitError as err:
             error = f"Query Limit Error: {err!s}"
         except ReqlOpIndeterminateError as err:
@@ -594,9 +618,10 @@ class rethink(InitDriver, DBCursorBackend):
                 self._result = data
             else:
                 raise NoDataFound(
-                    message=f"RethinkDB: Empty Row Result on {table!s}",
-                    code=404
+                    message=f"RethinkDB: Empty Row Result on {table!s}"
                 )
+        except NoDataFound:
+            raise
         except ReqlResourceLimitError as err:
             error = f"Query Limit Error: {err!s}"
         except ReqlOpIndeterminateError as err:
@@ -626,7 +651,9 @@ class rethink(InitDriver, DBCursorBackend):
             if data:
                 self._result = data
             else:
-                raise NoDataFound(message=f"RethinkDB: Empty Row Result on {table!s}", code=404)
+                raise NoDataFound(message=f"RethinkDB: Empty Row Result on {table!s}")
+        except NoDataFound:
+            raise
         except ReqlResourceLimitError as err:
             error = f"Query Limit Error: {err!s}"
         except ReqlOpIndeterminateError as err:
@@ -882,6 +909,8 @@ class rethink(InitDriver, DBCursorBackend):
                 self._result = data
             else:
                 raise NoDataFound(message=f"RethinkDB: Empty Row Result on {table!s}")
+        except NoDataFound:
+            raise
         except ReqlResourceLimitError as err:
             error = f"Query Limit Error: {err!s}"
         except ReqlOpIndeterminateError as err:
