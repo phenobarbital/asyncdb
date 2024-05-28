@@ -254,11 +254,29 @@ async def test_connect(event_loop):
         await conn.drop_database('testing')
 
 
+async def create_rethink_table(event_loop):
+    rt = AsyncDB('rethink', params=params, loop=event_loop)
+    print(rt)
+    async with await rt.connection() as conn:  #pylint: disable=E1101
+        await conn.create_database('navigator', use=True)
+        await conn.create_table('chatbots_usage')
+        exists = await conn.list_tables()
+        print('Exists? ', 'chatbots_usage' in exists)
+        # chatbot loaders:
+        await conn.create_table('chatbots_data')
+        created = await conn.create_index(
+            table='chatbots_data', field=None, name='data_version_control', fields=['chatbot_id', 'source_type', 'version']
+        )
+        print('CREATED > ', created)
+        exists = await conn.list_tables()
+        print('Exists? ', 'chatbots_data' in exists)
+
 if __name__ == '__main__':
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.set_debug(True)
         loop.run_until_complete(test_connect(loop))
+        loop.run_until_complete(create_rethink_table(loop))
     finally:
         loop.stop()
