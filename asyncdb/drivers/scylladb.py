@@ -561,7 +561,7 @@ class scylladb(InitDriver, ModelBackend):
             raise DriverError(f"Error: {err}") from err
 
     async def create_keyspace(self, keyspace: str, use: bool = True):
-        db = "CREATE KEYSPACE IF NOT EXISTS {keyspace} WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': 1}};"
+        db = "CREATE KEYSPACE IF NOT EXISTS {keyspace} WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': 3}};"
         db = db.format(keyspace=keyspace)
         try:
             if self._driver == "async":
@@ -855,10 +855,11 @@ class scylladb(InitDriver, ModelBackend):
 
     async def write(
         self,
-        data: Union[list, dict],
+        data: Union[list, dict, Any],
         sentence: str = None,
         table: str = None,
         keyspace: str = None,
+        batch_size: int = 100,
         **kwargs
     ):
         """
@@ -880,7 +881,9 @@ class scylladb(InitDriver, ModelBackend):
                     header = await file.readline()
                 columns = header.strip().split(sep)
             _data = str(data)
-            stdout, stderr, _ = await self.run_cqlsh_copy(keyspace, table, columns, _data, sep=sep)
+            stdout, stderr, _ = await self.run_cqlsh_copy(
+                keyspace, table, columns, _data, sep=sep
+            )
             self._logger.debug(f"COPY: {stdout.decode()}")
             if stderr:
                 print("Error: ", stderr.decode())
@@ -913,11 +916,10 @@ class scylladb(InitDriver, ModelBackend):
             stmt = await self._connection.prepare(sentence)
             # List to hold all the tasks
             tasks = []
-            # Create tasks for each insert
-            for row in _data:
-                bound_stmt = stmt.bind(*row)
-                task = self._connection.execute(bound_stmt)
-                tasks.append(task)
+            # Create tasks for each insert batch
+            for i in range(0, len(_data), batch_size):
+                batch = _data[i:i + batch_size]
+                tasks.append(self._execute_batch(stmt, batch))
             await asyncio.gather(*tasks)
         else:
             concurrency = kwargs.get("concurrency", 50)
@@ -928,6 +930,14 @@ class scylladb(InitDriver, ModelBackend):
             )
 
     copy = write
+
+
+    async def _execute_batch(self, stmt, batch):
+        tasks = []
+        for row in batch:
+            bound_stmt = stmt.bind(*row)
+            tasks.append(self._connection.execute(bound_stmt))
+        await asyncio.gather(*tasks)
 
     ## Model Logic:
     async def _insert_(self, _model: Model, **kwargs):  # pylint: disable=W0613

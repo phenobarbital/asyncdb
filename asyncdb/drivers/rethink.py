@@ -13,6 +13,7 @@ import asyncio
 import time
 from typing import Any, Optional, Union
 from collections.abc import Iterable
+import pandas
 import rethinkdb
 from rethinkdb.errors import (
     ReqlDriverError,
@@ -668,6 +669,85 @@ class rethink(InitDriver, DBCursorBackend):
             error = f"Unknown RT error: {err}"
         finally:
             return await self._serializer(self._result, error)  # pylint: disable=W0150
+
+    async def _batch_insert(
+        self,
+        table: str,
+        data: list,
+        on_conflict: str,
+        changes: bool,
+        durability: str
+    ):
+        """
+        Helper method to perform batch inserts.
+        """
+        return await self._engine.table(table).insert(
+            data,
+            conflict=on_conflict,
+            durability=durability,
+            return_changes=changes
+        ).run(self._connection)
+
+    async def write(
+        self,
+        table: str,
+        data: Union[list, dict, Any],
+        batch_size: int = 100,
+        on_conflict: str = "replace",
+        changes: bool = True,
+        durability: str = 'soft',
+        **kwargs
+    ):
+        """
+        write.
+
+        Saving data into a rethinkDB database on batch-async mode.
+        """
+        try:
+            if isinstance(data, pandas.DataFrame):
+                # Convert DataFrame to list of dicts
+                data = data.to_dict(orient='records')
+            if isinstance(data, list) and len(data) > batch_size:
+                # Handle batch insertion for large lists
+                for start in range(0, len(data), batch_size):
+                    batch = data[start:start + batch_size]
+                    result = await self._batch_insert(table, batch, on_conflict, changes, durability)
+                    if result["errors"] > 0:
+                        raise DriverError(
+                            f"INSERT Error in batch: {result['first_error']}"
+                        )
+                return {"inserted": len(data), "batches": (len(data) + batch_size - 1) // batch_size}
+            else:
+                result = await self._batch_insert(table, data, on_conflict, changes, durability)
+                if result["errors"] > 0:
+                    raise DriverError(
+                        f"INSERT Error: {result['first_error']}"
+                    )
+                return result
+        except ReqlResourceLimitError as err:
+            raise StatementError(
+                f"Query Limit Error: {err!s}"
+            ) from err
+        except ReqlOpIndeterminateError as err:
+            raise StatementError(
+                f"Operation indeterminated: {err!s}"
+            ) from err
+        except ReqlNonExistenceError as err:
+            raise DriverError(
+                f"Object doesn't exist {table}: {err!s}"
+            ) from err
+        except rethinkdb.errors.ReqlPermissionError as err:
+            raise DataError(
+                f"Permission error over {table}: {err}"
+            ) from err
+        except ReqlRuntimeError as err:
+            raise DriverError(
+                f"Runtime Error: {err}"
+            ) from err
+        except Exception as err:
+            raise DriverError(
+                f"Unknown RT error: {err}"
+            ) from err
 
     async def insert(
         self,
