@@ -53,16 +53,31 @@ max_cacheable_statement_size = 1024 * 15
 
 
 class NAVConnection(asyncpg.Connection):
+    """
+    A subclass of asyncpg.Connection to override the _get_reset_query method.
+    """
     def _get_reset_query(self):
         return None
 
 
 class pgRecord(asyncpg.Record):
+    """
+    A subclass of asyncpg.Record that allows attribute-style access to record fields.
+
+    This class overrides the __getattr__ method to enable accessing record fields
+    using dot notation, providing a more convenient and readable way to work with
+    database records.
+    """
     def __getattr__(self, name: str):
         return self[name]
 
 
 class pgPool(BasePool):
+    """
+    pgPool.
+
+    This class implements a connection pool for the asyncpg driver.
+    """
     _setup_func: Optional[Callable] = None
     _init_func: Optional[Callable] = None
 
@@ -76,7 +91,10 @@ class pgPool(BasePool):
         self._server_settings = {}
         self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
-        self._custom_record: bool = kwargs.get("custom_record", False)
+        self._custom_record: bool = False
+        custom_record = kwargs.get("custom_record", False)
+        if isinstance(custom_record, bool):
+            self._custom_record: bool = custom_record
         self._record_class_ = kwargs.get("record_class", pgRecord)
         self._cache_size: int = kwargs.get("cache_size", 36000)
         try:
