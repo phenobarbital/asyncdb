@@ -392,13 +392,6 @@ class scylladb(InitDriver, ModelBackend):
                 return False
         return True
 
-    async def drop_table(self, table):
-        result, error = await self.execute(f"DROP TABLE IF EXISTS {table}")
-        if error:
-            self._logger.error(error)
-        self._logger.debug(f"Table Dropped: {table}, result: {result}")
-        return result
-
     async def execute(  # pylint: disable=W0221
         self,
         sentence: Union[str, SimpleStatement, PreparedStatement],
@@ -590,7 +583,7 @@ class scylladb(InitDriver, ModelBackend):
                 result = await self._connection.execute(db)
             else:
                 result = self._connection.execute(db)
-            self._logger.debug(f"DROP {db}: {result!r}")
+            self._logger.debug(f"Table Dropped: {db}: {result!r}")
         except Exception as err:
             raise DriverError(f"Error: {err}") from err
 
