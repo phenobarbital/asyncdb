@@ -224,7 +224,7 @@ setup(
             "aiocouch==3.0.0"
         ],
         "hazelcast": [
-            "hazelcast-python-client==5.3.0"
+            "hazelcast-python-client==5.4.0"
         ],
         "scylla": [
             "scylla_driver==3.26.8",
@@ -269,7 +269,7 @@ setup(
             "aiomysql==0.2.0",
             "pyspark==3.5.0",
             "oracledb==2.2.1",
-            "hazelcast-python-client==5.3.0",
+            "hazelcast-python-client==5.4.0",
             "deltalake==0.17.4",
             "duckdb==0.10.2",
             "botocore==1.31.64",
