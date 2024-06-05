@@ -57,6 +57,11 @@ class NAVConnection(asyncpg.Connection):
         return None
 
 
+class pgRecord(asyncpg.Record):
+    def __getattr__(self, name: str):
+        return self[name]
+
+
 class pgPool(BasePool):
     _setup_func: Optional[Callable] = None
     _init_func: Optional[Callable] = None
@@ -71,6 +76,9 @@ class pgPool(BasePool):
         self._server_settings = {}
         self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        self._custom_record: bool = kwargs.get("custom_record", False)
+        self._record_class_ = kwargs.get("record_class", pgRecord)
+        self._cache_size: int = kwargs.get("cache_size", 36000)
         try:
             self._max_inactive_timeout = kwargs["max_inactive_timeout"]
         except KeyError:
@@ -155,7 +163,10 @@ class pgPool(BasePool):
 
         await connection.set_type_codec("json", encoder=_encoder, decoder=_decoder, schema="pg_catalog")
         await connection.set_type_codec("jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog")
-        await connection.set_builtin_type_codec("hstore", codec_name="pg_contrib.hstore")
+        try:
+            await connection.set_builtin_type_codec("hstore", codec_name="pg_contrib.hstore")
+        except Exception:
+            pass
 
         def _uuid_encoder(value):
             if isinstance(value, uuid.UUID):
@@ -166,13 +177,16 @@ class pgPool(BasePool):
                 val = b""
             return val
 
-        await connection.set_type_codec(
-            "uuid",
-            encoder=_uuid_encoder,
-            decoder=lambda u: pgproto.UUID(u),  # pylint: disable=I1101,W0108
-            schema="pg_catalog",
-            format="binary",
-        )
+        try:
+            await connection.set_type_codec(
+                "uuid",
+                encoder=_uuid_encoder,
+                decoder=lambda u: pgproto.UUID(u),  # pylint: disable=I1101,W0108
+                schema="pg_catalog",
+                format="binary",
+            )
+        except Exception:
+            pass
         if self._connection_config and isinstance(self._connection_config, dict):
             for key, value in self._connection_config.items():
                 config = f"SELECT set_config('{key}', '{value}', false);"
@@ -203,6 +217,11 @@ class pgPool(BasePool):
                 "tcp_keepalives_idle": "30min",
             }
             server_settings = {**server_settings, **self._server_settings}
+            custom_class = {}
+            if self._custom_record:
+                custom_class = {
+                    "record_class": self._record_class_
+                }
             if self.ssl:
                 _ssl = {"ssl": self.sslctx}
             else:
@@ -213,14 +232,14 @@ class pgPool(BasePool):
                 min_size=self._min_size,
                 max_size=self._max_clients,
                 max_inactive_connection_lifetime=self._max_inactive_timeout,
-                statement_cache_size=36000,
+                statement_cache_size=self._cache_size,
                 timeout=self._timeout,
-                # command_timeout=self._timeout,
                 init=self.init_connection,
                 setup=self.setup_connection,
                 loop=self._loop,
                 server_settings=server_settings,
                 connection_class=NAVConnection,
+                **custom_class,
                 **_ssl,
             )
             # is connected
@@ -391,7 +410,13 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
     _syntax = "sql"
     _test_query = "SELECT 1"
 
-    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
+    def __init__(
+        self,
+        dsn: str = "",
+        loop: asyncio.AbstractEventLoop = None,
+        params: dict = None,
+        **kwargs
+    ) -> None:
         self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
         self.application_name = os.getenv("APP_NAME", "NAV")
         self._prepared = None
@@ -399,6 +424,9 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         self._transaction = None
         self._server_settings = {}
         SQLDriver.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
+        self._custom_record: bool = kwargs.get("custom_record", False)
+        self._record_class_ = kwargs.get("record_class", pgRecord)
+        self._cache_size: int = kwargs.get("cache_size", 36000)
         DBCursorBackend.__init__(self)
         if "pool" in kwargs:
             self._pool = kwargs["pool"]
@@ -421,9 +449,9 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         ### SSL Support:
         self.ssl: bool = False
         if params and "ssl" in params:
-            ssloptions = params["ssl"]
+            ssloptions = params.pop('ssl')
         elif "ssl" in kwargs:
-            ssloptions = kwargs["ssl"]
+            ssloptions = kwargs.pop('ssl')
         else:
             ssloptions = None
         if ssloptions:
@@ -459,7 +487,6 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         if self._connection:
             try:
                 if not self._connection.is_closed():
-                    # self._logger.debug(f"Closing Connection, id: {self._connection.get_server_pid()}")
                     if self._pool:
                         await self._pool.release(self._connection)
                     else:
@@ -521,10 +548,14 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             "max_parallel_workers": "512",
         }
         server_settings = {**server_settings, **self._server_settings}
+        _ssl = {}
         if self.ssl:
             _ssl = {"ssl": self.sslctx}
-        else:
-            _ssl = {}
+        custom_class = {}
+        if self._custom_record:
+            custom_class = {
+                "record_class": self._record_class_
+            }
         try:
             if self._pool and not self._connection:
                 self._connection = await self._pool.pool().acquire()
@@ -532,15 +563,26 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 self._connection = await asyncpg.connect(
                     dsn=self._dsn,
                     timeout=self._timeout,
-                    statement_cache_size=36000,
+                    statement_cache_size=self._cache_size,
                     server_settings=server_settings,
                     connection_class=NAVConnection,
                     loop=self._loop,
+                    **custom_class,
                     **_ssl,
                 )
-                await self._connection.set_type_codec("json", encoder=_encoder, decoder=_decoder, schema="pg_catalog")
-                await self._connection.set_type_codec("jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog")
-                await self._connection.set_builtin_type_codec("hstore", codec_name="pg_contrib.hstore")
+                await self._connection.set_type_codec(
+                    "json", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
+                )
+                await self._connection.set_type_codec(
+                    "jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
+                )
+                try:
+                    await self._connection.set_builtin_type_codec(
+                        "hstore",
+                        codec_name="pg_contrib.hstore"
+                    )
+                except Exception:
+                    pass
 
                 def _uuid_encoder(value):
                     if isinstance(value, uuid.UUID):
@@ -557,13 +599,16 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     else:
                         return uuid.UUID(bytes=value)
 
-                await self._connection.set_type_codec(
-                    "uuid",
-                    encoder=_uuid_encoder,
-                    decoder=_uuid_decoder,
-                    schema="pg_catalog",
-                    format="binary",
-                )
+                try:
+                    await self._connection.set_type_codec(
+                        "uuid",
+                        encoder=_uuid_encoder,
+                        decoder=_uuid_decoder,
+                        schema="pg_catalog",
+                        format="binary",
+                    )
+                except Exception:
+                    pass
             if self._connection:
                 self._connected = True
                 if self._connection_config and isinstance(self._connection_config, dict):
@@ -582,7 +627,9 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 self._logger.debug(f"Initialized on: {self._initialized_on}")
             return self
         except ConnectionRefusedError as err:
-            raise UninitializedError(f"Unable to connect to database, connection Refused: {err}") from err
+            raise UninitializedError(
+                f"Unable to connect to database, connection Refused: {err}"
+            ) from err
         except TooManyConnectionsError as err:
             self._logger.error(f"Too Many Connections Error: {err}")
             raise TooManyConnections(f"Too Many Connections Error: {err}") from err
@@ -601,7 +648,9 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             self._logger.warning(f"Interface Warning: {err}")
             return False
         except Exception as ex:
-            self._logger.exception(f"Asyncpg Unknown Error: {ex}", stack_info=True)
+            self._logger.exception(
+                f"Asyncpg Unknown Error: {ex}", stack_info=True
+            )
             raise DriverError(f"Asyncpg Unknown Error: {ex}") from ex
 
     async def release(self):
