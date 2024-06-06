@@ -1,5 +1,5 @@
 aiounittest==1.4.2
-black==24.3.0
+black==24.4.2
 build==1.0.3
 coverage[toml]==7.5.3
 flit==3.9.0
