@@ -17,5 +17,5 @@ pytest-xdist==3.5.0
 pytest-assume==2.4.3
 sdist==0.0.0
 sphinx==7.3.7
-tox==4.6.4
+tox==4.15.1
 twine==4.0.2
