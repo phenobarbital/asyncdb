@@ -36,7 +36,6 @@ class memcachePool(BasePool):
         return params
 
     async def connect(self):
-        self._logger.debug(f"Memcache: Connecting to {self._params}")
         try:
             self._pool = aiomcache.Client(pool_size=self._max_queries, **self._params)
 
@@ -116,7 +115,6 @@ class memcache(BaseDriver):
         """
         __init async Memcache initialization
         """
-        self._logger.debug(f"Memcache: Connecting to {self._params}")
         try:
             self._connection = aiomcache.Client(**self._params)
         except aiomcache.exceptions.ValidationException as err:
