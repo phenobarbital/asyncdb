@@ -26,7 +26,6 @@ class redisPool(BasePool):
         """
         __init async db initialization
         """
-        self._logger.debug(f"Redis Pool: Connecting to {self._dsn}")
         try:
             self._pool = aioredis.ConnectionPool.from_url(
                 self._dsn,
