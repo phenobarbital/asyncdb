@@ -187,7 +187,6 @@ class cassandra(InitDriver):
                 execution_profiles=profiles,
                 **params,
             )
-            print(self._cluster)
             try:
                 self._connection = self._cluster.connect(keyspace=keyspace)
             except NoHostAvailable as ex:

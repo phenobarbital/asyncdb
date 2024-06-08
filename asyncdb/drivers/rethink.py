@@ -113,9 +113,6 @@ class rethink(InitDriver, DBCursorBackend):
         self.params["db"] = self.params.get("database", None)
 
     async def connection(self):
-        self._logger.debug(
-            f'RT Connection to host {self.params["host"]}:{self.params["port"]}'
-        )
         self._connection = None
         self.params["timeout"] = self._timeout
         try:

@@ -224,7 +224,7 @@ class pgPool(BasePool):
         """
         Creates a Pool Connection.
         """
-        self._logger.debug(f"AsyncPg (Pool): Connecting to {self._dsn}")
+        # self._logger.debug(f"AsyncPg (Pool): Connecting to {self._dsn}")
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             server_settings = {
@@ -635,14 +635,15 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                         try:
                             r = await self._connection.execute(config)
                         except RuntimeError as err:
-                            self._logger.warning(f"Pg: Error on Connection Configuration: {err}")
+                            self._logger.warning(
+                                f"Pg: Error on Connection Configuration: {err}"
+                            )
                 if self._init_func is not None and callable(self._init_func):
                     try:
                         await self._init_func(self._connection)  # pylint: disable=E1102
                     except (ValueError, RuntimeError) as err:
                         self._logger.warning(f"Error on Init Connection: {err}")
                 self._initialized_on = time.time()
-                self._logger.debug(f"Initialized on: {self._initialized_on}")
             return self
         except ConnectionRefusedError as err:
             raise UninitializedError(
