@@ -2,6 +2,7 @@ import os
 from typing import Union, Any
 import asyncio
 import time
+import uuid
 from dataclasses import is_dataclass, astuple, fields
 from ssl import PROTOCOL_TLSv1
 import logging
@@ -939,7 +940,7 @@ class scylladb(InitDriver, ModelBackend):
             tasks.append(self._connection.execute(bound_stmt))
         await asyncio.gather(*tasks)
 
-    ## Model Logic:
+        ## Model Logic:
     async def _insert_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """
         insert a row from model.
@@ -954,7 +955,7 @@ class scylladb(InitDriver, ModelBackend):
             table = _model.__name__
         cols = []
         columns = []
-        source = []
+        source = {}
         _filter = {}
         n = 1
         fields = _model.columns()
@@ -1003,30 +1004,37 @@ class scylladb(InitDriver, ModelBackend):
                         value = getattr(value, name)
                     except AttributeError:
                         value = None
-            source.append(value)
+            elif isinstance(value, uuid.UUID):
+                value = str(value)  # convert to string, for now
+            source[column] = value
             cols.append(column)
             n += 1
             if pk := self._get_attribute(field, value, attr="primary_key"):
                 _filter[column] = pk
         try:
+            values = ", ".join([f":{a}" for a in cols])  # pylint: disable=C0209
             cols = ",".join(cols)
-            values = ",".join(["?" for a in range(1, n)])  # pylint: disable=C0209
             insert = f"INSERT INTO {table}({cols}) VALUES({values}) IF NOT EXISTS;"
             self._logger.debug(f"INSERT: {insert}")
             stmt = self._connection.prepare(insert)
             result = self._connection.execute(stmt, source)
             if result.was_applied:
                 # get the row inserted again:
-                condition = self._where(fields, **_filter)
-                stmt = SimpleStatement(f"SELECT * FROM {table} {condition}")
-                result = self._connection.execute(stmt).one()
+                condition = " AND ".join(
+                    [f"{key} = :{key}" for key in _filter]
+                )
+                _select_stmt = f"SELECT * FROM {table} WHERE {condition}"
+                stmt = self._connection.prepare(_select_stmt)
+                result = self._connection.execute(stmt, _filter).one()
             if result:
                 _model.reset_values()
                 for f, val in result.items():
                     setattr(_model, f, val)
                 return _model
         except Exception as err:
-            raise DriverError(message=f"Error on Insert over table {_model.Meta.name}: {err!s}") from err
+            raise DriverError(
+                message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
+            ) from err
 
     async def _delete_(self, _model: Model, _filter: dict = None, **kwargs):  # pylint: disable=W0613
         """
