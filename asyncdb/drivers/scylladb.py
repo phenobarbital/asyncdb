@@ -2,6 +2,7 @@ import os
 from typing import Union, Any
 import asyncio
 import time
+from enum import Enum
 import uuid
 from dataclasses import is_dataclass, astuple, fields
 from ssl import PROTOCOL_TLSv1
@@ -940,7 +941,7 @@ class scylladb(InitDriver, ModelBackend):
             tasks.append(self._connection.execute(bound_stmt))
         await asyncio.gather(*tasks)
 
-        ## Model Logic:
+    ## Model Logic:
     async def _insert_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """
         insert a row from model.
@@ -1006,6 +1007,8 @@ class scylladb(InitDriver, ModelBackend):
                         value = None
             elif isinstance(value, uuid.UUID):
                 value = str(value)  # convert to string, for now
+            elif isinstance(value, Enum):
+                value = value.value
             source[column] = value
             cols.append(column)
             n += 1
@@ -1024,6 +1027,7 @@ class scylladb(InitDriver, ModelBackend):
                     [f"{key} = :{key}" for key in _filter]
                 )
                 _select_stmt = f"SELECT * FROM {table} WHERE {condition}"
+                self._logger.debug(f"SELECT: {_select_stmt}")
                 stmt = self._connection.prepare(_select_stmt)
                 result = self._connection.execute(stmt, _filter).one()
             if result:
