@@ -92,6 +92,7 @@ class scylladb(InitDriver, ModelBackend):
         self._driver: str = kwargs.pop("driver", "cassandra")
         self.heartbeat_interval: int = kwargs.pop("heartbeat_interval", 0)
         self._row_factory = kwargs.pop("row_factory", 'dict_factory')
+        self._force_closing: bool = kwargs.pop('force_closing', False)
         super(scylladb, self).__init__(loop=loop, params=params, **kwargs)
         try:
             if "host" in self.params:
@@ -112,18 +113,26 @@ class scylladb(InitDriver, ModelBackend):
 
     def sync_close(self):
         # gracefully closing underlying connection
+        if self._force_closing is False:
+            # if not forced, then, only declared null connection
+            self._connection = None
+            return
         if self._connection:
             try:
                 self._connection.shutdown()
             except Exception as err:
                 self._connection = None
-                raise DriverError(message=f"Connection Error, Terminated: {err}") from err
+                raise DriverError(
+                    message=f"Connection Error, Terminated: {err}"
+                ) from err
         if self._cluster:
             self._logger.debug("Closing Cluster")
             try:
                 self._cluster.shutdown()
             except Exception as err:
-                raise DriverError(f"Cluster Shutdown Error: {err}") from err
+                raise DriverError(
+                    f"Cluster Shutdown Error: {err}"
+                ) from err
 
     async def async_close(self):
         if self._connection:
@@ -176,7 +185,6 @@ class scylladb(InitDriver, ModelBackend):
             self._auth = {}
         params = {
             "port": self.params["port"],
-            "compression": True,
             "application_name": "Navigator",
             "protocol_version": self._protocol,
             "connect_timeout": self._timeout,
@@ -325,6 +333,7 @@ class scylladb(InitDriver, ModelBackend):
             auth_provider = None
             if self._auth:
                 auth_provider = PlainTextAuthProvider(**self._auth)
+            print('CLUSTER HOSTS ', self._hosts)
             self._cluster = Cluster(
                 self._hosts,
                 auth_provider=auth_provider,
