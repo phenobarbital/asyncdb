@@ -617,26 +617,14 @@ class bigquery(SQLDriver, ModelBackend):
             print('INSERT > ', table, source, type(source))
             for k,v in source.items():
                 print(f"{k} = {v}", type(v))
-            # job = self._connection.insert_rows(
-            #     table,
-            #     [source],
-            # )
-            # print('JOB > ', job)
             dataset_ref = self._connection.dataset(_model.Meta.schema)
             table_ref = dataset_ref.table(_model.Meta.name)
             table = bq.Table(table_ref)
-
-            job_config = bq.LoadJobConfig(
-                source_format=bq.SourceFormat.NEWLINE_DELIMITED_JSON,
-            )
-            job = await self._thread_func(
-                self._connection.load_table_from_json,
-                [source],
+            errors = self._connection.insert_rows_json(
                 table,
-                job_config=job_config
+                [source]
             )
-            row = job.result()
-            print('ROW > ', row)
+            print('ROW > ', errors)
             # get the row inserted again:
             condition = " AND ".join(
                 [f"{key} = :{key}" for key in _filter]
