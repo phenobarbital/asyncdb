@@ -26,6 +26,7 @@ from cassandra.policies import (
     DCAwareRoundRobinPolicy,
     WhiteListRoundRobinPolicy,
     DowngradingConsistencyRetryPolicy,
+    ConstantReconnectionPolicy,
     TokenAwarePolicy,
     RoundRobinPolicy
 )
@@ -83,7 +84,7 @@ class scylladb(InitDriver, ModelBackend):
     ):
         self.hosts: list = []
         self.application_name = os.getenv("APP_NAME", "NAV")
-        self._enable_shard_awareness = kwargs.pop("shard_awareness", True)
+        self._enable_shard_awareness = kwargs.pop("shard_awareness", False)
         self._test_query = "SELECT release_version FROM system.local"
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
         self._cluster = None
@@ -325,10 +326,14 @@ class scylladb(InitDriver, ModelBackend):
                 "compression": True,
                 "connection_class": conn_class,
                 "protocol_version": self._protocol,
-                "connect_timeout": self._timeout,
                 "idle_heartbeat_interval": self.heartbeat_interval,
                 "ssl_options": ssl_opts,
                 "executor_threads": 4,
+                "reconnection_policy": ConstantReconnectionPolicy(
+                    delay=5.0,
+                    max_attempts=100
+                ),
+                "connect_timeout": 10
             }
             auth_provider = None
             if self._auth:
