@@ -738,7 +738,12 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 return [None, "Data was not found"]
         except RuntimeError as err:
             error = f"Query Error: {err}"
-        except (InvalidSQLStatementNameError, PostgresSyntaxError, UndefinedColumnError, UndefinedTableError) as err:
+        except (
+            InvalidSQLStatementNameError,
+            PostgresSyntaxError,
+            UndefinedColumnError,
+            UndefinedTableError
+        ) as err:
             error = f"Sentence Error: {err}"
         except PostgresError as err:
             error = f"Postgres Error: {err}"

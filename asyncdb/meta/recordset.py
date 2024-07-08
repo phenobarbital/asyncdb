@@ -5,6 +5,7 @@ Sequence of Records.
 """
 from collections.abc import Sequence, Iterator
 from typing import Any, Union
+from google.cloud import bigquery
 from .record import Record
 
 
@@ -31,7 +32,11 @@ class Recordset(Sequence):
     def from_result(cls, result: Iterator) -> "Recordset":
         cols = []
         try:
-            if hasattr(result, "one"):  # Cassandra Resulset
+            if isinstance(result, bigquery.table.RowIterator):
+                rows_list = [row for row in result]
+                result = [{key: value for key, value in row.items()} for row in rows_list]
+                cols = list(result[0].keys())
+            elif hasattr(result, "one"):  # Cassandra Resulset
                 if callable(result.one):
                     cols = result.one().keys
                     result = list(result)
