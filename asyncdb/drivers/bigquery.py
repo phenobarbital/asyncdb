@@ -3,6 +3,7 @@ from typing import Any, Union
 from collections.abc import Iterable
 import io
 from pathlib import Path, PurePath
+from dataclasses import is_dataclass
 import asyncio
 import aiofiles
 import pandas_gbq
@@ -209,6 +210,7 @@ class bigquery(SQLDriver, ModelBackend):
             await self.connection()
         await self.valid_operation(sentence)
         self.start_timing()
+        self.output_format(kwargs.pop('factory', 'native'))
         error = None
         result = None
         try:
@@ -274,8 +276,8 @@ class bigquery(SQLDriver, ModelBackend):
 
     async def write(
         self,
-        table_id: str,
         data,
+        table_id: str = None,
         dataset_id: str = None,
         use_streams: bool = False,
         use_pandas: bool = True,  # by default using BigQuery
@@ -331,10 +333,14 @@ class bigquery(SQLDriver, ModelBackend):
                             f"Errors occurred while inserting rows: {errors}"
                         )
                 else:
+                    job_config = bq.LoadJobConfig(
+                        source_format=bq.SourceFormat.NEWLINE_DELIMITED_JSON,
+                    )
                     job = await self._thread_func(
                         self._connection.load_table_from_json,
-                        table,
                         data,
+                        table,
+                        job_config=job_config,
                         **kwargs
                     )
                     loop = asyncio.get_event_loop()
@@ -344,7 +350,7 @@ class bigquery(SQLDriver, ModelBackend):
                     else:
                         self._logger.info(f"Loaded {len(data)} rows into {table_id}")
             self._logger.info(
-                f"Inserted rows into {dataset_id}.{table_id}"
+                f"Inserted rows into {dataset_id}.{table_id}: {len(data)} rows"
             )
             # return Job object
             return job
@@ -532,7 +538,9 @@ class bigquery(SQLDriver, ModelBackend):
         results = await asyncio.gather(*tasks)  # Execute tasks concurrently and gather results
         return results
 
+    ##############################
     ## Model Logic:
+    ##############################
     async def _insert_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """
         insert a row from model.
@@ -566,9 +574,6 @@ class bigquery(SQLDriver, ModelBackend):
             except AttributeError:
                 required = False
             pk = self._get_attribute(field, value, attr="primary_key")
-            # if pk is True and value is None:
-            #     if "db_default" in field.metadata:
-            #         continue
             if pk is True and value is None and "db_default" in field.metadata:
                 continue
             if required is False and value is None or value == "None":
@@ -920,22 +925,24 @@ class bigquery(SQLDriver, ModelBackend):
         """
         try:
             schema = ""
-            # sc = _model.Meta.schema
             if sc := _model.Meta.schema:
                 schema = f"{sc}."
             table = f"{schema}{_model.Meta.name}"
         except AttributeError:
-            table = _model.__name__
+            table = f"{_model.Meta.schema}.{_model.Meta.name}"
         if "fields" in kwargs:
             columns = ",".join(kwargs["fields"])
         else:
             columns = "*"
         _all = f"SELECT {columns} FROM {table}"
         try:
-            smt = SimpleStatement(_all)
-            return self._connection.execute(smt)
+            job = self._connection.query(_all, **kwargs)
+            result = job.result()  # Waits for the query to finish
+            return [row for row in result]
         except Exception as e:
-            raise DriverError(f"Error: Model All over {table}: {e}") from e
+            raise DriverError(
+                f"Error: Model All over {table}: {e}"
+            ) from e
 
     async def _remove_(self, _model: Model, **kwargs):
         """
