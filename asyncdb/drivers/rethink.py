@@ -102,7 +102,7 @@ class rethink(InitDriver, DBCursorBackend):
         self.qry_options = None
         self._group = None
         self.distinct = None
-        self._db: str = None
+        self._db: str = "test"
         InitDriver.__init__(self, loop=loop, params=params, **kwargs)
         DBCursorBackend.__init__(self)
         # set rt object
@@ -258,7 +258,7 @@ class rethink(InitDriver, DBCursorBackend):
                 creation = self._engine.db(self._db).table_create(table)
             return await creation.run(self._connection)
         except ReqlOpFailedError as ex:
-            if 'already exists in' in str(ex) and exists_ok is True:
+            if 'already exists in' in str(ex) and exists_ok:
                 return True
             raise DriverError(f"Cannot create Table {table}, {ex}") from ex
         except (ReqlDriverError, ReqlRuntimeError) as ex:
