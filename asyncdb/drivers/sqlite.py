@@ -160,7 +160,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             if not self._result:
                 raise NoDataFound()
         except Exception as err:
-            error = "Error on Query: {err}"
+            error = f"Error on Query: {err}"
             raise DriverError(message=error) from err
         finally:
             try:
@@ -183,7 +183,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             if not self._result:
                 raise NoDataFound()
         except Exception as err:
-            error = "Error on Query: {err}"
+            error = f"Error on Query: {err}"
             raise DriverError(message=error) from err
         finally:
             try:
@@ -208,7 +208,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             if result:
                 await self._connection.commit()
         except Exception as err:
-            error = "Error on Execute: {err}"
+            error = f"Error on Execute: {err}"
             raise DriverError(message=error) from err
         finally:
             return (result, error)
@@ -221,7 +221,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             if result:
                 await self._connection.commit()
         except Exception as err:
-            error = "Error on Execute Many: {err}"
+            error = f"Error on Execute Many: {err}"
             raise DriverError(message=error) from err
         finally:
             return (result, error)
@@ -260,7 +260,7 @@ class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
             if not self._columns:
                 raise NoDataFound()
         except Exception as err:
-            error = "Error on Column Info: {err}"
+            error = f"Error on Column Info: {err}"
             raise DriverError(message=error) from err
         finally:
             return self._columns
