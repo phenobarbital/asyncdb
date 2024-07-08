@@ -142,7 +142,7 @@ setup(
             "python-datatable==1.1.3",
             "polars==0.20.4",
             "pyarrow==16.0.0",
-            "connectorx==0.2.3",
+            "connectorx==0.3.3",
             "pyspark==3.5.0",
             "deltalake==0.17.4",
             "duckdb==0.10.2",
@@ -205,13 +205,13 @@ setup(
             "JayDeBeApi==1.2.3"
         ],
         "oracle": [
-            "oracledb==2.1.1"
+            "oracledb==2.2.1"
         ],
         "sqlalchemy": [
             "sqlalchemy[asyncio]==2.0.23",
         ],
         "elasticsearch": [
-            "elasticsearch[async]==8.13.0",
+            "elasticsearch[async]==8.13.2",
         ],
         "mongodb": [
             "pymongo==4.6.1",
@@ -224,7 +224,7 @@ setup(
             "aiocouch==3.0.0"
         ],
         "hazelcast": [
-            "hazelcast-python-client==5.3.0"
+            "hazelcast-python-client==5.4.0"
         ],
         "scylla": [
             "scylla_driver==3.26.8",
@@ -238,7 +238,7 @@ setup(
             "python-datatable==1.1.3",
             "polars==0.20.4",
             "pyarrow==16.0.0",
-            "connectorx==0.2.3",
+            "connectorx==0.3.3",
             "aiosqlite>=0.18.0",
             "pylibmc==1.6.3",
             "aiomcache==0.8.1",
@@ -259,7 +259,7 @@ setup(
             "JayDeBeApi==1.2.3",
             "pyodbc==5.1.0",
             "sqlalchemy[asyncio]==2.0.23",
-            "elasticsearch[async]==8.13.0",
+            "elasticsearch[async]==8.13.2",
             "pymongo==4.6.1",
             "motor==3.4.0",
             "pymssql==2.2.11",
@@ -268,8 +268,8 @@ setup(
             "mysqlclient==2.2.0",
             "aiomysql==0.2.0",
             "pyspark==3.5.0",
-            "oracledb==2.1.1",
-            "hazelcast-python-client==5.3.0",
+            "oracledb==2.2.1",
+            "hazelcast-python-client==5.4.0",
             "deltalake==0.17.4",
             "duckdb==0.10.2",
             "botocore==1.31.64",
@@ -278,7 +278,7 @@ setup(
             "google-cloud-bigquery==3.25.0",
             "google-cloud-storage==2.17.0",
             "pandas-gbq==0.23.1",
-            "tqdm==4.66.1"
+            "tqdm==4.66.4"
         ]
     },
     tests_require=[
