@@ -1,7 +1,8 @@
 import os
 from typing import Any, Union
 from collections.abc import Iterable
-import io
+import uuid
+from enum import Enum
 from pathlib import Path, PurePath
 from dataclasses import is_dataclass
 import asyncio
@@ -16,7 +17,8 @@ from google.oauth2 import service_account
 from ..exceptions import DriverError
 from .sql import SQLDriver
 from ..interfaces import ModelBackend
-from ..models import Model, Field
+from ..models import Model
+from ..utils.types import Entity
 
 
 class bigquery(SQLDriver, ModelBackend):
@@ -541,18 +543,17 @@ class bigquery(SQLDriver, ModelBackend):
     ##############################
     ## Model Logic:
     ##############################
+    def get_table_ref(self, schema: str, table: str):
+        """Returns the referencie of a BQ Table.
+        """
+        dataset_ref = bq.DatasetReference(self._connection.project, schema)
+        table_ref = dataset_ref.table(table)
+        return self._connection.get_table(table_ref)
+
     async def _insert_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """
         insert a row from model.
         """
-        try:
-            schema = ""
-            sc = _model.Meta.schema
-            if sc:
-                schema = f"{sc}."
-            table = f"{schema}{_model.Meta.name}"
-        except AttributeError:
-            table = _model.__name__
         cols = []
         columns = []
         source = {}
@@ -565,6 +566,7 @@ class bigquery(SQLDriver, ModelBackend):
             except AttributeError:
                 continue
             ## getting the value of column:
+
             value = self._get_value(field, val)
             column = field.name
             columns.append(column)
@@ -605,27 +607,45 @@ class bigquery(SQLDriver, ModelBackend):
                 value = str(value)  # convert to string, for now
             elif isinstance(value, Enum):
                 value = value.value
-            source[column] = value
+            source[column] = val
             cols.append(column)
             n += 1
             if pk := self._get_attribute(field, value, attr="primary_key"):
                 _filter[column] = pk
         try:
-            values = ", ".join([f":{a}" for a in cols])  # pylint: disable=C0209
-            cols = ",".join(cols)
-            insert = f"INSERT INTO {table}({cols}) VALUES({values}) IF NOT EXISTS;"
-            self._logger.debug(f"INSERT: {insert}")
-            stmt = self._connection.prepare(insert)
-            result = self._connection.execute(stmt, source)
-            if result.was_applied:
-                # get the row inserted again:
-                condition = " AND ".join(
-                    [f"{key} = :{key}" for key in _filter]
-                )
-                _select_stmt = f"SELECT * FROM {table} WHERE {condition}"
-                self._logger.debug(f"SELECT: {_select_stmt}")
-                stmt = self._connection.prepare(_select_stmt)
-                result = self._connection.execute(stmt, _filter).one()
+            table = self.get_table_ref(_model.Meta.schema, _model.Meta.name)
+            print('INSERT > ', table, source, type(source))
+            for k,v in source.items():
+                print(f"{k} = {v}", type(v))
+            # job = self._connection.insert_rows(
+            #     table,
+            #     [source],
+            # )
+            # print('JOB > ', job)
+            dataset_ref = self._connection.dataset(_model.Meta.schema)
+            table_ref = dataset_ref.table(_model.Meta.name)
+            table = bq.Table(table_ref)
+
+            job_config = bq.LoadJobConfig(
+                source_format=bq.SourceFormat.NEWLINE_DELIMITED_JSON,
+            )
+            job = await self._thread_func(
+                self._connection.load_table_from_json,
+                [source],
+                table,
+                job_config=job_config
+            )
+            row = job.result()
+            print('ROW > ', row)
+            # get the row inserted again:
+            condition = " AND ".join(
+                [f"{key} = :{key}" for key in _filter]
+            )
+            _select_stmt = f"SELECT * FROM {table} WHERE {condition}"
+            self._logger.debug(f"SELECT: {_select_stmt}")
+            job = self._connection.query(_select_stmt)
+            result = job.result()
+            result = next(iter(result))
             if result:
                 _model.reset_values()
                 for f, val in result.items():
@@ -790,7 +810,7 @@ class bigquery(SQLDriver, ModelBackend):
                 schema = f"{sc}."
             table = f"{schema}{_model.Meta.name}"
         except AttributeError:
-            table = _model.__name__
+            table = f"{_model.Meta.schema}.{_model.Meta.name}"
         fields = _model.columns()
         _filter = {}
         for name, field in fields.items():
@@ -806,10 +826,13 @@ class bigquery(SQLDriver, ModelBackend):
         condition = self._where(fields, **_filter)
         _get = f"SELECT * FROM {table} {condition}"
         try:
-            smt = SimpleStatement(_get)
-            return self._connection.execute(smt).one()
+            job = self._connection.query(_get)
+            result = job.result()  # Waits for the query to finish
+            return next(iter(result))
         except Exception as e:
-            raise DriverError(f"Error: Model Fetch over {table}: {e}") from e
+            raise DriverError(
+                f"Error: Model Fetch over {table}: {e}"
+            ) from e
 
     async def _filter_(self, _model: Model, *args, **kwargs):
         """
@@ -822,7 +845,7 @@ class bigquery(SQLDriver, ModelBackend):
                 schema = f"{sc}."
             table = f"{schema}{_model.Meta.name}"
         except AttributeError:
-            table = _model.__name__
+            table = f"{_model.Meta.schema}.{_model.Meta.name}"
         fields = _model.columns(_model)
         _filter = {}
         if args:
@@ -842,12 +865,13 @@ class bigquery(SQLDriver, ModelBackend):
         condition = self._where(fields, **_filter)
         _get = f"SELECT {columns} FROM {table} {condition}"
         try:
-            stmt = SimpleStatement(_get)
-            fut = self._connection.execute_async(stmt)
-            result = fut.result()
-            return result
+            job = self._connection.query(_get)
+            result = job.result()  # Waits for the query to finish
+            return [row for row in result]
         except Exception as e:
-            raise DriverError(f"Error: Model GET over {table}: {e}") from e
+            raise DriverError(
+                f"Error: Model GET over {table}: {e}"
+            ) from e
 
     async def _select_(self, *args, **kwargs):
         """
@@ -856,7 +880,9 @@ class bigquery(SQLDriver, ModelBackend):
         try:
             model = kwargs["_model"]
         except KeyError as e:
-            raise DriverError(f"Missing Model for SELECT {kwargs!s}") from e
+            raise DriverError(
+                f"Missing Model for SELECT {kwargs!s}"
+            ) from e
         try:
             schema = ""
             sc = model.Meta.schema
@@ -864,7 +890,7 @@ class bigquery(SQLDriver, ModelBackend):
                 schema = f"{sc}."
             table = f"{schema}{model.Meta.name}"
         except AttributeError:
-            table = model.__name__
+            table = f"{model.Meta.schema}.{model.Meta.name}"
         if args:
             condition = "{}".join(args)
         else:
@@ -875,10 +901,13 @@ class bigquery(SQLDriver, ModelBackend):
             columns = "*"
         _get = f"SELECT {columns} FROM {table} {condition}"
         try:
-            smt = SimpleStatement(_get)
-            return self._connection.execute(smt)
+            job = self._connection.query(_get)
+            result = job.result()  # Waits for the query to finish
+            return [row for row in result]
         except Exception as e:
-            raise DriverError(f"Error: Model SELECT over {table}: {e}") from e
+            raise DriverError(
+                f"Error: Model GET over {table}: {e}"
+            ) from e
 
     async def _get_(self, _model: Model, *args, **kwargs):
         """
@@ -891,7 +920,7 @@ class bigquery(SQLDriver, ModelBackend):
                 schema = f"{sc}."
             table = f"{schema}{_model.Meta.name}"
         except AttributeError:
-            table = _model.__name__
+            table = f"{_model.Meta.schema}.{_model.Meta.name}"
         fields = _model.columns(_model)
         _filter = {}
         if args:
@@ -910,10 +939,11 @@ class bigquery(SQLDriver, ModelBackend):
                 _filter[name] = value
         condition = self._where(fields, **_filter)
         _get = f"SELECT {columns} FROM {table} {condition}"
-        print('SELECT ', _get)
+        print('SELECT :: ', _get)
         try:
-            smt = SimpleStatement(_get)
-            return self._connection.execute(smt).one()
+            job = self._connection.query(_get)
+            result = job.result()  # Waits for the query to finish
+            return next(iter(result))
         except Exception as e:
             raise DriverError(
                 f"Error: Model GET over {table}: {e}"
