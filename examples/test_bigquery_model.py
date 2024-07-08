@@ -1,4 +1,5 @@
 import asyncio
+import re
 from pathlib import Path
 from asyncdb import AsyncDB
 from asyncdb.models import Model, Field
@@ -20,6 +21,20 @@ CREATE TABLE IF NOT EXISTS library.country_flags (
   flag INT64
 );
 """
+
+def parse_inserts(statements):
+    rows_to_insert = []
+
+    for statement in statements:
+        match = re.search(r"INSERT INTO \w+\.\w+ \(([\w, ]+)\) VALUES \((.+)\);", statement)
+        if match:
+            columns = [col.strip() for col in match.group(1).split(",")]
+            values = [val.strip() for val in match.group(2).split(",")]
+            # Remove quotes and convert to appropriate types
+            values = [int(val) if val.isdigit() else val.strip("'") for val in values]
+            row_dict = dict(zip(columns, values))
+            rows_to_insert.append(row_dict)
+    return rows_to_insert
 
 class CountryFlag(Model):
     country: str = Field(primary_key=True)
@@ -64,17 +79,26 @@ async def start_test():
             table_schema
         )
         print('CREATE > ', result, error)
-
         if sql_file.exists():
             print('READING FILE: ', sql_file)
             # read cql_file into a list of sentences
             sentences = []
             with open(sql_file, 'r') as file:
                 sentences = file.readlines()
-            chunk_size = 5000
+            chunk_size = 1000
             chunks = [sentences[i:i+chunk_size] for i in range(0, len(sentences), chunk_size)]
             for chunk in chunks:
-                result, error = await conn.execute_many(chunk)
+                # Parse the inserts
+                data = parse_inserts(chunk)
+                print('DATA > ', len(data), data[0], type(data[0]))
+                await conn.write(
+                    data,
+                    table_id='country_flags',
+                    dataset_id='library',
+                    use_streams=False,
+                    use_pandas=False
+                )
+                break
             # Count models:
             count, error = await conn.query('SELECT COUNT(*) FROM unique-decker-385015.library.country_flags;')
             for c in count:
@@ -90,62 +114,74 @@ async def finish_test():
 async def test_operations():
     db = AsyncDB(DRIVER, params=PARAMS)
     async with await db.connection() as conn:
-        print('CONNECTED: ', conn.is_connected() is True)
+        print('TEST CONNECTED: ', conn.is_connected() is True)
         # using row factories
-        result, _ = await conn.query('SELECT * from library.country_flags LIMIT 10000', factory='pandas')
-        print(result.result)
-        result, _ = await conn.query('SELECT * from library.country_flags LIMIT 10000', factory='recordset')
-        print(result.result)
+        result, err = await conn.query(
+            'SELECT * from library.country_flags LIMIT 100',
+            factory='pandas'
+        )
+        print(result, 'Error: ', err)
+        result, err = await conn.query(
+            'SELECT * from library.country_flags LIMIT 100',
+            factory='recordset'
+        )
+        print(result, len(result), 'Error: ', err)
         # output formats
         db.output_format('json')  # change output format to json
-        result, _ = await conn.query('SELECT * from library.country_flags LIMIT 1')
-        print(result)
+        result, err = await conn.query('SELECT * from library.country_flags LIMIT 1')
+        print(result, 'Error: ', err)
+        for row in result:
+            print(row)
 
-# async def test_model():
-#     db = AsyncDB(DRIVER, params=ARGS)
-#     async with await db.connection() as conn:
-#         await conn.use('library')  # set database to work
-#         # Set the model to use the connection
-#         CountryFlag.Meta.connection = conn
-#         filter = {
-#             "country": "Venezuela",
-#             "cyclist_name": "Marty",
-#         }
-#         result = await CountryFlag.filter(**filter)
-#         for res in result:
-#             print('RESULT > ', res)
-#         # Get one single record:
-#         katie = await CountryFlag.get(
-#             country="Anguilla",
-#             cyclist_name="Kathie",
-#             flag=7
-#         )
-#         print('RESULT > ', katie)
-#         # Insert a new record:
-#         new_record = CountryFlag(
-#             country="Venezuela",
-#             cyclist_name="Jesus",
-#             flag=233
-#         )
-#         await new_record.insert()
-#         print('INSERT > ', new_record)
-#         # Delete the record:
-#         result = await new_record.delete()
-#         print('DELETED > ', result)
-#         # Update the record:
-#         katie.flag = 233
-#         await katie.update()
-#         print('UPDATED > ', katie)
-#         # Batch operation:
-#         brazil = await CountryFlag.filter(country="Brazil")
-#         for b in brazil:
-#             print(b)
-#         # Delete all records:
-#         result = await CountryFlag.remove(country="Brazil")
-#         print('REMOVED > ', result)
-#         # get all records:
-#         all_records = await CountryFlag.all()
-#         print('ALL RECORDS > ', len(all_records))
+async def test_model():
+    db = AsyncDB(DRIVER, params=PARAMS)
+    async with await db.connection() as conn:
+        # Set the model to use the connection
+        CountryFlag.Meta.connection = conn
+
+        # get all records:
+        all_records = await CountryFlag.all()
+        print('ALL RECORDS > ', len(all_records))
+
+        # Get one single record:
+        Kissee = await CountryFlag.get(
+            country="Algeria",
+            cyclist_name="Kissee",
+            flag=3
+        )
+        print('Get Kissee > ', Kissee)
+
+        filter = {
+            "country": "Austria"
+        }
+        result = await CountryFlag.filter(**filter)
+        for res in result:
+            print('RESULT > ', res)
+
+        # Insert a new record:
+        new_record = CountryFlag(
+            country="Venezuela",
+            cyclist_name="Jesus",
+            flag=233
+        )
+        await new_record.insert()
+        print('INSERT > ', new_record)
+
+        # # Delete the record:
+        # result = await new_record.delete()
+        # print('DELETED > ', result)
+        # # Update the record:
+        # katie.flag = 233
+        # await katie.update()
+        # print('UPDATED > ', katie)
+        # # Batch operation:
+        # brazil = await CountryFlag.filter(country="Brazil")
+        # for b in brazil:
+        #     print(b)
+        # # Delete all records:
+        # result = await CountryFlag.remove(country="Brazil")
+        # print('REMOVED > ', result)
+
 
 if __name__ == '__main__':
     try:
@@ -156,12 +192,12 @@ if __name__ == '__main__':
         loop.run_until_complete(
             start_test()
         )
-        loop.run_until_complete(
-            test_operations()
-        )
         # loop.run_until_complete(
-        #     test_model()
+        #     test_operations()
         # )
+        loop.run_until_complete(
+            test_model()
+        )
     except Exception as err:
         print('Error: ', err)
     finally:
