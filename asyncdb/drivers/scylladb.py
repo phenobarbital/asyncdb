@@ -83,7 +83,7 @@ class scylladb(InitDriver, ModelBackend):
     ):
         self.hosts: list = []
         self.application_name = os.getenv("APP_NAME", "NAV")
-        self._enable_shard_awareness = kwargs.pop("shard_awareness", True)
+        self._enable_shard_awareness = kwargs.pop("shard_awareness", False)
         self._test_query = "SELECT release_version FROM system.local"
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
         self._cluster = None
