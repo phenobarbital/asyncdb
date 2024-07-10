@@ -29,7 +29,10 @@ class bigquery(SQLDriver, ModelBackend):
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._credentials = params.get("credentials", None)
         if self._credentials:
-            self._credentials = Path(self._credentials).expanduser().resolve()
+            if isinstance(self._credentials, str):
+                self._credentials = Path(self._credentials).expanduser().resolve()
+            elif isinstance(self._credentials, PurePath):
+                self._credentials = self._credentials.resolve()
         self._account = None
         self._dsn = ""
         self._project_id = params.get("project_id", None)
@@ -546,9 +549,12 @@ class bigquery(SQLDriver, ModelBackend):
     def get_table_ref(self, schema: str, table: str):
         """Returns the referencie of a BQ Table.
         """
-        dataset_ref = bq.DatasetReference(self._connection.project, schema)
+        dataset_ref = bq.DatasetReference(self._project_id, schema)
         table_ref = dataset_ref.table(table)
         return self._connection.get_table(table_ref)
+        # dataset_ref = self._connection.dataset(schema)
+        # table_ref = dataset_ref.table(table)
+        # return bq.Table(table_ref)
 
     async def _insert_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """
@@ -566,7 +572,6 @@ class bigquery(SQLDriver, ModelBackend):
             except AttributeError:
                 continue
             ## getting the value of column:
-
             value = self._get_value(field, val)
             column = field.name
             columns.append(column)
@@ -614,22 +619,25 @@ class bigquery(SQLDriver, ModelBackend):
                 _filter[column] = pk
         try:
             table = self.get_table_ref(_model.Meta.schema, _model.Meta.name)
-            print('INSERT > ', table, source, type(source))
-            for k,v in source.items():
-                print(f"{k} = {v}", type(v))
-            dataset_ref = self._connection.dataset(_model.Meta.schema)
-            table_ref = dataset_ref.table(_model.Meta.name)
-            table = bq.Table(table_ref)
-            errors = self._connection.insert_rows_json(
+            # dataset_ref = self._connection.dataset(_model.Meta.schema)
+            # table_ref = dataset_ref.table(_model.Meta.name)
+            # table = bq.Table(table_ref)
+            job_config = bq.LoadJobConfig(
+                source_format=bq.SourceFormat.NEWLINE_DELIMITED_JSON,
+            )
+            job = await self._thread_func(
+                self._connection.load_table_from_json,
+                [source],
                 table,
-                [source]
+                job_config=job_config
             )
-            print('ROW > ', errors)
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, job.result)
+            if job.errors and len(job.errors) > 0:
+                raise RuntimeError(f"Error Inserting Data: {job.errors}")
             # get the row inserted again:
-            condition = " AND ".join(
-                [f"{key} = :{key}" for key in _filter]
-            )
-            _select_stmt = f"SELECT * FROM {table} WHERE {condition}"
+            condition = self._where(fields, **_filter)
+            _select_stmt = f"SELECT * FROM {table} {condition}"
             self._logger.debug(f"SELECT: {_select_stmt}")
             job = self._connection.query(_select_stmt)
             result = job.result()
@@ -648,14 +656,7 @@ class bigquery(SQLDriver, ModelBackend):
         """
         delete a row from model.
         """
-        try:
-            schema = ""
-            sc = _model.Meta.schema
-            if sc:
-                schema = f"{sc}."
-            table = f"{schema}{_model.Meta.name}"
-        except AttributeError:
-            table = _model.__name__
+        table = f"{self._project_id}.{_model.Meta.schema}.{_model.Meta.name}"
         source = []
         if not _filter:
             _filter = {}
@@ -683,10 +684,14 @@ class bigquery(SQLDriver, ModelBackend):
                 raise DriverError(f"Avoid DELETE without WHERE conditions: {_filter}")
             _delete = f"DELETE FROM {table} {condition};"
             self._logger.debug(f"DELETE: {_delete}")
-            result = self._connection.execute(_delete)
-            return f"DELETE {result}: {_filter!s}"
+            job = self._connection.query(_delete)
+            job.result()  # Waits for the query to finish
+            num_deleted_rows = job.num_dml_affected_rows
+            return f"DELETE {num_deleted_rows} rows: {_filter!s}"
         except Exception as err:
-            raise DriverError(message=f"Error on Insert over table {_model.Meta.name}: {err!s}") from err
+            raise DriverError(
+                message=f"Error on DELETE {_model.Meta.name}: {err!s}"
+            ) from err
 
     async def _update_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """
@@ -694,16 +699,9 @@ class bigquery(SQLDriver, ModelBackend):
         TODO: How to update when if primary key changed.
         Alternatives: Saving *dirty* status and previous value on dict
         """
-        try:
-            schema = ""
-            sc = _model.Meta.schema
-            if sc:
-                schema = f"{sc}."
-            table = f"{schema}{_model.Meta.name}"
-        except AttributeError:
-            table = _model.__name__
+        table = self.get_table_ref(_model.Meta.schema, _model.Meta.name)
         cols = []
-        source = []
+        source = {}
         _filter = {}
         _updated = {}
         _primary = []
@@ -716,7 +714,6 @@ class bigquery(SQLDriver, ModelBackend):
                 continue
             ## getting the value of column:
             value = self._get_value(field, val)
-
             column = field.name
             # validating required field
             try:
@@ -751,31 +748,33 @@ class bigquery(SQLDriver, ModelBackend):
             if curval == value:
                 continue  # no changes
             cols.append(name)  # pylint: disable=C0209
-            source.append(value)
+            datatype = field.type
+            value = Entity.escapeLiteral(value, datatype)
+            source[name] = value
             n += 1
         try:
-            if any(col in _primary for col in cols):
-                # in Cassandra we need to delete and insert again
-                condition = self._where(fields, **_filter)
-                _delete = f"DELETE FROM {table} {condition}"
-                result = self._connection.execute(
-                    SimpleStatement(_delete)
-                )
-                return await self._insert_(_model, **kwargs)
-            set_fields = ", ".join(cols)
+            set_fields = ", ".join(
+                [f"{key} = {val}" for key, val in source.items()]
+            )
             condition = self._where(fields, **_filter)
             _update = f"UPDATE {table} SET {set_fields} {condition}"
             self._logger.debug(f"UPDATE: {_update}")
-            stmt = await self.get_sentence(_update, prepared=True)
-            self._connection.execute(stmt, source)
+            job = self._connection.query(_update)
+            job.result()  # Waits for the query to finish
+        except Exception as err:
+            raise DriverError(
+                message=f"Error on Update over table {_model.Meta.name}: {err!s}"
+            ) from err
+        try:
             condition = self._where(fields, **_updated)
-            stmt = SimpleStatement(f"SELECT * FROM {table} {condition}")
-            result = self._connection.execute(stmt).one()
-            if result:
-                _model.reset_values()
-                for f, val in result.items():
-                    setattr(_model, f, val)
-                return _model
+            _get = f"SELECT * FROM {table} {condition}"
+            job = self._connection.query(_get)
+            result = job.result()  # Waits for the query to finish
+            data = dict(next(iter(result)))
+            _model.reset_values()
+            for f, val in data.items():
+                setattr(_model, f, val)
+            return _model
         except Exception as err:
             raise DriverError(
                 message=f"Error on Update over table {_model.Meta.name}: {err!s}"
@@ -966,13 +965,7 @@ class bigquery(SQLDriver, ModelBackend):
         """
         Deleting some records using Model.
         """
-        try:
-            schema = ""
-            if sc := _model.Meta.schema:
-                schema = f"{sc}."
-            table = f"{schema}{_model.Meta.name}"
-        except AttributeError:
-            table = _model.__name__
+        table = f"{_model.Meta.schema}.{_model.Meta.name}"
         fields = _model.columns(_model)
         _filter = {}
         for name, field in fields.items():
@@ -989,11 +982,14 @@ class bigquery(SQLDriver, ModelBackend):
         _delete = f"DELETE FROM {table} {condition}"
         try:
             self._logger.debug(f"DELETE: {_delete}")
-            smt = SimpleStatement(_delete)
-            result = self._connection.execute(smt)
-            return f"DELETE {result}: {_filter!s}"
+            job = self._connection.query(_delete)
+            job.result()  # Waits for the query to finish
+            num_deleted_rows = job.num_dml_affected_rows
+            return f"DELETE {num_deleted_rows} rows: {_filter!s}"
         except Exception as err:
-            raise DriverError(message=f"Error on DELETE {_model.Meta.name}: {err!s}") from err
+            raise DriverError(
+                message=f"Error on DELETE {_model.Meta.name}: {err!s}"
+            ) from err
 
     async def _updating_(self, *args, _filter: dict = None, **kwargs):
         """
@@ -1014,10 +1010,8 @@ class bigquery(SQLDriver, ModelBackend):
         fields = model.columns(model)
         if _filter is None and args:
             _filter = args[0]
-        cols = []
-        source = []
+        source = {}
         new_cond = {}
-        n = 1
         for name, field in fields.items():
             try:
                 val = kwargs[name]
@@ -1025,26 +1019,27 @@ class bigquery(SQLDriver, ModelBackend):
                 continue
             ## getting the value of column:
             value = self._get_value(field, val)
-            source.append(value)
             if name in _filter:
                 new_cond[name] = value
-            cols.append("{} = {}".format(name, "?".format(n)))  # pylint: disable=C0209
-            n += 1
+            datatype = field.type
+            value = Entity.escapeLiteral(value, datatype)
+            source[name] = value
         try:
-            set_fields = ", ".join(cols)
+            set_fields = ", ".join(
+                [f"{key} = {val}" for key, val in source.items()]
+            )
             condition = self._where(fields, **_filter)
             _update = f"UPDATE {table} SET {set_fields} {condition}"
             self._logger.debug(f"UPDATE: {_update}")
-            stmt = await self.get_sentence(_update, prepared=True)
-            result = self._connection.execute(stmt, source)
-            print(f"UPDATE {result}: {_filter!s}")
-
+            job = self._connection.query(_update)
+            job.result()  # Waits for the query to finish
+            num_affected_rows = job.num_dml_affected_rows
+            print(f'UPDATED rows: {num_affected_rows}')
             new_conditions = {**_filter, **new_cond}
             condition = self._where(fields, **new_conditions)
-
             _all = f"SELECT * FROM {table} {condition}"
-            stmt = await self.get_sentence(_all)
-            result = self._connection.execute(stmt)
+            job = self._connection.query(_all)
+            result = job.result()
             return [model(**dict(r)) for r in result]
         except Exception as err:
             raise DriverError(
