@@ -5,14 +5,17 @@ from asyncdb import AsyncDB
 from asyncdb.models import Model, Field
 
 DRIVER='bigquery'
-# create a pool with parameters
-PARAMS = {
-    "credentials": "~/proyectos/navigator/asyncdb/env/key.json",
-    "project_id": "unique-decker-385015"
-}
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+bigquery_credentials = BASE_DIR.joinpath('env', 'key.json')
 sql_file = BASE_DIR.joinpath('docs', 'countries_flags.bigquery.sql')
+
+# create a pool with parameters
+PARAMS = {
+    "credentials": bigquery_credentials,
+    "project_id": "unique-decker-385015"
+}
 
 table_schema = """
 CREATE TABLE IF NOT EXISTS library.country_flags (
@@ -154,8 +157,8 @@ async def test_model():
         filter = {
             "country": "Austria"
         }
-        result = await CountryFlag.filter(**filter)
-        for res in result:
+        austria = await CountryFlag.filter(**filter)
+        for res in austria:
             print('RESULT > ', res)
 
         # Insert a new record:
@@ -166,22 +169,27 @@ async def test_model():
         )
         await new_record.insert()
         print('INSERT > ', new_record)
-
-        # # Delete the record:
-        # result = await new_record.delete()
-        # print('DELETED > ', result)
-        # # Update the record:
-        # katie.flag = 233
-        # await katie.update()
-        # print('UPDATED > ', katie)
-        # # Batch operation:
-        # brazil = await CountryFlag.filter(country="Brazil")
-        # for b in brazil:
-        #     print(b)
-        # # Delete all records:
-        # result = await CountryFlag.remove(country="Brazil")
-        # print('REMOVED > ', result)
-
+        # Then Delete the record:
+        result = await new_record.delete()
+        print('DELETED > ', result)
+        # Update the record:
+        Kissee.flag = 233
+        await Kissee.update()
+        print('UPDATED > ', Kissee)
+        # Batch operation:
+        italy = await CountryFlag.filter(country='Italy')
+        for b in italy:
+            print(b)
+        # Delete all records:
+        result = await CountryFlag.remove(country="Austria")
+        print('REMOVED > ', result)
+        # Update Several records:
+        brazil = await CountryFlag.filter(country='Brazil')
+        for b in brazil:
+            print(b)
+        updated = await CountryFlag.updating(_filter={"country": 'Brazil'}, country='Brasil')
+        for b in updated:
+            print('UPDATED > ', b)
 
 if __name__ == '__main__':
     try:
