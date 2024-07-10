@@ -1010,10 +1010,8 @@ class bigquery(SQLDriver, ModelBackend):
         fields = model.columns(model)
         if _filter is None and args:
             _filter = args[0]
-        cols = []
         source = {}
         new_cond = {}
-        n = 1
         for name, field in fields.items():
             try:
                 val = kwargs[name]
@@ -1021,12 +1019,11 @@ class bigquery(SQLDriver, ModelBackend):
                 continue
             ## getting the value of column:
             value = self._get_value(field, val)
+            if name in _filter:
+                new_cond[name] = value
             datatype = field.type
             value = Entity.escapeLiteral(value, datatype)
             source[name] = value
-            if name in _filter:
-                new_cond[name] = value
-            n += 1
         try:
             set_fields = ", ".join(
                 [f"{key} = {val}" for key, val in source.items()]
@@ -1036,6 +1033,8 @@ class bigquery(SQLDriver, ModelBackend):
             self._logger.debug(f"UPDATE: {_update}")
             job = self._connection.query(_update)
             job.result()  # Waits for the query to finish
+            num_affected_rows = job.num_dml_affected_rows
+            print(f'UPDATED rows: {num_affected_rows}')
             new_conditions = {**_filter, **new_cond}
             condition = self._where(fields, **new_conditions)
             _all = f"SELECT * FROM {table} {condition}"
