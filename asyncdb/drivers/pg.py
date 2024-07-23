@@ -232,7 +232,7 @@ class pgPool(BasePool):
                 "idle_in_transaction_session_timeout": "60min",
                 "idle_session_timeout": "60min",
                 "statement_timeout": "60min",
-                "tcp_keepalives_idle": "30min",
+                # "tcp_keepalives_idle": "30min",
             }
             server_settings = {**server_settings, **self._server_settings}
             custom_class = {}
@@ -562,8 +562,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         server_settings = {
             "application_name": self.application_name,
             "idle_session_timeout": "120min",
-            "tcp_keepalives_idle": "36000",
-            "max_parallel_workers": "512",
+            # "tcp_keepalives_idle": "36000",
+            # "max_parallel_workers": "512",
         }
         server_settings = {**server_settings, **self._server_settings}
         _ssl = {}
