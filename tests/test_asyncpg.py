@@ -8,7 +8,8 @@ from datetime import datetime
 import pandas
 import polars as pl
 import datatable as dt
-from asyncdb.meta import Record, Recordset
+from asyncdb.meta.record import Record
+from asyncdb.meta.recordset import Recordset
 
 DRIVER = 'pg'
 DSN = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator"

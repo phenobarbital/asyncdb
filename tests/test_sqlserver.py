@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest_asyncio
 import pandas
 import datatable as dt
-from asyncdb.meta import Record, Recordset
+from asyncdb.meta.record import Record
+from asyncdb.meta.recordset import Recordset
 
 DRIVER = 'sqlserver'
 params = {

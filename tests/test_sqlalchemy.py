@@ -4,7 +4,8 @@ from asyncdb import AsyncDB
 import pytest_asyncio
 import polars as pl
 import datatable as dt
-from asyncdb.meta import Record, Recordset
+from asyncdb.meta.record import Record
+from asyncdb.meta.recordset import Recordset
 
 DRIVER = "sql_alchemy"
 PARAMS = {
@@ -35,7 +36,7 @@ async def test_connect(event_loop):
         result, error = conn.test_connection()
         pytest.assume(result.one == 1)
     assert db.is_closed() is True
-    
+
 async def test_connect_by_dsn(event_loop):
     db = AsyncDB(DRIVER, dsn=DSN, loop=event_loop)
     pytest.assume(db.is_connected() is False)
