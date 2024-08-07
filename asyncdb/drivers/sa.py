@@ -12,7 +12,7 @@ from collections.abc import Callable, Iterable
 from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError, ProgrammingError, InvalidRequestError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from ..meta import Record
+from asyncdb.meta.record import Record
 from ..exceptions import (
     EmptyStatement,
     NoDataFound,

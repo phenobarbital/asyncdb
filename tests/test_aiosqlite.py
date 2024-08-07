@@ -1,9 +1,10 @@
 import asyncio
 import pytest
-from asyncdb import AsyncDB
 import polars as pl
 import datatable as dt
-from asyncdb.meta import Record, Recordset
+from asyncdb import AsyncDB
+from asyncdb.meta.record import Record
+from asyncdb.meta.recordset import Recordset
 
 DRIVER = "sqlite"
 PARAMS = {"database": ":memory:"}
