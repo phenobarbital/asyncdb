@@ -41,7 +41,7 @@ from ..exceptions import (
 from ..utils.encoders import (
     BaseEncoder,
 )
-from ..meta import Recordset
+from asyncdb.meta.recordset import Recordset
 from .sql import SQLDriver
 
 # from .abstract import BaseCursor

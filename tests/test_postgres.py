@@ -5,7 +5,8 @@ import asyncpg
 from io import BytesIO
 from pathlib import Path
 import pytest_asyncio
-from asyncdb.meta import Record, Recordset
+from asyncdb.meta.record import Record
+from asyncdb.meta.recordset import Recordset
 
 DRIVER = 'postgres'
 DSN = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator"
