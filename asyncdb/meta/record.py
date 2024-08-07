@@ -5,7 +5,6 @@ Physical representation of a row in a class-based object.
 """
 from collections.abc import MutableMapping, Iterator
 from typing import Any, Union
-from google.cloud.bigquery import Row
 
 
 class Record(MutableMapping):

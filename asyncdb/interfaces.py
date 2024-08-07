@@ -22,7 +22,7 @@ from typing import (
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from datamodel.exceptions import ValidationError
-from .meta import Record, Recordset
+from .meta.record import Record
 from .exceptions import default_exception_handler, DriverError, EmptyStatement
 from .models import Model, Field, is_missing, is_dataclass
 from .utils.types import Entity, SafeDict
@@ -465,7 +465,7 @@ class DatabaseBackend(ABC):
         """
 
     @abstractmethod
-    async def query(self, sentence: Union[str, list], **kwargs) -> Optional[Recordset]:
+    async def query(self, sentence: Union[str, list], **kwargs) -> Optional[Sequence]:
         """queryrow.
 
         Making a Query and returns a resultset.
