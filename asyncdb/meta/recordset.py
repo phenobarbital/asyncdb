@@ -5,7 +5,7 @@ Sequence of Records.
 """
 from collections.abc import Sequence, Iterator
 from typing import Any, Union
-from google.cloud import bigquery
+# from google.cloud import bigquery
 from .record import Record
 
 
@@ -32,7 +32,8 @@ class Recordset(Sequence):
     def from_result(cls, result: Iterator) -> "Recordset":
         cols = []
         try:
-            if isinstance(result, bigquery.table.RowIterator):
+            # if isinstance(result, bigquery.table.RowIterator):
+            if hasattr(result, 'job_id'):  # BigQuery Row Iterator
                 rows_list = [row for row in result]
                 result = [{key: value for key, value in row.items()} for row in rows_list]
                 cols = list(result[0].keys())
