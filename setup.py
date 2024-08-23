@@ -182,7 +182,7 @@ setup(
         ],
         "boto3": [
             "botocore==1.31.64",
-            "aiobotocore==2.7.0",
+            "aiobotocore==2.13.3",
             "aioboto3==12.0.0"
         ],
         "bigquery": [
@@ -273,7 +273,7 @@ setup(
             "deltalake==0.17.4",
             "duckdb==0.10.2",
             "botocore==1.31.64",
-            "aiobotocore==2.7.0",
+            "aiobotocore==2.13.3",
             "aioboto3==12.0.0",
             "google-cloud-bigquery==3.25.0",
             "google-cloud-storage==2.17.0",
