@@ -131,7 +131,7 @@ setup(
             "rethinkdb==2.4.10.post1",
             "influxdb==5.3.1",
             "influxdb-client[async]==1.39.0",
-            "pymssql==2.2.11",
+            "pymssql==2.3.1",
             "redis==5.0.4",
             "deltalake==0.17.4",
             "duckdb==0.10.2",
@@ -218,7 +218,7 @@ setup(
             "motor==3.4.0",
         ],
         "msqlserver": [
-            "pymssql==2.2.11",
+            "pymssql==2.3.1",
         ],
         "couchdb": [
             "aiocouch==3.0.0"
@@ -262,7 +262,7 @@ setup(
             "elasticsearch[async]==8.13.2",
             "pymongo==4.6.1",
             "motor==3.4.0",
-            "pymssql==2.2.11",
+            "pymssql==2.3.1",
             "aiocouch==3.0.0",
             "asyncmy==0.2.9",
             "mysqlclient==2.2.0",
