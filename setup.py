@@ -98,17 +98,17 @@ setup(
     package_data={"asyncdb": ["py.typed"]},
     license=__license__,
     setup_requires=[
-        "setuptools==67.6.1",
-        "Cython==3.0.9",
-        "wheel==0.42.0"
+        "setuptools==74.0.0",
+        "Cython==3.0.11",
+        "wheel==0.44.0"
     ],
     install_requires=[
         "cryptography==42.0.4",
-        "aiohttp==3.9.5",
+        "aiohttp>=3.9.5",
         "asyncpg==0.29.0",
-        "uvloop==0.19.0",
+        "uvloop==0.20.0",
         "asyncio==3.4.3",
-        "pandas==2.2.1",
+        "pandas==2.2.2",
         "xlrd==2.0.1",
         "openpyxl==3.1.2",
         "lz4==4.3.2",
@@ -117,7 +117,7 @@ setup(
         "pgpy==0.6.0",
         "python-magic==0.4.27",
         "dateparser==1.1.8",
-        "python-datamodel>=0.6.23",
+        "python-datamodel>=0.7.0",
         "aiosqlite>=0.18.0",
         "looseversion==1.3.0",
         "aiofiles==23.2.1"
