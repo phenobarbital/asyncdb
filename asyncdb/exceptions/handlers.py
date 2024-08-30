@@ -2,7 +2,12 @@ from typing import Any
 import asyncio
 import logging
 
-def handle_done_tasks(task: asyncio.Task, logger: logging.Logger, *args: tuple[Any, ...]) -> None:
+
+def handle_done_tasks(
+    task: asyncio.Task,
+    logger: logging.Logger,
+    *args: tuple[Any, ...]
+) -> None:
     try:
         return task.result()
     except asyncio.CancelledError:
