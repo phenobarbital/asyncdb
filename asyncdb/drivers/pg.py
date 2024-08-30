@@ -577,9 +577,10 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             if self._pool and not self._connection:
                 self._connection = await self._pool.pool().acquire()
             else:
-                loop = self._loop
-                if not loop:
-                    loop = asyncio.get_running_loop()
+                # try:
+                #     loop = self._loop or asyncio.get_running_loop()
+                # except RuntimeError:
+                #     loop = asyncio.get_event_loop()
                 self._connection = await asyncpg.connect(
                     dsn=self._dsn,
                     timeout=self._timeout,
