@@ -97,10 +97,8 @@ class pgPool(BasePool):
             self._custom_record: bool = custom_record
         self._record_class_ = kwargs.get("record_class", pgRecord)
         self._cache_size: int = kwargs.get("cache_size", 36000)
-        try:
-            self._max_inactive_timeout = kwargs["max_inactive_timeout"]
-        except KeyError:
-            self._max_inactive_timeout = 36000
+        #  max_inactive_connection_lifetime
+        self._max_inactive_timeout = kwargs.pop('max_inactive_timeout', 360000)
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if "application_name" in self._server_settings:
@@ -224,7 +222,6 @@ class pgPool(BasePool):
         """
         Creates a Pool Connection.
         """
-        # self._logger.debug(f"AsyncPg (Pool): Connecting to {self._dsn}")
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             server_settings = {
@@ -445,6 +442,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         self._custom_record: bool = kwargs.get("custom_record", False)
         self._record_class_ = kwargs.get("record_class", pgRecord)
         self._cache_size: int = kwargs.get("cache_size", 36000)
+        #  max_inactive_connection_lifetime
+        self._max_inactive_timeout = kwargs.pop('max_inactive_timeout', 360000)
         DBCursorBackend.__init__(self)
         if "pool" in kwargs:
             self._pool = kwargs["pool"]
@@ -578,13 +577,18 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             if self._pool and not self._connection:
                 self._connection = await self._pool.pool().acquire()
             else:
+                loop = self._loop
+                if not loop:
+                    loop = asyncio.get_running_loop()
                 self._connection = await asyncpg.connect(
                     dsn=self._dsn,
                     timeout=self._timeout,
                     statement_cache_size=self._cache_size,
                     server_settings=server_settings,
-                    connection_class=NAVConnection,
-                    loop=self._loop,
+                    # connection_class=NAVConnection,
+                    max_cached_statement_lifetime=600,
+                    max_cacheable_statement_size=1024 * 30,
+                    # loop=loop,
                     **custom_class,
                     **_ssl,
                 )
