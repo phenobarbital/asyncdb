@@ -172,6 +172,7 @@ setup(
         ],
         "postgresql": [
             "asyncpg==0.29.0",
+            "psycopg[binary,pool]>=3.1.8",
         ],
         "mysql": [
             "asyncmy==0.2.9",
@@ -231,6 +232,14 @@ setup(
             "cassandra-driver==3.29.1",
             "acsylla==0.1.8b0",
             "cqlsh==6.1.2"
+        ],
+        "clickhouse": [
+            "clickhouse-driver==0.2.9",
+            "aiochclient[httpx-speedups]==2.6.0",
+            "clickhouse-connect==0.7.19"  # Support for SuperSet
+        ],
+        "redpanda": [
+            "aiokafka==0.11.0"
         ],
         "all": [
             "dask==2023.3.0",
