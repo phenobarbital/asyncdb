@@ -48,17 +48,25 @@ def default_exception_handler(loop: asyncio.AbstractEventLoop, context):
     # Call the default exception handler
     loop.default_exception_handler(context)
 
-    if exception:
-        logging.error(f"AsyncDB: Caught exception: {exception}")
-        if not isinstance(exception, asyncio.CancelledError):
-            try:
-                exc_name = type(exception).__name__
-                logging.error(f"{exc_name}: *{msg}* over task {task}")
-            except Exception as ex:
-                logging.exception("Handler Error", exc_info=True)
-                raise RuntimeError(f"Handler Error: {ex}") from ex
-    else:
-        logging.error(f"AsyncDB: Caught an error: {context}")
-        if task:
-            logging.exception(f"Exception raised by Task {task}, Error: {msg}")
-        raise RuntimeError(f"{msg}: task: {task}")
+    if not exception and not msg:
+        logging.error(
+            "AsyncDB: Caught an error with no exception or message in context."
+        )
+        raise RuntimeError("Unknown error: task: {task}")
+
+    if isinstance(exception, asyncio.CancelledError):
+        return
+
+    try:
+        if exception:
+            exc_name = type(exception).__name__
+            task_info = f"Task {task}" if task else "Unknown task"
+            logging.error(f"{exc_name}: *{msg}* over {task_info}")
+        else:
+            logging.error(f"AsyncDB: Caught an error: {context}")
+            if task:
+                logging.exception(f"Exception raised by Task {task}, Error: {msg}")
+            raise RuntimeError(f"{msg}: task: {task}")
+    except Exception as ex:
+        logging.exception("Handler Error", exc_info=True)
+        raise RuntimeError(f"Handler Error: {ex}") from ex
