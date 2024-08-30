@@ -52,7 +52,7 @@ def default_exception_handler(loop: asyncio.AbstractEventLoop, context):
         logging.error(
             "AsyncDB: Caught an error with no exception or message in context."
         )
-        raise RuntimeError("Unknown error: task: {task}")
+        raise RuntimeError(f"Unknown error: task: {task}")
 
     if isinstance(exception, asyncio.CancelledError):
         return
