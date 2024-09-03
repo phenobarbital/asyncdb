@@ -51,11 +51,11 @@ from cassandra.query import (
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.query import SimpleStatement
 from cassandra import ConsistencyLevel
-from asyncdb.meta import Recordset
+from asyncdb.meta.recordset import Recordset
 from asyncdb.exceptions import NoDataFound, DriverError
 from .abstract import InitDriver
 from ..interfaces import ModelBackend
-from ..models import Model, Field
+from ..models import Model
 from ..utils.types import Entity
 
 
@@ -338,7 +338,6 @@ class scylladb(InitDriver, ModelBackend):
             auth_provider = None
             if self._auth:
                 auth_provider = PlainTextAuthProvider(**self._auth)
-            print('CLUSTER HOSTS ', self._hosts)
             self._cluster = Cluster(
                 self._hosts,
                 auth_provider=auth_provider,
