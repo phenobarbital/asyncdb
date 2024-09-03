@@ -125,7 +125,7 @@ setup(
     extras_require={
         "default": [
             "pylibmc==1.6.3",
-            "aiomcache==0.8.1",
+            "aiomcache==0.8.2",
             "aiosqlite>=0.18.0",
             "cassandra-driver==3.29.1",
             "rethinkdb==2.4.10.post1",
@@ -155,7 +155,7 @@ setup(
         ],
         "memcache": [
             "pylibmc==1.6.3",
-            "aiomcache==0.8.1",
+            "aiomcache==0.8.2",
         ],
         "redis": [
             "jsonpath-rw==1.4.0",
