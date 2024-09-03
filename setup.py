@@ -250,7 +250,7 @@ setup(
             "connectorx==0.3.3",
             "aiosqlite>=0.18.0",
             "pylibmc==1.6.3",
-            "aiomcache==0.8.1",
+            "aiomcache==0.8.2",
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
             "redis==5.0.8",
