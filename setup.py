@@ -132,7 +132,7 @@ setup(
             "influxdb==5.3.1",
             "influxdb-client[async]==1.39.0",
             "pymssql==2.3.1",
-            "redis==5.0.4",
+            "redis==5.0.8",
             "deltalake==0.17.4",
             "duckdb==0.10.2",
         ],
@@ -160,7 +160,7 @@ setup(
         "redis": [
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
-            "redis==5.0.4",
+            "redis==5.0.8",
             "objectpath==0.6.1",
         ],
         "rethinkdb": [
@@ -253,7 +253,7 @@ setup(
             "aiomcache==0.8.1",
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
-            "redis==5.0.4",
+            "redis==5.0.8",
             "objectpath==0.6.1",
             "rethinkdb==2.4.10.post1",
             "aiopg==1.4.0",
