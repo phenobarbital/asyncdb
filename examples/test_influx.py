@@ -89,7 +89,8 @@ if __name__ == '__main__':
             "user": "troc_pgdata",
             "password": "12345678",
             "org": "navigator",
-            "bucket": "navigator"
+            "bucket": "navigator",
+            "token": "FL2XDVzRheR9-apXJu0csK3HaBSjfEG3d15R9uIu8xG8WwL9ICAGyrPWLoPct4IHtacpjtKd1y3NbYbAFPs20g=="
         }
         loop.run_until_complete(
             test_connection(DRIVER, params=p, event_loop=loop)
