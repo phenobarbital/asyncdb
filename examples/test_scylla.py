@@ -11,12 +11,12 @@ ARGS = {
     "password": 'navigator'
 }
 
-ARGS = {
-    "host": "10.10.10.93",
-    "port": "9042",
-    "username": '',
-    "password": ''
-}
+# ARGS = {
+#     "host": "10.10.10.93",
+#     "port": "9042",
+#     "username": '',
+#     "password": ''
+# }
 
 async def test_connection():
     db = AsyncDB(
