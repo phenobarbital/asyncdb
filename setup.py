@@ -230,7 +230,7 @@ setup(
         "scylla": [
             "scylla_driver==3.26.8",
             "cassandra-driver==3.29.1",
-            "acsylla==0.1.8b0",
+            "acsylla==0.2.0",
             "cqlsh==6.1.2"
         ],
         "clickhouse": [
@@ -260,7 +260,7 @@ setup(
             "psycopg-binary>=3.1.8",
             "cassandra-driver==3.29.1",
             "scylla_driver==3.26.9",
-            "acsylla==0.1.8b0",
+            "acsylla==0.2.0",
             "cqlsh==6.1.2",
             "influxdb==5.3.2",
             "influxdb-client[async]==1.45.0",
