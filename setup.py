@@ -292,7 +292,7 @@ setup(
     },
     tests_require=[
         'pytest>=7.2.2',
-        'pytest-asyncio==0.21.1',
+        'pytest-asyncio==0.24.0',
         'pytest-xdist==3.3.1',
         'pytest-assume==2.4.3'
     ],
