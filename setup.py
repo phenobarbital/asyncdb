@@ -134,7 +134,7 @@ setup(
             "pymssql==2.3.1",
             "redis==5.0.8",
             "deltalake==0.17.4",
-            "duckdb==0.10.2",
+            "duckdb==1.0.0",
         ],
         "dataframe": [
             "dask==2023.3.0",
@@ -145,7 +145,7 @@ setup(
             "connectorx==0.3.3",
             "pyspark==3.5.0",
             "deltalake==0.17.4",
-            "duckdb==0.10.2",
+            "duckdb==1.0.0",
         ],
         "pyspark": [
             "pyspark==3.5.0"
@@ -280,7 +280,7 @@ setup(
             "oracledb==2.2.1",
             "hazelcast-python-client==5.4.0",
             "deltalake==0.17.4",
-            "duckdb==0.10.2",
+            "duckdb==1.0.0",
             "botocore==1.31.64",
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
