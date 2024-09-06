@@ -106,7 +106,6 @@ setup(
         "cryptography==42.0.4",
         "aiohttp>=3.9.5",
         "asyncpg==0.29.0",
-        "uvloop==0.20.0",
         "asyncio==3.4.3",
         "pandas==2.2.2",
         "xlrd==2.0.1",
@@ -123,6 +122,9 @@ setup(
         "aiofiles==23.2.1"
     ],
     extras_require={
+        "uvloop": [
+            "uvloop==0.20.0"
+        ],
         "default": [
             "pylibmc==1.6.3",
             "aiomcache==0.8.2",
