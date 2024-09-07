@@ -185,7 +185,7 @@ setup(
             "aiomysql==0.2.0"
         ],
         "boto3": [
-            "botocore==1.31.64",
+            "botocore==1.35.14",
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0"
         ],
@@ -284,7 +284,7 @@ setup(
             "hazelcast-python-client==5.4.0",
             "deltalake==0.17.4",
             "duckdb==1.0.0",
-            "botocore==1.31.64",
+            "botocore==1.35.14",
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
             "google-cloud-bigquery==3.25.0",
