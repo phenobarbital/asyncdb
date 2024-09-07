@@ -103,7 +103,7 @@ setup(
         "wheel==0.44.0"
     ],
     install_requires=[
-        "cryptography==42.0.4",
+        "cryptography==43.0.1",
         "aiohttp>=3.9.5",
         "asyncpg==0.29.0",
         "asyncio==3.4.3",
