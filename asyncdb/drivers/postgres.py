@@ -15,7 +15,6 @@ from typing import Any, Optional
 from collections.abc import Iterable
 from dateutil.relativedelta import relativedelta
 import asyncpg
-import uvloop
 from asyncpg.exceptions import (
     ConnectionDoesNotExistError,
     InterfaceError,
@@ -43,13 +42,6 @@ from ..utils.encoders import (
 )
 from asyncdb.meta.recordset import Recordset
 from .sql import SQLDriver
-
-# from .abstract import BaseCursor
-
-
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-uvloop.install()
-
 
 class postgres(threading.Thread, SQLDriver):
     _provider = "postgres"
