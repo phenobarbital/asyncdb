@@ -106,7 +106,6 @@ setup(
         "cryptography==42.0.4",
         "aiohttp>=3.9.5",
         "asyncpg==0.29.0",
-        "uvloop==0.20.0",
         "asyncio==3.4.3",
         "pandas==2.2.2",
         "xlrd==2.0.1",
@@ -123,7 +122,11 @@ setup(
         "aiofiles==23.2.1"
     ],
     extras_require={
+        "uvloop": [
+            "uvloop==0.20.0"
+        ],
         "default": [
+            "uvloop==0.20.0",
             "pylibmc==1.6.3",
             "aiomcache==0.8.2",
             "aiosqlite>=0.18.0",
@@ -134,18 +137,18 @@ setup(
             "pymssql==2.3.1",
             "redis==5.0.8",
             "deltalake==0.17.4",
-            "duckdb==0.10.2",
+            "duckdb==1.0.0",
         ],
         "dataframe": [
-            "dask==2023.3.0",
+            "dask==2024.8.2",
             'datatable==1.1.0',
             "python-datatable==1.1.3",
-            "polars==0.20.4",
+            "polars==1.6.0",
             "pyarrow==17.0.0",
             "connectorx==0.3.3",
             "pyspark==3.5.0",
             "deltalake==0.17.4",
-            "duckdb==0.10.2",
+            "duckdb==1.0.0",
         ],
         "pyspark": [
             "pyspark==3.5.0"
@@ -242,10 +245,10 @@ setup(
             "aiokafka==0.11.0"
         ],
         "all": [
-            "dask==2023.3.0",
+            "dask==2024.8.2",
             "datatable==1.1.0",
             "python-datatable==1.1.3",
-            "polars==0.20.4",
+            "polars==1.6.0",
             "pyarrow==17.0.0",
             "connectorx==0.3.3",
             "aiosqlite>=0.18.0",
@@ -280,7 +283,7 @@ setup(
             "oracledb==2.2.1",
             "hazelcast-python-client==5.4.0",
             "deltalake==0.17.4",
-            "duckdb==0.10.2",
+            "duckdb==1.0.0",
             "botocore==1.31.64",
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
