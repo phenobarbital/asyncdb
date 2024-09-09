@@ -1,7 +1,7 @@
 from typing import Union, Any
 import asyncio
 from collections.abc import Awaitable
-from abc import ABC, abstractmethod
+from abc import ABC
 import logging
 from contextlib import AbstractAsyncContextManager
 from ..exceptions import (
@@ -70,6 +70,7 @@ class EventLoopManager:
     def __init__(
         self,
         loop: Union[asyncio.AbstractEventLoop, None] = None,
+        **kwargs
     ):
         self._loop: Awaitable = None
         if loop:

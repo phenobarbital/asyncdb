@@ -132,6 +132,7 @@ class BaseDriver(InitDriver, ConnectionDSNBackend, ABC):
         self,
         dsn: Union[str, None] = None,
         loop: asyncio.AbstractEventLoop = None,
+        pool: Optional[BasePool] = None,
         params: dict = None,
         **kwargs
     ):
@@ -147,6 +148,10 @@ class BaseDriver(InitDriver, ConnectionDSNBackend, ABC):
         )
         # always starts output format to native:
         self.output_format("native")
+        self._pool = None
+        if pool:
+            self._pool = pool
+            self._loop = self._pool.get_loop()
 
 
 class BaseDBDriver(BaseDriver):
