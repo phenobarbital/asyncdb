@@ -9,31 +9,31 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 CSV_FILE = BASE_DIR.joinpath('docs', 'calendar-table-data.csv')
 
 async def saving_into_bigquery(pg_dsn, params):
-    # pg = AsyncDB('pg', dsn=pg_dsn)
-    # # First: getting data from postgres
-    # async with await pg.connection() as conn:
-    #     # Connectar a la DB
-    #     conn.output_format('pandas')
-    #     df, error = await conn.query(
-    #         "SELECT * FROM epson.sales LIMIT 10000"
-    #     )
-    #     df.infer_objects()
+    pg = AsyncDB('pg', dsn=pg_dsn)
+    # First: getting data from postgres
+    async with await pg.connection() as conn:
+        # Connectar a la DB
+        conn.output_format('pandas')
+        df, error = await conn.query(
+            "SELECT * FROM epson.sales LIMIT 10000"
+        )
+        df.infer_objects()
 
     bq = AsyncDB('bigquery', params=params)
     async with await bq.connection() as conn:
         # Truncate Epson Sales Table:
-        # truncated = await conn.truncate_table(
-        #     dataset_id='epson',
-        #     table_id='sales'
-        # )
-        # print('Table truncated: ', truncated)
+        truncated = await conn.truncate_table(
+            dataset_id='epson',
+            table_id='sales'
+        )
+        print('Table truncated: ', truncated)
         # Write data into table:
-        # saved = await conn.write(
-        #     dataset_id='epson',
-        #     table_id='sales',
-        #     data=df
-        # )
-        # print('Saved: ', saved)
+        saved = await conn.write(
+            dataset_id='epson',
+            table_id='sales',
+            data=df
+        )
+        print('Saved: ', saved)
         # # Test Data Saved:
         # conn.output_format('pandas')
         # query = """
