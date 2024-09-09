@@ -151,11 +151,17 @@ class memcache(BaseDriver):
         try:
             self._connection = aiomcache.Client(**self._params)
         except aiomcache.exceptions.ValidationException as err:
-            raise DriverError(f"Invalid Connection Parameters: {err}") from err
+            raise DriverError(
+                f"Invalid Connection Parameters: {err}"
+            ) from err
         except ClientException as err:
-            raise DriverError(f"Unable to connect to Memcache: {err}") from err
+            raise DriverError(
+                f"Unable to connect to Memcache: {err}"
+            ) from err
         except Exception as err:
-            raise DriverError(f"Unknown Error: {err}") from err
+            raise DriverError(
+                f"Unknown Error: {err}"
+            ) from err
         # is connected
         if self._connection:
             self._connected = True
