@@ -41,7 +41,7 @@ from cassandra.query import (
 )
 from asyncdb.meta import Recordset
 from asyncdb.exceptions import NoDataFound, DriverError
-from .abstract import InitDriver
+from .base import InitDriver
 
 
 def pandas_factory(colnames, rows):
