@@ -14,9 +14,9 @@ from google.cloud import bigquery as bq
 from google.cloud.exceptions import Conflict
 from google.cloud.bigquery import LoadJobConfig, SourceFormat
 from google.oauth2 import service_account
-from ..exceptions import DriverError
 from .sql import SQLDriver
-from ..interfaces import ModelBackend
+from ..exceptions import DriverError
+from ..interfaces.model import ModelBackend
 from ..models import Model
 from ..utils.types import Entity
 
@@ -26,7 +26,13 @@ class bigquery(SQLDriver, ModelBackend):
     _syntax = "sql"
     _test_query = "SELECT 1"
 
-    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
+    def __init__(
+        self,
+        dsn: str = "",
+        loop: asyncio.AbstractEventLoop = None,
+        params: dict = None,
+        **kwargs
+    ) -> None:
         self._credentials = params.get("credentials", None)
         if self._credentials:
             if isinstance(self._credentials, str):
@@ -36,18 +42,25 @@ class bigquery(SQLDriver, ModelBackend):
         self._account = None
         self._dsn = ""
         self._project_id = params.get("project_id", None)
-        super().__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        super().__init__(
+            dsn=dsn,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
         if not self._credentials:
             self._account = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", None)
         if self._account is None and self._credentials is None:
             raise DriverError(
                 "BigQuery: Missing account Credentials"
             )
-        self._connection = None  # BigQuery does not use traditional connections
+        # BigQuery does not use traditional connections
+        self._connection = None
 
     async def connection(self):
         """Initialize BigQuery client.
-        # Assuming that authentication is handled outside (via environment variables or similar)
+        Assuming that authentication is handled outside
+        (via environment variables or similar)
         """
         try:
             if self._credentials:  # usage of explicit credentials
@@ -75,8 +88,6 @@ class bigquery(SQLDriver, ModelBackend):
         # BigQuery client does not maintain persistent connections, so nothing to close here.
         self._connected = False
         self._connection = None
-
-    disconnect = close
 
     async def execute(self, query, **kwargs):
         """
