@@ -1,25 +1,32 @@
 """Dummy Driver.
 """
-from datetime import datetime
+from typing import Union
 from ..exceptions import DriverError
-from .abstract import BaseDriver
+from .base import BaseDriver
 
 
 class dummy(BaseDriver):
     _provider = "dummy"
     _syntax = "sql"
 
-    def __init__(self, dsn="", loop=None, params: dict = None, **kwargs):
+    def __init__(
+        self,
+        dsn: Union[str, None] = None,
+        loop=None,
+        params: dict = None,
+        **kwargs
+    ):
         self._test_query = "SELECT 1"
-        _starttime = datetime.now()
         self._dsn = "test:/{host}:{port}/{db}"
         if not params:
-            params = {"host": "127.0.0.1", "port": "0", "db": 0}
+            params = {
+                "host": "127.0.0.1",
+                "port": "0",
+                "db": 0
+            }
         try:
             super(dummy, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
             self._logger.debug(f"Dummy Params are: {params}")
-            _generated = datetime.now() - _starttime
-            print(f"Started in: {_generated}")
         except Exception as err:
             raise DriverError(f"Dummy Error: {err}") from err
 

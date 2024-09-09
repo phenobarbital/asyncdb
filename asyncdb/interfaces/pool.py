@@ -1,8 +1,8 @@
 from typing import Optional, Union, Any
 from collections.abc import Callable, Awaitable
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 import logging
-from .base import (
+from .abstract import (
     AbstractDriver,
     PoolContextManager,
     EventLoopManager
@@ -27,6 +27,8 @@ class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
         self._encoding = kwargs.get('encoding', "utf-8")
         self._max_queries = kwargs.get('max_queries', 300)
         self._timeout = kwargs.get('timeout', 600)
+        if 'credentials' in kwargs:
+            params = kwargs.get('credentials', {})
         super(PoolBackend, self).__init__(
             params=params,
             **kwargs
@@ -40,18 +42,27 @@ class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
 
     @abstractmethod
     async def connect(self) -> "PoolBackend":
+        """connect.
+        async database initialization.
+        """
         raise NotImplementedError()  # pragma: no cover
 
     open = connect
 
     @abstractmethod
     async def disconnect(self, timeout: int = 5) -> None:
+        """close.
+        Closing Pool Connection.
+        """
         raise NotImplementedError()  # pragma: no cover
 
     close = disconnect
 
     @abstractmethod
     async def acquire(self):
+        """acquire.
+        Take a connection from the pool.
+        """
         raise NotImplementedError()  # pragma: no cover
 
     @abstractmethod
@@ -60,6 +71,9 @@ class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
         connection: Union[Callable, Awaitable, None] = None,
         timeout: int = 10
     ) -> None:
+        """release.
+        Relase the connection back to the pool.
+        """
         raise NotImplementedError()  # pragma: no cover
 
     @property
