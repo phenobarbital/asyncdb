@@ -9,7 +9,7 @@ import asyncio
 from datetime import datetime
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from .base import (
+from .abstract import (
     AbstractDriver,
     DriverContextManager,
     EventLoopManager
@@ -31,6 +31,8 @@ class ConnectionBackend(AbstractDriver, DriverContextManager, EventLoopManager):
         params: dict[Any] = Any,
         **kwargs
     ) -> None:
+        if 'credentials' in kwargs:
+            params = kwargs.get('credentials', {})
         super(ConnectionBackend, self).__init__(
             **kwargs
         )
