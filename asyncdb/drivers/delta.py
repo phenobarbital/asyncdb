@@ -23,7 +23,7 @@ import datatable as dt
 from deltalake import DeltaTable, write_deltalake
 from deltalake.exceptions import DeltaError, DeltaProtocolError
 from ..exceptions import DriverError
-from .abstract import (
+from .base import (
     InitDriver,
 )
 
