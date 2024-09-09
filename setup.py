@@ -119,7 +119,7 @@ setup(
         "python-datamodel>=0.7.0",
         "aiosqlite>=0.18.0",
         "looseversion==1.3.0",
-        "aiofiles==23.2.1"
+        "aiofiles==24.1.0"
     ],
     extras_require={
         "uvloop": [
@@ -231,7 +231,7 @@ setup(
             "hazelcast-python-client==5.4.0"
         ],
         "scylla": [
-            "scylla_driver==3.26.8",
+            "scylla_driver==3.26.9",
             "cassandra-driver==3.29.1",
             "acsylla==0.2.0",
             "cqlsh==6.1.2"
@@ -296,7 +296,7 @@ setup(
     tests_require=[
         'pytest>=7.2.2',
         'pytest-asyncio==0.24.0',
-        'pytest-xdist==3.3.1',
+        'pytest-xdist==3.6.1',
         'pytest-assume==2.4.3'
     ],
     test_suite='tests',
