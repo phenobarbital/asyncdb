@@ -12,8 +12,8 @@ import time
 import redis
 from ..exceptions import DriverError, ConnectionTimeout
 from ..interfaces import ConnectionDSNBackend
-from .abstract import (
-    InitDriver,
+from .base import (
+    InitDriver
 )
 
 
@@ -22,7 +22,13 @@ class mredis(InitDriver, ConnectionDSNBackend):
     _syntax = "json"
     _encoding = "utf-8"
 
-    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
+    def __init__(
+        self,
+        dsn: str = "",
+        loop: asyncio.AbstractEventLoop = None,
+        params: dict = None,
+        **kwargs
+    ) -> None:
         self._dsn = "redis://{host}:{port}/{db}"
         InitDriver.__init__(self, loop=loop, params=params, **kwargs)
         ConnectionDSNBackend.__init__(self, dsn=dsn, params=params)

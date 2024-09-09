@@ -72,7 +72,14 @@ setup(
     python_requires=">=3.9.13",
     url="https://github.com/phenobarbital/asyncdb",
     description=__description__,
-    keywords=['asyncio', 'asyncpg', 'aioredis', 'aiomcache', 'cassandra', 'scylladb'],
+    keywords=[
+        'asyncio',
+        'asyncpg',
+        'aioredis',
+        'aiomcache',
+        'cassandra',
+        'scylladb'
+    ],
     platforms=['POSIX'],
     long_description=readme(),
     long_description_content_type='text/markdown',

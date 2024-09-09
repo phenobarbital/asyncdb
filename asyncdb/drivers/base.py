@@ -1,52 +1,46 @@
 # -*- coding: utf-8 -*-
 import sys
 import asyncio
-import traceback
+from typing import Union, Optional, Any
 from abc import (
     ABC,
     abstractmethod,
 )
-from typing import Optional, Any
 from collections.abc import Iterable
+import traceback
 from ..exceptions import EmptyStatement
 from ..interfaces import (
     PoolBackend,
     ConnectionDSNBackend,
     ConnectionBackend,
-    DatabaseBackend,
-    CursorBackend
+    DatabaseBackend
 )
 from .outputs import OutputFactory
 
 
-class BasePool(PoolBackend, ConnectionDSNBackend):
+class BasePool(PoolBackend, ConnectionDSNBackend, ABC):
     """BasePool.
 
-    Abstract Class to create Pool-based database connectors.
+    Abstract Class to create Pool-based database connectors with DSN support.
     """
-
-    def __init__(self, dsn: str = "", loop=None, params: Optional[dict] = None, **kwargs):
-        ConnectionDSNBackend.__init__(self, dsn=dsn, params=params)
-        PoolBackend.__init__(self, loop=loop, params=params, **kwargs)
-
-    # Create a database connection pool
-    @abstractmethod
-    async def connect(self):
-        """connect.
-        __init async db initialization
-        """
-
-    @abstractmethod
-    async def acquire(self):
-        """acquire.
-        Take a connection from the pool.
-        """
-
-    @abstractmethod
-    async def close(self, **kwargs):
-        """close.
-        Closing a connection from the pool.
-        """
+    def __init__(
+        self,
+        dsn: Union[str, None] = None,
+        loop: asyncio.AbstractEventLoop = None,
+        params: Optional[Union[dict, None]] = None,
+        **kwargs
+    ):
+        ConnectionDSNBackend.__init__(
+            self,
+            dsn=dsn,
+            params=params
+        )
+        PoolBackend.__init__(
+            self,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
 
 
 class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
@@ -55,28 +49,42 @@ class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
         Abstract Class for Simple Connections.
     ----
     """
-
     _provider: str = "init"
-    _syntax: str = "init"  # can use QueryParser for parsing SQL queries
+    _syntax: str = "init"
 
-    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
+    def __init__(
+        self,
+        loop: Union[asyncio.AbstractEventLoop, None] = None,
+        params: Union[dict, None] = None,
+        **kwargs
+    ):
         if params is None:
             params = {}
-        self._pool = None
         self._max_connections = 4
         self._parameters = ()
         # noinspection PyTypeChecker
         self._serializer: OutputFactory = None
         self._row_format = "native"
-        self._connected: bool = False
-        self._connection = None
-        ConnectionBackend.__init__(self, loop=loop, params=params, **kwargs)
+        ConnectionBackend.__init__(
+            self,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
         DatabaseBackend.__init__(self)
         self._initialized_on = None
         # always starts output format to native:
         self.output_format("native")
         if self._loop.get_debug():
-            self._source_traceback = traceback.extract_stack(sys._getframe(1))
+            self._source_traceback = traceback.extract_stack(
+                sys._getframe(1)
+            )
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
 
     def row_format(self, frmt: str = "native"):
         """
@@ -91,8 +99,18 @@ class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
         self._result = result
         return [result, error]
 
-    def output_format(self, frmt: str = "native", *args, **kwargs):  # pylint: disable=W1113
-        self._serializer = OutputFactory(self, frmt=frmt, *args, **kwargs)
+    def output_format(
+        self,
+        frmt: str = "native",
+        *args,
+        **kwargs
+    ):  # pylint: disable=W1113
+        self._serializer = OutputFactory(
+            self,
+            frmt=frmt,
+            *args,
+            **kwargs
+        )
 
     async def valid_operation(self, sentence: Any):
         """
@@ -100,7 +118,9 @@ class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
         TODO: add some validations.
         """
         if not sentence:
-            raise EmptyStatement(f"{__name__!s} Error: cannot use an empty sentence")
+            raise EmptyStatement(
+                f"{__name__!s} Error: cannot use an empty sentence"
+            )
         if not self._connection:
             await self.connection()
 
@@ -108,18 +128,36 @@ class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
 class BaseDriver(InitDriver, ConnectionDSNBackend, ABC):
     """
     BaseDriver
-        Abstract Class for DB Connection
+        Abstract Class for Database Connections.
     ----
     """
-
     _provider: str = "base"
     _syntax: str = "base"  # can use QueryParser for parsing SQL queries
 
-    def __init__(self, dsn: str = None, loop=None, params: dict = None, **kwargs):
-        InitDriver.__init__(self, loop=loop, params=params, **kwargs)
-        ConnectionDSNBackend.__init__(self, dsn=dsn, params=params)
+    def __init__(
+        self,
+        dsn: Union[str, None] = None,
+        loop: asyncio.AbstractEventLoop = None,
+        pool: Optional[BasePool] = None,
+        params: dict = None,
+        **kwargs
+    ):
+        InitDriver.__init__(
+            self, loop=loop,
+            params=params,
+            **kwargs
+        )
+        ConnectionDSNBackend.__init__(
+            self,
+            dsn=dsn,
+            params=params
+        )
         # always starts output format to native:
         self.output_format("native")
+        self._pool = None
+        if pool:
+            self._pool = pool
+            self._loop = self._pool.get_loop()
 
 
 class BaseDBDriver(BaseDriver):
@@ -144,13 +182,3 @@ class BaseDBDriver(BaseDriver):
         """
         Getting Column info from an existing Table in Driver.
         """
-
-
-class BaseCursor(CursorBackend):
-    """
-    baseCursor.
-
-    Iterable Object for Cursor-Like functionality
-    """
-
-    _provider: BaseDriver

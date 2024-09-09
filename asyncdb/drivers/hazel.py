@@ -16,7 +16,7 @@ from ..exceptions import (
     DriverError,
     NoDataFound,
 )
-from .abstract import InitDriver
+from .base import InitDriver
 
 
 class HazelPortable(BaseModel, Portable):

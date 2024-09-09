@@ -19,7 +19,7 @@ from influxdb_client.rest import _BaseRESTClient
 import pandas
 from ..exceptions import NoDataFound, DriverError
 from ..interfaces import ConnectionDSNBackend
-from .abstract import InitDriver
+from .base import InitDriver
 
 
 class WriteCallback:
