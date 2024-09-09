@@ -30,7 +30,6 @@ from asyncpg.exceptions import (
     UniqueViolationError,
 )
 from asyncpg.pgproto import pgproto
-
 from ..exceptions import (
     ConnectionTimeout,
     DriverError,
@@ -40,13 +39,15 @@ from ..exceptions import (
     TooManyConnections,
     UninitializedError,
 )
-from ..interfaces import DBCursorBackend, ModelBackend
+from ..interfaces.model import ModelBackend
+from ..interfaces.cursors import DBCursorBackend
 from ..models import Model
 from ..utils.encoders import DefaultEncoder
 from ..utils.types import Entity
 
-from .abstract import BasePool
+from .base import BasePool
 from .sql import SQLCursor, SQLDriver
+
 
 max_cached_statement_lifetime = 600
 max_cacheable_statement_size = 1024 * 15
@@ -62,7 +63,8 @@ class NAVConnection(asyncpg.Connection):
 
 class pgRecord(asyncpg.Record):
     """
-    A subclass of asyncpg.Record that allows attribute-style access to record fields.
+    A subclass of asyncpg.Record that allows
+    attribute-style access to record fields.
 
     This class overrides the __getattr__ method to enable accessing record fields
     using dot notation, providing a more convenient and readable way to work with
@@ -263,7 +265,9 @@ class pgPool(BasePool):
                 self._initialized_on = time.time()
             return self
         except ConnectionRefusedError as err:
-            raise UninitializedError(f"Unable to connect to database, connection Refused: {err}") from err
+            raise UninitializedError(
+                f"Unable to connect to database, connection Refused: {err}"
+            ) from err
         except ConnectionError as ex:
             self._logger.error(f"Connection Error: {ex}")
             raise UninitializedError(f"Connection Error: {ex}") from ex
@@ -445,9 +449,6 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         #  max_inactive_connection_lifetime
         self._max_inactive_timeout = kwargs.pop('max_inactive_timeout', 360000)
         DBCursorBackend.__init__(self)
-        if "pool" in kwargs:
-            self._pool = kwargs["pool"]
-            self._loop = self._pool.get_loop()
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if "application_name" in self._server_settings:

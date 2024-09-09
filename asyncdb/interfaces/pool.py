@@ -29,8 +29,16 @@ class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
         self._timeout = kwargs.get('timeout', 600)
         if 'credentials' in kwargs:
             params = kwargs.get('credentials', {})
-        super(PoolBackend, self).__init__(
-            params=params,
+        AbstractDriver.__init__(
+            self,
+            **kwargs
+        )
+        PoolContextManager.__init__(
+            self,
+            **kwargs,
+        )
+        EventLoopManager.__init__(
+            self,
             **kwargs
         )
         try:
