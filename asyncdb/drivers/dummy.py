@@ -25,7 +25,12 @@ class dummy(BaseDriver):
                 "db": 0
             }
         try:
-            super(dummy, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+            super(dummy, self).__init__(
+                dsn=dsn,
+                loop=loop,
+                params=params,
+                **kwargs
+            )
             self._logger.debug(f"Dummy Params are: {params}")
         except Exception as err:
             raise DriverError(f"Dummy Error: {err}") from err

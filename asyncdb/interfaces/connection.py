@@ -33,7 +33,16 @@ class ConnectionBackend(AbstractDriver, DriverContextManager, EventLoopManager):
     ) -> None:
         if 'credentials' in kwargs:
             params = kwargs.get('credentials', {})
-        super(ConnectionBackend, self).__init__(
+        AbstractDriver.__init__(
+            self,
+            **kwargs
+        )
+        DriverContextManager.__init__(
+            self,
+            **kwargs,
+        )
+        EventLoopManager.__init__(
+            self,
             **kwargs
         )
         self._cursor = None

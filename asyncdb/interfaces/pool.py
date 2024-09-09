@@ -40,7 +40,6 @@ class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
         # set the logger:
         self._logger = logging.getLogger(name=__name__)
 
-    @abstractmethod
     async def connect(self) -> "PoolBackend":
         """connect.
         async database initialization.
@@ -49,7 +48,6 @@ class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
 
     open = connect
 
-    @abstractmethod
     async def disconnect(self, timeout: int = 5) -> None:
         """close.
         Closing Pool Connection.
