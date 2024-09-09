@@ -231,7 +231,7 @@ setup(
             "hazelcast-python-client==5.4.0"
         ],
         "scylla": [
-            "scylla_driver==3.26.8",
+            "scylla_driver==3.26.9",
             "cassandra-driver==3.29.1",
             "acsylla==0.2.0",
             "cqlsh==6.1.2"
