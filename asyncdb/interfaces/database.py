@@ -1,31 +1,12 @@
-"""
-Basic Interfaces for every kind of Database Connector.
-"""
-import asyncio
-import logging
-import uuid
-import inspect
-import types
 from typing import (
     Any,
-    List,
     Optional,
     Union
 )
-from collections.abc import Sequence, Iterable, Callable, Awaitable
-from abc import (
-    ABC,
-    abstractmethod,
-)
-from importlib import import_module
-from datetime import datetime
-from functools import partial
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from datamodel.exceptions import ValidationError
-from .meta.record import Record
-from .exceptions import default_exception_handler, DriverError, EmptyStatement
-from .models import Model, Field, is_missing, is_dataclass
-from .utils.types import Entity, SafeDict
+from collections.abc import Sequence, Iterable
+from abc import ABC, abstractmethod
+from ..exceptions import DriverError
+
 
 class TransactionBackend(ABC):
     """
@@ -62,7 +43,6 @@ class DatabaseBackend(ABC):
     """
     Interface for Basic Methods on Databases (query, fetch, execute).
     """
-
     _test_query: Optional[Any] = None
 
     def __init__(self) -> None:
@@ -130,7 +110,7 @@ class DatabaseBackend(ABC):
         """
 
     @abstractmethod
-    async def queryrow(self, sentence: Union[str, list]) -> Optional[Record]:
+    async def queryrow(self, sentence: Union[str, list]) -> Optional[Iterable]:
         """queryrow.
 
         Returns a single row of a query sentence.
