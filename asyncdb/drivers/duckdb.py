@@ -5,7 +5,7 @@ import asyncio
 import time
 import duckdb as duck
 from ..exceptions import NoDataFound, DriverError
-from ..interfaces import DBCursorBackend
+from ..interfaces.cursors import DBCursorBackend
 from .sql import SQLCursor, SQLDriver
 
 
@@ -18,7 +18,10 @@ class duckdbCursor(SQLCursor):
     _connection: duck.DuckDBPyConnection = None
 
     async def __aenter__(self) -> "duckdbCursor":
-        self._cursor = self._connection.execute(self._sentence, parameters=self._params)
+        self._cursor = self._connection.execute(
+            self._sentence,
+            parameters=self._params
+        )
         return self
 
     async def __anext__(self):

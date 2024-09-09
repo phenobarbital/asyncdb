@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 import oracledb
 from ..utils.encoders import DefaultEncoder
-from ..exceptions import DriverError, NoDataFound
+from ..exceptions import DriverError
 from .sql import SQLDriver
 
 
