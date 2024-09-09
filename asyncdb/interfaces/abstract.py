@@ -32,8 +32,6 @@ class AbstractDriver(ABC):
     async def connection(self) -> Any:
         raise NotImplementedError()  # pragma: no cover
 
-    # open = connection
-
     def set_connection(self, connection):
         self._connection = connection
 
