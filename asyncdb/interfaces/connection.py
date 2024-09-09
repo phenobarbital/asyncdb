@@ -149,10 +149,9 @@ class ConnectionDSNBackend(ABC):
 
     def create_dsn(self, params: dict):
         try:
-            if params:
-                return self._dsn.format_map(SafeDict(**params))
-            else:
-                return None
+            return self._dsn.format_map(
+                SafeDict(**params)
+            ) if params else None
         except TypeError as err:
             self._logger.error(err)
             raise DriverError(

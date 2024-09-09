@@ -112,10 +112,7 @@ class ModelBackend(ABC):
         datatype = field.type
         new_val = None
         if is_dataclass(datatype) and value is not None:
-            if is_missing(value):
-                new_val = None
-            else:
-                new_val = value
+            new_val = None if is_missing(value) else value
         if inspect.isclass(datatype) and value is None:
             if isinstance(datatype, (types.BuiltinFunctionType, types.FunctionType)):
                 try:
