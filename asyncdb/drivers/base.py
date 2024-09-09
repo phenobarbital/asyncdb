@@ -135,8 +135,16 @@ class BaseDriver(InitDriver, ConnectionDSNBackend, ABC):
         params: dict = None,
         **kwargs
     ):
-        InitDriver.__init__(self, loop=loop, params=params, **kwargs)
-        ConnectionDSNBackend.__init__(self, dsn=dsn, params=params)
+        InitDriver.__init__(
+            self, loop=loop,
+            params=params,
+            **kwargs
+        )
+        ConnectionDSNBackend.__init__(
+            self,
+            dsn=dsn,
+            params=params
+        )
         # always starts output format to native:
         self.output_format("native")
 
