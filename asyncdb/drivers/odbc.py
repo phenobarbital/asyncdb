@@ -18,7 +18,7 @@ from ..exceptions import (
     StatementError,
     TooManyConnections,
 )
-from ..interfaces import DBCursorBackend
+from ..interfaces.cursors import DBCursorBackend
 from .sql import SQLDriver, SQLCursor
 
 
