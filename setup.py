@@ -119,7 +119,7 @@ setup(
         "python-datamodel>=0.7.0",
         "aiosqlite>=0.18.0",
         "looseversion==1.3.0",
-        "aiofiles==23.2.1"
+        "aiofiles==24.1.0"
     ],
     extras_require={
         "uvloop": [
