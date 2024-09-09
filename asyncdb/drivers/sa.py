@@ -15,12 +15,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from asyncdb.meta.record import Record
 from ..exceptions import (
     EmptyStatement,
-    NoDataFound,
     DriverError,
-    StatementError,
-    TooManyConnections,
 )
-from ..interfaces import DBCursorBackend
+from ..interfaces.cursors import DBCursorBackend
 from ..utils.encoders import json_encoder, json_decoder
 from .sql import SQLDriver, SQLCursor
 
