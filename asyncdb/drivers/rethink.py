@@ -26,9 +26,10 @@ from rethinkdb.errors import (
 )
 from rethinkdb import RethinkDB, r
 from datamodel import BaseModel
-from ..interfaces import DBCursorBackend, CursorBackend
+from ..interfaces.cursors import DBCursorBackend, CursorBackend
 from ..exceptions import DriverError, DataError, NoDataFound, StatementError
-from .abstract import InitDriver, BaseCursor
+from .base import InitDriver
+from .cursor import BaseCursor
 
 
 class Point(BaseModel):
@@ -103,7 +104,12 @@ class rethink(InitDriver, DBCursorBackend):
         self._group = None
         self.distinct = None
         self._db: str = "test"
-        InitDriver.__init__(self, loop=loop, params=params, **kwargs)
+        InitDriver.__init__(
+            self,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
         DBCursorBackend.__init__(self)
         # set rt object
         self._engine = RethinkDB()

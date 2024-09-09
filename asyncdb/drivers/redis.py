@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """ Redis async Provider.
 Notes on redis Provider
 --------------------
@@ -13,18 +12,28 @@ from typing import Any, Union
 from redis import asyncio as aioredis
 from redis.exceptions import AuthenticationError, RedisError
 from ..exceptions import ConnectionTimeout, DriverError
-from .abstract import BaseDriver, BasePool
+from .base import BaseDriver, BasePool
 
 
 class redisPool(BasePool):
-    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
+    def __init__(
+        self,
+        dsn: str = "",
+        loop: asyncio.AbstractEventLoop = None,
+        params: dict = None,
+        **kwargs
+    ) -> None:
         self._dsn = "redis://{host}:{port}/{db}"
-        super(redisPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        super(redisPool, self).__init__(
+            dsn=dsn,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
 
-    # Create a redis connection pool
     async def connect(self, **kwargs):
         """
-        __init async db initialization
+        Create a redis connection pool.
         """
         try:
             self._pool = aioredis.ConnectionPool.from_url(
@@ -35,11 +44,16 @@ class redisPool(BasePool):
                 health_check_interval=60.0,
                 **kwargs,
             )
-            self._connection = aioredis.Redis(connection_pool=self._pool)
+            self._connection = aioredis.Redis(
+                connection_pool=self._pool)
         except ConnectionError as err:
-            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
+            raise ConnectionTimeout(
+                f"Unable to connect to Redis: {err}"
+            ) from err
         except RedisError as err:
-            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+            raise DriverError(
+                f"Unable to connect to Redis, connection Refused: {err}"
+            ) from err
         except Exception as err:
             raise DriverError(f"Unknown Error: {err}") from err
         # is connected
@@ -52,19 +66,25 @@ class redisPool(BasePool):
         """
         Take a connection from the pool.
         """
-        # Take a connection from the pool.
+        # Taking a connection from the pool.
         try:
             return redis(connection=self._connection, pool=self)
         except ConnectionError as err:
-            raise ConnectionError(f"Redis Pool is already closed: {err}") from err
+            raise ConnectionError(
+                f"Redis Pool is already closed: {err}"
+            ) from err
         except RedisError as err:
-            raise ConnectionError(f"Redis Pool is closed o doesnt exists: {err}") from err
+            raise ConnectionError(
+                f"Redis Pool is closed o doesnt exists: {err}"
+            ) from err
         except Exception as err:
-            raise DriverError(f"Redis Unknown Error: {err}") from err
+            raise DriverError(
+                f"Redis Unknown Error: {err}"
+            ) from err
 
-    async def release(self, connection: "redis " = None):  # pylint: disable=W0221
+    async def release(self, connection: "redis" = None):  # pylint: disable=W0221
         """
-        Release a connection from the pool
+        Release a connection from the pool.
         """
         if not connection:
             return True
@@ -91,15 +111,17 @@ class redisPool(BasePool):
             self._logger.exception(f"Pool Closing Error: {err}")
             raise DriverError(f"Connection close Error: {err}") from err
 
-    disconnect = close
-
     async def execute(self, sentence, *args, **kwargs):
         """
         Execute a connection into the Pool
         """
         if self._pool:
             try:
-                result = await self._connection.execute_command(sentence, *args, **kwargs)
+                result = await self._connection.execute_command(
+                    sentence,
+                    *args,
+                    **kwargs
+                )
                 return result
             except TypeError as err:
                 raise DriverError(f"Execute Error: {err}") from err
@@ -115,9 +137,20 @@ class redis(BaseDriver):
     _provider = "redis"
     _syntax = "json"
 
-    def __init__(self, dsn: str = None, loop=None, params: dict = None, **kwargs):
+    def __init__(
+        self,
+        dsn: str = None,
+        loop=None,
+        params: dict = None,
+        **kwargs
+    ):
         self._dsn = "redis://{host}:{port}/{db}"
-        super(redis, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        super(redis, self).__init__(
+            dsn=dsn,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
         if "connection" in kwargs:
             self._connection = kwargs["connection"]
             self._connected = True
@@ -134,7 +167,7 @@ class redis(BaseDriver):
     # Create a redis pool
     async def connection(self, **kwargs):
         """
-        __init async redis initialization
+        async redis initialization.
         """
         try:
             self._connection = await aioredis.from_url(
@@ -144,13 +177,21 @@ class redis(BaseDriver):
                 **kwargs,
             )
         except AuthenticationError as err:
-            raise DriverError(f"Unable to connect to Redis, connection Refused: {err}") from err
+            raise DriverError(
+                f"Unable to connect to Redis, connection Refused: {err}"
+            ) from err
         except ConnectionError as err:
-            raise DriverError(f"Connection Error: {err}") from err
+            raise DriverError(
+                f"Connection Error: {err}"
+            ) from err
         except (RedisError, asyncio.TimeoutError) as err:
-            raise ConnectionTimeout(f"Unable to connect to Redis: {err}") from err
+            raise ConnectionTimeout(
+                f"Unable to connect to Redis: {err}"
+            ) from err
         except Exception as err:
-            raise DriverError(f"Unknown Redis Error: {err}") from err
+            raise DriverError(
+                f"Unknown Redis Error: {err}"
+            ) from err
         # is connected
         if self._connection:
             self._connected = True
@@ -184,8 +225,6 @@ class redis(BaseDriver):
             self._logger.exception(f"Redis Closing Error: {err}")
             raise DriverError(f"Unknown Redis Error: {err}") from err
 
-    disconnect = close
-
     async def execute(self, sentence, *args, **kwargs) -> Any:
         """execute.
         Raises:
@@ -206,7 +245,11 @@ class redis(BaseDriver):
     async def prepare(self, sentence: Union[str, list]) -> Any:
         raise NotImplementedError()  # pragma: no-cover
 
-    async def test_connection(self, key: str = "test_123", optional: int = 1):  # pylint: disable=W0221
+    async def test_connection(
+        self,
+        key: str = "test_123",
+        optional: int = 1
+    ):  # pylint: disable=W0221
         result = None
         error = None
         try:
@@ -289,7 +332,9 @@ class redis(BaseDriver):
         try:
             return await self._connection.expireat(key, timestamp)
         except TypeError as ex:
-            raise DriverError(f"Redis: wrong Expiration timestamp: {timestamp}") from ex
+            raise DriverError(
+                f"Redis: wrong Expiration timestamp: {timestamp}"
+            ) from ex
         except Exception as err:
             raise DriverError(f"Redis Expiration Unknown Error: {err}") from err
 
@@ -309,7 +354,9 @@ class redis(BaseDriver):
         try:
             await self._connection.setex(key, expiration, value)
         except TypeError as ex:
-            raise DriverError(f"Redis: wrong Expiration timestamp: {expiration}") from ex
+            raise DriverError(
+                f"Redis: wrong Expiration timestamp: {expiration}"
+            ) from ex
         except ConnectionError as err:
             raise DriverError(f"Error connecting to Redis {err}") from err
         except RedisError as err:
@@ -406,11 +453,17 @@ class redis(BaseDriver):
         try:
             return await self._connection.hvals(key)
         except ConnectionError as err:
-            raise DriverError(f"Error connecting to Redis {err}") from err
+            raise DriverError(
+                f"Error connecting to Redis {err}"
+            ) from err
         except RedisError as err:
-            raise DriverError(f"Redis: Error on hvals: {err!s}") from err
+            raise DriverError(
+                f"Redis: Error on hvals: {err!s}"
+            ) from err
         except Exception as err:
-            raise DriverError(f"Redis hvals Unknown Error: {err}") from err
+            raise DriverError(
+                f"Redis hvals Unknown Error: {err}"
+            ) from err
 
     async def keys(self, key):
         return await self.hkeys(key)
@@ -423,7 +476,12 @@ class redis(BaseDriver):
         Set field to value within hash with name *key*.
         """
         try:
-            await self._connection.hset(key, key=field, value=value, mapping=mapping)
+            await self._connection.hset(
+                key,
+                key=field,
+                value=value,
+                mapping=mapping
+            )
         except ConnectionError as err:
             raise DriverError(f"Error connecting to Redis {err}") from err
         except RedisError as err:
@@ -479,11 +537,17 @@ class redis(BaseDriver):
         try:
             await self._connection.mset(mapping)
         except ConnectionError as err:
-            raise DriverError(f"Error connecting to Redis {err}") from err
+            raise DriverError(
+                f"Error connecting to Redis {err}"
+            ) from err
         except RedisError as err:
-            raise DriverError(f"Redis: Error on Mset: {err!s}") from err
+            raise DriverError(
+                f"Redis: Error on Mset: {err!s}"
+            ) from err
         except Exception as err:
-            raise DriverError(f"Redis Mset Unknown Error: {err}") from err
+            raise DriverError(
+                f"Redis Mset Unknown Error: {err}"
+            ) from err
 
     async def move(self, key, database):
         """
@@ -492,11 +556,17 @@ class redis(BaseDriver):
         try:
             await self._connection.move(key, database)
         except ConnectionError as err:
-            raise DriverError(f"Error connecting to Redis {err}") from err
+            raise DriverError(
+                f"Error connecting to Redis {err}"
+            ) from err
         except RedisError as err:
-            raise DriverError(f"Redis: Error on Move: {err!s}") from err
+            raise DriverError(
+                f"Redis: Error on Move: {err!s}"
+            ) from err
         except Exception as err:
-            raise DriverError(f"Redis Move Unknown Error: {err}") from err
+            raise DriverError(
+                f"Redis Move Unknown Error: {err}"
+            ) from err
 
     async def lrange(self, key, start: int = 0, stop: int = 100):
         """
@@ -505,8 +575,14 @@ class redis(BaseDriver):
         try:
             await self._connection.lrange(key, start, stop)
         except ConnectionError as err:
-            raise DriverError(f"Error connecting to Redis {err}") from err
+            raise DriverError(
+                f"Error connecting to Redis {err}"
+            ) from err
         except RedisError as err:
-            raise DriverError(f"Redis: Error on Lrange: {err!s}") from err
+            raise DriverError(
+                f"Redis: Error on Lrange: {err!s}"
+            ) from err
         except Exception as err:
-            raise DriverError(f"Redis Lrange Unknown Error: {err}") from err
+            raise DriverError(
+                f"Redis Lrange Unknown Error: {err}"
+            ) from err

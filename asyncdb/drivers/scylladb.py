@@ -51,10 +51,10 @@ from cassandra.query import (
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.query import SimpleStatement
 from cassandra import ConsistencyLevel
-from asyncdb.meta.recordset import Recordset
-from asyncdb.exceptions import NoDataFound, DriverError
-from .abstract import InitDriver
-from ..interfaces import ModelBackend
+from .base import InitDriver
+from ..meta.recordset import Recordset
+from ..exceptions import NoDataFound, DriverError
+from ..interfaces.model import ModelBackend
 from ..models import Model
 from ..utils.types import Entity
 
@@ -94,7 +94,11 @@ class scylladb(InitDriver, ModelBackend):
         self.heartbeat_interval: int = kwargs.pop("heartbeat_interval", 0)
         self._row_factory = kwargs.pop("row_factory", 'dict_factory')
         self._force_closing: bool = kwargs.pop('force_closing', False)
-        super(scylladb, self).__init__(loop=loop, params=params, **kwargs)
+        super(scylladb, self).__init__(
+            loop=loop,
+            params=params,
+            **kwargs
+        )
         try:
             if "host" in self.params:
                 self._hosts = self.params["host"].split(",")

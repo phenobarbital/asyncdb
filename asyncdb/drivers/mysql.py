@@ -13,8 +13,8 @@ from ..exceptions import (
     DriverError,
     StatementError,
 )
-from ..interfaces import DBCursorBackend
-from .abstract import BasePool
+from ..interfaces.cursors import DBCursorBackend
+from .base import BasePool
 from .sql import SQLCursor, SQLDriver
 
 
@@ -39,13 +39,17 @@ class mysqlPool(BasePool):
         self._dsn = "mysql://{user}:{password}@{host}:{port}/{database}"
         self._init_command = kwargs.pop("init_command", None)
         self._sql_modes = kwargs.pop("sql_modes", None)
-        super(mysqlPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+        super(mysqlPool, self).__init__(
+            dsn=dsn,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
 
     async def connect(self):
         """
         Create a database connection pool.
         """
-        self._logger.debug("MySQL: Connecting to {}".format(self._params))
         try:
             # TODO: pass a setup class for set_builtin_type_codec and a setup for add listener
             params = {}
@@ -172,13 +176,25 @@ class mysql(SQLDriver, DBCursorBackend):
     _syntax = "sql"
     _test_query = "SELECT 1"
 
-    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
+    def __init__(
+        self,
+        dsn: str = "",
+        loop: asyncio.AbstractEventLoop = None,
+        params: dict = None,
+        **kwargs
+    ) -> None:
         self._dsn = "mysql://{user}:{password}@{host}:{port}/{database}"
         self._prepared = None
         self._cursor = None
         self._transaction = None
         self._server_settings = {}
-        SQLDriver.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
+        SQLDriver.__init__(
+            self,
+            dsn=dsn,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
         DBCursorBackend.__init__(self)
         if "pool" in kwargs:
             self._pool = kwargs["pool"]
