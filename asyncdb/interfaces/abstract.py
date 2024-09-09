@@ -28,16 +28,18 @@ class AbstractDriver(ABC):
     def log(self):
         return self._logger
 
-    @abstractmethod
     async def connection(self) -> Any:
         raise NotImplementedError()  # pragma: no cover
+
+    open = connection
 
     def set_connection(self, connection):
         self._connection = connection
 
-    @abstractmethod
     async def close(self, timeout: int = 10) -> None:
         raise NotImplementedError()  # pragma: no cover
+
+    disconnect = close
 
     def is_closed(self):
         if not self._connected:
@@ -122,6 +124,12 @@ class PoolContextManager(Awaitable, AbstractAsyncContextManager):
         await self.release(connection=self._connection, timeout=5)
         self._connection = None
 
+    ### Implementing __await__ method
+    def __await__(self):
+        # TODO: explain how to an awaitable behavior
+        # driver = await DriverContextManager()
+        return self._connection.__await__()
+
 
 class DriverContextManager(Awaitable, AbstractAsyncContextManager):
     """Async Conext version for AsyncDB drivers."""
@@ -164,3 +172,9 @@ class DriverContextManager(Awaitable, AbstractAsyncContextManager):
                 stacklevel=2
             )
             raise
+
+    ### Implementing __await__ method
+    def __await__(self):
+        # TODO: explain how to an awaitable behavior
+        # driver = await DriverContextManager()
+        return self._connection.__await__()
