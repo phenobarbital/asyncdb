@@ -143,7 +143,7 @@ setup(
             "influxdb-client[async]==1.45.0",
             "pymssql==2.3.1",
             "redis==5.0.8",
-            "deltalake==0.17.4",
+            "deltalake==0.19.2",
             "duckdb==1.0.0",
         ],
         "dataframe": [
@@ -154,7 +154,7 @@ setup(
             "pyarrow==17.0.0",
             "connectorx==0.3.3",
             "pyspark==3.5.0",
-            "deltalake==0.17.4",
+            "deltalake==0.19.2",
             "duckdb==1.0.0",
         ],
         "pyspark": [
@@ -289,7 +289,7 @@ setup(
             "pyspark==3.5.0",
             "oracledb==2.2.1",
             "hazelcast-python-client==5.4.0",
-            "deltalake==0.17.4",
+            "deltalake==0.19.2",
             "duckdb==1.0.0",
             "botocore==1.31.64",
             "aiobotocore==2.7.0",
