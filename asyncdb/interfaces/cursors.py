@@ -21,10 +21,10 @@ class CursorBackend(ABC):
     ):
         self._cursor = None
         self._provider = provider
+        self._connection = provider.engine()
         self._result = result
         self._sentence = sentence
         self._params = parameters
-        self._connection = self._provider.engine()
         self._kwargs = kwargs
         self._logger = logging.getLogger(
             f"DB.{self.__class__.__name__}"
@@ -143,7 +143,9 @@ class DBCursorBackend(ABC):
                 **kwargs
             )
         except (TypeError, AttributeError, ValueError) as e:
-            raise TypeError(f"{__name__}: No support for Cursors.") from e
+            raise TypeError(
+                f"{__name__}: No support for Cursors."
+            ) from e
         except Exception as err:
             logging.exception(err)
             raise
