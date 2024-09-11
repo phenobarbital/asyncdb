@@ -27,11 +27,23 @@ class saCursor(SQLCursor):
 
     async def __aenter__(self) -> "SQLCursor":
         try:
-            self._cursor = await self._connection.execute(self._sentence, self._params)
+            async with self._connection.connect() as conn:
+                self._cursor = await conn.execute(
+                    text(self._sentence),
+                    self._params
+                )
+                # Create an iterator from the result
+                self._result_iter = self._cursor.__iter__()
         except Exception as e:
             raise DriverError(f"SQLAlchemy Error: {e}") from e
         return self
 
+    async def __anext__(self):
+        # Retrieve the next item in the result set
+        try:
+            return next(self._result_iter)
+        except StopIteration:
+            raise StopAsyncIteration
 
 class sa(SQLDriver, DBCursorBackend):
     _provider = "sa"
@@ -48,9 +60,16 @@ class sa(SQLDriver, DBCursorBackend):
     setup_func: Optional[Callable] = None
     init_func: Optional[Callable] = None
 
-    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
-        """sql_alchemy.
+    def __init__(
+        self,
+        dsn: str = "",
+        loop: asyncio.AbstractEventLoop = None,
+        params: dict = None,
+        **kwargs
+    ):
+        """sa.
 
+        The SQL Alchemy based driver for AsyncDB.
         Args:
             dsn (str, optional): Connection DSN. Defaults to "".
             loop (asyncio.AbstractEventLoop, optional): optional Event Loop. Defaults to None.
@@ -63,14 +82,16 @@ class sa(SQLDriver, DBCursorBackend):
         self.__cursor__ = None
         self._row_format = "dict"
         if params:
-            try:
-                if not params["driver"]:
-                    params["driver"] = "postgresql+asyncpg"
-                else:
-                    self._driver = params["driver"]
-            except KeyError:
-                params["driver"] = "postgresql+asyncpg"
-        SQLDriver.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
+            self._driver = params.get('driver', "postgresql+asyncpg")
+        else:
+            params = {}
+            params["driver"] = "postgresql+asyncpg"
+        SQLDriver.__init__(
+            self, dsn=dsn,
+            loop=loop,
+            params=params,
+            **kwargs
+        )
         DBCursorBackend.__init__(self)
         self._options = self._engine_options
         if kwargs:
@@ -92,7 +113,9 @@ class sa(SQLDriver, DBCursorBackend):
                 await self._connection.dispose()
             except Exception as err:
                 self._connection = None
-                raise DriverError(f"Engine Error, Terminated: {err!s}")
+                raise DriverError(
+                    f"Engine Error, Terminated: {err!s}"
+                ) from err
             finally:
                 self._connection = None
                 self._connected = False
@@ -101,19 +124,19 @@ class sa(SQLDriver, DBCursorBackend):
         """
         Get a connection
         """
-        self._logger.info(f"SQLAlchemy: Connecting to {self._dsn}")
         self._connection = None
         self._connected = False
         try:
-            self._connection = create_async_engine(self._dsn, **self._options)
+            self._connection = create_async_engine(
+                self._dsn,
+                **self._options
+            )
             self._session = AsyncSession(bind=self._connection)
             self._connected = True
         except (SQLAlchemyError, OperationalError) as err:
-            print(err)
             self._connection = None
             raise DriverError(f"Connection Error: {err!s}")
         except Exception as err:
-            print(err)
             self._connection = None
             raise DriverError(f"Engine Error, Terminated: {err!s}")
         finally:
@@ -140,6 +163,12 @@ class sa(SQLDriver, DBCursorBackend):
             result = resultset.fetchone()
         return result
 
+    def get_connection(self):
+        return self._connection.connect()
+
+    def get_engine(self):
+        return self._session
+
     async def get_resultset(self, resultset):
         result = None
         if self._row_format == "list":
@@ -152,6 +181,9 @@ class sa(SQLDriver, DBCursorBackend):
         else:
             result = resultset.fetchall()
         return result
+
+    def text(self, sentence: str):
+        return text(sentence)
 
     async def test_connection(self):
         """
@@ -175,133 +207,249 @@ class sa(SQLDriver, DBCursorBackend):
         finally:
             return [row, error]
 
-    def valid_operation(self, sentence: Any):
+    async def valid_operation(self, sentence: Any):
         """
         Returns if is a valid operation.
         TODO: add some validations.
         """
         if not sentence:
-            raise EmptyStatement(f"{__name__!s} Error: cannot use an empty SQL sentence")
+            raise EmptyStatement(
+                f"{__name__!s} Error: cannot use an empty SQL sentence"
+            )
         if not self._connection:
-            self.connection()
+            await self.connection()
 
-    def query(self, sentence: Any, params: List = None):
+    def _construct_record(self, row, column_names):
+        return Record(dict(zip(column_names, row)), column_names)
+
+    async def query(
+        self,
+        sentence: Any,
+        params: List = None,
+        format: str = None
+    ):
         """
         Running Query.
         """
         self._result = None
         error = None
-        self.valid_operation(sentence)
+        await self.valid_operation(sentence)
+        if not format:
+            format = self._row_format
         try:
             self.start_timing()
-            self._logger.debug("Running Query {}".format(sentence))
-            result = self._connection.execute(sentence, params)
-            if result:
+            async with self._connection.connect() as conn:
+                if isinstance(sentence, str):
+                    sentence = text(sentence)
+                result = await conn.execute(sentence, params)
                 rows = result.fetchall()
-                if self._row_format == "dict" or self._row_format == "iterable":
-                    self._result = [dict(zip(row.keys(), row)) for row in rows]
-                elif self._row_format == "record":
-                    self._result = [Record(row, row.keys()) for row in rows]
+                # Get the column names from the result metadata
+                column_names = result.keys()
+                if format in ("dict", "iterable"):
+                    self._result = [
+                        dict(zip(column_names, row)) for row in rows
+                    ]
+                elif format == "record":
+                    self._result = [
+                        self._construct_record(row, column_names) for row in rows
+                    ]
                 else:
                     self._result = rows
         except (DatabaseError, OperationalError) as err:
-            error = "Query Error: {}".format(str(err))
-            raise DriverError(message=error)
+            error = DriverError(
+                f"Query Error: {err}"
+            )
         except Exception as err:
-            error = "Query Error, Terminated: {}".format(str(err))
-            raise DriverError(message=error)
+            print('ERROR > ', err)
+            error = DriverError(
+                f"Query Error, Terminated: {err}"
+            )
         finally:
             self.generated_at()
-            return [self._result, error]
+            return await self._serializer(
+                self._result,
+                error
+            )  # pylint: disable=W0150
 
-    def queryrow(self, sentence: Any):
+    async def queryrow(
+        self,
+        sentence: Any,
+        params: Any = None,
+        format: Optional[str] = None
+    ):
         """
         Running Query and return only one row.
         """
         self._result = None
         error = None
-        self.valid_operation(sentence)
+        await self.valid_operation(sentence)
         try:
-            self._logger.debug("Running Query {}".format(sentence))
-            result = self._connection.execute(sentence)
-            if result:
+            if not format:
+                format = self._row_format
+            result = None
+            async with self._connection.connect() as conn:
+                if isinstance(sentence, str):
+                    sentence = text(sentence)
+                result = await conn.execute(sentence, params)
+                column_names = result.keys()
                 row = result.fetchone()
-                if self._row_format == "dict":
-                    self._result = dict(row)
-                elif self._row_format == "iterable":
-                    self._result = dict(zip(row.keys(), row))
-                elif self._row_format == "record":
-                    self._result = Record(row, row.keys())
+                if format in ("dict", 'iterable'):
+                    self._result = dict(zip(column_names, row))
+                elif format == "record":
+                    self._result = self._construct_record(row, column_names)
                 else:
                     self._result = row
         except (DatabaseError, OperationalError) as err:
-            error = "Query Row Error: {}".format(str(err))
-            raise DriverError(message=error)
+            error = DriverError(
+                f"Query Error: {err}"
+            )
         except Exception as err:
-            error = "Query Row Error, Terminated: {}".format(str(err))
-            raise DriverError(message=error)
+            error = DriverError(
+                f"Query Error, Terminated: {err}"
+            )
         finally:
-            return [self._result, error]
+            return await self._serializer(
+                self._result,
+                error
+            )  # pylint: disable=W0150
 
-    def fetch_all(self, sentence: Any, params: List = None):
+    async def fetch_all(
+        self,
+        sentence: Any,
+        params: List = None,
+        format: Optional[str] = None
+    ):
         """
-        Running Query.
+        Fetch All Rows in a Query.
         """
         result = None
-        self.valid_operation(sentence)
+        await self.valid_operation(sentence)
         try:
-            self.start_timing()
-            self._logger.debug("Running Query {}".format(sentence))
-            result = self._connection.execute(sentence, params)
-            if result:
-                rows = result.fetchall()
-                if self._row_format == "dict" or self._row_format == "iterable":
-                    result = [dict(zip(row.keys(), row)) for row in rows]
-                elif self._row_format == "record":
-                    result = [Record(row, row.keys()) for row in rows]
+            if not format:
+                format = self._row_format
+            async with self._connection.connect() as conn:
+                if isinstance(sentence, str):
+                    sentence = text(sentence)
+                rst = await conn.execute(sentence, params)
+                column_names = rst.keys()
+                rows = rst.fetchall()
+                if rows is None:
+                    return None
+                if format in ("dict", 'iterable'):
+                    result = [
+                        dict(zip(column_names, row)) for row in rows
+                    ]
+                elif format == "record":
+                    result = [
+                        self._construct_record(row, column_names) for row in rows
+                    ]
                 else:
                     result = rows
         except (DatabaseError, OperationalError) as err:
-            error = "Query Error: {}".format(str(err))
-            raise DriverError(message=error)
+            raise DriverError(
+                f"Query Error: {err}"
+            )
         except Exception as err:
-            error = "Query Error, Terminated: {}".format(str(err))
-            raise DriverError(message=error)
+            raise DriverError(
+                f"Query Error, Terminated: {err}"
+            )
         finally:
             self.generated_at()
             return result
 
-    def fetch_one(self, sentence: Any):
+    async def fetch_many(
+        self,
+        sentence: Any,
+        size: int = 1,
+        params: List = None,
+        format: Optional[str] = None
+    ):
+        """
+        Fetch Many Rows from a Query as requested.
+        """
+        result = None
+        await self.valid_operation(sentence)
+        try:
+            if not format:
+                format = self._row_format
+            async with self._connection.connect() as conn:
+                if isinstance(sentence, str):
+                    sentence = text(sentence)
+                rst = await conn.execute(sentence, params)
+                column_names = rst.keys()
+                rows = rst.fetchmany(size)
+                if rows is None:
+                    return None
+                if format in ("dict", 'iterable'):
+                    result = [
+                        dict(zip(column_names, row)) for row in rows
+                    ]
+                elif format == "record":
+                    result = [
+                        self._construct_record(row, column_names) for row in rows
+                    ]
+                else:
+                    result = rows
+        except (DatabaseError, OperationalError) as err:
+            raise DriverError(
+                f"Query Error: {err}"
+            )
+        except Exception as err:
+            raise DriverError(
+                f"Query Error, Terminated: {err}"
+            )
+        finally:
+            self.generated_at()
+            return result
+
+    fetchmany = fetch_many
+
+    async def fetch_one(
+        self,
+        sentence: Any,
+        params: List = None,
+        format: Optional[str] = None
+    ):
         """
         Running Query and return only one row.
         """
         result = None
-        self.valid_operation(sentence)
+        await self.valid_operation(sentence)
         try:
-            self._logger.debug("Running Query {}".format(sentence))
-            result = self._connection.execute(sentence)
-            if result:
-                row = result.fetchone()
-                if self._row_format == "dict":
-                    result = dict(row)
-                elif self._row_format == "iterable":
-                    result = dict(zip(row.keys(), row))
-                elif self._row_format == "record":
-                    result = Record(row, row.keys())
+            if not format:
+                format = self._row_format
+            async with self._connection.connect() as conn:
+                if isinstance(sentence, str):
+                    sentence = text(sentence)
+                rst = await conn.execute(sentence, params)
+                column_names = rst.keys()
+                row = rst.fetchone()
+                if row is None:
+                    return None
+                if format in ("dict", 'iterable'):
+                    result = dict(zip(column_names, row))
+                elif format == "record":
+                    result = Record(
+                        dict(zip(column_names, row)),
+                        column_names
+                    )
                 else:
                     result = row
         except (DatabaseError, OperationalError) as err:
-            error = "Query Row Error: {}".format(str(err))
-            raise DriverError(message=error)
+            raise DriverError(
+                f"Query Error: {err}"
+            )
         except Exception as err:
-            error = "Query Row Error, Terminated: {}".format(str(err))
-            raise DriverError(message=error)
+            raise DriverError(
+                f"Query Error, Terminated: {err}"
+            )
         finally:
+            self.generated_at()
             return result
 
     fetchone = fetch_one
 
-    def execute(self, sentence, params: List = None):
+    async def execute(self, sentence, params: List = None):
         """Execute a transaction
         get a SQL sentence and execute
         returns: results of the execution
@@ -310,33 +458,39 @@ class sa(SQLDriver, DBCursorBackend):
         error = None
         self.valid_operation(sentence)
         try:
-            self._logger.debug("Execute Sentence {}".format(sentence))
-            result = self._connection.execute(sentence, params)
-            self._result = result
+            if isinstance(sentence, str):
+                sentence = text(sentence)
+            async with self._connection.begin() as conn:
+                result = await conn.execute(sentence, params)
+                # row = await self.get_result(result)
+                self._result = result
         except (DatabaseError, OperationalError) as err:
-            error = "Execute Error: {}".format(str(err))
-            raise DriverError(message=error)
+            error = DriverError(f"Execute Error: {err!s}")
         except Exception as err:
-            error = "Exception Error on Execute: {}".format(str(err))
-            raise DriverError(message=error)
+            error = DriverError(f"Exception Error on Execute: {err!s}")
         finally:
             return [self._result, error]
 
-    def execute_many(self, sentence, params: List):
+    async def execute_many(self, sentence: list, params: List):
         """Execute multiples transactions."""
         self._result = None
         error = None
         self.valid_operation(sentence)
         try:
-            self._logger.debug("Execute Sentence {}".format(sentence))
-            result = self._connection.execute(sentence, params)
-            self._result = result
+            async with self._connection.begin() as conn:
+                results = []
+                for query in sentence:
+                    if isinstance(query, str):
+                        query = text(query)
+                    result = await conn.execute(query, params)
+                    results.append(result)
+                self._result = results
         except (DatabaseError, OperationalError) as err:
-            error = "Execute Error: {}".format(str(err))
-            raise DriverError(message=error)
+            error = DriverError(f"Execute Error: {err}")
         except Exception as err:
-            error = "Exception Error on Execute: {}".format(str(err))
-            raise DriverError(message=error)
+            error = DriverError(
+                f"Exception on Execute Many: {err!s}"
+            )
         finally:
             return [self._result, error]
 
@@ -369,7 +523,7 @@ class sa(SQLDriver, DBCursorBackend):
                 # transaction inactive
                 pass
             except (SQLAlchemyError, DatabaseError, OperationalError) as err:
-                error = "Exception Error on Transaction: {}".format(str(err))
+                error = f"Exception Error on Transaction: {err}"
                 raise DriverError(message=error)
             finally:
                 self._transaction = None
@@ -389,7 +543,6 @@ class sa(SQLDriver, DBCursorBackend):
     """
     DDL Information.
     """
-
     def create(self, obj: str = "table", name: str = "", fields: Optional[List] = None) -> bool:
         """
         Create is a generic method for Database Objects Creation.
@@ -414,7 +567,6 @@ class sa(SQLDriver, DBCursorBackend):
     """
     Model Logic:
     """
-
     def column_info(self, tablename: str, schema: str = None):
         """Column Info.
 
@@ -451,7 +603,6 @@ class sa(SQLDriver, DBCursorBackend):
     """
     Metadata information.
     """
-
     def tables(self, schema: str = "") -> Iterable[Any]:
         raise NotImplementedError
 

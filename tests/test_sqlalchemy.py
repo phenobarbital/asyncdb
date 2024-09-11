@@ -7,13 +7,13 @@ import datatable as dt
 from asyncdb.meta.record import Record
 from asyncdb.meta.recordset import Recordset
 
-DRIVER = "sql_alchemy"
+DRIVER = "sa"
 PARAMS = {
     "user": "troc_pgdata",
     "password": "12345678",
     "host": "127.0.0.1",
     "port": "5432",
-    "database": "navigator_dev",
+    "database": "navigator",
     "DEBUG": True,
 }
 DSN = "postgresql://troc_pgdata:12345678@127.0.0.1:5432/navigator_dev"
