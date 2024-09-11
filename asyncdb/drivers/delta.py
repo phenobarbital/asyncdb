@@ -9,16 +9,19 @@ TODO: add Thread Pool Support.
 import asyncio
 from collections.abc import Iterable
 import time
+import gc
 import duckdb
 from typing import Any, Union, Optional
 from datetime import datetime
 from pathlib import Path, PurePath
 import polars as pl
+from pyarrow import Table
 import pyarrow.parquet as pq
 import pyarrow.csv as pcsv
 import pyarrow.dataset as ds
 from pyarrow import fs
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
 import datatable as dt
 from deltalake import DeltaTable, write_deltalake
 from deltalake.exceptions import DeltaError, DeltaProtocolError
@@ -39,7 +42,11 @@ class delta(InitDriver):
         **kwargs
     ) -> None:
 
-        self.storage_options = params.pop("storage_options", {})
+        storage_options = params.pop("storage_options", {})
+        self.storage_options = {
+            "timeout": "120s",
+            **storage_options
+        }
         self._delta = params.pop('path', None)
         super().__init__(loop=loop, params=params, **kwargs)
         self.kwargs = params
@@ -68,20 +75,26 @@ class delta(InitDriver):
         self._logger.info(
             f"DeltaTable: Connecting to {self._delta}"
         )
+        if not isinstance(self._delta, str):
+            self._delta = str(self._delta)
         try:
             if version is not None:
                 self.kwargs["version"] = version
             if self._delta.startswith("s3:"):
                 raw_fs, normalized_path = fs.FileSystem.from_uri(self._delta)
-                filesystem = fs.SubTreeFileSystem(normalized_path, raw_fs)
+                self._filesystem = fs.SubTreeFileSystem(normalized_path, raw_fs)
                 self._connection = DeltaTable(self._delta)
-                self._storage = self._connection.to_pyarrow_dataset(filesystem=filesystem)
+                self._storage = self._connection.to_pyarrow_dataset(
+                    filesystem=self._filesystem
+                )
             else:
+                self._filesystem = None
                 self._connection = DeltaTable(
                     self._delta,
                     storage_options=self.storage_options,
                     **self.kwargs
                 )
+                self._storage = self._connection.to_pyarrow_dataset()
         except DeltaError as exc:
             raise DriverError(
                 message=f"{exc}"
@@ -101,9 +114,20 @@ class delta(InitDriver):
         Closing DeltaTable Connection
         """
         try:
-            self._connection = None
+            if self._connection:
+                # Close any open file systems or resources
+                if hasattr(self._connection, 'filesystem'):
+                    self._connection.filesystem.close()
+                self._connection = None
+                # Close PyArrow file system if connected to S3
+                if self._filesystem:
+                    self._filesystem.close()
+                    self._filesystem = None
             self._connected = False
+            self._storage = None
             self._delta = None
+            # Optionally force garbage collection
+            gc.collect()
         except Exception as err:
             raise DriverError(
                 f"Unknown Closing Error: {err}"
@@ -124,7 +148,11 @@ class delta(InitDriver):
     def schema(self):
         return self._connection.schema()
 
-    def test_connection(self, key: str = "test_123", optional: int = 1):  # pylint: disable=W0221,W0236
+    def test_connection(
+        self,
+        key: str = "test_123",
+        optional: int = 1
+    ):  # pylint: disable=W0221,W0236
         result = None
         error = None
         try:
@@ -170,11 +198,21 @@ class delta(InitDriver):
             elif ext == ".parquet":
                 data = pq.read_table(data)
         try:
-            write_deltalake(path, data, name=name, mode=mode, **kwargs)
+            write_deltalake(
+                path,
+                data,
+                name=name,
+                mode=mode,
+                **kwargs
+            )
         except DeltaError as exc:
-            raise DriverError(f"Delta: can't create a table in path {path}, error: {exc}") from exc
+            raise DriverError(
+                f"Delta: can't create a table in path {path}, error: {exc}"
+            ) from exc
         except Exception as exc:
-            raise DriverError(f"Delta Error: {exc}") from exc
+            raise DriverError(
+                f"Delta Error: {exc}"
+            ) from exc
 
     def execute(self, sentence: Any):  # pylint: disable=W0221,W0236
         raise NotImplementedError
@@ -214,9 +252,13 @@ class delta(InitDriver):
                 result = self._connection.to_pyarrow_dataset(**args, **kwargs)
             return result
         except (DeltaError, DeltaProtocolError) as exc:
-            raise DriverError(f"DeltaTable Error: {exc}") from exc
+            raise DriverError(
+                f"DeltaTable Error: {exc}"
+            ) from exc
         except Exception as exc:
-            raise DriverError(f"Query Error: {exc}") from exc
+            raise DriverError(
+                f"Delta Get Error: {exc}"
+            ) from exc
 
     async def query(
         self,
@@ -236,41 +278,94 @@ class delta(InitDriver):
             args = {"partitions": partitions}
         try:
             # connect to an in-memory database
-            con = duckdb.connect()
-            dataset = self._connection.to_pyarrow_dataset(**args, **kwargs)
-            ex_data = duckdb.arrow(dataset)
-            if sentence and sentence.strip().upper().startswith("SELECT"):
-                # Register the Arrow dataset as a table
-                con.register(tablename, dataset)
-                print('SENTENCE > ', sentence)
-                rst = con.execute(sentence)
-                if factory == "pandas":
-                    result = rst.df()
-                elif factory == "polars":
-                    result = rst.df_polars()
-                elif factory == 'arrow':
-                    result = rst.arrow()
-            else:
-                result = ex_data.filter(sentence)
-                if factory == "pandas":
-                    result = result.to_df()
-                elif factory == "polars":
-                    result = result.pl()
-                elif factory == 'arrow':
-                    result = result.to_arrow_table()
+            with duckdb.connect() as con:
+                dataset = self._connection.to_pyarrow_dataset(**args, **kwargs)
+                ex_data = duckdb.arrow(dataset)
+                if sentence and sentence.strip().upper().startswith("SELECT"):
+                    # Register the Arrow dataset as a table
+                    con.register(tablename, dataset)
+                    rst = con.execute(sentence)
+                    if factory == "pandas":
+                        result = rst.df()
+                    elif factory == "polars":
+                        result = rst.df_polars()
+                    elif factory == 'arrow':
+                        result = rst.arrow()
+                else:
+                    result = ex_data.filter(sentence)
+                    if factory == "pandas":
+                        result = result.to_df()
+                    elif factory == "polars":
+                        result = result.pl()
+                    elif factory == 'arrow':
+                        result = result.to_arrow_table()
         except (DeltaError, DeltaProtocolError) as exc:
             error = exc
-            raise DriverError(f"DeltaTable Error: {exc}") from exc
         except Exception as exc:
             error = exc
-            raise DriverError(f"Query Error: {exc}") from exc
         finally:
             return [result, error]  # pylint: disable=W0150
 
     fetch_all = query
 
-    def queryrow(self, key: str, *args):  # pylint: disable=W0221,W0236
-        return self.get(key, *args)
+    async def queryrow(
+        self,
+        sentence: Optional[str] = None,
+        partitions: Optional[list] = None,
+        tablename: Optional[str] = "arrow_dataset",
+        factory: Optional[str] = "pandas",
+        **kwargs,
+    ):
+        """queryrow.
+        Get a single row from Delta using a query (with DuckDB).
+        """
+        result = None
+        dataset = None
+        error = None
+        args = {}
+        if partitions:
+            args = {"partitions": partitions}
+
+        # Modify the SQL query to return only one row using LIMIT 1
+        if sentence and not sentence.strip().upper().startswith("SELECT"):
+            raise ValueError("Only SELECT queries are allowed")
+
+        if "LIMIT" not in sentence.upper():
+            sentence = f"{sentence.strip()} LIMIT 1"
+
+        try:
+            rst = None
+            with duckdb.connect() as con:
+                dataset = self._connection.to_pyarrow_dataset(**args, **kwargs)
+                # Register the dataset as a table in DuckDB
+                con.register(tablename, dataset)
+                rst = con.execute(sentence)
+                # Return the result based on the factory
+                if rst:
+                    if factory == "pandas":
+                        df = rst.df()
+                        if not df.empty:
+                            result = df.iloc[0]
+                    elif factory == "polars":
+                        pl_df = rst.df_polars()
+                        if pl_df.shape[0] > 0:
+                            result = pl_df.row(0)  # Get the first row
+                    elif factory == 'arrow':
+                        arrow_table = rst.arrow()
+                        if arrow_table.num_rows > 0:
+                            result = arrow_table.slice(0, 1)  # Return the first row
+                    else:
+                        raise ValueError(
+                            f"Unsupported factory type: {factory}"
+                        )
+        except (DeltaError, DeltaProtocolError) as exc:
+            error = exc
+        except Exception as exc:
+            error = exc
+        finally:
+            rst = None
+            dataset = None
+            return [result, error]  # pylint: disable=W0150
 
     fetch_one = queryrow
 
@@ -279,6 +374,7 @@ class delta(InitDriver):
         filename: Union[str, Path],
         parquet: str,
         factory: str = "pandas",
+        chunksize: int = 100000,
         **kwargs
     ):
         """file_to_parquet.
@@ -290,9 +386,9 @@ class delta(InitDriver):
         ext = filename.suffix
         arguments = kwargs.get("pd_args", {})
         df = None
-        if ext in (".csv", ".txt", ".TXT", ".CSV"):
+        if ext in (".csv", ".CSV", ".txt", ".TXT"):
             if factory == "pandas":
-                df = pd.read_csv(
+                csv_chunks = pd.read_csv(
                     filename,
                     quotechar='"',
                     decimal=",",
@@ -301,8 +397,29 @@ class delta(InitDriver):
                     na_values=["NULL", "TBD"],
                     na_filter=True,
                     skipinitialspace=True,
+                    chunksize=chunksize,  # Process in chunks
                     **arguments,
                 )
+                # Write Parquet using schema derived from the first chunk
+                parquet_writer = None
+                try:
+                    for _, chunk in enumerate(csv_chunks):
+                        # Convert chunk to Arrow Table
+                        table = Table.from_pandas(chunk)
+                        if parquet_writer is None:
+                            # Define the schema from the first chunk
+                            schema = table.schema
+                            # Create the ParquetWriter with the schema
+                            parquet_writer = pq.ParquetWriter(
+                                parquet,
+                                schema,
+                                compression="snappy"
+                            )
+                        # Write the chunk to the Parquet file
+                        parquet_writer.write_table(table)
+                finally:
+                    if parquet_writer:
+                        parquet_writer.close()
             elif factory == "datatable":
                 frame = dt.fread(filename, **arguments)
                 df = frame.to_pandas()
@@ -382,9 +499,13 @@ class delta(InitDriver):
             # Destination will be the new file path:
             self._delta = destination
         except (DeltaError, DeltaProtocolError) as exc:
-            raise DriverError(f"DeltaTable Error: {exc}") from exc
+            raise DriverError(
+                f"DeltaTable Error: {exc}"
+            ) from exc
         except Exception as exc:
-            raise DriverError(f"Query Error: {exc}") from exc
+            raise DriverError(
+                f"Delta Write Error: {exc}"
+            ) from exc
 
     async def to_df(
         self,
@@ -399,7 +520,8 @@ class delta(InitDriver):
         Args:
         - partitions: List of Partitions.
         - columns: List of Columns.
-        - factory: Factory to be used, default is "pandas", can be "arrow", "polars" or "datatable".
+        - factory: Factory to be used, default is "pandas",
+            can be "arrow", "polars" or "datatable".
         """
         result = None
         error = None
@@ -420,10 +542,8 @@ class delta(InitDriver):
                 result = pl.from_arrow(table)
         except (DeltaError, DeltaProtocolError) as exc:
             error = exc
-            raise DriverError(f"DeltaTable Error: {exc}") from exc
         except Exception as exc:
             error = exc
-            raise DriverError(f"Query Error: {exc}") from exc
         finally:
             return [result, error]  # pylint: disable=W0150
 
