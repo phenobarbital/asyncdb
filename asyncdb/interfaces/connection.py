@@ -103,6 +103,8 @@ class ConnectionBackend(AbstractDriver, DriverContextManager, EventLoopManager):
             return ProcessPoolExecutor(
                 max_workers=max_workers
             )
+        elif self._executor is not None:
+            return self._executor
         else:
             return None
 

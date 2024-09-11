@@ -1,6 +1,12 @@
 from typing import Optional, Union, Any
 from collections.abc import Callable, Awaitable
 from abc import abstractmethod
+import asyncio
+from functools import partial
+from concurrent.futures import (
+    ThreadPoolExecutor,
+    ProcessPoolExecutor
+)
 import logging
 from .abstract import (
     AbstractDriver,
@@ -47,6 +53,8 @@ class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
             self._debug = kwargs.get('debug', False)
         # set the logger:
         self._logger = logging.getLogger(name=__name__)
+        # Executor:
+        self._executor = None
 
     async def connect(self) -> "PoolBackend":
         """connect.
@@ -110,3 +118,39 @@ class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
     @classmethod
     def dialect(cls):
         return cls._syntax
+
+    def get_executor(self, executor="thread", max_workers: int = 2) -> Any:
+        if executor == "thread":
+            return ThreadPoolExecutor(
+                max_workers=max_workers
+            )
+        elif executor == "process":
+            return ProcessPoolExecutor(
+                max_workers=max_workers
+            )
+        elif self._executor is not None:
+            return self._executor
+        else:
+            return None
+
+    async def _thread_func(
+        self,
+        fn: Union[Callable, Awaitable],
+        *args,
+        executor: Any = None,
+        **kwargs
+    ):
+        """_execute.
+
+        Returns a future to be executed into a Thread Pool.
+        """
+        loop = asyncio.get_event_loop()
+        func = partial(fn, *args, **kwargs)
+        if not executor:
+            executor = self._executor
+        try:
+            fut = loop.run_in_executor(executor, func)
+            return await fut
+        except Exception as e:
+            self._logger.exception(e, stack_info=True)
+            raise
