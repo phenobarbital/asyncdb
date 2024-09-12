@@ -7,7 +7,7 @@ hypothesis==6.91.0
 ipython==8.27.0
 lint==1.2.1
 mypy==1.7.1
-pylint==3.0.2
+pylint==3.2.7
 pyperf==2.7.0
 pytest>=6.0.0
 pytest-asyncio==0.24.0
