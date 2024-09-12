@@ -144,7 +144,7 @@ class mysqlclientPool(BasePool):
         await self._thread_func(self._pool.close)
         self._connected = False
         self._logger.debug(
-            f"MySQL Connection Closed."
+            "MySQL Connection Closed."
         )
 
     disconnect = close

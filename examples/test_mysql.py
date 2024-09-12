@@ -23,7 +23,6 @@ async def pooler(loop):
     async with await pool.acquire() as conn:
         # execute a sentence
         result, error = await conn.test_connection()
-        print(result, 'Error: ', error)
     print('Is closed: ', {db.is_connected()})
     await pool.close()
 

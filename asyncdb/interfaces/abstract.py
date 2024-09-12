@@ -84,10 +84,10 @@ class EventLoopManager:
                 try:
                     self._loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(self._loop)
-                except RuntimeError:
+                except RuntimeError as e:
                     raise RuntimeError(
                         "No Event Loop is running. Please, run this driver inside an asyncio loop."
-                    )
+                    ) from e
         if self._loop.is_closed():
             self._loop = asyncio.get_running_loop()
             asyncio.set_event_loop(self._loop)
@@ -100,7 +100,7 @@ class EventLoopManager:
     event_loop = get_loop
 
     def event_loop_is_closed(self):
-        return True if not self._loop else bool(self._loop.is_closed())
+        return bool(self._loop.is_closed()) if self._loop else True
 
 
 class PoolContextManager(Awaitable, AbstractAsyncContextManager):
