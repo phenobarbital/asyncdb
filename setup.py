@@ -222,7 +222,7 @@ setup(
             "sqlalchemy[asyncio]==2.0.34",
         ],
         "elasticsearch": [
-            "elasticsearch[async]==8.13.2",
+            "elasticsearch[async]==8.15.1",
         ],
         "mongodb": [
             "pymongo==4.6.1",
@@ -278,7 +278,7 @@ setup(
             "JayDeBeApi==1.2.3",
             "pyodbc==5.1.0",
             "sqlalchemy[asyncio]==2.0.34",
-            "elasticsearch[async]==8.13.2",
+            "elasticsearch[async]==8.15.1",
             "pymongo==4.6.1",
             "motor==3.4.0",
             "pymssql==2.3.1",
