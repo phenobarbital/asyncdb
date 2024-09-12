@@ -1,6 +1,7 @@
 import asyncio
 from pathlib import Path
 import time
+import gc
 from asyncdb.drivers.delta import delta
 from asyncdb import AsyncDB
 
@@ -43,7 +44,7 @@ async def test_data(evt: asyncio.AbstractEventLoop):
         )
         print(result, error)
 
-async def test_epson(evt: asyncio.AbstractEventLoop):
+async def test_create_epson(evt: asyncio.AbstractEventLoop):
     # Convert a file to parquet:
     args = {
         "has_header": False,
@@ -82,33 +83,74 @@ async def test_epson(evt: asyncio.AbstractEventLoop):
         **args
     )
     print('RESULT > ', parquet, meta)
-    # await dt.create(parquet_dir, parquet, name='EPSON_SALES', mode='overwrite')
-    # async with await dt.connection() as conn:
-    #     # querying data:
-    #     result, error = await conn.query(
-    #         sentence="passenger_count > 2",
+    await dt.create(parquet_dir, parquet, name='EPSON_SALES', mode='overwrite')
+    async with await dt.connection() as conn:
+        # querying data:
+        result, error = await conn.query(
+            sentence="customer_id == '1006534'",
+            factory='pandas'
+        )
+        print('ERROR > ',result, error)
+        group = result.groupby(['customer_id']).count()
+        print(group)
+        print(result)
+
+async def test_epson(evt: asyncio.AbstractEventLoop):
+    tablename = 'EPSON_SALES'
+    params = {
+        "path": Path(__file__).parent.parent.joinpath('docs', "epson.sales")
+    }
+    dt = delta(params=params, loop=evt)
+    query_string = "SELECT * FROM EPSON_SALES WHERE customer_id = 1006534 LIMIT 100"
+    async with await dt.connection() as conn:
+        # querying data:
+        result, error = await conn.query(
+            sentence=query_string,
+            tablename=tablename,
+            factory='pandas'
+        )
+        print('Query > ', result, error)
+        group = result.groupby(['store_number']).count()
+        print('GROUP > ', group)
+        result, error = await conn.queryrow(
+            sentence=query_string,
+            tablename=tablename,
+            factory='pandas'
+        )
+        if error:
+            print(f"Error executing queryrow: {error}")
+        else:
+            print(result)
+    # path = Path(__file__).parent.parent.joinpath('docs', "epson.sales")
+    # async with await dt.connection(path=path) as conn:
+    #     result, error = await conn.queryrow(
+    #         sentence=query_string,
+    #         tablename=tablename,
     #         factory='pandas'
     #     )
-    #     print('ERROR > ',result, error)
-    #     group = result.groupby(['customer_id']).count()
-    #     print(group)
-    #     print(result)
+    #     if error:
+    #         print(f"Error executing queryrow: {error}")
+    #     else:
+    #         print(result)
 
 if __name__ == '__main__':
-    start_time = time.time()  # Record the start time
-    loop = asyncio.new_event_loop()
-    loop.set_debug(True)
-    # loop.run_until_complete(
-    #     test_connection(evt=loop)
-    # )
-    # loop.run_until_complete(
-    #     test_data(evt=loop)
-    # )
-    loop.run_until_complete(
-        test_epson(evt=loop)
-    )
-    end_time = time.time()  # Record the end time
-    duration_seconds = end_time - start_time
-    print(
-        f"Duration: {duration_seconds} seconds"
-    )
+    try:
+        start_time = time.time()  # Record the start time
+        loop = asyncio.get_event_loop()
+        # loop.set_debug(True)
+        # loop.run_until_complete(
+        #     test_connection(evt=loop)
+        # )
+        # loop.run_until_complete(
+        #     test_data(evt=loop)
+        # )
+        loop.run_until_complete(
+            test_epson(evt=loop)
+        )
+        end_time = time.time()  # Record the end time
+        duration_seconds = end_time - start_time
+        print(
+            f"Duration: {duration_seconds} seconds"
+        )
+    finally:
+        loop.stop()

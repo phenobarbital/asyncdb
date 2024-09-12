@@ -7,9 +7,16 @@ from typing import Union, Optional, Any
 from collections.abc import Iterable
 import pymssql
 from pymssql import _mssql
-from ..interfaces import DBCursorBackend
-from ..exceptions import DataError, EmptyStatement, NoDataFound, DriverError, StatementError
+from ..interfaces.cursors import DBCursorBackend
+from ..exceptions import (
+    DataError,
+    EmptyStatement,
+    NoDataFound,
+    DriverError,
+    StatementError
+)
 from .sql import SQLDriver, SQLCursor
+
 
 types_map = {
     1: "string",

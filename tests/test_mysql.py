@@ -15,9 +15,9 @@ def event_loop():
 params = {
     "host": "127.0.0.1",
     "port": "3306",
-    "database": 'sakila',
-    "user": 'troc_pgdata',
-    "password": '12345678'
+    "user": "root",
+    "password": "12345678",
+    "database": "navigator_dev"
 }
 
 DRIVER='mysql'
@@ -47,6 +47,7 @@ async def test_connect(driver, event_loop):
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection()
     pytest.assume(type(result) == list)
+    pytest.assume(error is None)
     await db.close()
 
 

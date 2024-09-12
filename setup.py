@@ -110,7 +110,7 @@ setup(
         "wheel==0.44.0"
     ],
     install_requires=[
-        "cryptography==42.0.4",
+        "cryptography==43.0.1",
         "aiohttp>=3.9.5",
         "asyncpg==0.29.0",
         "asyncio==3.4.3",
@@ -143,19 +143,19 @@ setup(
             "influxdb-client[async]==1.45.0",
             "pymssql==2.3.1",
             "redis==5.0.8",
-            "deltalake==0.17.4",
-            "duckdb==1.0.0",
+            "deltalake==0.19.2",
+            "duckdb==1.1.0",
         ],
         "dataframe": [
             "dask==2024.8.2",
             'datatable==1.1.0',
             "python-datatable==1.1.3",
-            "polars==1.6.0",
+            "polars==1.7.0",
             "pyarrow==17.0.0",
             "connectorx==0.3.3",
             "pyspark==3.5.0",
-            "deltalake==0.17.4",
-            "duckdb==1.0.0",
+            "deltalake==0.19.2",
+            "duckdb==1.1.0",
         ],
         "pyspark": [
             "pyspark==3.5.0"
@@ -219,7 +219,7 @@ setup(
             "oracledb==2.2.1"
         ],
         "sqlalchemy": [
-            "sqlalchemy[asyncio]==2.0.23",
+            "sqlalchemy[asyncio]==2.0.34",
         ],
         "elasticsearch": [
             "elasticsearch[async]==8.13.2",
@@ -255,7 +255,7 @@ setup(
             "dask==2024.8.2",
             "datatable==1.1.0",
             "python-datatable==1.1.3",
-            "polars==1.6.0",
+            "polars==1.7.0",
             "pyarrow==17.0.0",
             "connectorx==0.3.3",
             "aiosqlite>=0.18.0",
@@ -277,7 +277,7 @@ setup(
             "aioodbc==0.5.0",
             "JayDeBeApi==1.2.3",
             "pyodbc==5.1.0",
-            "sqlalchemy[asyncio]==2.0.23",
+            "sqlalchemy[asyncio]==2.0.34",
             "elasticsearch[async]==8.13.2",
             "pymongo==4.6.1",
             "motor==3.4.0",
@@ -289,8 +289,8 @@ setup(
             "pyspark==3.5.0",
             "oracledb==2.2.1",
             "hazelcast-python-client==5.4.0",
-            "deltalake==0.17.4",
-            "duckdb==1.0.0",
+            "deltalake==0.19.2",
+            "duckdb==1.1.0",
             "botocore==1.31.64",
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
