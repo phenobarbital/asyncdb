@@ -29,9 +29,16 @@ class oracle(SQLDriver):
             except KeyError:
                 self._lib_dir = None
         try:
-            super(oracle, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
+            super(oracle, self).__init__(
+                dsn=dsn,
+                loop=loop,
+                params=params,
+                **kwargs
+            )
             _generated = datetime.now() - _starttime
-            print(f"Oracle Started in: {_generated}")
+            print(
+                f"Oracle Started in: {_generated}"
+            )
         except Exception as err:
             raise DriverError(f"Oracle Error: {err}") from err
         # set the JSON encoder:

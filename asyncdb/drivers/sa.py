@@ -42,8 +42,8 @@ class saCursor(SQLCursor):
         # Retrieve the next item in the result set
         try:
             return next(self._result_iter)
-        except StopIteration:
-            raise StopAsyncIteration
+        except StopIteration as e:
+            raise StopAsyncIteration from e
 
 class sa(SQLDriver, DBCursorBackend):
     _provider = "sa"
@@ -84,8 +84,7 @@ class sa(SQLDriver, DBCursorBackend):
         if params:
             self._driver = params.get('driver', "postgresql+asyncpg")
         else:
-            params = {}
-            params["driver"] = "postgresql+asyncpg"
+            params = {"driver": "postgresql+asyncpg"}
         SQLDriver.__init__(
             self, dsn=dsn,
             loop=loop,
@@ -226,7 +225,7 @@ class sa(SQLDriver, DBCursorBackend):
         self,
         sentence: Any,
         params: List = None,
-        format: str = None
+        query_format: str = None
     ):
         """
         Running Query.
@@ -234,8 +233,8 @@ class sa(SQLDriver, DBCursorBackend):
         self._result = None
         error = None
         await self.valid_operation(sentence)
-        if not format:
-            format = self._row_format
+        if not query_format:
+            query_format = self._row_format
         try:
             self.start_timing()
             async with self._connection.connect() as conn:
@@ -245,11 +244,11 @@ class sa(SQLDriver, DBCursorBackend):
                 rows = result.fetchall()
                 # Get the column names from the result metadata
                 column_names = result.keys()
-                if format in ("dict", "iterable"):
+                if query_format in ("dict", "iterable"):
                     self._result = [
                         dict(zip(column_names, row)) for row in rows
                     ]
-                elif format == "record":
+                elif query_format == "record":
                     self._result = [
                         self._construct_record(row, column_names) for row in rows
                     ]
@@ -275,7 +274,7 @@ class sa(SQLDriver, DBCursorBackend):
         self,
         sentence: Any,
         params: Any = None,
-        format: Optional[str] = None
+        query_format: Optional[str] = None
     ):
         """
         Running Query and return only one row.
@@ -284,8 +283,8 @@ class sa(SQLDriver, DBCursorBackend):
         error = None
         await self.valid_operation(sentence)
         try:
-            if not format:
-                format = self._row_format
+            if not query_format:
+                query_format = self._row_format
             result = None
             async with self._connection.connect() as conn:
                 if isinstance(sentence, str):
@@ -293,9 +292,9 @@ class sa(SQLDriver, DBCursorBackend):
                 result = await conn.execute(sentence, params)
                 column_names = result.keys()
                 row = result.fetchone()
-                if format in ("dict", 'iterable'):
+                if query_format in ("dict", 'iterable'):
                     self._result = dict(zip(column_names, row))
-                elif format == "record":
+                elif query_format == "record":
                     self._result = self._construct_record(row, column_names)
                 else:
                     self._result = row
@@ -317,7 +316,7 @@ class sa(SQLDriver, DBCursorBackend):
         self,
         sentence: Any,
         params: List = None,
-        format: Optional[str] = None
+        query_format: Optional[str] = None
     ):
         """
         Fetch All Rows in a Query.
@@ -325,8 +324,8 @@ class sa(SQLDriver, DBCursorBackend):
         result = None
         await self.valid_operation(sentence)
         try:
-            if not format:
-                format = self._row_format
+            if not query_format:
+                query_format = self._row_format
             async with self._connection.connect() as conn:
                 if isinstance(sentence, str):
                     sentence = text(sentence)
@@ -335,11 +334,11 @@ class sa(SQLDriver, DBCursorBackend):
                 rows = rst.fetchall()
                 if rows is None:
                     return None
-                if format in ("dict", 'iterable'):
+                if query_format in ("dict", 'iterable'):
                     result = [
                         dict(zip(column_names, row)) for row in rows
                     ]
-                elif format == "record":
+                elif query_format == "record":
                     result = [
                         self._construct_record(row, column_names) for row in rows
                     ]
@@ -362,7 +361,7 @@ class sa(SQLDriver, DBCursorBackend):
         sentence: Any,
         size: int = 1,
         params: List = None,
-        format: Optional[str] = None
+        query_format: Optional[str] = None
     ):
         """
         Fetch Many Rows from a Query as requested.
@@ -370,8 +369,8 @@ class sa(SQLDriver, DBCursorBackend):
         result = None
         await self.valid_operation(sentence)
         try:
-            if not format:
-                format = self._row_format
+            if not query_format:
+                query_format = self._row_format
             async with self._connection.connect() as conn:
                 if isinstance(sentence, str):
                     sentence = text(sentence)
@@ -380,11 +379,11 @@ class sa(SQLDriver, DBCursorBackend):
                 rows = rst.fetchmany(size)
                 if rows is None:
                     return None
-                if format in ("dict", 'iterable'):
+                if query_format in ("dict", 'iterable'):
                     result = [
                         dict(zip(column_names, row)) for row in rows
                     ]
-                elif format == "record":
+                elif query_format == "record":
                     result = [
                         self._construct_record(row, column_names) for row in rows
                     ]
@@ -408,7 +407,7 @@ class sa(SQLDriver, DBCursorBackend):
         self,
         sentence: Any,
         params: List = None,
-        format: Optional[str] = None
+        query_format: Optional[str] = None
     ):
         """
         Running Query and return only one row.
@@ -416,8 +415,8 @@ class sa(SQLDriver, DBCursorBackend):
         result = None
         await self.valid_operation(sentence)
         try:
-            if not format:
-                format = self._row_format
+            if not query_format:
+                query_format = self._row_format
             async with self._connection.connect() as conn:
                 if isinstance(sentence, str):
                     sentence = text(sentence)
@@ -426,9 +425,9 @@ class sa(SQLDriver, DBCursorBackend):
                 row = rst.fetchone()
                 if row is None:
                     return None
-                if format in ("dict", 'iterable'):
+                if query_format in ("dict", 'iterable'):
                     result = dict(zip(column_names, row))
-                elif format == "record":
+                elif query_format == "record":
                     result = Record(
                         dict(zip(column_names, row)),
                         column_names
