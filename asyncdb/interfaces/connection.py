@@ -103,6 +103,8 @@ class ConnectionBackend(AbstractDriver, DriverContextManager, EventLoopManager):
             return ProcessPoolExecutor(
                 max_workers=max_workers
             )
+        elif self._executor is not None:
+            return self._executor
         else:
             return None
 
@@ -149,10 +151,9 @@ class ConnectionDSNBackend(ABC):
 
     def create_dsn(self, params: dict):
         try:
-            if params:
-                return self._dsn.format_map(SafeDict(**params))
-            else:
-                return None
+            return self._dsn.format_map(
+                SafeDict(**params)
+            ) if params else None
         except TypeError as err:
             self._logger.error(err)
             raise DriverError(

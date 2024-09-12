@@ -5,7 +5,8 @@ from typing import Any, Optional, Union
 from collections.abc import Sequence, Iterable
 import aiosqlite
 from ..exceptions import NoDataFound, DriverError
-from ..interfaces import DBCursorBackend, ModelBackend
+from ..interfaces.model import ModelBackend
+from ..interfaces.cursors import DBCursorBackend
 from ..models import Model
 from ..utils.types import Entity
 from .sql import SQLDriver, SQLCursor

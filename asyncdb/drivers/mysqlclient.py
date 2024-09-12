@@ -136,12 +136,16 @@ class mysqlclientPool(BasePool):
             try:
                 conn.close()
             except MySQLdb.OperationalError as err:
-                self._logger.warning(f"MySQL: Unable to close connection: {err}")
+                self._logger.warning(
+                    f"MySQL: Unable to close connection: {err}"
+                )
             self._current_size -= 1
         # Close connection from the pool:
         await self._thread_func(self._pool.close)
         self._connected = False
-        self._logger.debug(f"MySQL Connection Closed.")
+        self._logger.debug(
+            f"MySQL Connection Closed."
+        )
 
     disconnect = close
 
@@ -245,11 +249,12 @@ class mysqlclient(SQLDriver, DBCursorBackend):
             if self._connection:
                 close = self._thread_func(self._connection.close)
                 await asyncio.wait_for(close, timeout)
-                print(f"{self._provider}: Closed connection to {self._dsn}")
         except Exception as e:
             print(e)
             self._logger.exception(e, stack_info=True)
-            raise DriverError(f"MySQL Closing Error: {e!s}") from e
+            raise DriverError(
+                f"MySQL Closing Error: {e!s}"
+            ) from e
         finally:
             self._connected = False
             self._connection = None

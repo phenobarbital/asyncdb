@@ -9,18 +9,24 @@ TODO:
 import asyncio
 import time
 from typing import Any, Union
+from dataclasses import dataclass
 from redis import asyncio as aioredis
 from redis.exceptions import AuthenticationError, RedisError
 from ..exceptions import ConnectionTimeout, DriverError
 from .base import BaseDriver, BasePool
 
+@dataclass
+class RedisConfig:
+    host: str
+    port: int
+    db: str
 
 class redisPool(BasePool):
     def __init__(
         self,
         dsn: str = "",
         loop: asyncio.AbstractEventLoop = None,
-        params: dict = None,
+        params: Union[dict, RedisConfig] = None,
         **kwargs
     ) -> None:
         self._dsn = "redis://{host}:{port}/{db}"
@@ -117,12 +123,11 @@ class redisPool(BasePool):
         """
         if self._pool:
             try:
-                result = await self._connection.execute_command(
+                return await self._connection.execute_command(
                     sentence,
                     *args,
                     **kwargs
                 )
-                return result
             except TypeError as err:
                 raise DriverError(f"Execute Error: {err}") from err
             except (ConnectionError, redis.exceptions.ConnectionError) as err:
@@ -235,8 +240,7 @@ class redis(BaseDriver):
         """
         if self._connection:
             try:
-                result = await self._connection.execute_command(sentence, *args)
-                return result
+                return await self._connection.execute_command(sentence, *args)
             except (RedisError,) as err:
                 raise DriverError(f"Connection Error: {err}") from err
 
