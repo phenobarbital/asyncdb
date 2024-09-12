@@ -137,7 +137,7 @@ setup(
             "pylibmc==1.6.3",
             "aiomcache==0.8.2",
             "aiosqlite>=0.18.0",
-            "cassandra-driver==3.29.1",
+            "cassandra-driver==3.29.2",
             "rethinkdb==2.4.10.post1",
             "influxdb==5.3.2",
             "influxdb-client[async]==1.45.0",
@@ -202,7 +202,7 @@ setup(
           "google-cloud-storage==2.17.0"
         ],
         "cassandra": [
-            "cassandra-driver==3.29.1",
+            "cassandra-driver==3.29.2",
         ],
         "influxdb": [
             "influxdb==5.3.2",
@@ -239,7 +239,7 @@ setup(
         ],
         "scylla": [
             "scylla_driver==3.26.9",
-            "cassandra-driver==3.29.1",
+            "cassandra-driver==3.29.2",
             "acsylla==0.2.0",
             "cqlsh==6.1.2"
         ],
@@ -268,7 +268,7 @@ setup(
             "rethinkdb==2.4.10.post1",
             "aiopg==1.4.0",
             "psycopg-binary>=3.1.8",
-            "cassandra-driver==3.29.1",
+            "cassandra-driver==3.29.2",
             "scylla_driver==3.26.9",
             "acsylla==0.2.0",
             "cqlsh==6.1.2",
