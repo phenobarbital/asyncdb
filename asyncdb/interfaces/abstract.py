@@ -81,9 +81,13 @@ class EventLoopManager:
                 self._loop = asyncio.get_event_loop()
                 asyncio.set_event_loop(self._loop)
             except RuntimeError:
-                raise RuntimeError(
-                    "No Event Loop is running. Please, run this driver inside an asyncio loop."
-                )
+                try:
+                    self._loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(self._loop)
+                except RuntimeError:
+                    raise RuntimeError(
+                        "No Event Loop is running. Please, run this driver inside an asyncio loop."
+                    )
         if self._loop.is_closed():
             self._loop = asyncio.get_running_loop()
             asyncio.set_event_loop(self._loop)
