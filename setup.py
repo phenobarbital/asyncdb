@@ -226,7 +226,7 @@ setup(
         ],
         "mongodb": [
             "pymongo==4.6.1",
-            "motor==3.4.0",
+            "motor==3.5.1",
         ],
         "msqlserver": [
             "pymssql==2.3.1",
@@ -280,7 +280,7 @@ setup(
             "sqlalchemy[asyncio]==2.0.34",
             "elasticsearch[async]==8.15.1",
             "pymongo==4.6.1",
-            "motor==3.4.0",
+            "motor==3.5.1",
             "pymssql==2.3.1",
             "aiocouch==3.0.0",
             "asyncmy==0.2.9",
