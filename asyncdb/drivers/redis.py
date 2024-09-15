@@ -241,8 +241,14 @@ class redis(BaseDriver):
         if self._connection:
             try:
                 return await self._connection.execute_command(sentence, *args)
-            except (RedisError,) as err:
-                raise DriverError(f"Connection Error: {err}") from err
+            except RedisError as err:
+                raise DriverError(
+                    f"Connection Error: {err}"
+                ) from err
+            except Exception as err:
+                raise DriverError(
+                    f"Unknown Redis Error: {err}"
+                ) from err
 
     execute_many = execute
 

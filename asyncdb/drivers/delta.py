@@ -445,7 +445,7 @@ class delta(InitDriver):
                 pq.write_table(atable, parquet, compression="snappy")
         except Exception as exc:
             raise DriverError(
-                f"Query Error: {exc}"
+                f"Delta File To Parquet Error: {exc}"
             ) from exc
 
     async def write(
