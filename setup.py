@@ -245,6 +245,7 @@ setup(
         ],
         "clickhouse": [
             "clickhouse-driver==0.2.9",
+            "clickhouse-cityhash==1.0.2.4",
             "aiochclient[httpx-speedups]==2.6.0",
             "clickhouse-connect==0.7.19"  # Support for SuperSet
         ],

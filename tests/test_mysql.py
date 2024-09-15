@@ -46,7 +46,7 @@ async def test_connect(driver, event_loop):
     await db.connection()
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection()
-    pytest.assume(type(result) == list)
+    pytest.assume(isinstance(result, list) and len(result) > 0)
     pytest.assume(error is None)
     await db.close()
 
