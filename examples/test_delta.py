@@ -145,6 +145,9 @@ if __name__ == '__main__':
         #     test_data(evt=loop)
         # )
         loop.run_until_complete(
+            test_create_epson(evt=loop)
+        )
+        loop.run_until_complete(
             test_epson(evt=loop)
         )
         end_time = time.time()  # Record the end time
