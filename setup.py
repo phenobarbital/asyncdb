@@ -198,7 +198,7 @@ setup(
         "bigquery": [
           "google-cloud-bigquery==3.25.0",
           "pandas-gbq==0.23.1",
-          "google-cloud-storage==2.17.0"
+          "google-cloud-storage==2.18.2"
         ],
         "cassandra": [
             "cassandra-driver==3.29.2",
@@ -295,7 +295,7 @@ setup(
             "aiobotocore==2.7.0",
             "aioboto3==12.0.0",
             "google-cloud-bigquery==3.25.0",
-            "google-cloud-storage==2.17.0",
+            "google-cloud-storage==2.18.2",
             "pandas-gbq==0.23.1",
             "tqdm==4.66.4"
         ]
