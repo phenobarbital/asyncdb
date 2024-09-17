@@ -194,11 +194,10 @@ class elastic(BaseDriver):
         Check if a document exists by its ID.
         """
         try:
-            exists = await self._connection.exists(
+            return await self._connection.exists(
                 index=self._database,
                 id=key
             )
-            return exists
         except Exception as exc:
             self._logger.error(
                 f"Error checking existence of document with ID {key}: {exc}"
