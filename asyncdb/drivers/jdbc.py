@@ -5,6 +5,7 @@ from typing import Union, Any
 import time
 from collections.abc import Iterable, Sequence
 from pathlib import Path, PurePath
+import threading
 from functools import partial
 import jaydebeapi
 import jpype
@@ -17,12 +18,23 @@ from ..interfaces.model import ModelBackend
 from .sql import SQLDriver
 
 
-class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
+class jdbc(
+    SQLDriver,
+    DatabaseBackend,
+    ModelBackend
+):
     _provider = "JDBC"
     _syntax = "sql"
 
-    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
+    def __init__(
+        self,
+        dsn: str = "",
+        loop: asyncio.AbstractEventLoop = None,
+        params: dict = None,
+        **kwargs
+    ) -> None:
         self._test_query = "SELECT 1"
+        self.max_memory: int = kwargs.pop('max_memory', 12000)
         try:
             if isinstance(params["classpath"], str):
                 params["classpath"] = Path(params["classpath"])
@@ -94,10 +106,14 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
             classpath = None
             path = ";".join(jarpath)
             _jvmArgs.append("-Djava.class.path=" + path)
-        _jvmArgs.append("-Xmx12000m")
+        _jvmArgs.append(f"-Xmx{self.max_memory}m")
         _jvmArgs.append("-Dfile.encoding=UTF8")
         jpype.startJVM(
-            jvmpath=jpype.getDefaultJVMPath(), classpath=[classpath], *_jvmArgs, interrupt=True, convertStrings=True
+            jvmpath=jpype.getDefaultJVMPath(),
+            classpath=[classpath],
+            *_jvmArgs,
+            interrupt=True,
+            convertStrings=True
         )
 
     async def connection(self):
@@ -116,11 +132,16 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
                     jpype.java.lang.ClassLoader.getSystemClassLoader()
                 )
             if "options" in self._params:
-                options = ";".join({f"{k}={v}" for k, v in self._params["options"].items()})
+                options = ";".join(
+                    {f"{k}={v}" for k, v in self._params["options"].items()}
+                )
                 self._dsn = f"{self._dsn};{options}"
             user = self._params["user"]
             password = self._params["password"]
-            self._executor = self.get_executor(executor=None, max_workers=10)
+            self._executor = self.get_executor(
+                executor="thread",
+                max_workers=10
+            )
             self._connection = await self._thread_func(
                 jaydebeapi.connect,
                 self._classname,
@@ -130,50 +151,89 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
                 executor=self._executor,
             )
             if self._connection:
-                print(f'{self._provider}: Connected at {self._params["driver"]}:{self._params["host"]}')
+                print(
+                    f'{self._provider}: Connected at {self._params["driver"]}:{self._params["host"]}'
+                )
                 self._connected = True
                 self._initialized_on = time.time()
                 if self._init_func is not None and callable(self._init_func):
-                    await self._init_func(self._connection)  # pylint: disable=E1102
+                    await self._init_func(self._connection)  # pylint: disable=E1102 # no-qa
         except jpype.JException as ex:
+            if "does not exist" in str(ex):
+                raise DriverError(
+                    f"Database does not exist: {self._params.get('database')}"
+                )
             print(ex.stacktrace())
-            self._logger.error(f"Driver {self._classname} Error: {ex}")
+            self._logger.error(
+                f"Driver {self._classname} Error: {ex}"
+            )
         except TypeError as e:
-            raise DriverError(f"Driver {self._classname} was not found: {e}") from e
+            raise DriverError(
+                f"Driver {self._classname} was not found: {e}"
+            ) from e
         except Exception as e:
             self._logger.exception(e, stack_info=True)
-            raise DriverError(f"JDBC Unknown Error: {e!s}") from e
+            raise DriverError(
+                f"JDBC Unknown Error: {e!s}"
+            ) from e
         return self
 
     connect = connection
 
-    async def close(self, timeout: int = 10) -> None:
+    async def close(self, timeout: int = 5) -> None:
+        print("JVM started: ", jpype.isJVMStarted())
+        if not self._connected or not self._connection:
+            print('Connection already closed.')
+            return  # Prevent double close
         try:
             if self._connection:
-                close = self._thread_func(self._connection.close)
+                close = self._thread_func(
+                    self._connection.close,
+                    executor=self._executor
+                )
                 await asyncio.wait_for(close, timeout)
-                print(f'{self._provider}: Closed connection to {self._params["driver"]}:{self._params["host"]}')
+        except Exception as e:
+            self._logger.exception(e, stack_info=True)
+            raise DriverError(
+                f"JDBC Closing Error: {e!s}"
+            ) from e
+        finally:
             self._connected = False
             self._connection = None
-        except Exception as e:
-            print(e)
-            self._logger.exception(e, stack_info=True)
-            raise DriverError(f"JDBC Closing Error: {e!s}") from e
+            # Shutdown the executor
+            if self._executor:
+                self._executor.shutdown(wait=True)
+                self._executor = None
+                # Detach all threads before shutting down JVM
+                if jpype.isThreadAttachedToJVM():
+                    jpype.detachThreadFromJVM()
+            # Ensure JVM shutdown is called from the main thread
+            if jpype.isJVMStarted() and threading.current_thread() is threading.main_thread():
+                try:
+                     # Force garbage collection on the Java side
+                    jpype.java.lang.System.gc()
+                    jpype.shutdownJVM()
+                    self._logger.info(
+                        'JDBC: JVM shutdown successfully.'
+                    )
+                except Exception as e:
+                    self._logger.warning(
+                        f"Error shutting down JVM: {e}"
+                    )
 
     disconnect = close
-
-    def __del__(self) -> None:
-        try:
-            if jpype.isThreadAttachedToJVM():
-                jpype.detachThreadFromJVM()
-            jpype.shutdownJVM()
-        except Exception as e:
-            self._logger.exception(e, stack_info=True)
 
     def get_columns(self):
         return self._columns
 
-    async def _query(self, sentence, cursor: Any, fetch: Any, *args, **kwargs) -> Iterable:
+    async def _query(
+        self,
+        sentence,
+        cursor: Any,
+        fetch: Any,
+        *args,
+        **kwargs
+    ) -> Iterable:
         loop = asyncio.get_event_loop()
 
         def _execute(sentence, cursor, fetch, *args, **kwargs):
@@ -210,7 +270,10 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         cursor = None
         await self.valid_operation(sentence)
         try:
-            cursor = await self._thread_func(self._connection.cursor)
+            cursor = await self._thread_func(
+                self._connection.cursor,
+                executor=self._executor
+            )
             rows = await self._query(sentence, cursor, cursor.fetchall, **kwargs)
             self._result = [dict(zip(self._columns, row)) for row in rows]
             if not self._result:
@@ -230,7 +293,10 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         result = None
         await self.valid_operation(sentence)
         try:
-            cursor = await self._thread_func(self._connection.cursor)
+            cursor = await self._thread_func(
+                self._connection.cursor,
+                executor=self._executor
+            )
             result = await self._query(sentence, cursor, cursor.fetchall, **kwargs)
             if not result:
                 return NoDataFound()
@@ -248,7 +314,10 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         cursor = None
         await self.valid_operation(sentence)
         try:
-            cursor = await self._thread_func(self._connection.cursor)
+            cursor = await self._thread_func(
+                self._connection.cursor,
+                executor=self._executor
+            )
             row = await self._query(sentence, cursor, cursor.fetchone, **kwargs)
             self._result = dict(zip(self._columns, row))
             if not self._result:
@@ -270,7 +339,10 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         result = None
         await self.valid_operation(sentence)
         try:
-            cursor = await self._thread_func(self._connection.cursor)
+            cursor = await self._thread_func(
+                self._connection.cursor,
+                executor=self._executor
+            )
             row = await self._query(sentence, cursor, cursor.fetchone, **kwargs)
             result = dict(zip(self._columns, row))
             if not result:
@@ -291,7 +363,10 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         result = None
         await self.valid_operation(sentence)
         try:
-            cursor = await self._thread_func(self._connection.cursor)
+            cursor = await self._thread_func(
+                self._connection.cursor,
+                executor=self._executor
+            )
             rows = await self._query(sentence, cursor, cursor.fetchmany, size=size, **kwargs)
             result = [dict(zip(self._columns, row)) for row in rows]
             if not result:
@@ -311,7 +386,10 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         result = None
         await self.valid_operation(sentence)
         try:
-            cursor = await self._thread_func(self._connection.cursor)
+            cursor = await self._thread_func(
+                self._connection.cursor,
+                executor=self._executor
+            )
             result = await self._execute(sentence, cursor, *args, **kwargs)
             return result
         except Exception as err:
@@ -327,7 +405,10 @@ class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
         result = None
         await self.valid_operation(sentence)
         try:
-            cursor = await self._thread_func(self._connection.cursor)
+            cursor = await self._thread_func(
+                self._connection.cursor,
+                executor=self._executor
+            )
             if isinstance(sentence, list):
                 results = []
                 for st in sentence:
