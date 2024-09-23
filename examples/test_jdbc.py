@@ -58,7 +58,7 @@ postgresql = {
     "password": "12345678",
     "host": "127.0.0.1",
     "port": 5432,
-    "database": "navigator_dev",
+    "database": "navigator",
     "jar": [
         'postgresql-42.5.0.jar'
     ],

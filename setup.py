@@ -212,10 +212,11 @@ setup(
             "pyodbc==5.1.0",
         ],
         "jdbc": [
+            "JPype1==1.5.0",
             "JayDeBeApi==1.2.3"
         ],
         "oracle": [
-            "oracledb==2.2.1"
+            "oracledb==2.4.1"
         ],
         "sqlalchemy": [
             "sqlalchemy[asyncio]==2.0.34",
