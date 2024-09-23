@@ -212,6 +212,7 @@ setup(
             "pyodbc==5.1.0",
         ],
         "jdbc": [
+            "JPype1==1.5.0",
             "JayDeBeApi==1.2.3"
         ],
         "oracle": [
