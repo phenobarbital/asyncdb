@@ -216,7 +216,7 @@ setup(
             "JayDeBeApi==1.2.3"
         ],
         "oracle": [
-            "oracledb==2.2.1"
+            "oracledb==2.4.1"
         ],
         "sqlalchemy": [
             "sqlalchemy[asyncio]==2.0.34",
