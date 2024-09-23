@@ -392,17 +392,147 @@ class oracle(SQLDriver):
             raise DriverError("Not connected to database")
         error = None
         try:
-            cursor = await self._thread_func(self._connection.cursor, executor=self._executor)
-            await self._thread_func(cursor.execute, sentence, executor=self._executor)
-            row = await self._thread_func(cursor.fetchone, executor=self._executor)
+            cursor = await self._thread_func(
+                self._connection.cursor,
+                executor=self._executor
+            )
+            await self._thread_func(
+                cursor.execute,
+                sentence,
+                executor=self._executor
+            )
+            row = await self._thread_func(
+                cursor.fetchone,
+                executor=self._executor
+            )
             if row is not None:
                 columns = [col[0] for col in cursor.description]
                 data = dict(zip(columns, row))
             else:
                 data = None
-            await self._thread_func(cursor.close, executor=self._executor)
+            await self._thread_func(
+                cursor.close,
+                executor=self._executor
+            )
             return await self._serializer(data, error)
         except Exception as e:
-            self._logger.exception("Error executing queryrow", exc_info=True)
+            self._logger.exception(
+                "Error executing queryrow",
+                exc_info=True
+            )
             error = e
             return await self._serializer(None, error)
+
+    async def fetch(self, sentence: str = "", **kwargs) -> Iterable[Any]:
+        """
+        Executes a query and retrieves all rows asynchronously.
+
+        Parameters:
+        -----------
+        sentence : str
+            The SQL query to execute.
+        kwargs : dict
+            Additional keyword arguments for the query.
+
+        Returns:
+        --------
+        Iterable[Any]
+            An iterable containing the rows returned by the query.
+
+        Raises:
+        -------
+        DriverError
+            If not connected to the database or an error occurs during execution.
+        """
+        if not self._connected:
+            raise DriverError("Not connected to database")
+        error = None
+        try:
+            cursor = await self._thread_func(
+                self._connection.cursor,
+                executor=self._executor)
+            await self._thread_func(
+                cursor.execute,
+                sentence,
+                executor=self._executor
+            )
+            result = await self._thread_func(
+                cursor.fetchall,
+                executor=self._executor
+            )
+            # Get column names
+            columns = [col[0] for col in cursor.description]
+            # Build list of dicts
+            data = [dict(zip(columns, row)) for row in result]
+            await self._thread_func(cursor.close, executor=self._executor)
+            return data
+        except Exception as e:
+            self._logger.exception(
+                "Error executing query",
+                exc_info=True
+            )
+            raise DriverError(
+                f"Fetch One error: {e}"
+            ) from e
+
+
+    fetch_all = fetch
+
+    async def fetch_one(self, sentence: str = "", **kwargs) -> Optional[dict]:
+        """
+        Executes a query and retrieves a single row asynchronously.
+
+        Parameters:
+        -----------
+        sentence : str
+            The SQL query to execute.
+        kwargs : dict
+            Additional keyword arguments for the query.
+
+        Returns:
+        --------
+        Optional[dict]
+            A dictionary representing the single row returned by the query,
+            or None if no rows are returned.
+
+        Raises:
+        -------
+        DriverError
+            If not connected to the database or an error occurs during execution.
+        """
+        if not self._connected:
+            raise DriverError("Not connected to database")
+        try:
+            cursor = await self._thread_func(
+                self._connection.cursor,
+                executor=self._executor
+            )
+            await self._thread_func(
+                cursor.execute,
+                sentence,
+                executor=self._executor
+            )
+            row = await self._thread_func(
+                cursor.fetchone,
+                executor=self._executor
+            )
+            if row is not None:
+                columns = [col[0] for col in cursor.description]
+                data = dict(zip(columns, row))
+            else:
+                data = None
+            await self._thread_func(
+                cursor.close,
+                executor=self._executor
+            )
+            return data
+        except Exception as e:
+            self._logger.exception(
+                "Error executing queryrow",
+                exc_info=True
+            )
+            raise DriverError(
+                f"Fetch One error: {e}"
+            ) from e
+
+    fetchone = fetch_one
