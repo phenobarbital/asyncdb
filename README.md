@@ -1,12 +1,12 @@
 # AsyncDB #
 
-AsyncDB is a collection of different Database Drivers using asyncio-based connections, binary-connectors (as asyncpg) but providing an abstraction layer to easily connect to different data sources, a high-level abstraction layer for various non-blocking database connectors,
+AsyncDB is a collection of different Database Drivers using asyncio-based connections and binary connectors (as asyncpg) but providing an abstraction layer to easily connect to different data sources, a high-level abstraction layer for various non-blocking database connectors,
 on other blocking connectors (like MS SQL Server) we are using ThreadPoolExecutors to run in a non-blocking manner.
 
 ### Why AsyncDB? ###
 
-The finality of AsyncDB is to provide us a subset of drivers (connectors) for accessing different databases and data sources for data interaction.
-The main goal of AsyncDB is using asyncio-based technologies.
+The finality of AsyncDB is to provide us with a subset of drivers (connectors) for accessing different databases and data sources for data interaction.
+The main goal of AsyncDB is to use asyncio-based technologies.
 
 ### Getting Started ###
 
@@ -53,8 +53,9 @@ Currently AsyncDB supports the following databases:
 * Apache Cassandra (requires official cassandra driver)
 * InfluxDB (using influxdb)
 * CouchBase (using aiocouch)
-* MongoDB (using motor)
+* MongoDB (using motor and pymongo)
 * SQLAlchemy (requires sqlalchemy async (+3.14))
+* Oracle (requires oracledb)
 
 ### Quick Tutorial ###
 
@@ -87,10 +88,7 @@ Every Driver has a simple name to call it:
 * redis: redis-py (Redis)
 * mcache: aiomcache (Memcache)
 * odbc: aiodbc (ODBC)
-
-#### Future work: ####
-
-* Prometheus
+* oracle: oracle (oracledb)
 
 ### Output Support ###
 
