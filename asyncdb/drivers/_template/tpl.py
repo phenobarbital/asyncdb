@@ -31,13 +31,7 @@ class template_driver(SQLDriver):
     _syntax: str = "sql"
     _dsn: str = "{database}"
 
-    def __init__(
-        self,
-        dsn: str = "",
-        loop: asyncio.AbstractEventLoop = None,
-        params: dict = None,
-        **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         """
         Initializes the template_driver with the given DSN,
         event loop, and optional parameters.

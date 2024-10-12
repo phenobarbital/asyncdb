@@ -27,11 +27,7 @@ class mysqlPool(BasePool):
     _init_func: Optional[Callable] = None
 
     def __init__(
-        self,
-        dsn: str = None,
-        loop: asyncio.AbstractEventLoop = None,
-        params: Optional[dict] = None,
-        **kwargs
+        self, dsn: str = None, loop: asyncio.AbstractEventLoop = None, params: Optional[dict] = None, **kwargs
     ):
         self._test_query = "SELECT 1"
         self._max_clients = 300
@@ -39,12 +35,7 @@ class mysqlPool(BasePool):
         self._dsn = "mysql://{user}:{password}@{host}:{port}/{database}"
         self._init_command = kwargs.pop("init_command", None)
         self._sql_modes = kwargs.pop("sql_modes", None)
-        super(mysqlPool, self).__init__(
-            dsn=dsn,
-            loop=loop,
-            params=params,
-            **kwargs
-        )
+        super(mysqlPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
     async def connect(self):
         """
@@ -176,25 +167,13 @@ class mysql(SQLDriver, DBCursorBackend):
     _syntax = "sql"
     _test_query = "SELECT 1"
 
-    def __init__(
-        self,
-        dsn: str = "",
-        loop: asyncio.AbstractEventLoop = None,
-        params: dict = None,
-        **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._dsn = "mysql://{user}:{password}@{host}:{port}/{database}"
         self._prepared = None
         self._cursor = None
         self._transaction = None
         self._server_settings = {}
-        SQLDriver.__init__(
-            self,
-            dsn=dsn,
-            loop=loop,
-            params=params,
-            **kwargs
-        )
+        SQLDriver.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
         DBCursorBackend.__init__(self)
         if "pool" in kwargs:
             self._pool = kwargs["pool"]

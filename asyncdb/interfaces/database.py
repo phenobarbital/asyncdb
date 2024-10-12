@@ -1,8 +1,4 @@
-from typing import (
-    Any,
-    Optional,
-    Union
-)
+from typing import Any, Optional, Union
 from collections.abc import Sequence, Iterable
 from abc import ABC, abstractmethod
 from ..exceptions import DriverError
@@ -43,6 +39,7 @@ class DatabaseBackend(ABC):
     """
     Interface for Basic Methods on Databases (query, fetch, execute).
     """
+
     _test_query: Optional[Any] = None
 
     def __init__(self) -> None:

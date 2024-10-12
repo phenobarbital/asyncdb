@@ -3,6 +3,7 @@ DataClass Format.
 
 Output format returning a list of Dataclasses based on Data.
 """
+
 from dataclasses import make_dataclass
 from .base import OutputFormat
 

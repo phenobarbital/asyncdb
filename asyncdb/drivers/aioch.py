@@ -32,13 +32,7 @@ class aioch(SQLDriver):
     _dsn: str = "{database}"
     _test_query: str = "SELECT version()"
 
-    def __init__(
-        self,
-        dsn: str = "",
-        loop: asyncio.AbstractEventLoop = None,
-        params: dict = None,
-        **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         """
         Initializes the clickhouse with the given DSN,
         event loop, and optional parameters.
@@ -55,13 +49,7 @@ class aioch(SQLDriver):
             Additional keyword arguments to pass to the base SQLDriver.
         """
         self._session: Awaitable = None
-        SQLDriver.__init__(
-            self,
-            dsn=dsn,
-            loop=loop,
-            params=params,
-            **kwargs
-        )
+        SQLDriver.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
 
     async def connection(self, **kwargs):
         """
@@ -91,9 +79,7 @@ class aioch(SQLDriver):
                 self._connected = True
             return self
         except Exception as exc:
-            raise DriverError(
-                f"clickhouse Error: {exc}"
-            ) from exc
+            raise DriverError(f"clickhouse Error: {exc}") from exc
 
     connect = connection
 

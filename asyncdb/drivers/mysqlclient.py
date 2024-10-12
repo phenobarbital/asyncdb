@@ -27,11 +27,7 @@ class mysqlclientPool(BasePool):
     _init_func: Optional[Callable] = None
 
     def __init__(
-        self,
-        dsn: str = None,
-        loop: asyncio.AbstractEventLoop = None,
-        params: Optional[dict] = None,
-        **kwargs
+        self, dsn: str = None, loop: asyncio.AbstractEventLoop = None, params: Optional[dict] = None, **kwargs
     ):
         self._test_query = "SELECT 1"
         self._max_clients = 30
@@ -42,12 +38,7 @@ class mysqlclientPool(BasePool):
         self._executor = ThreadPoolExecutor(max_workers=self._min_size)
         self._queue = asyncio.Queue(maxsize=self._max_clients)
         self._current_size: int = 0
-        super(mysqlclientPool, self).__init__(
-            dsn=dsn,
-            loop=loop,
-            params=params,
-            **kwargs
-        )
+        super(mysqlclientPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
     async def _connection_(self):
         params = {}
@@ -136,16 +127,12 @@ class mysqlclientPool(BasePool):
             try:
                 conn.close()
             except MySQLdb.OperationalError as err:
-                self._logger.warning(
-                    f"MySQL: Unable to close connection: {err}"
-                )
+                self._logger.warning(f"MySQL: Unable to close connection: {err}")
             self._current_size -= 1
         # Close connection from the pool:
         await self._thread_func(self._pool.close)
         self._connected = False
-        self._logger.debug(
-            "MySQL Connection Closed."
-        )
+        self._logger.debug("MySQL Connection Closed.")
 
     disconnect = close
 
@@ -252,9 +239,7 @@ class mysqlclient(SQLDriver, DBCursorBackend):
         except Exception as e:
             print(e)
             self._logger.exception(e, stack_info=True)
-            raise DriverError(
-                f"MySQL Closing Error: {e!s}"
-            ) from e
+            raise DriverError(f"MySQL Closing Error: {e!s}") from e
         finally:
             self._connected = False
             self._connection = None

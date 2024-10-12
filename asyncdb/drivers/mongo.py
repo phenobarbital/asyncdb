@@ -34,6 +34,7 @@ class mongo(BaseDriver):
     _connected : bool
         Indicates if the driver is currently connected to the database.
     """
+
     _provider = "mongodb"
     _dsn = "'mongodb://{host}:{port}"
     _syntax = "mongo"
@@ -41,13 +42,7 @@ class mongo(BaseDriver):
     _initialized_on = None
     _timeout: int = 5
 
-    def __init__(
-        self,
-        dsn: str = "",
-        loop: asyncio.AbstractEventLoop = None,
-        params: dict = None,
-        **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         """
         Initializes the MongoDBDriver with the given DSN,
         event loop, and optional parameters.
@@ -67,10 +62,7 @@ class mongo(BaseDriver):
             self._dsn = "mongodb://{username}:{password}@{host}:{port}"
         if "database" in params:
             self._dsn = self._dsn + "/{database}"
-            self._database_name = params.get(
-                'database',
-                kwargs.get('database', None)
-            )
+            self._database_name = params.get("database", kwargs.get("database", None))
         super().__init__(dsn, loop, params, **kwargs)
         self._connection = None
         self._database = None
@@ -86,20 +78,15 @@ class mongo(BaseDriver):
             if self._dsn:
                 self._connection = motor.motor_asyncio.AsyncIOMotorClient(self._dsn)
             else:
-                params = {
-                    "host": self._params.get('host', 'localhost'),
-                    "port": self._params.get('port', 27017)
-                }
-                if 'username' in self._params:
+                params = {"host": self._params.get("host", "localhost"), "port": self._params.get("port", 27017)}
+                if "username" in self._params:
                     params["username"] = self._params["username"]
                     params["password"] = self._params["password"]
                 self._connection = motor.motor_asyncio.AsyncIOMotorClient(**params)
             try:
                 self._databases = await self._connection.list_database_names()
             except Exception as err:
-                raise DriverError(
-                    f"Error Connecting to Mongo: {err}"
-                ) from err
+                raise DriverError(f"Error Connecting to Mongo: {err}") from err
             if len(self._databases) > 0:
                 self._connected = True
                 self._initialized_on = time.time()
@@ -108,9 +95,7 @@ class mongo(BaseDriver):
             self._connection = None
             self._cursor = None
             print(err)
-            raise DriverError(
-                f"connection Error, Terminated: {err}"
-            ) from err
+            raise DriverError(f"connection Error, Terminated: {err}") from err
 
     async def close(self):
         """
@@ -122,13 +107,9 @@ class mongo(BaseDriver):
                     self._connection.close()
                 except Exception as err:
                     self._connection = None
-                    raise DriverError(
-                        f"Connection Error, Terminated: {err}"
-                    )
+                    raise DriverError(f"Connection Error, Terminated: {err}")
         except Exception as err:
-            raise DriverError(
-                f"Close Error: {err}"
-            )
+            raise DriverError(f"Close Error: {err}")
         finally:
             self._connection = None
             self._connected = False
@@ -172,17 +153,9 @@ class mongo(BaseDriver):
             self._database = self._connection[database]
             return self._database
         else:
-            raise DriverError(
-                f"Not connected to MongoDB on DB {database}"
-            )
+            raise DriverError(f"Not connected to MongoDB on DB {database}")
 
-    async def execute(
-        self,
-        collection_name: str,
-        operation: str,
-        *args,
-        **kwargs
-    ) -> Optional[Any]:
+    async def execute(self, collection_name: str, operation: str, *args, **kwargs) -> Optional[Any]:
         """
         Executes an operation (insert, update, delete) on a collection asynchronously.
 
@@ -207,9 +180,7 @@ class mongo(BaseDriver):
         error = None
         result = None
         if not self._database:
-            raise DriverError(
-                "No database selected. Use 'use' method to select a database."
-            )
+            raise DriverError("No database selected. Use 'use' method to select a database.")
 
         collection = self._database[collection_name]
         try:
@@ -219,12 +190,7 @@ class mongo(BaseDriver):
             error = err
         return (result, error)
 
-    async def execute_many(
-        self,
-        collection_name: str,
-        operation: str,
-        documents: list
-    ) -> Optional[Any]:
+    async def execute_many(self, collection_name: str, operation: str, documents: list) -> Optional[Any]:
         """
         Executes a bulk operation on a collection asynchronously.
 
@@ -246,9 +212,7 @@ class mongo(BaseDriver):
         error = None
         result = None
         if not self._database:
-            raise DriverError(
-                "No database selected. Use 'use' method to select a database."
-            )
+            raise DriverError("No database selected. Use 'use' method to select a database.")
 
         collection = self._database[collection_name]
         try:
@@ -302,13 +266,7 @@ class mongo(BaseDriver):
         """
         await self.close()
 
-    async def query(
-        self,
-        collection_name: str,
-        filter: dict = None,
-        *args,
-        **kwargs
-    ) -> Iterable[Any]:
+    async def query(self, collection_name: str, filter: dict = None, *args, **kwargs) -> Iterable[Any]:
         """
         Executes a query to retrieve documents from a collection asynchronously.
 
@@ -333,9 +291,7 @@ class mongo(BaseDriver):
         if not self._database:
             self._database = self.use(database=self._database_name)
             if not self._database:
-                raise DriverError(
-                    "No database selected. Use 'use' method to select it."
-                )
+                raise DriverError("No database selected. Use 'use' method to select it.")
 
         collection = self._database[collection_name]
         cursor = collection.find(filter or {}, *args, **kwargs)
@@ -347,13 +303,7 @@ class mongo(BaseDriver):
             error = err
         return await self._serializer(result, error)
 
-    async def queryrow(
-        self,
-        collection_name: str,
-        filter: dict = None,
-        *args,
-        **kwargs
-    ) -> Optional[dict]:
+    async def queryrow(self, collection_name: str, filter: dict = None, *args, **kwargs) -> Optional[dict]:
         """
         Executes a query to retrieve a single document from a collection asynchronously.
 
@@ -378,9 +328,7 @@ class mongo(BaseDriver):
         if not self._database:
             self._database = self.use(database=self._database_name)
             if not self._database:
-                raise DriverError(
-                    "No database selected. Use 'use' method to select it."
-                )
+                raise DriverError("No database selected. Use 'use' method to select it.")
 
         collection = self._database[collection_name]
         try:
@@ -389,13 +337,7 @@ class mongo(BaseDriver):
             error = err
         return await self._serializer(result, error)
 
-    async def fetch(
-        self,
-        collection_name: str,
-        filter: dict = None,
-        *args,
-        **kwargs
-    ) -> Iterable[Any]:
+    async def fetch(self, collection_name: str, filter: dict = None, *args, **kwargs) -> Iterable[Any]:
         """
         Executes a query to retrieve documents from a collection asynchronously.
 
@@ -419,9 +361,7 @@ class mongo(BaseDriver):
         if not self._database:
             self._database = self.use(database=self._database_name)
             if not self._database:
-                raise DriverError(
-                    "No database selected. Use 'use' method to select it."
-                )
+                raise DriverError("No database selected. Use 'use' method to select it.")
 
         collection = self._database[collection_name]
         cursor = collection.find(filter or {}, *args, **kwargs)
@@ -430,20 +370,12 @@ class mongo(BaseDriver):
             async for document in cursor:
                 result.append(document)
         except Exception as err:
-            raise DriverError(
-                f"Error Getting Data from Mongo {err}"
-            )
+            raise DriverError(f"Error Getting Data from Mongo {err}")
         return result
 
     fetch_all = fetch
 
-    async def fetch_one(
-        self,
-        collection_name: str,
-        filter: dict = None,
-        *args,
-        **kwargs
-    ) -> Optional[dict]:
+    async def fetch_one(self, collection_name: str, filter: dict = None, *args, **kwargs) -> Optional[dict]:
         """
         Executes a query to retrieve a single document from a collection asynchronously.
 
@@ -467,17 +399,13 @@ class mongo(BaseDriver):
         if not self._database:
             self._database = self.use(database=self._database_name)
             if not self._database:
-                raise DriverError(
-                    "No database selected. Use 'use' method to select it."
-                )
+                raise DriverError("No database selected. Use 'use' method to select it.")
 
         collection = self._database[collection_name]
         try:
             result = await collection.find_one(filter or {}, *args, **kwargs)
         except Exception as err:
-            raise DriverError(
-                f"No row to be returned {err}"
-            )
+            raise DriverError(f"No row to be returned {err}")
         return result
 
     fetchrow = fetch_one
@@ -521,9 +449,7 @@ class mongo(BaseDriver):
         if database:
             await self.use(database)
         if not self._database:
-            raise DriverError(
-                "No database selected. Use 'use' method to select a database."
-            )
+            raise DriverError("No database selected. Use 'use' method to select a database.")
 
         if not table:
             raise ValueError("No collection (table) specified.")
@@ -533,36 +459,30 @@ class mongo(BaseDriver):
         # Process data
         if use_pandas and isinstance(data, pd.DataFrame):
             # Assume data is a pandas DataFrame
-            documents = data.to_dict('records')
+            documents = data.to_dict("records")
         elif isinstance(data, Iterable):
             # Assume data is an iterable of documents
             documents = list(data)
         else:
-            raise ValueError(
-                "Mongo: Data must be an iterable or a pandas DataFrame."
-            )
+            raise ValueError("Mongo: Data must be an iterable or a pandas DataFrame.")
 
         # Get key_field from kwargs or default to '_id'
-        key_field = kwargs.get('key_field', '_id')
+        key_field = kwargs.get("key_field", "_id")
 
         # Build bulk operations
         operations = []
-        if if_exists == 'replace':
+        if if_exists == "replace":
             for doc in documents:
                 if key_field not in doc:
                     # If key_field is not in document, generate a unique identifier
                     doc[key_field] = pymongo.ObjectId()
                 filter = {key_field: doc[key_field]}
-                operations.append(
-                    pymongo.UpdateOne(filter, {'$set': doc}, upsert=True)
-                )
-        elif if_exists == 'append':
+                operations.append(pymongo.UpdateOne(filter, {"$set": doc}, upsert=True))
+        elif if_exists == "append":
             # Insert new documents without checking for existing ones
             operations = [pymongo.InsertOne(doc) for doc in documents]
         else:
-            raise ValueError(
-                "Invalid value for if_exists: choose 'replace' or 'append'"
-            )
+            raise ValueError("Invalid value for if_exists: choose 'replace' or 'append'")
 
         # Execute bulk write
         try:

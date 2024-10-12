@@ -4,6 +4,7 @@ Notes on pg Provider
 This provider implements basic funcionalities from asyncpg
 (cursors, transactions, copy from and to files, pools, native data types, etc).
 """
+
 import asyncio
 import os
 import ssl
@@ -57,6 +58,7 @@ class NAVConnection(asyncpg.Connection):
     """
     A subclass of asyncpg.Connection to override the _get_reset_query method.
     """
+
     def _get_reset_query(self):
         return None
 
@@ -70,6 +72,7 @@ class pgRecord(asyncpg.Record):
     using dot notation, providing a more convenient and readable way to work with
     database records.
     """
+
     def __getattr__(self, name: str):
         return self[name]
 
@@ -80,6 +83,7 @@ class pgPool(BasePool):
 
     This class implements a connection pool for the asyncpg driver.
     """
+
     _setup_func: Optional[Callable] = None
     _init_func: Optional[Callable] = None
 
@@ -100,7 +104,7 @@ class pgPool(BasePool):
         self._record_class_ = kwargs.get("record_class", pgRecord)
         self._cache_size: int = kwargs.get("cache_size", 36000)
         #  max_inactive_connection_lifetime
-        self._max_inactive_timeout = kwargs.pop('max_inactive_timeout', 360000)
+        self._max_inactive_timeout = kwargs.pop("max_inactive_timeout", 360000)
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
         if "application_name" in self._server_settings:
@@ -236,9 +240,7 @@ class pgPool(BasePool):
             server_settings = {**server_settings, **self._server_settings}
             custom_class = {}
             if self._custom_record:
-                custom_class = {
-                    "record_class": self._record_class_
-                }
+                custom_class = {"record_class": self._record_class_}
             if self.ssl:
                 _ssl = {"ssl": self.sslctx}
             else:
@@ -265,9 +267,7 @@ class pgPool(BasePool):
                 self._initialized_on = time.time()
             return self
         except ConnectionRefusedError as err:
-            raise UninitializedError(
-                f"Unable to connect to database, connection Refused: {err}"
-            ) from err
+            raise UninitializedError(f"Unable to connect to database, connection Refused: {err}") from err
         except ConnectionError as ex:
             self._logger.error(f"Connection Error: {ex}")
             raise UninitializedError(f"Connection Error: {ex}") from ex
@@ -429,13 +429,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
     _syntax = "sql"
     _test_query = "SELECT 1"
 
-    def __init__(
-        self,
-        dsn: str = "",
-        loop: asyncio.AbstractEventLoop = None,
-        params: dict = None,
-        **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
         self.application_name = os.getenv("APP_NAME", "NAV")
         self._prepared = None
@@ -447,7 +441,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         self._record_class_ = kwargs.get("record_class", pgRecord)
         self._cache_size: int = kwargs.get("cache_size", 36000)
         #  max_inactive_connection_lifetime
-        self._max_inactive_timeout = kwargs.pop('max_inactive_timeout', 360000)
+        self._max_inactive_timeout = kwargs.pop("max_inactive_timeout", 360000)
         DBCursorBackend.__init__(self)
         if "server_settings" in kwargs:
             self._server_settings = kwargs["server_settings"]
@@ -467,9 +461,9 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         ### SSL Support:
         self.ssl: bool = False
         if params and "ssl" in params:
-            ssloptions = params.pop('ssl')
+            ssloptions = params.pop("ssl")
         elif "ssl" in kwargs:
-            ssloptions = kwargs.pop('ssl')
+            ssloptions = kwargs.pop("ssl")
         else:
             ssloptions = None
         if ssloptions:
@@ -571,9 +565,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             _ssl = {"ssl": self.sslctx}
         custom_class = {}
         if self._custom_record:
-            custom_class = {
-                "record_class": self._record_class_
-            }
+            custom_class = {"record_class": self._record_class_}
         try:
             if self._pool and not self._connection:
                 self._connection = await self._pool.pool().acquire()
@@ -594,17 +586,10 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     **custom_class,
                     **_ssl,
                 )
-                await self._connection.set_type_codec(
-                    "json", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
-                )
-                await self._connection.set_type_codec(
-                    "jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
-                )
+                await self._connection.set_type_codec("json", encoder=_encoder, decoder=_decoder, schema="pg_catalog")
+                await self._connection.set_type_codec("jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog")
                 try:
-                    await self._connection.set_builtin_type_codec(
-                        "hstore",
-                        codec_name="pg_contrib.hstore"
-                    )
+                    await self._connection.set_builtin_type_codec("hstore", codec_name="pg_contrib.hstore")
                 except Exception:
                     pass
 
@@ -641,9 +626,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                         try:
                             r = await self._connection.execute(config)
                         except RuntimeError as err:
-                            self._logger.warning(
-                                f"Pg: Error on Connection Configuration: {err}"
-                            )
+                            self._logger.warning(f"Pg: Error on Connection Configuration: {err}")
                 if self._init_func is not None and callable(self._init_func):
                     try:
                         await self._init_func(self._connection)  # pylint: disable=E1102
@@ -652,9 +635,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 self._initialized_on = time.time()
             return self
         except ConnectionRefusedError as err:
-            raise UninitializedError(
-                f"Unable to connect to database, connection Refused: {err}"
-            ) from err
+            raise UninitializedError(f"Unable to connect to database, connection Refused: {err}") from err
         except TooManyConnectionsError as err:
             self._logger.error(f"Too Many Connections Error: {err}")
             raise TooManyConnections(f"Too Many Connections Error: {err}") from err
@@ -673,9 +654,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             self._logger.warning(f"Interface Warning: {err}")
             return False
         except Exception as ex:
-            self._logger.exception(
-                f"Asyncpg Unknown Error: {ex}", stack_info=True
-            )
+            self._logger.exception(f"Asyncpg Unknown Error: {ex}", stack_info=True)
             raise DriverError(f"Asyncpg Unknown Error: {ex}") from ex
 
     async def release(self):
@@ -744,12 +723,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 return [None, "Data was not found"]
         except RuntimeError as err:
             error = f"Query Error: {err}"
-        except (
-            InvalidSQLStatementNameError,
-            PostgresSyntaxError,
-            UndefinedColumnError,
-            UndefinedTableError
-        ) as err:
+        except (InvalidSQLStatementNameError, PostgresSyntaxError, UndefinedColumnError, UndefinedTableError) as err:
             error = f"Sentence Error: {err}"
         except PostgresError as err:
             error = f"Postgres Error: {err}"

@@ -3,6 +3,7 @@ Iterable.
 
 Output format returning a simple list of dictionaries.
 """
+
 from .base import OutputFormat
 
 

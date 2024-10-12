@@ -3,6 +3,7 @@ PySpark Dataframe.
 
 Output format returning a PySpark Dataframe
 """
+
 from pyspark.sql import SparkSession, Row
 from .base import OutputFormat
 
