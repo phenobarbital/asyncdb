@@ -309,13 +309,7 @@ class influx(InitDriver, ConnectionDSNBackend):
         except Exception as err:
             raise Exception(f"InfluxDB: Error on Write: {err!s}") from err
 
-    async def write(
-        self,
-        data: Union[list, dict, Any],
-        bucket: str,
-        batch_size: int = 1000,
-        **kwargs
-    ):
+    async def write(self, data: Union[list, dict, Any], bucket: str, batch_size: int = 1000, **kwargs):
         """
         Write data into InfluxDB (async version).
         """
@@ -329,7 +323,7 @@ class influx(InitDriver, ConnectionDSNBackend):
                     idx = kwargs.get("index", None)
                     # Batching the DataFrame
                     for start in range(0, len(data), batch_size):
-                        batch = data.iloc[start:start + batch_size]
+                        batch = data.iloc[start : start + batch_size]
                         result = await writer.write(
                             bucket=bucket,
                             org=self._org,

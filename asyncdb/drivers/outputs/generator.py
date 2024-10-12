@@ -3,6 +3,7 @@ Generator.
 
 Output format returning a list of dictionaries as a generator
 """
+
 from .base import OutputFormat
 
 

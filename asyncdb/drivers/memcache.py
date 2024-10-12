@@ -9,10 +9,7 @@ import time
 import aiomcache
 from aiomcache.exceptions import ClientException
 from ..exceptions import DriverError
-from .base import (
-    BasePool,
-    BaseDriver
-)
+from .base import BasePool, BaseDriver
 
 
 class memcachePool(BasePool):
@@ -20,32 +17,18 @@ class memcachePool(BasePool):
     Pool-based version of Memcached connector.
     """
 
-    def __init__(
-        self,
-        dsn: str = "",
-        loop: asyncio.AbstractEventLoop = None,
-        params: dict = None,
-        **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._dsn = None
         self._connection = None
         self._max_queries = 10
-        super(memcachePool, self).__init__(
-            dsn,
-            loop,
-            params,
-            **kwargs
-        )
+        super(memcachePool, self).__init__(dsn, loop, params, **kwargs)
 
     def create_dsn(self, params: dict):
         return params
 
     async def connect(self):
         try:
-            self._pool = aiomcache.Client(
-                pool_size=self._max_queries,
-                **self._params
-            )
+            self._pool = aiomcache.Client(pool_size=self._max_queries, **self._params)
         except ClientException as err:
             raise DriverError(f"Unable to connect to Memcache: {err}") from err
         except Exception as err:
@@ -66,25 +49,14 @@ class memcachePool(BasePool):
         try:
             self._connection = self._pool
         except ClientException as err:
-            raise DriverError(
-                f"Unable to connect to Memcache: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Memcache: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Error: {err}") from err
         if self._connection:
-            db = memcache(
-                pool=self,
-                loop=self._loop,
-                connection=self._connection
-            )
+            db = memcache(pool=self, loop=self._loop, connection=self._connection)
         return db
 
-    async def release(
-        self,
-        connection=None
-    ):  # pylint: disable=W0221
+    async def release(self, connection=None):  # pylint: disable=W0221
         """
         Release a connection from the pool
         """
@@ -96,9 +68,7 @@ class memcachePool(BasePool):
             if conn:
                 self._pool.release(conn)
         except Exception as err:
-            raise DriverError(
-                f"Memcache Release Error: {err}"
-            ) from err
+            raise DriverError(f"Memcache Release Error: {err}") from err
 
     async def close(self):  # pylint: disable=W0221
         """
@@ -108,32 +78,17 @@ class memcachePool(BasePool):
             if self._pool:
                 await self._pool.close()
         except ClientException as err:
-            raise DriverError(
-                f"Connection Close Error: {err}"
-            ) from err
+            raise DriverError(f"Connection Close Error: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Closing Error: {err}"
-            ) from err
+            raise DriverError(f"Closing Error: {err}") from err
 
 
 class memcache(BaseDriver):
     _provider = "memcache"
     _syntax = "nosql"
 
-    def __init__(
-        self,
-        dsn: str = None,
-        loop=None,
-        params: dict = None,
-        **kwargs
-    ) -> None:
-        super(memcache, self).__init__(
-            dsn=dsn,
-            loop=loop,
-            params=params,
-            **kwargs
-        )
+    def __init__(self, dsn: str = None, loop=None, params: dict = None, **kwargs) -> None:
+        super(memcache, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         if "pool" in kwargs:
             self._pool = kwargs["pool"]
             self._connection = kwargs["connection"]
@@ -151,17 +106,11 @@ class memcache(BaseDriver):
         try:
             self._connection = aiomcache.Client(**self._params)
         except aiomcache.exceptions.ValidationException as err:
-            raise DriverError(
-                f"Invalid Connection Parameters: {err}"
-            ) from err
+            raise DriverError(f"Invalid Connection Parameters: {err}") from err
         except ClientException as err:
-            raise DriverError(
-                f"Unable to connect to Memcache: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Memcache: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Error: {err}") from err
         # is connected
         if self._connection:
             self._connected = True
@@ -173,16 +122,12 @@ class memcache(BaseDriver):
         Closing memcache Connection
         """
         if self._pool:
-            await self._pool.release(
-                connection=self._connection
-            )
+            await self._pool.release(connection=self._connection)
         else:
             try:
                 await self._connection.close()
             except ClientException as err:
-                raise DriverError(
-                    f"Unable to connect to Memcache: {err}"
-                ) from err
+                raise DriverError(f"Unable to connect to Memcache: {err}") from err
             except Exception as err:
                 raise DriverError(f"Unknown Error: {err}") from err
 
@@ -194,13 +139,9 @@ class memcache(BaseDriver):
             if self._connection:
                 self._connection.flush_all()
         except ClientException as err:
-            raise DriverError(
-                f"Unable to connect to Memcache: {err}"
-            ) from err
+            raise DriverError(f"Unable to connect to Memcache: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Error: {err}") from err
 
     async def prepare(self, sentence=""):
         raise NotImplementedError
@@ -260,11 +201,7 @@ class memcache(BaseDriver):
             args = {}
             if timeout:
                 args = {"exptime": timeout}
-            return await self._connection.set(
-                bytes(key, "utf-8"),
-                bytes(value, "utf-8"),
-                **args
-            )
+            return await self._connection.set(bytes(key, "utf-8"), bytes(value, "utf-8"), **args)
         except ClientException as err:
             raise DriverError(f"Set Memcache Error: {err}") from err
         except Exception as err:
@@ -274,11 +211,7 @@ class memcache(BaseDriver):
         """Migrate to pylibmc with Threads."""
         try:
             for k, v in mapping.items():
-                await self._connection.set(
-                    bytes(k, "utf-8"),
-                    bytes(v, "utf-8"),
-                    timeout
-                )
+                await self._connection.set(bytes(k, "utf-8"), bytes(v, "utf-8"), timeout)
         except ClientException as err:
             raise DriverError(f"Set Memcache Error: {err}") from err
         except Exception as err:
@@ -302,11 +235,7 @@ class memcache(BaseDriver):
         except Exception as err:
             raise DriverError(f"DELETE Unknown Error: {err}") from err
 
-    async def test_connection(
-        self,
-        key: str = "test_123",
-        optional: str = "1"
-    ):  # pylint: disable=W0221
+    async def test_connection(self, key: str = "test_123", optional: str = "1"):  # pylint: disable=W0221
         result = None
         error = None
         try:

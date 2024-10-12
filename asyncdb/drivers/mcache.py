@@ -20,29 +20,18 @@ class mcache(InitDriver):
     _syntax = "nosql"
     _behaviors = {"tcp_nodelay": True, "ketama": True}
 
-    def __init__(
-        self,
-        loop: asyncio.AbstractEventLoop = None,
-        params: dict = None,
-        **kwargs
-    ) -> None:
-        super(mcache, self).__init__(
-            loop=loop,
-            params=params,
-            **kwargs
-        )
+    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
+        super(mcache, self).__init__(loop=loop, params=params, **kwargs)
         try:
             host = params["host"]
         except KeyError as ex:
-            raise DriverError(
-                "Memcache: Unable to find *host* in parameters."
-            ) from ex
+            raise DriverError("Memcache: Unable to find *host* in parameters.") from ex
         try:
             port = params["port"]
         except KeyError:
             port = 11211
         self._server = [f"{host}:{port}"]
-        if 'behaviors' in kwargs:
+        if "behaviors" in kwargs:
             self._behaviors = {**self._behaviors, **kwargs["behaviors"]}
 
     ### Context magic Methods
@@ -56,11 +45,7 @@ class mcache(InitDriver):
         """
         self._logger.info(f"Memcache: Connecting to {self._server}")
         try:
-            self._connection = pylibmc.Client(
-                self._server,
-                binary=True,
-                behaviors=self._behaviors
-            )
+            self._connection = pylibmc.Client(self._server, binary=True, behaviors=self._behaviors)
         except pylibmc.Error as err:
             raise DriverError(message=f"Connection Error: {err}") from err
         except Exception as err:
@@ -86,9 +71,7 @@ class mcache(InitDriver):
         except pylibmc.Error as err:
             raise DriverError(f"Close Error: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Memcache Closing Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Memcache Closing Error: {err}") from err
 
     def flush(self):
         """
@@ -98,19 +81,11 @@ class mcache(InitDriver):
             if self._connection:
                 self._connection.flush_all()
         except pylibmc.Error as err:
-            raise DriverError(
-                f"Close Error: {err}"
-            ) from err
+            raise DriverError(f"Close Error: {err}") from err
         except Exception as err:
-            raise DriverError(
-                f"Unknown Memcache Error: {err}"
-            ) from err
+            raise DriverError(f"Unknown Memcache Error: {err}") from err
 
-    def test_connection(
-        self,
-        key: str = "test_123",
-        optional: int = 1
-    ):  # pylint: disable=W0221,W0236
+    def test_connection(self, key: str = "test_123", optional: int = 1):  # pylint: disable=W0221,W0236
         result = None
         error = None
         try:
@@ -147,16 +122,9 @@ class mcache(InitDriver):
     def set(self, key, value, timeout=None):
         try:
             if timeout:
-                return self._connection.set(
-                    bytes(key, "utf-8"),
-                    bytes(value, "utf-8"),
-                    time=timeout
-                )
+                return self._connection.set(bytes(key, "utf-8"), bytes(value, "utf-8"), time=timeout)
             else:
-                return self._connection.set(
-                    bytes(key, "utf-8"),
-                    bytes(value, "utf-8")
-                )
+                return self._connection.set(bytes(key, "utf-8"), bytes(value, "utf-8"))
         except pylibmc.Error as err:
             raise DriverError(f"Set Memcache Error: {err}") from err
         except Exception as err:

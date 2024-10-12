@@ -3,16 +3,9 @@ from collections.abc import Callable, Awaitable
 from abc import abstractmethod
 import asyncio
 from functools import partial
-from concurrent.futures import (
-    ThreadPoolExecutor,
-    ProcessPoolExecutor
-)
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import logging
-from .abstract import (
-    AbstractDriver,
-    PoolContextManager,
-    EventLoopManager
-)
+from .abstract import AbstractDriver, PoolContextManager, EventLoopManager
 
 
 class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
@@ -24,33 +17,23 @@ class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
     _syntax: str = ""  # Used by QueryParser for parsing queries
     _init_func: Optional[Callable] = None
 
-    def __init__(
-        self,
-        params: dict[Any] = None,
-        **kwargs
-    ) -> None:
+    def __init__(self, params: dict[Any] = None, **kwargs) -> None:
         self._connected: bool = False
-        self._encoding = kwargs.get('encoding', "utf-8")
-        self._max_queries = kwargs.get('max_queries', 300)
-        self._timeout = kwargs.get('timeout', 600)
-        if 'credentials' in kwargs:
-            params = kwargs.get('credentials', {})
-        AbstractDriver.__init__(
-            self,
-            **kwargs
-        )
+        self._encoding = kwargs.get("encoding", "utf-8")
+        self._max_queries = kwargs.get("max_queries", 300)
+        self._timeout = kwargs.get("timeout", 600)
+        if "credentials" in kwargs:
+            params = kwargs.get("credentials", {})
+        AbstractDriver.__init__(self, **kwargs)
         PoolContextManager.__init__(
             self,
             **kwargs,
         )
-        EventLoopManager.__init__(
-            self,
-            **kwargs
-        )
+        EventLoopManager.__init__(self, **kwargs)
         try:
             self._debug = bool(params.get("DEBUG", False))
         except (TypeError, KeyError, AttributeError):
-            self._debug = kwargs.get('debug', False)
+            self._debug = kwargs.get("debug", False)
         # set the logger:
         self._logger = logging.getLogger(name=__name__)
         # Executor:
@@ -80,11 +63,7 @@ class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
         raise NotImplementedError()  # pragma: no cover
 
     @abstractmethod
-    async def release(
-        self,
-        connection: Union[Callable, Awaitable, None] = None,
-        timeout: int = 10
-    ) -> None:
+    async def release(self, connection: Union[Callable, Awaitable, None] = None, timeout: int = 10) -> None:
         """release.
         Relase the connection back to the pool.
         """
@@ -121,25 +100,15 @@ class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
 
     def get_executor(self, executor="thread", max_workers: int = 2) -> Any:
         if executor == "thread":
-            return ThreadPoolExecutor(
-                max_workers=max_workers
-            )
+            return ThreadPoolExecutor(max_workers=max_workers)
         elif executor == "process":
-            return ProcessPoolExecutor(
-                max_workers=max_workers
-            )
+            return ProcessPoolExecutor(max_workers=max_workers)
         elif self._executor is not None:
             return self._executor
         else:
             return None
 
-    async def _thread_func(
-        self,
-        fn: Union[Callable, Awaitable],
-        *args,
-        executor: Any = None,
-        **kwargs
-    ):
+    async def _thread_func(self, fn: Union[Callable, Awaitable], *args, executor: Any = None, **kwargs):
         """_execute.
 
         Returns a future to be executed into a Thread Pool.

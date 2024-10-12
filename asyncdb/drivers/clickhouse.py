@@ -32,13 +32,7 @@ class clickhouse(SQLDriver):
     _dsn: str = ""
     _test_query: str = "SELECT now(), version()"
 
-    def __init__(
-        self,
-        dsn: str = "",
-        loop: asyncio.AbstractEventLoop = None,
-        params: dict = None,
-        **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         """
         Initializes the clickhouse with the given DSN,
         event loop, and optional parameters.
@@ -55,20 +49,9 @@ class clickhouse(SQLDriver):
         kwargs : dict
             Additional keyword arguments to pass to the base SQLDriver.
         """
-        server_args = {
-            "secure": False,
-            "verify": False,
-            "compression": True
-        }
-        SQLDriver.__init__(
-            self,
-            dsn=dsn,
-            loop=loop,
-            params=params,
-            **kwargs
-        )
+        server_args = {"secure": False, "verify": False, "compression": True}
+        SQLDriver.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
         self.params.update(server_args)
-
 
     async def connection(self, **kwargs):
         """
@@ -89,25 +72,17 @@ class clickhouse(SQLDriver):
         """
         self._connection = None
         self._connected = False
-        self._executor = self.get_executor(
-            executor="thread", max_workers=10
-        )
+        self._executor = self.get_executor(executor="thread", max_workers=10)
         try:
             if self._dsn:
-                self._connection = await self._thread_func(
-                    Client.from_url, self._dsn, executor=self._executor
-                )
+                self._connection = await self._thread_func(Client.from_url, self._dsn, executor=self._executor)
             else:
-                self._connection = await self._thread_func(
-                    Client, **self.params, executor=self._executor
-                )
+                self._connection = await self._thread_func(Client, **self.params, executor=self._executor)
             if self._connection.connection:
                 self._connected = True
             return self
         except Exception as exc:
-            raise DriverError(
-                f"clickhouse Error: {exc}"
-            ) from exc
+            raise DriverError(f"clickhouse Error: {exc}") from exc
 
     connect = connection
 
@@ -154,12 +129,7 @@ class clickhouse(SQLDriver):
     async def __aexit__(self, exc_type, exc, tb):
         await self.close()
 
-    async def execute(
-        self,
-        sentence: Any,
-        params: Optional[Iterable] = None,
-        **kwargs
-    ) -> Optional[Any]:
+    async def execute(self, sentence: Any, params: Optional[Iterable] = None, **kwargs) -> Optional[Any]:
         """
         Executes a transaction or command that does not necessarily
         return a result asynchronously.
@@ -181,33 +151,17 @@ class clickhouse(SQLDriver):
         await self.valid_operation(sentence)
         try:
             if not self._executor:
-                self._executor = self.get_executor(
-                    executor="thread", max_workers=2
-                )
-            new_args = {
-                "with_column_types": True,
-                "columnar": False,
-                "params": params,
-                **kwargs
-            }
+                self._executor = self.get_executor(executor="thread", max_workers=2)
+            new_args = {"with_column_types": True, "columnar": False, "params": params, **kwargs}
             if params:
-                new_args['params'] = params
-            result = await self._thread_func(
-                self._connection.execute,
-                sentence,
-                **new_args,
-                executor=self._executor
-            )
+                new_args["params"] = params
+            result = await self._thread_func(self._connection.execute, sentence, **new_args, executor=self._executor)
         except Exception as exc:
             error = exc
         finally:
             return [result, error]
 
-    async def execute_many(
-        self,
-        sentence: Union[str, list],
-        params: Optional[Iterable] = None
-    ) -> Optional[Any]:
+    async def execute_many(self, sentence: Union[str, list], params: Optional[Iterable] = None) -> Optional[Any]:
         """
         Executes multiple transactions or commands asynchronously.
 
@@ -243,13 +197,7 @@ class clickhouse(SQLDriver):
     def _construct_record(self, row, column_names):
         return Record(dict(zip(column_names, row)), column_names)
 
-    async def query(
-        self,
-        sentence: Any,
-        *args,
-        row_format: str = None,
-        **kwargs
-    ) -> Iterable[Any]:
+    async def query(self, sentence: Any, *args, row_format: str = None, **kwargs) -> Iterable[Any]:
         """
         Executes a query to retrieve data from the database asynchronously.
 
@@ -274,23 +222,15 @@ class clickhouse(SQLDriver):
             row_format = self._row_format
         try:
             if not self._executor:
-                self._executor = self.get_executor(
-                    executor="thread", max_workers=2
-                )
-            new_args = {
-                "with_column_types": True,
-                "columnar": False,
-                **kwargs
-            }
+                self._executor = self.get_executor(executor="thread", max_workers=2)
+            new_args = {"with_column_types": True, "columnar": False, **kwargs}
             result, columns_info = await self._thread_func(
-                self._connection.execute,
-                sentence, *args, **new_args,
-                executor=self._executor
+                self._connection.execute, sentence, *args, **new_args, executor=self._executor
             )
             if result:
-                if row_format == 'record':
+                if row_format == "record":
                     self._result = result
-                elif row_format in ('dict', 'iterable'):
+                elif row_format in ("dict", "iterable"):
                     # Get the column names from the executed query
                     columns = [col[0] for col in columns_info]
                     self._result = [dict(zip(columns, row)) for row in result]
@@ -300,13 +240,7 @@ class clickhouse(SQLDriver):
             error = exc
         return await self._serializer(self._result, error)
 
-    async def queryrow(
-        self,
-        sentence: Any,
-        *args,
-        params: Optional[Iterable] = None,
-        **kwargs
-    ) -> Iterable[Any]:
+    async def queryrow(self, sentence: Any, *args, params: Optional[Iterable] = None, **kwargs) -> Iterable[Any]:
         """
         Executes a query to retrieve a single row of data from the database asynchronously.
 
@@ -325,21 +259,10 @@ class clickhouse(SQLDriver):
         await self.valid_operation(sentence)
         try:
             if not self._executor:
-                self._executor = self.get_executor(
-                    executor="thread", max_workers=2
-                )
-            new_args = {
-                "with_column_types": True,
-                "settings": {
-                    'max_block_size': 100000
-                },
-                "chunk_size": 1,
-                **kwargs
-            }
+                self._executor = self.get_executor(executor="thread", max_workers=2)
+            new_args = {"with_column_types": True, "settings": {"max_block_size": 100000}, "chunk_size": 1, **kwargs}
             rows_gen = await self._thread_func(
-                self._connection.execute_iter,
-                sentence, *args, **new_args,
-                executor=self._executor
+                self._connection.execute_iter, sentence, *args, **new_args, executor=self._executor
             )
             # Extract the first element (column info) using next()
             column_info = next(rows_gen)

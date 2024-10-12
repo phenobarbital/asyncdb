@@ -3,6 +3,7 @@ Record.
 
 Returning a asyncdb Record row Format.
 """
+
 import logging
 from ...meta.record import Record
 from .base import OutputFormat
