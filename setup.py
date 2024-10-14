@@ -110,7 +110,7 @@ setup(
         "wheel==0.44.0"
     ],
     install_requires=[
-        "cryptography==43.0.1",
+        "cryptography>=43.0.1",
         "aiohttp>=3.9.5",
         "asyncpg==0.29.0",
         "asyncio==3.4.3",
@@ -191,9 +191,8 @@ setup(
             "aiomysql==0.2.0"
         ],
         "boto3": [
-            "botocore==1.31.64",
-            "aiobotocore==2.7.0",
-            "aioboto3==12.0.0"
+            "aiobotocore[boto3]==2.15.2",
+            "aioboto3==13.2.0"
         ],
         "bigquery": [
           "google-cloud-bigquery==3.25.0",
@@ -292,9 +291,8 @@ setup(
             "hazelcast-python-client==5.4.0",
             "deltalake==0.19.2",
             "duckdb==1.1.0",
-            "botocore==1.31.64",
-            "aiobotocore==2.7.0",
-            "aioboto3==12.0.0",
+            "aiobotocore[boto3]==2.15.2",
+            "aioboto3==13.2.0"
             "google-cloud-bigquery==3.25.0",
             "google-cloud-storage==2.17.0",
             "pandas-gbq==0.23.1",
