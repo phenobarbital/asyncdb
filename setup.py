@@ -292,7 +292,7 @@ setup(
             "deltalake==0.19.2",
             "duckdb==1.1.0",
             "aiobotocore[boto3]==2.15.2",
-            "aioboto3==13.2.0"
+            "aioboto3==13.2.0",
             "google-cloud-bigquery==3.25.0",
             "google-cloud-storage==2.17.0",
             "pandas-gbq==0.23.1",
