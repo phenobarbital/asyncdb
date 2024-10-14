@@ -301,7 +301,7 @@ class bigquery(SQLDriver, ModelBackend):
         **kwargs,
     ):
         """
-        Write data to a BigQuery table
+        Write data to a BigQuery table.
         """
         if not self._connection:
             await self.connection()
