@@ -12,12 +12,7 @@ class CursorBackend(ABC):
     """
 
     def __init__(
-        self,
-        provider: Any,
-        sentence: str,
-        result: Optional[Any] = None,
-        parameters: Iterable[Any] = None,
-        **kwargs
+        self, provider: Any, sentence: str, result: Optional[Any] = None, parameters: Iterable[Any] = None, **kwargs
     ):
         self._cursor = None
         self._provider = provider
@@ -26,9 +21,7 @@ class CursorBackend(ABC):
         self._sentence = sentence
         self._params = parameters
         self._kwargs = kwargs
-        self._logger = logging.getLogger(
-            f"DB.{self.__class__.__name__}"
-        )
+        self._logger = logging.getLogger(f"DB.{self.__class__.__name__}")
 
     ### Magic Context Methods for Cursors.
     async def __aenter__(self) -> "CursorBackend":
@@ -123,29 +116,17 @@ class DBCursorBackend(ABC):
             self.__cursor__ = None
 
     def cursor(
-        self,
-        sentence: Union[str, any],
-        params: Union[Iterable[Any], None] = None,
-        **kwargs
+        self, sentence: Union[str, any], params: Union[Iterable[Any], None] = None, **kwargs
     ) -> Optional["DBCursorBackend"]:
         """Returns an iterable Cursor Object"""
         if not sentence:
-            raise EmptyStatement(
-                f"{__name__!s} Error: Cannot use an empty Sentence."
-            )
+            raise EmptyStatement(f"{__name__!s} Error: Cannot use an empty Sentence.")
         if params is None:
             params = []
         try:
-            return self.__cursor__(
-                provider=self,
-                sentence=sentence,
-                parameters=params,
-                **kwargs
-            )
+            return self.__cursor__(provider=self, sentence=sentence, parameters=params, **kwargs)
         except (TypeError, AttributeError, ValueError) as e:
-            raise TypeError(
-                f"{__name__}: No support for Cursors."
-            ) from e
+            raise TypeError(f"{__name__}: No support for Cursors.") from e
         except Exception as err:
             logging.exception(err)
             raise

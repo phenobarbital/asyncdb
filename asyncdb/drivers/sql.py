@@ -4,6 +4,7 @@ SQLProvider.
 Abstract class covering all major functionalities for
 Relational SQL-based databases.
 """
+
 import asyncio
 from typing import Any
 from collections.abc import Iterable
@@ -11,11 +12,13 @@ from ..exceptions import DriverError
 from .base import BaseDBDriver
 from .cursor import BaseCursor
 
+
 class SQLCursor(BaseCursor):
     """SQLCursor.
 
     Base class for all SQL-based Drivers.
     """
+
     _connection = None
 
     async def __aenter__(self) -> "BaseCursor":
@@ -35,20 +38,9 @@ class SQLDriver(BaseDBDriver):
     _syntax = "sql"
     _test_query = "SELECT 1"
 
-    def __init__(
-        self,
-        dsn: str = "",
-        loop: asyncio.AbstractEventLoop = None,
-        params: dict = None,
-        **kwargs
-    ) -> None:
+    def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
-        super(SQLDriver, self).__init__(
-            dsn=dsn,
-            loop=loop,
-            params=params,
-            **kwargs
-        )
+        super(SQLDriver, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
     async def close(self, timeout: int = 5) -> None:
         """
@@ -76,6 +68,4 @@ class SQLDriver(BaseDBDriver):
           get column information about a table
           TODO: rewrite column info using information schema.
         """
-        raise NotImplementedError(
-            f"Column info method not implemented on {self.__name__}"
-        )
+        raise NotImplementedError(f"Column info method not implemented on {self.__name__}")

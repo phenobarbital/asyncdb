@@ -3,6 +3,7 @@ Recordset.
 
 Returning a asyncdb Recordset Result Format.
 """
+
 import logging
 from ...meta.recordset import Recordset
 from .base import OutputFormat

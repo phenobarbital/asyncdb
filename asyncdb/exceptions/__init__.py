@@ -1,5 +1,6 @@
 """Exception Handler for AsyncDB.
 """
+
 from .exceptions import (
     ProviderError,
     DriverError,
