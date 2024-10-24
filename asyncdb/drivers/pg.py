@@ -29,6 +29,9 @@ from asyncpg.exceptions import (
     UndefinedColumnError,
     UndefinedTableError,
     UniqueViolationError,
+    ForeignKeyViolationError,
+    NotNullViolationError,
+    QueryCanceledError
 )
 from asyncpg.pgproto import pgproto
 from ..exceptions import (
@@ -414,10 +417,25 @@ class pgPool(BasePool):
         """
         try:
             return await self._pool.execute(sentence, *args)
+        except (
+            QueryCanceledError,
+            StatementError,
+            UniqueViolationError,
+            ForeignKeyViolationError,
+            NotNullViolationError
+        ) as err:
+            self._logger.warning(
+                f"AsyncPg: {err}"
+            )
+            raise
         except InterfaceError as err:
-            raise ProviderError(f"Execute Interface Error: {err}") from err
+            raise ProviderError(
+                f"Execute Interface Error: {err}"
+            ) from err
         except Exception as err:
-            raise ProviderError(f"Execute Error: {err}") from err
+            raise ProviderError(
+                f"Execute Error: {err}"
+            ) from err
 
 
 class pgCursor(SQLCursor):
@@ -769,8 +787,24 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         await self.valid_operation(sentence)
         try:
             self._result = await self._connection.execute(sentence, *args, **kwargs)
-        except (InvalidSQLStatementNameError, PostgresSyntaxError, UndefinedColumnError, UndefinedTableError) as err:
-            error = f"Sentence Error: {err}"
+        except (
+            QueryCanceledError,
+            StatementError,
+            UniqueViolationError,
+            ForeignKeyViolationError,
+            NotNullViolationError
+        ) as err:
+            self._logger.warning(
+                f"AsyncPg: {err}"
+            )
+            raise
+        except (
+            InvalidSQLStatementNameError,
+            PostgresSyntaxError,
+            UndefinedColumnError,
+            UndefinedTableError
+        ) as err:
+            error = err
         except DuplicateTableError as err:
             error = f"Duplicated table: {err}"
         except PostgresError as err:
@@ -787,10 +821,26 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         await self.valid_operation(sentence)
         try:
             self._result = await self._connection.executemany(sentence, *args)
+        except (
+            QueryCanceledError,
+            StatementError,
+            UniqueViolationError,
+            ForeignKeyViolationError,
+            NotNullViolationError
+        ) as err:
+            self._logger.warning(
+                f"AsyncPg: {err}"
+            )
+            raise
         except InterfaceWarning as err:
             error = f"Interface Warning: {err}"
-        except (InvalidSQLStatementNameError, PostgresSyntaxError, UndefinedColumnError, UndefinedTableError) as err:
-            error = f"Sentence Error: {err}"
+        except (
+            InvalidSQLStatementNameError,
+            PostgresSyntaxError,
+            UndefinedColumnError,
+            UndefinedTableError
+        ) as err:
+            error = err
         except DuplicateTableError as err:
             error = f"Duplicated table: {err}"
         except PostgresError as err:
