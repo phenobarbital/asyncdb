@@ -1011,6 +1011,17 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 output=output,
             )
             return result
+        except (
+            QueryCanceledError,
+            StatementError,
+            UniqueViolationError,
+            ForeignKeyViolationError,
+            NotNullViolationError
+        ) as err:
+            self._logger.warning(
+                f"AsyncPg Copy From Table: {err}"
+            )
+            raise
         except UndefinedTableError as ex:
             raise StatementError(f"Error on Copy, Table {table }doesn't exists: {ex}") from ex
         except (InvalidSQLStatementNameError, PostgresSyntaxError, UndefinedColumnError) as ex:
@@ -1038,10 +1049,23 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 source=source,
             )
             return result
+        except (
+            QueryCanceledError,
+            StatementError,
+            UniqueViolationError,
+            ForeignKeyViolationError,
+            NotNullViolationError
+        ) as err:
+            self._logger.warning(
+                f"AsyncPg Copy To Table: {err}"
+            )
+            raise
         except UndefinedTableError as ex:
-            raise StatementError(f"Error on Copy to Table {table }doesn't exists: {ex}") from ex
+            raise StatementError(
+                f"Error on Copy to Table {table } doesn't exists: {ex}") from ex
         except (InvalidSQLStatementNameError, PostgresSyntaxError, UndefinedColumnError) as ex:
-            raise StatementError(f"Error on Copy, Invalid Statement Error: {ex}") from ex
+            raise StatementError(
+                f"Error on Copy, Invalid Statement Error: {ex}") from ex
         except Exception as ex:
             raise DriverError(f"Error on Copy to Table {ex}") from ex
 
@@ -1061,12 +1085,21 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 table_name=table, schema_name=schema, columns=columns, records=source
             )
             return result
+        except (
+            QueryCanceledError,
+            StatementError,
+            UniqueViolationError,
+            ForeignKeyViolationError,
+            NotNullViolationError
+        ) as err:
+            self._logger.warning(
+                f"AsyncPg Copy Into Table: {err}"
+            )
+            raise
         except UndefinedTableError as ex:
-            raise StatementError(f"Error on Copy to Table {table }doesn't exists: {ex}") from ex
+            raise StatementError(f"Error on Copy to Table {table } doesn't exists: {ex}") from ex
         except (InvalidSQLStatementNameError, PostgresSyntaxError, UndefinedColumnError) as ex:
             raise StatementError(f"Error on Copy, Invalid Statement Error: {ex}") from ex
-        except UniqueViolationError as ex:
-            raise StatementError(f"Error on Copy, Constraint Violated: {ex}") from ex
         except InterfaceError as ex:
             raise DriverError(f"Error on Copy into Table Function: {ex}") from ex
         except (RuntimeError, PostgresError) as ex:
