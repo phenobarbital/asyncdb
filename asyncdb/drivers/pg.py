@@ -919,8 +919,10 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
 
     async def commit(self):
         if self._transaction:
-            await self._transaction.commit()
-        self._transaction = None
+            try:
+                await self._transaction.commit()
+            finally:
+                self._transaction = None
 
     async def rollback(self):
         if self._transaction:
