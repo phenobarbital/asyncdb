@@ -6,7 +6,7 @@ from .utils.modules import module_exists
 from .utils import install_uvloop
 
 
-T_aobj = TypeVar('T_aobj', bound='Asyncdb')
+T_aobj = TypeVar("T_aobj", bound="Asyncdb")
 install_uvloop()
 
 
@@ -16,11 +16,8 @@ class AsyncPool:
        Base class for Asyncio-based DB Pools.
        Factory interface for Pool-based connectors.
     """
-    def __new__(
-        cls: Type[T_aobj],
-        driver: str = "dummy",
-        **kwargs
-    ) -> AbstractDriver:
+
+    def __new__(cls: Type[T_aobj], driver: str = "dummy", **kwargs) -> AbstractDriver:
         classpath = f"asyncdb.drivers.{driver}"
         pool = f"{driver}Pool"
         try:
@@ -29,9 +26,7 @@ class AsyncPool:
             return obj
         except Exception as err:
             logging.exception(err)
-            raise DriverError(
-                message=f"Cannot Load Backend Pool: {pool}"
-            ) from err
+            raise DriverError(message=f"Cannot Load Backend Pool: {pool}") from err
 
 
 class AsyncDB:
@@ -39,11 +34,8 @@ class AsyncDB:
 
     Factory Proxy Interface for Database Providers.
     """
-    def __new__(
-        cls: Type[T_aobj],
-        driver: str = "dummy",
-        **kwargs
-    ) -> AbstractDriver:
+
+    def __new__(cls: Type[T_aobj], driver: str = "dummy", **kwargs) -> AbstractDriver:
         classpath = f"asyncdb.drivers.{driver}"
         try:
             mdl = module_exists(driver, classpath)
@@ -51,9 +43,7 @@ class AsyncDB:
             return obj
         except Exception as err:
             logging.exception(err)
-            raise DriverError(
-                message=f"Cannot Load Backend {driver}"
-            ) from err
+            raise DriverError(message=f"Cannot Load Backend {driver}") from err
 
 
 class Asyncdb:
@@ -62,12 +52,8 @@ class Asyncdb:
 
     Getting a Database Driver Connection.
     """
-    async def __new__(
-        cls: Type[T_aobj],
-        driver: str,
-        *args,
-        **kwargs
-    ) -> T_aobj:
+
+    async def __new__(cls: Type[T_aobj], driver: str, *args, **kwargs) -> T_aobj:
         clspath = f"asyncdb.drivers.{driver}"
         mdl = module_exists(driver, clspath)
         obj = mdl(**kwargs)

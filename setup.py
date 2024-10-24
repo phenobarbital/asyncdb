@@ -136,7 +136,7 @@ setup(
             "pylibmc==1.6.3",
             "aiomcache==0.8.2",
             "aiosqlite>=0.18.0",
-            "cassandra-driver==3.29.1",
+            "cassandra-driver==3.29.2",
             "rethinkdb==2.4.10.post1",
             "influxdb==5.3.2",
             "influxdb-client[async]==1.45.0",
@@ -200,7 +200,7 @@ setup(
           "google-cloud-storage==2.17.0"
         ],
         "cassandra": [
-            "cassandra-driver==3.29.1",
+            "cassandra-driver==3.29.2",
         ],
         "influxdb": [
             "influxdb==5.3.2",
@@ -221,11 +221,11 @@ setup(
             "sqlalchemy[asyncio]==2.0.34",
         ],
         "elasticsearch": [
-            "elasticsearch[async]==8.13.2",
+            "elasticsearch[async]==8.15.1",
         ],
         "mongodb": [
-            "pymongo==4.6.1",
-            "motor==3.4.0",
+            "pymongo==4.10.1",
+            "motor==3.5.1",
         ],
         "msqlserver": [
             "pymssql==2.3.1",
@@ -238,7 +238,7 @@ setup(
         ],
         "scylla": [
             "scylla_driver==3.26.9",
-            "cassandra-driver==3.29.1",
+            "cassandra-driver==3.29.2",
             "acsylla==0.2.0",
             "cqlsh==6.1.2"
         ],
@@ -268,7 +268,7 @@ setup(
             "rethinkdb==2.4.10.post1",
             "aiopg==1.4.0",
             "psycopg-binary>=3.1.8",
-            "cassandra-driver==3.29.1",
+            "cassandra-driver==3.29.2",
             "scylla_driver==3.26.9",
             "acsylla==0.2.0",
             "cqlsh==6.1.2",
@@ -278,9 +278,9 @@ setup(
             "JayDeBeApi==1.2.3",
             "pyodbc==5.1.0",
             "sqlalchemy[asyncio]==2.0.34",
-            "elasticsearch[async]==8.13.2",
-            "pymongo==4.6.1",
-            "motor==3.4.0",
+            "elasticsearch[async]==8.15.1",
+            "pymongo==4.10.1",
+            "motor==3.5.1",
             "pymssql==2.3.1",
             "aiocouch==3.0.0",
             "asyncmy==0.2.9",

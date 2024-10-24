@@ -1,7 +1,8 @@
 gcc python3.9-dev python3.9-venv libmemcached-dev zlib1g-dev build-essential libffi-dev unixodbc unixodbc-dev libsqliteodbc libev4 libev-dev
 sudo apt install python3-cassandra
+apt install pkg-config
 # For MySQL is required:
-sudo apt-get install python3-dev default-libmysqlclient-dev build-essential
+sudo apt-get install python3-dev default-libmysqlclient-dev build-essential libmariadb-dev libmysqlclient-dev
 ###  For JDBC is required:
 sudo apt install openjdk-17-jre java-package
 # adding the keys certs

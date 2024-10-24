@@ -10,14 +10,18 @@ import logging
 from pathlib import PurePath
 import aiofiles
 import pandas as pd
+
 # async driver:
 import acsylla as c
+
 # Cassandra:
 from cassandra import ReadTimeout
 from cassandra.io.asyncorereactor import AsyncoreConnection
+
 # from cassandra.io.asyncioreactor import AsyncioConnection
 try:
     from cassandra.io.libevreactor import LibevConnection
+
     LIBEV = True
 except ImportError:
     LIBEV = False
@@ -28,15 +32,9 @@ from cassandra.policies import (
     DowngradingConsistencyRetryPolicy,
     ConstantReconnectionPolicy,
     TokenAwarePolicy,
-    RoundRobinPolicy
+    RoundRobinPolicy,
 )
-from cassandra.cluster import (
-    Cluster,
-    EXEC_PROFILE_DEFAULT,
-    ExecutionProfile,
-    NoHostAvailable,
-    ResultSet
-)
+from cassandra.cluster import Cluster, EXEC_PROFILE_DEFAULT, ExecutionProfile, NoHostAvailable, ResultSet
 from cassandra.query import (
     tuple_factory,
     dict_factory,
@@ -76,12 +74,7 @@ class scylladb(InitDriver, ModelBackend):
     _provider = "scylladb"
     _syntax = "cql"
 
-    def __init__(
-        self,
-        loop: asyncio.AbstractEventLoop = None,
-        params: dict = None,
-        **kwargs
-    ):
+    def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
         self.hosts: list = []
         self.application_name = os.getenv("APP_NAME", "NAV")
         self._enable_shard_awareness = kwargs.pop("shard_awareness", False)
@@ -92,13 +85,9 @@ class scylladb(InitDriver, ModelBackend):
         self._protocol: int = kwargs.pop("protocol", 4)
         self._driver: str = kwargs.pop("driver", "cassandra")
         self.heartbeat_interval: int = kwargs.pop("heartbeat_interval", 0)
-        self._row_factory = kwargs.pop("row_factory", 'dict_factory')
-        self._force_closing: bool = kwargs.pop('force_closing', False)
-        super(scylladb, self).__init__(
-            loop=loop,
-            params=params,
-            **kwargs
-        )
+        self._row_factory = kwargs.pop("row_factory", "dict_factory")
+        self._force_closing: bool = kwargs.pop("force_closing", False)
+        super(scylladb, self).__init__(loop=loop, params=params, **kwargs)
         try:
             if "host" in self.params:
                 self._hosts = self.params["host"].split(",")
@@ -127,17 +116,13 @@ class scylladb(InitDriver, ModelBackend):
                 self._connection.shutdown()
             except Exception as err:
                 self._connection = None
-                raise DriverError(
-                    message=f"Connection Error, Terminated: {err}"
-                ) from err
+                raise DriverError(message=f"Connection Error, Terminated: {err}") from err
         if self._cluster:
             self._logger.debug("Closing Cluster")
             try:
                 self._cluster.shutdown()
             except Exception as err:
-                raise DriverError(
-                    f"Cluster Shutdown Error: {err}"
-                ) from err
+                raise DriverError(f"Cluster Shutdown Error: {err}") from err
 
     async def async_close(self):
         if self._connection:
@@ -200,9 +185,7 @@ class scylladb(InitDriver, ModelBackend):
         }
         try:
             self._cluster = c.create_cluster(self._hosts, **params)
-            self._connection = await self._cluster.connect(
-                keyspace=keyspace
-            )
+            self._connection = await self._cluster.connect(keyspace=keyspace)
             self._driver = "async"
             if self._connection:
                 self._connected = True
@@ -217,9 +200,7 @@ class scylladb(InitDriver, ModelBackend):
             self._logger.exception(f"Scylla Connection Error: {err}")
             self._connection = None
             self._cursor = None
-            raise DriverError(
-                message=f"Scylla Connection Error: {err}"
-            ) from err
+            raise DriverError(message=f"Scylla Connection Error: {err}") from err
 
     async def connect(self, keyspace=None):
         """
@@ -333,11 +314,8 @@ class scylladb(InitDriver, ModelBackend):
                 "idle_heartbeat_interval": self.heartbeat_interval,
                 "ssl_options": ssl_opts,
                 "executor_threads": 4,
-                "reconnection_policy": ConstantReconnectionPolicy(
-                    delay=5.0,
-                    max_attempts=100
-                ),
-                "connect_timeout": 10
+                "reconnection_policy": ConstantReconnectionPolicy(delay=5.0, max_attempts=100),
+                "connect_timeout": 10,
             }
             auth_provider = None
             if self._auth:
@@ -351,9 +329,7 @@ class scylladb(InitDriver, ModelBackend):
             try:
                 self._connection = self._cluster.connect(keyspace=keyspace)
             except NoHostAvailable as ex:
-                raise DriverError(
-                    message=f"Not able to connect to any of the Scylla contact points: {ex}"
-                ) from ex
+                raise DriverError(message=f"Not able to connect to any of the Scylla contact points: {ex}") from ex
             if self._connection:
                 self._connected = True
                 self._initialized_on = time.time()
@@ -364,14 +340,10 @@ class scylladb(InitDriver, ModelBackend):
         except DriverError:
             raise
         except Exception as err:
-            self._logger.exception(
-                f"Scylla Connection Error: {err}"
-            )
+            self._logger.exception(f"Scylla Connection Error: {err}")
             self._connection = None
             self._cursor = None
-            raise DriverError(
-                message=f"Scylla Connection Error: {err}"
-            ) from err
+            raise DriverError(message=f"Scylla Connection Error: {err}") from err
 
     async def connection(self, keyspace: str = None):
         if self._driver == "async":
@@ -380,12 +352,7 @@ class scylladb(InitDriver, ModelBackend):
             await self.connect(keyspace)
         return self
 
-    async def table_exists(
-        self,
-        table: str,
-        keyspace: str = None,
-        schema: str = None
-    ) -> bool:
+    async def table_exists(self, table: str, keyspace: str = None, schema: str = None) -> bool:
         """
         Ensure the table exists. Optional If not, create it.
 
@@ -412,10 +379,7 @@ class scylladb(InitDriver, ModelBackend):
         return True
 
     async def execute(  # pylint: disable=W0221
-        self,
-        sentence: Union[str, SimpleStatement, PreparedStatement],
-        params: list = None,
-        **kwargs
+        self, sentence: Union[str, SimpleStatement, PreparedStatement], params: list = None, **kwargs
     ) -> Any:
         """Execute a transaction
         get a CQL sentence and execute
@@ -489,9 +453,7 @@ class scylladb(InitDriver, ModelBackend):
             return [result, error]
 
     async def execute_many(  # pylint: disable=W0221
-        self,
-        sentence: Union[str, SimpleStatement, PreparedStatement],
-        params: list = None
+        self, sentence: Union[str, SimpleStatement, PreparedStatement], params: list = None
     ) -> Any:
         """execute_many.
 
@@ -607,12 +569,7 @@ class scylladb(InitDriver, ModelBackend):
             raise DriverError(f"Error: {err}") from err
 
     async def create_table(
-        self,
-        table: str,
-        schema: str = None,
-        data: Any = None,
-        pk: str = None,
-        optionals: dict = None
+        self, table: str, schema: str = None, data: Any = None, pk: str = None, optionals: dict = None
     ):
         if schema:
             await self.use(schema)
@@ -626,7 +583,7 @@ class scylladb(InitDriver, ModelBackend):
                 "int64": "int",
                 "float64": "float",
                 "object": "text",  # assuming object type is string
-                "datetime64[ns]": "timestamp"
+                "datetime64[ns]": "timestamp",
                 # Add more type mappings as needed
             }
             columns = []
@@ -660,9 +617,7 @@ class scylladb(InitDriver, ModelBackend):
             elif isinstance(optionals, str):
                 create_stmt += f" {optionals}"
             else:
-                raise ValueError(
-                    "Optional WITH must be a list, dict or string"
-                )
+                raise ValueError("Optional WITH must be a list, dict or string")
         create_stmt += ";"
         # Execute the CREATE TABLE statement
         self._logger.debug(f"CREATE TABLE: {create_stmt}")
@@ -693,10 +648,7 @@ class scylladb(InitDriver, ModelBackend):
         return SimpleStatement(sentence, consistency_level=cl)
 
     async def get_sentence(
-        self,
-        sentence: Union[str, SimpleStatement, PreparedStatement],
-        prepared: bool = False,
-        params: list = None
+        self, sentence: Union[str, SimpleStatement, PreparedStatement], prepared: bool = False, params: list = None
     ):
         if isinstance(sentence, PreparedStatement):
             if params:
@@ -765,9 +717,7 @@ class scylladb(InitDriver, ModelBackend):
             self.start_timing()
             self._result = self._connection.execute(sentence, params)
             if not self._result:
-                raise NoDataFound(
-                    "Cassandra: No Data was Found"
-                )
+                raise NoDataFound("Cassandra: No Data was Found")
             self.generated_at()
             return self._result
         except NoDataFound:
@@ -782,11 +732,7 @@ class scylladb(InitDriver, ModelBackend):
             params = []
         return self.fetch_all(sentence, params)
 
-    async def queryrow(
-        self,
-        sentence: Union[str, SimpleStatement, PreparedStatement],
-        params: list = None
-    ):
+    async def queryrow(self, sentence: Union[str, SimpleStatement, PreparedStatement], params: list = None):
         error = None
         self._result = None
         try:
@@ -879,7 +825,7 @@ class scylladb(InitDriver, ModelBackend):
         table: str = None,
         keyspace: str = None,
         batch_size: int = 100,
-        **kwargs
+        **kwargs,
     ):
         """
         Write data into ScyllaDB.
@@ -900,9 +846,7 @@ class scylladb(InitDriver, ModelBackend):
                     header = await file.readline()
                 columns = header.strip().split(sep)
             _data = str(data)
-            stdout, stderr, _ = await self.run_cqlsh_copy(
-                keyspace, table, columns, _data, sep=sep
-            )
+            stdout, stderr, _ = await self.run_cqlsh_copy(keyspace, table, columns, _data, sep=sep)
             self._logger.debug(f"COPY: {stdout.decode()}")
             if stderr:
                 print("Error: ", stderr.decode())
@@ -937,19 +881,15 @@ class scylladb(InitDriver, ModelBackend):
             tasks = []
             # Create tasks for each insert batch
             for i in range(0, len(_data), batch_size):
-                batch = _data[i:i + batch_size]
+                batch = _data[i : i + batch_size]
                 tasks.append(self._execute_batch(stmt, batch))
             await asyncio.gather(*tasks)
         else:
             concurrency = kwargs.get("concurrency", 50)
             stmt = SimpleStatement(sentence)
-            execute_concurrent(
-                self._connection, ((stmt, row) for row in _data),
-                concurrency=concurrency
-            )
+            execute_concurrent(self._connection, ((stmt, row) for row in _data), concurrency=concurrency)
 
     copy = write
-
 
     async def _execute_batch(self, stmt, batch):
         tasks = []
@@ -1012,9 +952,7 @@ class scylladb(InitDriver, ModelBackend):
                     # field get a default value from database
                     continue
                 else:
-                    raise ValueError(
-                        f"Field {name} is required and value is null over {_model.Meta.name}"
-                    )
+                    raise ValueError(f"Field {name} is required and value is null over {_model.Meta.name}")
             elif is_dataclass(value):
                 if isinstance(value, Model):
                     ### get value for primary key associated with.
@@ -1040,9 +978,7 @@ class scylladb(InitDriver, ModelBackend):
             result = self._connection.execute(stmt, source)
             if result.was_applied:
                 # get the row inserted again:
-                condition = " AND ".join(
-                    [f"{key} = :{key}" for key in _filter]
-                )
+                condition = " AND ".join([f"{key} = :{key}" for key in _filter])
                 _select_stmt = f"SELECT * FROM {table} WHERE {condition}"
                 self._logger.debug(f"SELECT: {_select_stmt}")
                 stmt = self._connection.prepare(_select_stmt)
@@ -1053,9 +989,7 @@ class scylladb(InitDriver, ModelBackend):
                     setattr(_model, f, val)
                 return _model
         except Exception as err:
-            raise DriverError(
-                message=f"Error on Insert over table {_model.Meta.name}: {err!s}"
-            ) from err
+            raise DriverError(message=f"Error on Insert over table {_model.Meta.name}: {err!s}") from err
 
     async def _delete_(self, _model: Model, _filter: dict = None, **kwargs):  # pylint: disable=W0613
         """
@@ -1171,9 +1105,7 @@ class scylladb(InitDriver, ModelBackend):
                 # in Cassandra we need to delete and insert again
                 condition = self._where(fields, **_filter)
                 _delete = f"DELETE FROM {table} {condition}"
-                result = self._connection.execute(
-                    SimpleStatement(_delete)
-                )
+                result = self._connection.execute(SimpleStatement(_delete))
                 return await self._insert_(_model, **kwargs)
             set_fields = ", ".join(cols)
             condition = self._where(fields, **_filter)
@@ -1190,9 +1122,7 @@ class scylladb(InitDriver, ModelBackend):
                     setattr(_model, f, val)
                 return _model
         except Exception as err:
-            raise DriverError(
-                message=f"Error on Update over table {_model.Meta.name}: {err!s}"
-            ) from err
+            raise DriverError(message=f"Error on Update over table {_model.Meta.name}: {err!s}") from err
 
     async def _save_(self, _model: Model, *args, **kwargs):
         """
@@ -1331,14 +1261,12 @@ class scylladb(InitDriver, ModelBackend):
                 _filter[name] = value
         condition = self._where(fields, **_filter)
         _get = f"SELECT {columns} FROM {table} {condition}"
-        print('SELECT ', _get)
+        print("SELECT ", _get)
         try:
             smt = SimpleStatement(_get)
             return self._connection.execute(smt).one()
         except Exception as e:
-            raise DriverError(
-                f"Error: Model GET over {table}: {e}"
-            ) from e
+            raise DriverError(f"Error: Model GET over {table}: {e}") from e
 
     async def _all_(self, _model: Model, *args, **kwargs):  # pylint: disable=W0613
         """
@@ -1384,9 +1312,7 @@ class scylladb(InitDriver, ModelBackend):
                 _filter[name] = value
         condition = self._where(fields, **_filter)
         if not condition:
-            raise ValueError(
-                "Avoid DELETE without WHERE conditions"
-            )
+            raise ValueError("Avoid DELETE without WHERE conditions")
         _delete = f"DELETE FROM {table} {condition}"
         try:
             self._logger.debug(f"DELETE: {_delete}")
@@ -1448,9 +1374,7 @@ class scylladb(InitDriver, ModelBackend):
             result = self._connection.execute(stmt)
             return [model(**dict(r)) for r in result]
         except Exception as err:
-            raise DriverError(
-                message=f"Error on UPDATE over table {model.Meta.name}: {err!s}"
-            ) from err
+            raise DriverError(message=f"Error on UPDATE over table {model.Meta.name}: {err!s}") from err
 
     async def _deleting_(self, *args, _filter: dict = None, **kwargs):
         """
@@ -1494,6 +1418,6 @@ class scylladb(InitDriver, ModelBackend):
             stmt = await self.get_sentence(_delete)
             result = self._connection.excute(stmt, source)
             print(f"DELETE {result}: {_filter!s}")
-            return f'DELETED: {_filter}'
+            return f"DELETED: {_filter}"
         except Exception as err:
             raise DriverError(message=f"Error on DELETE over table {model.Meta.name}: {err!s}") from err

@@ -8,13 +8,7 @@ from collections.abc import Iterable
 import pymssql
 from pymssql import _mssql
 from ..interfaces.cursors import DBCursorBackend
-from ..exceptions import (
-    DataError,
-    EmptyStatement,
-    NoDataFound,
-    DriverError,
-    StatementError
-)
+from ..exceptions import DataError, EmptyStatement, NoDataFound, DriverError, StatementError
 from .sql import SQLDriver, SQLCursor
 
 

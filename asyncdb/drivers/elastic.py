@@ -6,6 +6,7 @@ TODO:
  - use jsonpath to query json-objects
  - implements lists and hash datatypes
 """
+
 import asyncio
 import time
 from typing import Any, Union
@@ -23,7 +24,7 @@ class ElasticConfig:
     user: str
     password: str
     db: str
-    protocol: str = 'http'
+    protocol: str = "http"
 
     def get_dsn(self) -> str:
         return f"{self.protocol}://{self.host}:{self.port}/"
@@ -33,39 +34,24 @@ class elastic(BaseDriver):
     _provider = "elasticsearch"
     _syntax = "json"
 
-    def __init__(
-        self,
-        dsn: str = None,
-        loop=None,
-        params: Union[dict, ElasticConfig] = None,
-        **kwargs
-    ):
+    def __init__(self, dsn: str = None, loop=None, params: Union[dict, ElasticConfig] = None, **kwargs):
         # self._dsn = "{protocol}://{user}:{password}@{host}:{port}/{database}"
         if isinstance(params, ElasticConfig):
             self._database = params.database
         else:
-            self._database = params.pop('db', 'default')
+            self._database = params.pop("db", "default")
         self._dsn = "{protocol}://{host}:{port}/"
-        super(elastic, self).__init__(
-            dsn=dsn,
-            loop=loop,
-            params=params,
-            **kwargs
-        )
+        super(elastic, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
     def create_dsn(self, params: Union[dict, dataclass]):
         if is_dataclass(params):
             self._dsn = params.get_dsn()
         else:
             try:
-                return self._dsn.format_map(
-                    SafeDict(**params)
-                ) if params else None
+                return self._dsn.format_map(SafeDict(**params)) if params else None
             except TypeError as err:
                 self._logger.error(err)
-                raise DriverError(
-                    f"Error creating DSN connection: {err}"
-                ) from err
+                raise DriverError(f"Error creating DSN connection: {err}") from err
 
     async def connection(self, timeout: int = 10, **kwargs):
         """
@@ -84,29 +70,16 @@ class elastic(BaseDriver):
             ConnectionTimeout: If the connection attempt exceeds the specified timeout.
             DriverError: If any other error occurs while attempting to connect to Elasticsearch.
         """
-        args = {
-            "timeout": self._timeout,
-            **self.kwargs
-        }
+        args = {"timeout": self._timeout, **self.kwargs}
         try:
             # Use asyncio.wait_for to apply a timeout to the connection attempt
-            self._connection = await asyncio.wait_for(
-                AsyncElasticsearch(
-                    hosts=self._dsn,
-                    **args
-                ),
-                timeout=timeout
-            )
+            self._connection = await asyncio.wait_for(AsyncElasticsearch(hosts=self._dsn, **args), timeout=timeout)
             self._connected = True
             return self
         except asyncio.TimeoutError:
-            raise ConnectionTimeout(
-                f"Elasticsearch connection timed out after {timeout} seconds"
-            )
+            raise ConnectionTimeout(f"Elasticsearch connection timed out after {timeout} seconds")
         except Exception as exc:
-            raise DriverError(
-                f"Elasticsearch Connection Error: {exc}"
-            ) from exc
+            raise DriverError(f"Elasticsearch Connection Error: {exc}") from exc
 
     def is_closed(self) -> bool:
         return self._connection is None
@@ -121,33 +94,18 @@ class elastic(BaseDriver):
     async def close(self, timeout: int = 10):
         try:
             # Close the Elasticsearch connection
-            await asyncio.wait_for(
-                self._connection.close(),
-                timeout=timeout
-            )
+            await asyncio.wait_for(self._connection.close(), timeout=timeout)
         except Exception as e:
-            self._logger.warning(
-                f"Elasticsearch closing connection: {e}"
-            )
+            self._logger.warning(f"Elasticsearch closing connection: {e}")
 
-    async def test_connection(
-        self,
-        key: str = "test-index",
-        id: int = 1
-    ) -> bool:
+    async def test_connection(self, key: str = "test-index", id: int = 1) -> bool:
         try:
             # Perform a simple operation to check the connection
-            await self._connection.index(
-                index=key,
-                id=id,
-                document={'test_field': 'test_value'}
-            )
+            await self._connection.index(index=key, id=id, document={"test_field": "test_value"})
             await self._connection.delete(index=key, id=id)
             return True
         except Exception as exc:
-            self._logger.error(
-                f"Test connection failed: {exc}"
-            )
+            self._logger.error(f"Test connection failed: {exc}")
             return False
 
     async def use(self, database: int):
@@ -161,11 +119,8 @@ class elastic(BaseDriver):
         Get a document by its ID.
         """
         try:
-            response = await self._connection.get(
-                index=self._database,
-                id=key
-            )
-            return response['_source']
+            response = await self._connection.get(index=self._database, id=key)
+            return response["_source"]
         except Exception as exc:
             self._logger.error(f"Error getting document with ID {key}: {exc}")
             raise DriverError(f"Error getting document with ID {key}: {exc}") from exc
@@ -175,53 +130,30 @@ class elastic(BaseDriver):
         Index or update a document in Elasticsearch.
         """
         try:
-            await self._connection.index(
-                index=self._database,
-                id=key,
-                document=value,
-                **kwargs
-            )
+            await self._connection.index(index=self._database, id=key, document=value, **kwargs)
         except Exception as exc:
-            self._logger.error(
-                f"Error setting document with ID {key}: {exc}"
-            )
-            raise DriverError(
-                f"Error setting document with ID {key}: {exc}"
-            ) from exc
+            self._logger.error(f"Error setting document with ID {key}: {exc}")
+            raise DriverError(f"Error setting document with ID {key}: {exc}") from exc
 
     async def exists(self, key: str, *keys) -> bool:
         """
         Check if a document exists by its ID.
         """
         try:
-            return await self._connection.exists(
-                index=self._database,
-                id=key
-            )
+            return await self._connection.exists(index=self._database, id=key)
         except Exception as exc:
-            self._logger.error(
-                f"Error checking existence of document with ID {key}: {exc}"
-            )
-            raise DriverError(
-                f"Error checking existence of document with ID {key}: {exc}"
-            ) from exc
+            self._logger.error(f"Error checking existence of document with ID {key}: {exc}")
+            raise DriverError(f"Error checking existence of document with ID {key}: {exc}") from exc
 
     async def delete(self, key: str, *keys):
         """
         Delete a document by its ID.
         """
         try:
-            await self._connection.delete(
-                index=self._database,
-                id=key
-            )
+            await self._connection.delete(index=self._database, id=key)
         except Exception as exc:
-            self._logger.error(
-                f"Error deleting document with ID {key}: {exc}"
-            )
-            raise DriverError(
-                f"Error deleting document with ID {key}: {exc}"
-            ) from exc
+            self._logger.error(f"Error deleting document with ID {key}: {exc}")
+            raise DriverError(f"Error deleting document with ID {key}: {exc}") from exc
 
     async def query(self, sentence: str, *args, **kwargs) -> Any:
         """
@@ -261,12 +193,8 @@ class elastic(BaseDriver):
         result = None
         error = None
         try:
-            response = await self._connection.search(
-                index=self._database,
-                body=sentence,
-                **kwargs
-            )
-            result = response['hits']['hits']
+            response = await self._connection.search(index=self._database, body=sentence, **kwargs)
+            result = response["hits"]["hits"]
         except Exception as exc:
             error = exc
         finally:
@@ -308,13 +236,8 @@ class elastic(BaseDriver):
         result = None
         error = None
         try:
-            response = await self._connection.search(
-                index=self._database,
-                body=sentence,
-                size=1,
-                **kwargs
-            )
-            hits = response['hits']['hits']
+            response = await self._connection.search(index=self._database, body=sentence, size=1, **kwargs)
+            hits = response["hits"]["hits"]
             return hits[0] if hits else None
         except Exception as exc:
             error = exc
@@ -328,13 +251,10 @@ class elastic(BaseDriver):
         """
         try:
             # Assuming `sentence` is an action, like creating an index
-            if sentence == 'create_index':
-                index_name = kwargs.get('index_name')
-                body = kwargs.get('body', {})
-                await self._connection.indices.create(
-                    index=index_name,
-                    body=body
-                )
+            if sentence == "create_index":
+                index_name = kwargs.get("index_name")
+                body = kwargs.get("body", {})
+                await self._connection.indices.create(index=index_name, body=body)
             # Add other operations as needed
             else:
                 self._logger.warning(f"Unsupported operation: {sentence}")
@@ -360,32 +280,19 @@ class elastic(BaseDriver):
 
     async def fetchall(self, sentence: str, *args, **kwargs) -> Any:
         try:
-            response = await self._connection.search(
-                index=self._database,
-                body=sentence,
-                **kwargs
-            )
-            return response['hits']['hits']
+            response = await self._connection.search(index=self._database, body=sentence, **kwargs)
+            return response["hits"]["hits"]
         except Exception as exc:
-            raise DriverError(
-                f"Error executing query: {exc}"
-            ) from exc
+            raise DriverError(f"Error executing query: {exc}") from exc
 
     fetch_all = fetchall
 
     async def fetchone(self, sentence: str, *args, **kwargs) -> Any:
         try:
-            response = await self._connection.search(
-                index=self._database,
-                body=sentence,
-                size=1,
-                **kwargs
-            )
-            hits = response['hits']['hits']
+            response = await self._connection.search(index=self._database, body=sentence, size=1, **kwargs)
+            hits = response["hits"]["hits"]
             return hits[0] if hits else None
         except Exception as exc:
-            raise DriverError(
-                f"Error executing queryrow: {exc}"
-            ) from exc
+            raise DriverError(f"Error executing queryrow: {exc}") from exc
 
     fetch_one = fetchone

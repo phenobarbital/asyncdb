@@ -4,25 +4,19 @@ from collections.abc import Awaitable
 from abc import ABC
 import logging
 from contextlib import AbstractAsyncContextManager
-from ..exceptions import (
-    default_exception_handler
-)
+from ..exceptions import default_exception_handler
 
 
 class AbstractDriver(ABC):
     """Base driver for all Database Drivers."""
-    def __init__(
-        self,
-        **kwargs
-    ):
+
+    def __init__(self, **kwargs):
         self._connection: Awaitable = None
         self._pool: Awaitable = None
         self._connected: bool = False
-        self._encoding = kwargs.get('encoding', "utf-8")
-        self._timeout = kwargs.get('timeout', 600)
-        self._logger = logging.getLogger(
-            f"DB.{self.__class__.__name__}"
-        )
+        self._encoding = kwargs.get("encoding", "utf-8")
+        self._timeout = kwargs.get("timeout", 600)
+        self._logger = logging.getLogger(f"DB.{self.__class__.__name__}")
 
     @property
     def log(self):
@@ -43,9 +37,7 @@ class AbstractDriver(ABC):
 
     def is_closed(self):
         if not self._connected:
-            self._logger.debug(
-                f"Connection closed on: {self._pool}"
-            )
+            self._logger.debug(f"Connection closed on: {self._pool}")
             return True
         return False
 
@@ -67,11 +59,8 @@ class AbstractDriver(ABC):
 
 class EventLoopManager:
     """Basic Interface for Managing the Event Loop inside of Drivers."""
-    def __init__(
-        self,
-        loop: Union[asyncio.AbstractEventLoop, None] = None,
-        **kwargs
-    ):
+
+    def __init__(self, loop: Union[asyncio.AbstractEventLoop, None] = None, **kwargs):
         self._loop: Awaitable = None
         if loop:
             self._loop = loop
@@ -106,10 +95,7 @@ class EventLoopManager:
 class PoolContextManager(Awaitable, AbstractAsyncContextManager):
     """Async Conext version for AsyncDB pool-based drivers."""
 
-    def __init__(
-        self,
-        **kwargs
-    ):
+    def __init__(self, **kwargs):
         self._connection: Awaitable = None
         self._pool: Awaitable = None
 
@@ -135,10 +121,7 @@ class PoolContextManager(Awaitable, AbstractAsyncContextManager):
 class DriverContextManager(Awaitable, AbstractAsyncContextManager):
     """Async Conext version for AsyncDB drivers."""
 
-    def __init__(
-        self,
-        **kwargs
-    ):
+    def __init__(self, **kwargs):
         self._connection: Awaitable = None
         self._pool: Awaitable = None
 
@@ -148,11 +131,7 @@ class DriverContextManager(Awaitable, AbstractAsyncContextManager):
             try:
                 await self.connection()
             except Exception as err:
-                logging.exception(
-                    f"Closing Error: {err}",
-                    stack_info=True,
-                    stacklevel=2
-                )
+                logging.exception(f"Closing Error: {err}", stack_info=True, stacklevel=2)
                 raise
         return self
 
@@ -161,17 +140,11 @@ class DriverContextManager(Awaitable, AbstractAsyncContextManager):
         try:
             await asyncio.wait_for(self.close(), timeout=10)
         except asyncio.TimeoutError as e:
-            logging.warning(
-                f"Close timed out: {e}"
-            )
+            logging.warning(f"Close timed out: {e}")
         except RuntimeError as e:
             self._logger.error(str(e))
         except Exception as err:
-            logging.exception(
-                f"Closing Error: {err}",
-                stack_info=True,
-                stacklevel=2
-            )
+            logging.exception(f"Closing Error: {err}", stack_info=True, stacklevel=2)
             raise
 
     ### Implementing __await__ method

@@ -5,6 +5,7 @@ This provider implements all funcionalities from asyncpg
 (cursors, transactions, copy from and to files, pools, native data types, etc)
 but using Threads.
 """
+
 import os
 import asyncio
 import json
@@ -42,6 +43,7 @@ from ..utils.encoders import (
 )
 from asyncdb.meta.recordset import Recordset
 from .sql import SQLDriver
+
 
 class postgres(threading.Thread, SQLDriver):
     _provider = "postgres"

@@ -48,8 +48,10 @@ class colors:
 
 
 info_level = {"INFO", "info"}
-debug_level =  {"DEBUG", "debug"}
+debug_level = {"DEBUG", "debug"}
 warn_level = {"WARN", "warn", "WARNING", "warning"}
+
+
 class cPrint:
     def __init__(self, message: str = "", level: str = "INFO"):
         if level in info_level:

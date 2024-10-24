@@ -3,19 +3,13 @@ import asyncio
 import logging
 
 
-def handle_done_tasks(
-    task: asyncio.Task,
-    logger: logging.Logger,
-    *args: tuple[Any, ...]
-) -> None:
+def handle_done_tasks(task: asyncio.Task, logger: logging.Logger, *args: tuple[Any, ...]) -> None:
     try:
         return task.result()
     except asyncio.CancelledError:
         return True  # Task cancellation should not be logged as an error.
     except Exception as err:  # pylint: disable=broad-except
-        logger.exception(
-            f"Exception raised by Task {task}, error: {err}"
-        )
+        logger.exception(f"Exception raised by Task {task}, error: {err}")
         return None
 
 
@@ -54,9 +48,7 @@ def default_exception_handler(loop: asyncio.AbstractEventLoop, context):
     loop.default_exception_handler(context)
 
     if not exception and not msg:
-        logging.error(
-            "AsyncDB: Caught an error with no exception or message in context."
-        )
+        logging.error("AsyncDB: Caught an error with no exception or message in context.")
         raise RuntimeError(f"Unknown error: task: {task}")
 
     if isinstance(exception, asyncio.CancelledError):
