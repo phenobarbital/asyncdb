@@ -13,6 +13,7 @@ import uuid
 from collections.abc import Callable, Iterable
 from typing import Any, Optional, Union
 from dataclasses import is_dataclass
+import contextlib
 from datamodel import BaseModel
 import asyncpg
 from asyncpg.exceptions import (
@@ -918,11 +919,15 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
 
     async def commit(self):
         if self._transaction:
-            await self._transaction.commit()
+            try:
+                await self._transaction.commit()
+            finally:
+                self._transaction = None
 
     async def rollback(self):
         if self._transaction:
             await self._transaction.rollback()
+        self._transaction = None
 
     async def cursor(self, sentence: Union[str, any], params: Iterable[Any] = None, **kwargs):  # pylint: disable=W0236
         if not sentence:
@@ -967,6 +972,38 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             raise StopAsyncIteration
 
     ## COPY Functions
+    @contextlib.asynccontextmanager
+    async def handle_copy_errors(self, operation_name: str):
+        try:
+            yield
+        except (
+            QueryCanceledError,
+            StatementError,
+            UniqueViolationError,
+            ForeignKeyViolationError,
+            NotNullViolationError
+        ) as err:
+            self._logger.warning(
+                f"AsyncPg {operation_name}: {err}"
+            )
+            raise
+        except UndefinedTableError as ex:
+            raise StatementError(
+                f"Error {operation_name}, table doesn't exist: {ex}"
+            ) from ex
+        except UndefinedColumnError as ex:
+            raise StatementError(
+                f"Error {operation_name}, Undefined Column: {ex}"
+            ) from ex
+        except (InvalidSQLStatementNameError, PostgresSyntaxError) as ex:
+            raise StatementError(
+                f"Error {operation_name}: Invalid Statement: {ex}"
+            ) from ex
+        except Exception as ex:
+            raise DriverError(
+                f"Error {operation_name}: {ex}"
+            ) from ex
+
     ## type: [ text, csv, binary ]
     async def copy_from_table(self, table="", schema="public", output=None, file_type="csv", columns=None):
         """table_copy
@@ -976,7 +1013,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         """
         if not self._connection:
             await self.connection()
-        try:
+        async with self.handle_copy_errors("Copy From Table"):
             result = await self._connection.copy_from_table(
                 table_name=table,
                 schema_name=schema,
@@ -985,23 +1022,6 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 output=output,
             )
             return result
-        except (
-            QueryCanceledError,
-            StatementError,
-            UniqueViolationError,
-            ForeignKeyViolationError,
-            NotNullViolationError
-        ) as err:
-            self._logger.warning(
-                f"AsyncPg Copy From Table: {err}"
-            )
-            raise
-        except UndefinedTableError as ex:
-            raise StatementError(f"Error on Copy, Table {table }doesn't exists: {ex}") from ex
-        except (InvalidSQLStatementNameError, PostgresSyntaxError, UndefinedColumnError) as ex:
-            raise StatementError(f"Error on Copy, Invalid Statement Error: {ex}") from ex
-        except Exception as ex:
-            raise DriverError(f"Error on Table Copy: {ex}") from ex
 
     async def copy_to_table(self, table="", schema="public", source=None, file_type="csv", columns=None):
         """copy_to_table
@@ -1014,7 +1034,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         if self._transaction:
             # a transaction exists:
             await self._transaction.commit()
-        try:
+        async with self.handle_copy_errors("Copy To Table"):
             result = await self._connection.copy_to_table(
                 table_name=table,
                 schema_name=schema,
@@ -1023,25 +1043,6 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 source=source,
             )
             return result
-        except (
-            QueryCanceledError,
-            StatementError,
-            UniqueViolationError,
-            ForeignKeyViolationError,
-            NotNullViolationError
-        ) as err:
-            self._logger.warning(
-                f"AsyncPg Copy To Table: {err}"
-            )
-            raise
-        except UndefinedTableError as ex:
-            raise StatementError(
-                f"Error on Copy to Table {table } doesn't exists: {ex}") from ex
-        except (InvalidSQLStatementNameError, PostgresSyntaxError, UndefinedColumnError) as ex:
-            raise StatementError(
-                f"Error on Copy, Invalid Statement Error: {ex}") from ex
-        except Exception as ex:
-            raise DriverError(f"Error on Copy to Table {ex}") from ex
 
     async def copy_into_table(self, table="", schema="public", source=None, columns=None):
         """copy_into_table
@@ -1054,32 +1055,11 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         if self._transaction:
             # a transaction exists:
             await self._transaction.commit()
-        try:
+        async with self.handle_copy_errors("Copy Into Table"):
             result = await self._connection.copy_records_to_table(
                 table_name=table, schema_name=schema, columns=columns, records=source
             )
             return result
-        except (
-            QueryCanceledError,
-            StatementError,
-            UniqueViolationError,
-            ForeignKeyViolationError,
-            NotNullViolationError
-        ) as err:
-            self._logger.warning(
-                f"AsyncPg Copy Into Table: {err}"
-            )
-            raise
-        except UndefinedTableError as ex:
-            raise StatementError(f"Error on Copy to Table {table } doesn't exists: {ex}") from ex
-        except (InvalidSQLStatementNameError, PostgresSyntaxError, UndefinedColumnError) as ex:
-            raise StatementError(f"Error on Copy, Invalid Statement Error: {ex}") from ex
-        except InterfaceError as ex:
-            raise DriverError(f"Error on Copy into Table Function: {ex}") from ex
-        except (RuntimeError, PostgresError) as ex:
-            raise DriverError(f"Postgres Error on Copy into Table: {ex}") from ex
-        except Exception as ex:
-            raise DriverError(f"Error on Copy into Table: {ex}") from ex
 
     ## Model Logic:
     async def column_info(self, tablename: str, schema: str = None):

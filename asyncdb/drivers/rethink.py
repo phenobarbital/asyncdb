@@ -645,11 +645,19 @@ class rethink(InitDriver, DBCursorBackend):
             if isinstance(data, list) and len(data) > batch_size:
                 # Handle batch insertion for large lists
                 for start in range(0, len(data), batch_size):
-                    batch = data[start : start + batch_size]
+                    self._logger.debug(
+                        f"Rethink: Saving batch {start + 1} to {start + batch_size} of {len(data)} records"
+                    )
+                    batch = data[start:start + batch_size]
                     result = await self._batch_insert(table, batch, on_conflict, changes, durability)
                     if result["errors"] > 0:
-                        raise DriverError(f"INSERT Error in batch: {result['first_error']}")
-                return {"inserted": len(data), "batches": (len(data) + batch_size - 1) // batch_size}
+                        raise DriverError(
+                            f"INSERT Error in batch: {result['first_error']}"
+                        )
+                return {
+                    "inserted": len(data),
+                    "batches": (len(data) + batch_size - 1) // batch_size
+                }
             else:
                 result = await self._batch_insert(table, data, on_conflict, changes, durability)
                 if result["errors"] > 0:
