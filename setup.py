@@ -114,7 +114,7 @@ setup(
         "aiohttp>=3.9.5",
         "asyncpg==0.29.0",
         "asyncio==3.4.3",
-        "pandas==2.2.2",
+        "pandas==2.2.3",
         "xlrd==2.0.1",
         "openpyxl==3.1.2",
         "lz4==4.3.2",
@@ -129,10 +129,9 @@ setup(
     ],
     extras_require={
         "uvloop": [
-            "uvloop==0.20.0"
+            "uvloop==0.21.0"
         ],
         "default": [
-            "uvloop==0.20.0",
             "pylibmc==1.6.3",
             "aiomcache==0.8.2",
             "aiosqlite>=0.18.0",
@@ -196,7 +195,7 @@ setup(
         ],
         "bigquery": [
           "google-cloud-bigquery==3.25.0",
-          "pandas-gbq==0.23.1",
+          "pandas-gbq==0.24.0",
           "google-cloud-storage>=2.17.0"
         ],
         "cassandra": [
@@ -295,7 +294,7 @@ setup(
             "aioboto3==13.2.0",
             "google-cloud-bigquery==3.25.0",
             "google-cloud-storage>=2.17.0",
-            "pandas-gbq==0.23.1",
+            "pandas-gbq==0.24.0",
             "tqdm==4.66.4"
         ]
     },
