@@ -6,7 +6,7 @@ install:
 	pip install -e .
 
 develop:
-	pip install -e .[all]
+	pip install -e .[uvloop,all]
 	pip install -Ur docs/requirements-dev.txt
 	flit install --symlink
 
