@@ -295,7 +295,7 @@ setup(
             "google-cloud-bigquery==3.25.0",
             "google-cloud-storage>=2.17.0",
             "pandas-gbq==0.24.0",
-            "tqdm==4.66.4"
+            "tqdm==4.66.6"
         ]
     },
     tests_require=[
