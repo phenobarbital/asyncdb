@@ -286,7 +286,7 @@ setup(
             "mysqlclient==2.2.0",
             "aiomysql==0.2.0",
             "pyspark==3.5.0",
-            "oracledb==2.2.1",
+            "oracledb==2.5.0",
             "hazelcast-python-client==5.4.0",
             "deltalake==0.19.2",
             "duckdb==1.1.0",
