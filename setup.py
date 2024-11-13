@@ -184,7 +184,7 @@ setup(
         ],
         "mysql": [
             "asyncmy==0.2.9",
-            "mysqlclient==2.2.0"
+            "mysqlclient==2.2.6"
         ],
         "mariadb": [
             "aiomysql==0.2.0"
@@ -283,7 +283,7 @@ setup(
             "pymssql==2.3.1",
             "aiocouch==3.0.0",
             "asyncmy==0.2.9",
-            "mysqlclient==2.2.0",
+            "mysqlclient==2.2.6",
             "aiomysql==0.2.0",
             "pyspark==3.5.0",
             "oracledb==2.2.1",
