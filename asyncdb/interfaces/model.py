@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Any, List
 from abc import ABC, abstractmethod
 import uuid
@@ -122,6 +123,8 @@ class ModelBackend(ABC):
                     new_val = None
         elif callable(datatype) and value is None:
             new_val = None
+        elif isinstance(value, Enum):
+            new_val = value.value
         else:
             new_val = value
         return new_val
