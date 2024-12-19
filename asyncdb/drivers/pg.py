@@ -6,6 +6,7 @@ This provider implements basic funcionalities from asyncpg
 """
 
 import asyncio
+from enum import Enum
 import os
 import ssl
 import time
@@ -1178,6 +1179,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                         value = getattr(value, name)
                     except AttributeError:
                         value = None
+            elif isinstance(value, Enum):
+                value = value.value
             source.append(value)
             cols.append(column)
             n += 1
@@ -1299,6 +1302,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                         value = getattr(value, name)
                     except AttributeError:
                         value = None
+            elif isinstance(value, Enum):
+                value = value.value
             cols.append("{} = {}".format(name, "${}".format(n)))  # pylint: disable=C0209
             source.append(value)
             n += 1
