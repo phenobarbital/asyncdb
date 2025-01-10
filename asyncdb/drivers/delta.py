@@ -34,6 +34,7 @@ from .base import (
 class delta(InitDriver):
     _provider = "delta"
     _syntax = "nosql"
+    _dsn_template = ""  # DeltaTable DSN template, not used in this driver.
 
     def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
 

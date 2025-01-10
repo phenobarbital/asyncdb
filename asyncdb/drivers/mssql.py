@@ -37,6 +37,8 @@ class mssql(SQLDriver, DBCursorBackend):
     _syntax = "sql"
     _test_query = "SELECT 1 as one"
     _charset: str = "UTF8"
+    _dsn_template: str = ''
+
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._dsn = ""
@@ -44,7 +46,6 @@ class mssql(SQLDriver, DBCursorBackend):
         self._version: str = None
         self.application_name = os.getenv("APP_NAME", "NAV")
         self._server_settings: dict = []
-        self._connected: bool = False
         try:
             self.tds_version = kwargs["tds_version"]
             del kwargs["tds_version"]

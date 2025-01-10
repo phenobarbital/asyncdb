@@ -73,6 +73,7 @@ def record_factory(colnames, rows):
 class scylladb(InitDriver, ModelBackend):
     _provider = "scylladb"
     _syntax = "cql"
+    _dsn_template: str = ''
 
     def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
         self.hosts: list = []

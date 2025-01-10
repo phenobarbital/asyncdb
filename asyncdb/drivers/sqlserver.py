@@ -53,6 +53,7 @@ class sqlserver(mssql):
     """
 
     _provider = "sqlserver"
+    _dsn_template: str = ''
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         try:

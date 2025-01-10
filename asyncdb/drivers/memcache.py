@@ -16,6 +16,7 @@ class memcachePool(BasePool):
     """
     Pool-based version of Memcached connector.
     """
+    _dsn_template = ""  # Memcached DSN template, not used in this driver.
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._dsn = None
