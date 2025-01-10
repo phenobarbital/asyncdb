@@ -49,9 +49,9 @@ class postgres(threading.Thread, SQLDriver):
     _provider = "postgres"
     _syntax = "sql"
     _test_query = "SELECT 1"
+    _dsn_template: str = "postgres://{user}:{password}@{host}:{port}/{database}"
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
-        self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
         self.application_name = os.getenv("APP_NAME", "NAV")
         self._is_started = False
         self._error = None
