@@ -29,7 +29,7 @@ class clickhouse(SQLDriver):
 
     _provider: str = "clickhouse"
     _syntax: str = "sql"
-    _dsn: str = ""
+    _dsn_template: str = ""
     _test_query: str = "SELECT now(), version()"
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:

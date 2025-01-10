@@ -25,10 +25,11 @@ class RedisConfig:
 
 
 class redisPool(BasePool):
+    _dsn_template = "redis://{host}:{port}/{db}"
+
     def __init__(
         self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: Union[dict, RedisConfig] = None, **kwargs
     ) -> None:
-        self._dsn = "redis://{host}:{port}/{db}"
         super(redisPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
     async def connect(self, **kwargs):
@@ -120,9 +121,9 @@ class redisPool(BasePool):
 class redis(BaseDriver):
     _provider = "redis"
     _syntax = "json"
+    _dsn_template: str = "redis://{host}:{port}/{db}"
 
     def __init__(self, dsn: str = None, loop=None, params: dict = None, **kwargs):
-        self._dsn = "redis://{host}:{port}/{db}"
         super(redis, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         if "connection" in kwargs:
             self._connection = kwargs["connection"]

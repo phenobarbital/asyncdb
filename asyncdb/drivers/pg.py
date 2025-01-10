@@ -91,6 +91,7 @@ class pgPool(BasePool):
 
     _setup_func: Optional[Callable] = None
     _init_func: Optional[Callable] = None
+    _dsn_template: str = "postgres://{user}:{password}@{host}:{port}/{database}"
 
     def __init__(
         self, dsn: str = None, loop: asyncio.AbstractEventLoop = None, params: Optional[dict] = None, **kwargs
@@ -100,7 +101,6 @@ class pgPool(BasePool):
         self._max_clients = 300
         self._min_size = 10
         self._server_settings = {}
-        self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
         super(pgPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         self._custom_record: bool = False
         custom_record = kwargs.get("custom_record", False)
@@ -448,9 +448,9 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
     _provider = "pg"
     _syntax = "sql"
     _test_query = "SELECT 1"
+    _dsn_template: str = "postgres://{user}:{password}@{host}:{port}/{database}"
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
-        self._dsn = "postgres://{user}:{password}@{host}:{port}/{database}"
         self.application_name = os.getenv("APP_NAME", "NAV")
         self._prepared = None
         self._cursor = None

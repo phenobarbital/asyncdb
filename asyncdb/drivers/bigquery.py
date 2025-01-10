@@ -11,7 +11,7 @@ import pandas_gbq
 import pandas as pd
 from google.cloud import storage
 from google.cloud import bigquery as bq
-from google.cloud.exceptions import Conflict
+from google.cloud.exceptions import Conflict, NotFound
 from google.cloud.bigquery import LoadJobConfig, SourceFormat
 from google.oauth2 import service_account
 from .sql import SQLDriver
@@ -25,6 +25,7 @@ class bigquery(SQLDriver, ModelBackend):
     _provider = "bigquery"
     _syntax = "sql"
     _test_query = "SELECT 1"
+    _dsn_template: str = ""
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._credentials = params.get("credentials", None)
@@ -157,33 +158,67 @@ class bigquery(SQLDriver, ModelBackend):
             self._logger.info(f"Created table {table.project}.{table.dataset_id}.{table.table_id}")
             return table
         except Conflict:
-            self._logger.warning(f"Table {table.project}.{table.dataset_id}.{table.table_id} already exists")
+            self._logger.warning(
+                f"Table {table.project}.{table.dataset_id}.{table.table_id} already exists"
+            )
             return table
         except Exception as e:
-            raise DriverError(f"BigQuery: Error creating table: {e}")
+            raise DriverError(f"BigQuery: Error creating table: {e}") from e
 
     async def truncate_table(self, table_id: str, dataset_id: str):
         """
-        Truncate a BigQuery table by overwriting with an empty table.
+        Truncate a BigQuery table by overwriting it with an empty table.
+
+        Parameters:
+            dataset_id (str): The ID of the dataset containing the table.
+            table_id (str): The ID of the table to truncate.
+
+        Raises:
+            DriverError: If there is an issue truncating the table.
         """
         if not self._connection:
             await self.connection()
 
-        # Construct a reference to the dataset
-        dataset_ref = bq.DatasetReference(self._connection.project, dataset_id)
-        table_ref = dataset_ref.table(table_id)
-        table = self._connection.get_table(table_ref)  # API request to fetch the table schema
-
-        # Create an empty table with the same schema
-        job_config = bq.QueryJobConfig(destination=table_ref)
-        job_config.write_disposition = bq.WriteDisposition.WRITE_TRUNCATE
-
         try:
-            job = self._connection.query(f"SELECT * FROM `{table_ref}` WHERE FALSE", job_config=job_config)
-            job.result()  # Wait for the job to finish
-            self._logger.info(f"Truncated table {dataset_id}.{table_id}")
+            # Reference to the dataset and table
+            dataset_ref = self._connection.dataset(dataset_id)
+            table_ref = dataset_ref.table(table_id)
+
+            # Ensure the table exists
+            try:
+                table = self._connection.get_table(table_ref)
+            except NotFound:
+                raise DriverError(
+                    f"BigQuery: Table `{dataset_id}.{table_id}` does not exist."
+                )
+
+            # Configure the query job to overwrite the table
+            job_config = bq.QueryJobConfig(
+                destination=table_ref,
+                write_disposition=bq.WriteDisposition.WRITE_TRUNCATE,
+                allow_large_results=True
+            )
+
+            # Execute a query that selects no rows, effectively truncating the table
+            query = f"SELECT * FROM `{self._project_id}.{dataset_id}.{table_id}` WHERE FALSE"
+
+            self._logger.debug(f"Truncating table with query: {query}")
+            job = self._connection.query(query, job_config=job_config)
+
+            # Wait for the job to complete
+            await asyncio.get_event_loop().run_in_executor(None, job.result)
+
+            self._logger.info(f"Successfully truncated table `{dataset_id}.{table_id}`.")
+            return True
+        except DriverError:
+            raise
         except Exception as e:
-            raise DriverError(f"BigQuery: Error truncating table: {e}")
+            self._logger.error(
+                f"BigQuery: Error truncating table `{dataset_id}.{table_id}`: {e}"
+            )
+            raise DriverError(
+                f"BigQuery: Error truncating table `{dataset_id}.{table_id}`: {e}"
+            ) from e
 
     async def query(self, sentence: str, **kwargs):
         if not self._connection:
@@ -244,8 +279,7 @@ class bigquery(SQLDriver, ModelBackend):
         """
         Fetch all results from a BigQuery query
         """
-        results = await self.execute(query, *args)
-        return results
+        return await self.execute(query, *args)
 
     async def fetch_one(self, query, *args):
         """
@@ -273,7 +307,7 @@ class bigquery(SQLDriver, ModelBackend):
         table = f"{self._project_id}.{dataset_id}.{table_id}"
         try:
             if isinstance(data, pd.DataFrame):
-                if use_pandas is True:
+                if use_pandas:
                     job = await self._thread_func(self._connection.load_table_from_dataframe, data, table, **kwargs)
                 else:
                     object_cols = data.select_dtypes(include=["object"]).columns
@@ -293,7 +327,7 @@ class bigquery(SQLDriver, ModelBackend):
                 dataset_ref = self._connection.dataset(dataset_id)
                 table_ref = dataset_ref.table(table_id)
                 table = bq.Table(table_ref)
-                if use_streams is True:
+                if use_streams:
                     errors = await self._thread_func(self._connection.insert_rows_json, table, data, **kwargs)
                     if errors:
                         raise RuntimeError(f"Errors occurred while inserting rows: {errors}")
@@ -314,7 +348,7 @@ class bigquery(SQLDriver, ModelBackend):
             # return Job object
             return job
         except Exception as e:
-            raise DriverError(f"BigQuery: Error writing to table: {e}")
+            raise DriverError(f"BigQuery: Error writing to table: {e}") from e
 
     async def load_table_from_uri(
         self,

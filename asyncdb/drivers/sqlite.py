@@ -28,7 +28,7 @@ class sqliteCursor(SQLCursor):
 class sqlite(SQLDriver, DBCursorBackend, ModelBackend):
     _provider: str = "sqlite"
     _syntax: str = "sql"
-    _dsn: str = "{database}"
+    _dsn_template: str = "{database}"
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         SQLDriver.__init__(self, dsn, loop, params, **kwargs)
