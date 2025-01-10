@@ -25,6 +25,7 @@ class mysqlCursor(SQLCursor):
 class mysqlPool(BasePool):
     _setup_func: Optional[Callable] = None
     _init_func: Optional[Callable] = None
+    _dsn_template: str = "mysql://{user}:{password}@{host}:{port}/{database}"
 
     def __init__(
         self, dsn: str = None, loop: asyncio.AbstractEventLoop = None, params: Optional[dict] = None, **kwargs
@@ -32,7 +33,6 @@ class mysqlPool(BasePool):
         self._test_query = "SELECT 1"
         self._max_clients = 300
         self._min_size = 10
-        self._dsn = "mysql://{user}:{password}@{host}:{port}/{database}"
         self._init_command = kwargs.pop("init_command", None)
         self._sql_modes = kwargs.pop("sql_modes", None)
         super(mysqlPool, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
@@ -166,9 +166,10 @@ class mysql(SQLDriver, DBCursorBackend):
     _provider = "mysql"
     _syntax = "sql"
     _test_query = "SELECT 1"
+    _dsn_template: str = "mysql://{user}:{password}@{host}:{port}/{database}"
+
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
-        self._dsn = "mysql://{user}:{password}@{host}:{port}/{database}"
         self._prepared = None
         self._cursor = None
         self._transaction = None

@@ -32,7 +32,7 @@ class odbcCursor(SQLCursor):
 
 class odbc(SQLDriver, DBCursorBackend):
     _provider = "odbc"
-    _dsn = "Driver={driver};Database={database}"
+    _dsn_template = "Driver={driver};Database={database}"
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         if "host" in params:

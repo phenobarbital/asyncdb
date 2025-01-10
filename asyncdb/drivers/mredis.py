@@ -19,16 +19,13 @@ class mredis(InitDriver, ConnectionDSNBackend):
     _provider = "redis"
     _syntax = "json"
     _encoding = "utf-8"
+    _dsn_template: str = "redis://{host}:{port}/{db}"
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
-        self._dsn = "redis://{host}:{port}/{db}"
         InitDriver.__init__(self, loop=loop, params=params, **kwargs)
         ConnectionDSNBackend.__init__(self, dsn=dsn, params=params)
-        try:
-            self._encoding = params["encoding"]
-            del params["encoding"]
-        except KeyError:
-            pass
+        self._encoding = params.pop('encoding', "utf-8")
+
 
     ### Context magic Methods
     def __enter__(self):

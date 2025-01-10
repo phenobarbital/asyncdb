@@ -57,6 +57,7 @@ class sa(SQLDriver, DBCursorBackend):
     }
     setup_func: Optional[Callable] = None
     init_func: Optional[Callable] = None
+    _dsn_template: str = "{driver}://{user}:{password}@{host}:{port}/{database}"
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
         """sa.
@@ -68,7 +69,6 @@ class sa(SQLDriver, DBCursorBackend):
             params (dict, optional): Connection Parameters. Defaults to None.
         """
         self._session = None
-        self._dsn = "{driver}://{user}:{password}@{host}:{port}/{database}"
         self._transaction = None
         self._driver = "postgresql"
         self.__cursor__ = None

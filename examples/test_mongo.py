@@ -1,33 +1,36 @@
-from asyncdb import AsyncDB
 import asyncio
+from asyncdb import AsyncDB
+from asyncdb.drivers.mongo import mongo
 
-loop = asyncio.get_event_loop()
-asyncio.set_event_loop(loop)
 
 params = {
     "host": "127.0.0.1",
     "port": "27017",
     "username": 'troc_pgdata',
-    "password": '12345678'
+    "password": '12345678',
+    "database": "navigator"
 }
 
-DRIVER='mongo'
+async def test_connect(params):
+    db = AsyncDB('mongo', params=params)
+    async with await db.connection() as conn:
+        print('CONNECTED: ', conn.is_connected() is True)
+        result, error = await conn.test_connection()
+        print(result, error)
+        print(type(result) == list)
 
 
-async def test_connect(driver, params, event_loop):
-    db = AsyncDB(driver, params=params, loop=event_loop)
-    await db.connection()
-    print('CONNECTED: ', db.is_connected() is True)
-    result, error = await db.test_connection()
-    print(result, error)
-    print(type(result) == list)
-    await db.close()
+async def check_connection():
+    async with mongo(
+        params=params
+    ) as db_driver:
+        is_connected = await db_driver.test_connection()
+        if is_connected:
+            print("Successfully connected to MongoDB.")
+        else:
+            print("Failed to connect to MongoDB.")
 
 
 if __name__ == '__main__':
-    try:
-        loop.run_until_complete(test_connect(DRIVER, params, loop))
-    except Exception as err:
-        print(err)
-    finally:
-        loop.close()
+    asyncio.run(test_connect(params))
+    asyncio.run(check_connection())

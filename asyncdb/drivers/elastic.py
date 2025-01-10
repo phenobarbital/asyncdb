@@ -33,6 +33,8 @@ class ElasticConfig:
 class elastic(BaseDriver):
     _provider = "elasticsearch"
     _syntax = "json"
+    _dsn_template: str = "{protocol}://{host}:{port}/"
+
 
     def __init__(self, dsn: str = None, loop=None, params: Union[dict, ElasticConfig] = None, **kwargs):
         # self._dsn = "{protocol}://{user}:{password}@{host}:{port}/{database}"
@@ -40,7 +42,6 @@ class elastic(BaseDriver):
             self._database = params.database
         else:
             self._database = params.pop("db", "default")
-        self._dsn = "{protocol}://{host}:{port}/"
         super(elastic, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
     def create_dsn(self, params: Union[dict, dataclass]):

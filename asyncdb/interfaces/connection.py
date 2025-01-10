@@ -105,12 +105,10 @@ class ConnectionDSNBackend(ABC):
     """
     Interface for Databases with DSN Support.
     """
+    _dsn_template: str
 
     def __init__(self, dsn: str = None, params: Optional[dict] = None) -> None:
-        if dsn:
-            self._dsn = dsn
-        else:
-            self._dsn = self.create_dsn(params)
+        self._dsn = dsn or self.create_dsn(params)
         try:
             self._params = params.copy()
         except (TypeError, AttributeError, ValueError):
@@ -118,7 +116,7 @@ class ConnectionDSNBackend(ABC):
 
     def create_dsn(self, params: dict):
         try:
-            return self._dsn.format_map(SafeDict(**params)) if params else None
+            return self._dsn_template.format_map(SafeDict(**params)) if params else None
         except TypeError as err:
             self._logger.error(err)
             raise DriverError(f"Error creating DSN connection: {err}") from err
