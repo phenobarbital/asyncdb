@@ -2,6 +2,7 @@ from typing import Optional, Any, Union, Iterable, List
 from collections.abc import Sequence
 import asyncio
 import time
+from urllib.parse import urlencode
 import motor.motor_asyncio
 import pymongo
 import pandas as pd
@@ -79,6 +80,7 @@ class mongo(BaseDriver):
         self._database = None
         self._databases: List[str] = []
         self._database_name = params.get("database", kwargs.get("database", None))
+        self._dbtype: str = params.get("dbtype", kwargs.get("dbtype", "mongodb"))
         super(mongo, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         self._dsn = self._construct_dsn(params)
 
@@ -91,19 +93,34 @@ class mongo(BaseDriver):
         host = params.get("host", "localhost")
         port = params.get("port", 27017)
         database = self._database_name or ""
+        authsource = params.get("authsource", database) or 'admin'
         if username and password:
-            if database:
-                return self._dsn_template.format(
-                    username=username,
-                    password=password,
-                    host=host,
-                    port=port,
-                    database=database,
-                ) + f"?authSource={database}"
-            else:
-                return f"mongodb://{username}:{password}@{host}:{port}/?authSource=admin"
+            base_dsn = self._dsn_template.format(
+                username=username,
+                password=password,
+                host=host,
+                port=port,
+                database=database,
+            )
         else:
-            return f"mongodb://{host}:{port}/{database}"
+            base_dsn = f"mongodb://{host}:{port}/{database}"
+        if self._dbtype == 'mongodb':
+            return base_dsn + f"?authSource={authsource}"
+        elif self._dbtype == 'atlas':
+            return f"{base_dsn}?retryWrites=true&w=majority"
+        elif self._dbtype == 'documentdb':
+            more_params = params.get('connection_params', {})
+            query_params = {
+                "ssl": "true",
+                "replicaSet": params.get("replicaSet", "rs0"),
+                "readPreference": params.get("readPreference", "secondaryPreferred"),
+                "retryWrites": params.get("retryWrites", "false"),
+                "tlsCAFile": params.get("tlsCAFile", "global-bundle.pem"),
+                **more_params
+            }
+            query_string = urlencode(query_params)
+            return f"{base_dsn}?{query_string}"
+        return base_dsn
 
     async def _select_database(self) -> motor.motor_asyncio.AsyncIOMotorDatabase:
         """
