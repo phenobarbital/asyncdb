@@ -72,6 +72,8 @@ class HazelPortable(BaseModel, Portable):
 class hazel(InitDriver):
     _provider = "hazelcast"
     _syntax = "sql"
+    _dsn_template = ""
+
 
     def __init__(self, dsn: str = None, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
         self._test_query = None

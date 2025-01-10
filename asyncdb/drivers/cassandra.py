@@ -50,6 +50,7 @@ def record_factory(colnames, rows):
 class cassandra(InitDriver):
     _provider = "cassandra"
     _syntax = "cql"
+    _dsn_template = "cassandra://{username}:{password}@{host}:{port}/{database}"
 
     def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
         self.hosts: list = []
@@ -102,16 +103,16 @@ class cassandra(InitDriver):
         self._connected = False
         self._cluster = None
         try:
-            try:
-                if self.params["ssl"] is not None:
-                    ssl_opts = {
-                        "ca_certs": self.params["ssl"]["certfile"],
-                        "ssl_version": PROTOCOL_TLSv1,
-                        "keyfile": self.params["ssl"]["userkey"],
-                        "certfile": self.params["ssl"]["usercert"],
-                    }
-            except KeyError:
-                ssl_opts = {}
+            if self.params["ssl"] is not None:
+                ssl_opts = {
+                    "ca_certs": self.params["ssl"]["certfile"],
+                    "ssl_version": PROTOCOL_TLSv1,
+                    "keyfile": self.params["ssl"]["userkey"],
+                    "certfile": self.params["ssl"]["usercert"],
+                }
+        except KeyError:
+            ssl_opts = {}
+        try:
             if self.whitelist:
                 policy = WhiteListRoundRobinPolicy(self.whitelist)
             else:

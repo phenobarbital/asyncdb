@@ -19,6 +19,7 @@ class mcache(InitDriver):
     _provider = "memcache"
     _syntax = "nosql"
     _behaviors = {"tcp_nodelay": True, "ketama": True}
+    _dsn_template = ""  # Memcached DSN template, not used in this driver.
 
     def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         super(mcache, self).__init__(loop=loop, params=params, **kwargs)

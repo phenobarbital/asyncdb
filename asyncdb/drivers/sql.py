@@ -37,6 +37,8 @@ class SQLDriver(BaseDBDriver):
 
     _syntax = "sql"
     _test_query = "SELECT 1"
+    _dsn_template: str = ""
+
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"

@@ -87,6 +87,7 @@ class rethinkCursor(BaseCursor):
 class rethink(InitDriver, DBCursorBackend):
     _provider = "rethink"
     _syntax = "rql"
+    _dsn_template: str = ''
 
     def __init__(self, loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs):
         self.conditions = {}

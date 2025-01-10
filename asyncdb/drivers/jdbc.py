@@ -22,6 +22,8 @@ from .sql import SQLDriver
 class jdbc(SQLDriver, DatabaseBackend, ModelBackend):
     _provider = "JDBC"
     _syntax = "sql"
+    _dsn_template: str = ""
+
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._test_query = "SELECT 1"

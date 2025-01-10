@@ -32,6 +32,7 @@ class oracle(SQLDriver):
 
     _provider = "oracle"
     _syntax = "sql"
+    _dsn_template: str = "{host}:{port}/{database}"
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         """
@@ -51,7 +52,6 @@ class oracle(SQLDriver):
         """
         self._test_query = "SELECT 1 FROM dual"
         _starttime = datetime.now()
-        self._dsn = "{host}:{port}/{database}"
         self._database = None
         self.application_name = os.getenv("APP_NAME", "ASYNCDB")
         if params:
