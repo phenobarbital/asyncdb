@@ -9,10 +9,11 @@ from .base import BaseDriver
 class dummy(BaseDriver):
     _provider = "dummy"
     _syntax = "sql"
+    _dsn_template: str = "test:/{host}:{port}/{db}"
+
 
     def __init__(self, dsn: Union[str, None] = None, loop=None, params: dict = None, **kwargs):
         self._test_query = "SELECT 1"
-        self._dsn = "test:/{host}:{port}/{db}"
         if not params:
             params = {"host": "127.0.0.1", "port": "0", "db": 0}
         try:

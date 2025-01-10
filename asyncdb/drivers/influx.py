@@ -39,12 +39,12 @@ class WriteCallback:
 class influx(InitDriver, ConnectionDSNBackend):
     _provider = "influxdb"
     _syntax = "sql"
+    _dsn_template: str = "{protocol}://{host}:{port}"
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         self._test_query = "SELECT 1"
         self._query_raw = "SELECT {fields} FROM {table} {where_cond}"
         self._version: str = None
-        self._dsn = "{protocol}://{host}:{port}"
         self._client = InfluxDBClientAsync
         self._enable_gzip = kwargs.get("enable_gzip", True)
         self._retries = Retry(connect=5, read=2, redirect=5)

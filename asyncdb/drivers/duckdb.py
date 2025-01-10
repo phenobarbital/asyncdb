@@ -45,7 +45,7 @@ class duckdbCursor(SQLCursor):
 class duckdb(SQLDriver, DBCursorBackend):
     _provider: str = "duckdb"
     _syntax: str = "sql"
-    _dsn: str = "{database}"
+    _dsn_template: str = "{database}"
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
         SQLDriver.__init__(self, dsn, loop, params, **kwargs)

@@ -29,7 +29,7 @@ class aioch(SQLDriver):
 
     _provider: str = "clickhouse"
     _syntax: str = "sql"
-    _dsn: str = "{database}"
+    _dsn_template: str = "{database}"
     _test_query: str = "SELECT version()"
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
