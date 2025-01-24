@@ -1,6 +1,18 @@
 import logging
+from io import StringIO
 import pandas
 from .base import OutputFormat
+
+
+
+def pandas_parser(csv_stream: StringIO, chunksize: int, delimiter: str = ",", columns: list = None):
+    """
+    Parser function that reads the CSV text in `csv_stream`
+    and yields DataFrame chunks using Pandas' chunked read_csv.
+    """
+    # `pd.read_csv(..., chunksize=...)` returns an iterator of DataFrames
+    # We'll just return that iterator
+    yield from pandas.read_csv(csv_stream, chunksize=chunksize, sep=delimiter, names=columns, header=None)
 
 
 class pandasFormat(OutputFormat):

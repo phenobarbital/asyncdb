@@ -7,12 +7,13 @@ This provider implements basic funcionalities from asyncpg
 
 import asyncio
 from enum import Enum
+import io
 import os
 import ssl
 import time
 import uuid
 from collections.abc import Callable, Iterable
-from typing import Any, Optional, Union
+from typing import Any, AsyncGenerator, Generator, Optional, Union
 from dataclasses import is_dataclass
 import contextlib
 from datamodel import BaseModel
@@ -80,6 +81,12 @@ class pgRecord(asyncpg.Record):
 
     def __getattr__(self, name: str):
         return self[name]
+
+    def to_dict(self):
+        """Return a dict representation of this record."""
+        # `asyncpg.Record` supports an iterator over column indexes,
+        # but we can also do something like:
+        return {key: self[key] for key in self.keys()}
 
 
 class pgPool(BasePool):
@@ -751,9 +758,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             error = f"Error on Query: {err}"
         finally:
             self.generated_at()
-            if error:
-                return [None, error]
-            return await self._serializer(self._result, error)  # pylint: disable=W0150
+            return [None, error] if error else await self._serializer(self._result, error)  # pylint: disable=W0150
 
     async def queryrow(self, sentence: str, *args):
         self._result = None
@@ -1560,7 +1565,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             source.append(value)
             if name in _filter:
                 new_cond[name] = value
-            cols.append("{} = {}".format(name, "${}".format(n)))  # pylint: disable=C0209
+            cols.append(f"{name} = ${n}")  # pylint: disable=C0209
             n += 1
         try:
             set_fields = ", ".join(cols)
@@ -1634,3 +1639,97 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 return [model(**dict(r)) for r in result]
         except Exception as err:
             raise DriverError(message=f"Error on DELETE over table {model.Meta.name}: {err!s}") from err
+
+    async def stream_query(
+        self,
+        query: str,
+        parser: Callable[[io.StringIO, int], Generator],
+        chunksize: int = 1000,
+        delimiter='|',
+    ):
+        """
+        Stream a query's results via COPY TO STDOUT in CSV format,
+        parse them in memory in chunks, yield parsed DataFrames (or anything else).
+
+        :param conn:       an active asyncpg.Connection
+        :param query:      the SQL SELECT you want to stream
+        :param parser:     a function like pandas_parser(csv_stream, chunksize)
+                        that yields parsed objects (DataFrame, etc.)
+        :param chunksize:  how many rows each parser chunk should contain
+        """
+        if not self._connection:
+            await self.connection()
+        # We'll accumulate CSV text in a buffer
+        buffer = io.StringIO()
+        columns = None  # Store the header row (column names)
+        accumulated_lines = []  # store lines for the current batch
+
+        # A queue to collect raw bytes from the producer
+        queue = asyncio.Queue()
+
+        # Define the coroutine that asyncpg will call with each chunk of bytes
+        async def producer_coroutine(chunk: bytes):
+            # This function is called by asyncpg whenever new bytes arrive.
+            # We just stuff them into the queue.
+            await queue.put(chunk)
+
+        # We wrap copy_from_query in a task so it runs in parallel with consumption.
+        # Once copy_from_query returns, we know no more data is coming.
+        copy_task = asyncio.create_task(
+            self._connection.copy_from_query(
+                query,
+                output=producer_coroutine,  # call our coroutine for every chunk
+                delimiter=delimiter,
+                format='csv',
+                quote='"',
+                escape='"',
+                # force_quote=True,
+                header=True,
+            )
+        )
+
+        # Consumer loop
+        while True:
+            try:
+                chunk = await queue.get()
+                if chunk is None:
+                    break  # No more data
+            except asyncio.TimeoutError:
+                continue
+
+            text_chunk = chunk.decode('utf-8', errors='replace')
+            if columns is None:
+                # this is the first row: the header:
+                end_header = text_chunk.find('\n', 0)
+                header = text_chunk[:end_header]
+                columns = header.strip().split(delimiter)
+                # remove the header from the current chunk:
+                text_chunk = text_chunk[end_header + 1:]
+            accumulated_lines = text_chunk.count('\n')
+            # If we reached our threshold, parse & yield
+            if accumulated_lines >= chunksize:
+                buffer.write(text_chunk)
+                buffer.seek(0)
+                for parsed_obj in parser(buffer, chunksize, delimiter=delimiter, columns=columns):
+                    yield parsed_obj
+                accumulated_lines = 0
+                buffer.seek(0)
+                buffer.truncate(0)
+            else:
+                buffer.write(text_chunk)
+
+            queue.task_done()
+
+            if copy_task.done() and queue.empty():
+                break  # No more data
+
+        # If there's leftover unparsed data
+        if accumulated_lines:
+            buffer.seek(0)
+            for parsed_obj in parser(buffer, chunksize, delimiter=delimiter, columns=columns):
+                yield parsed_obj
+
+        # Make sure the COPY command is fully done
+        # (awaiting copy_task will raise if there's any error in the copy).
+        await copy_task
+        await queue.join()
