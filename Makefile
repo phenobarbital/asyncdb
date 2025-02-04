@@ -9,6 +9,10 @@ develop:
 	pip install -e .[uvloop,all]
 	pip install -Ur docs/requirements-dev.txt
 	flit install --symlink
+	# install Rust:
+	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+	# enable compiler:
+	source $HOME/.cargo/env
 
 release:
 	lint test clean
