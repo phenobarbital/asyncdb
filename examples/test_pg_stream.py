@@ -1,13 +1,18 @@
 import asyncio
+import time
+
 import pandas as pd
 import pyarrow as pa
+import polars as pl
+import datatable as dt
+
 from asyncdb.drivers.pg import pg
 from asyncdb.drivers.outputs.pandas import pandas_parser
 from asyncdb.drivers.outputs.arrow import arrow_parser
-from asyncdb.drivers.outputs.dt import dt_parser, dt
-from asyncdb.drivers.outputs.polars import polars_parser, pl
+from asyncdb.drivers.outputs.polars import polars_parser
+from asyncdb.drivers.outputs.dt import dt_parser
 
-
+# Connection parameters (adjust as needed)
 params = {
     "user": "troc_pgdata",
     "password": "12345678",
@@ -17,67 +22,119 @@ params = {
     "DEBUG": True,
 }
 
-async def connect():
+# The query to test. Adjust row LIMIT as needed for your benchmarks.
+QUERY = "SELECT * FROM epson.sales LIMIT 1000000"  # smaller limit for Pandas example
+CHUNKSIZE = 10000
+
+async def test_pandas(conn):
+    """
+    Stream data into Pandas in chunks and measure time.
+    """
+    start_time = time.perf_counter()
+
+    parts = []
+    async for chunk_df in conn.stream_query(
+        QUERY,
+        parser=pandas_parser,   # your custom parser
+        chunksize=CHUNKSIZE
+    ):
+        parts.append(chunk_df)
+
+    df = pd.concat(parts, ignore_index=True)
+    total_rows = len(df)
+
+    elapsed = time.perf_counter() - start_time
+    print(f"[Pandas] Loaded {total_rows} rows in {elapsed:.2f} seconds.")
+
+async def test_arrow(conn):
+    """
+    Stream data into Arrow Tables in chunks and measure time.
+    """
+    start_time = time.perf_counter()
+
+    tables = []
+    async for tbl in conn.stream_query(
+        QUERY,
+        parser=arrow_parser,   # your custom parser
+        chunksize=CHUNKSIZE
+    ):
+        tables.append(tbl)
+
+    # Concatenate all tables into one
+    final_table = pa.concat_tables(tables)
+    total_rows = final_table.num_rows
+
+    elapsed = time.perf_counter() - start_time
+    print(f"[Arrow] Loaded {total_rows} rows in {elapsed:.2f} seconds.")
+
+    # then time the conversion:
+    start_conv = time.perf_counter()
+    df = final_table.to_pandas()
+    conv_elapsed = time.perf_counter() - start_conv
+    print(f"[Conversion] Arrow Table -> Pandas took {conv_elapsed:.2f} seconds.")
+
+async def test_polars(conn):
+    """
+    Stream data into Polars in chunks and measure time.
+    """
+    start_time = time.perf_counter()
+
+    frames = []
+    async for pl_df in conn.stream_query(
+        QUERY,
+        parser=polars_parser,
+        chunksize=CHUNKSIZE
+    ):
+        frames.append(pl_df)
+
+    final_df = pl.concat(frames, how="vertical")
+    total_rows = final_df.shape[0]
+
+    elapsed = time.perf_counter() - start_time
+    print(f"[Polars] Loaded {total_rows} rows in {elapsed:.2f} seconds.")
+
+async def test_datatable(conn):
+    """
+    Stream data into Python datatable in chunks and measure time.
+    """
+    start_time = time.perf_counter()
+
+    dt_frames = []
+    async for frame in conn.stream_query(
+        QUERY,
+        parser=dt_parser,
+        chunksize=CHUNKSIZE
+    ):
+        dt_frames.append(frame)
+
+    final_frame = dt.rbind(dt_frames)  # or dt.rbind(dt_frames, force=True)
+    total_rows = final_frame.nrows
+
+    elapsed = time.perf_counter() - start_time
+    print(f"[datatable] Loaded {total_rows} rows in {elapsed:.2f} seconds.")
+
+    # 2. Convert datatable.Frame => Pandas DataFrame
+    start_conv = time.perf_counter()
+    df = final_frame.to_pandas()
+    conv_elapsed = time.perf_counter() - start_conv
+
+    print(f"[Conversion] datatable.Frame -> Pandas took {conv_elapsed:.2f} seconds.")
+    print(f"Final Pandas DataFrame has {len(df)} rows.")
+
+async def main():
+    # Create a pg driver instance and connect
     db = pg(params=params)
-    # create a connection
     async with await db.connection() as conn:
-        print('Connection: ', conn)
+        print("Connection:", conn)
         result, error = await conn.test_connection()
-        print(result, error)
+        print("Test connection:", result, error)
 
-        # create a Pandas dataframe from streaming
-        parts = []
-        async for chunk in conn.stream_query(
-            "SELECT * FROM epson.sales LIMIT 100000",
-            pandas_parser,
-            chunksize=1000
-        ):
-            print("Received chunk of size:", len(chunk))
-            parts.append(chunk)
+        # Run each parser test in sequence
+        await test_pandas(conn)
+        await test_arrow(conn)
+        await test_polars(conn)
+        await test_datatable(conn)
 
-        df = pd.concat(parts, ignore_index=True)
-        print(df)
-
-        # create a Arrow Table from streaming
-        parts = []
-        async for chunk in conn.stream_query(
-            "SELECT * FROM epson.sales LIMIT 1000000",
-            arrow_parser,
-            chunksize=10000
-        ):
-            # print("Received chunk of size:", len(chunk))
-            parts.append(chunk)
-
-        df = pa.concat_tables(parts)
-        print("Final table has", df.num_rows, "rows in total.")
-
-        # create a Polars dataframe from streaming
-        parts = []
-        async for chunk in conn.stream_query(
-            "SELECT * FROM epson.sales LIMIT 1000000",
-            polars_parser,
-            chunksize=10000
-        ):
-            # print("Received chunk of size:", len(chunk))
-            parts.append(chunk)
-
-        df = pl.concat(parts, how="vertical")
-        print("Final table has", df.shape, "rows in total.")
-
-        # create a Datatable from streaming
-        parts = []
-        async for chunk in conn.stream_query(
-            "SELECT * FROM epson.sales LIMIT 1000000",
-            dt_parser,
-            chunksize=10000
-        ):
-            # print("Received chunk of size:", len(chunk))
-            parts.append(chunk)
-
-        df = dt.rbind(parts)  # or dt.rbind(frames, force=True)
-        print("Final table has", df.nrows, "rows in total.")
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(connect())
+    asyncio.run(main())

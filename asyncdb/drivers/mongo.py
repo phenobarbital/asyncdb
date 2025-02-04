@@ -2,6 +2,7 @@ from typing import Optional, Any, Union, Iterable, List
 from collections.abc import Sequence
 import asyncio
 import time
+import ssl
 from urllib.parse import urlencode
 import motor.motor_asyncio
 import pymongo
@@ -83,6 +84,7 @@ class mongo(BaseDriver):
         self._dbtype: str = params.get("dbtype", kwargs.get("dbtype", "mongodb"))
         super(mongo, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         self._dsn = self._construct_dsn(params)
+        self._use_ssl: bool = kwargs.get("ssl", False)
 
     def _construct_dsn(self, params) -> str:
         """Construct DSN based on provided parameters."""
@@ -110,16 +112,20 @@ class mongo(BaseDriver):
             return f"{base_dsn}?retryWrites=true&w=majority"
         elif self._dbtype == 'documentdb':
             more_params = params.get('connection_params', {})
+            self._use_ssl = params.get('ssl', False)
             query_params = {
-                "ssl": "true",
                 "replicaSet": params.get("replicaSet", "rs0"),
                 "readPreference": params.get("readPreference", "secondaryPreferred"),
                 "retryWrites": params.get("retryWrites", "false"),
-                "tlsCAFile": params.get("tlsCAFile", "global-bundle.pem"),
                 **more_params
             }
             query_string = urlencode(query_params)
-            return f"{base_dsn}?{query_string}"
+            _url = f"{base_dsn}?{query_string}"
+            if self._use_ssl:
+                cert = str(params.get("tlsCAFile", "global-bundle.pem"))
+                _url = _url + "&tls=true"
+                _url = _url + f"&tlsCAFile={cert}"
+            return _url
         return base_dsn
 
     async def _select_database(self) -> motor.motor_asyncio.AsyncIOMotorDatabase:
@@ -161,31 +167,47 @@ class mongo(BaseDriver):
         """
         self._connection = None
         self._connected = False
+        ssl = {}
+        if self._use_ssl:
+            ssl = {
+                "ssl": True,
+                "ssl_cert_reqs": ssl.CERT_NONE,
+                "tlsAllowInvalidCertificates": True,
+                "ssl_ca_certs": str(self._params.get("tlsCAFile", "global-bundle.pem")),
+            }
         try:
             if self._dsn:
                 self._connection = motor.motor_asyncio.AsyncIOMotorClient(
                     self._dsn,
-                    serverSelectionTimeoutMS=self._timeout * 1000
+                    serverSelectionTimeoutMS=self._timeout * 1000,
+                    **ssl
                 )
             else:
                 params = {
                     "host": self._params.get("host", "localhost"),
                     "port": self._params.get("port", 27017),
                     "serverSelectionTimeoutMS": self._timeout * 1000,
+                    **ssl
                 }
                 if "username" in self._params and "password" in self._params:
                     params["username"] = self._params["username"]
                     params["password"] = self._params["password"]
-                self._connection = motor.motor_asyncio.AsyncIOMotorClient(**params)
+                self._connection = motor.motor_asyncio.AsyncIOMotorClient(
+                    **params
+                )
             # Attempt to fetch server info to verify connection
-            await self._connection.admin.command('ping')
+            ad = await self._connection.admin.command('ping')
+            if 'ok' not in ad:
+                raise DriverError("Ping Connection Error")
             self._connected = True
             self._initialized_on = time.time()
             return self
         except Exception as err:
             self._connection = None
             self._database = None
-            raise DriverError(f"Connection Error, Terminated: {err}") from err
+            raise DriverError(
+                f"Connection Error, Terminated: {err}"
+            ) from err
 
     async def close(self) -> None:
         """
