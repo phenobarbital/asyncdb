@@ -608,7 +608,9 @@ class mongo(BaseDriver):
             if use_pandas and isinstance(data, pd.DataFrame):
                 documents = data.to_dict("records")
             elif use_pandas and isinstance(data, pa.Table):
-                documents = [dict(zip(data.schema.names, row)) for row in data.to_pydict().values()]
+                # documents = [dict(zip(data.schema.names, row)) for row in data.to_pydict().values()]
+                table_dict = data.to_pydict()
+                documents = [dict(zip(data.schema.names, row)) for row in zip(*table_dict.values())]
             elif is_dataclass(data):
                 documents = [asdict(item) for item in data] if isinstance(data, Sequence) else asdict(data)
             elif isinstance(data, Iterable):
@@ -622,16 +624,16 @@ class mongo(BaseDriver):
         key_field = kwargs.get("key_field", "_id")
         operations = []
         try:
-            if if_exists == "replace":
+            if if_exists == "append":
+                # Insert new documents without checking for existing ones
+                operations = [pymongo.InsertOne(doc) for doc in documents]
+            elif if_exists == "replace":
                 for doc in documents:
                     if key_field not in doc:
                         # If key_field is not in document, generate a unique identifier
                         doc[key_field] = pymongo.ObjectId()
                     filter_condition = {key_field: doc[key_field]}
                     operations.append(pymongo.UpdateOne(filter_condition, {"$set": doc}, upsert=True))
-            elif if_exists == "append":
-                # Insert new documents without checking for existing ones
-                operations = [pymongo.InsertOne(doc) for doc in documents]
             else:
                 raise ValueError("Invalid value for if_exists: choose 'replace' or 'append'")
         except Exception as e:
@@ -642,10 +644,14 @@ class mongo(BaseDriver):
             if not operations:
                 raise DataError("No operations to perform during write.")
             result = await coll.bulk_write(operations, ordered=False)
-            self._logger.info(f"Write operation successful: {result.bulk_api_result}")
-            return True
+            self._logger.info(
+                f"Write operation successful: {result.bulk_api_result}"
+            )
+            return result.bulk_api_result
         except Exception as e:
-            raise DriverError(f"Error during write operation: {e}") from e
+            raise DriverError(
+                f"Error during write operation: {e}"
+            ) from e
 
     async def truncate_table(self, collection_name: str) -> bool:
         """
