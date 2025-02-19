@@ -37,7 +37,10 @@ from asyncpg.exceptions import (
     QueryCanceledError
 )
 from asyncpg.pgproto import pgproto
-from pgvector.asyncpg import register_vector
+try:
+    from pgvector.asyncpg import register_vector
+except ImportError:
+    pass
 from ..exceptions import (
     ConnectionTimeout,
     DriverError,

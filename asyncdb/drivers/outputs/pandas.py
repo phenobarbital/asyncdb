@@ -1,5 +1,6 @@
 import logging
 from io import StringIO
+from asyncpg import Record
 import pandas
 from .base import OutputFormat
 

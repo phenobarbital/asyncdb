@@ -22,7 +22,10 @@ import pyarrow.dataset as ds
 from pyarrow import fs
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
-import datatable as dt
+try:
+    import datatable as dt
+except ImportError:
+    dt = None
 from deltalake import DeltaTable, write_deltalake
 from deltalake.exceptions import DeltaError, DeltaProtocolError
 from ..exceptions import DriverError

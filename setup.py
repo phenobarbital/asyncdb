@@ -112,7 +112,7 @@ setup(
     install_requires=[
         "cryptography>=43.0.1",
         "aiohttp>=3.9.5",
-        "asyncpg==0.29.0",
+        "asyncpg==0.30.0",
         "asyncio==3.4.3",
         "pandas==2.2.3",
         "xlrd==2.0.1",
@@ -143,21 +143,17 @@ setup(
             "pymssql==2.3.1",
             "redis==5.0.8",
             "deltalake==0.19.2",
-            "duckdb==1.1.0",
+            "duckdb==1.2.0",
         ],
         "dataframe": [
             "dask==2024.8.2",
-            'datatable==1.1.0',
-            "python-datatable==1.1.3",
+            # 'datatable==1.1.0',
+            # "python-datatable==1.1.3",  # TODO: not compatible 3.13
             "polars==1.12.0",
-            "pyarrow==17.0.0",
-            "connectorx==0.3.3",
-            "pyspark==3.5.0",
+            "pyarrow==19.0.1",
+            "connectorx==0.4.2",
             "deltalake==0.19.2",
-            "duckdb==1.1.0",
-        ],
-        "pyspark": [
-            "pyspark==3.5.0"
+            "duckdb==1.2.0",
         ],
         "sqlite": [
             "aiosqlite>=0.18.0",
@@ -180,7 +176,6 @@ setup(
             "psycopg-binary>=3.1.8",
         ],
         "postgresql": [
-            "asyncpg==0.29.0",
             "psycopg[binary,pool]>=3.1.8",
         ],
         "mysql": [
@@ -209,14 +204,14 @@ setup(
         ],
         "odbc": [
             "aioodbc==0.5.0",
-            "pyodbc==5.1.0",
+            "pyodbc==5.2.0",
         ],
         "jdbc": [
             "JPype1==1.5.0",
             "JayDeBeApi==1.2.3"
         ],
         "oracle": [
-            "oracledb==2.4.1"
+            "oracledb==2.5.1"
         ],
         "sqlalchemy": [
             "sqlalchemy[asyncio]==2.0.34",
@@ -225,8 +220,8 @@ setup(
             "elasticsearch[async]==8.15.1",
         ],
         "mongodb": [
-            "pymongo==4.10.1",
-            "motor==3.6.0",
+            "pymongo==4.11.1",
+            "motor==3.7.0",
         ],
         "msqlserver": [
             "pymssql==2.3.1",
@@ -240,7 +235,7 @@ setup(
         "scylla": [
             "scylla_driver==3.26.9",
             "cassandra-driver==3.29.2",
-            "acsylla==0.2.0",
+            "acsylla==1.0.0",
             "cqlsh==6.1.2"
         ],
         "clickhouse": [
@@ -254,11 +249,11 @@ setup(
         ],
         "all": [
             "dask==2024.8.2",
-            "datatable==1.1.0",
-            "python-datatable==1.1.3",
+            # "datatable==1.1.0",
+            # "python-datatable==1.1.3",
             "polars==1.12.0",
-            "pyarrow==17.0.0",
-            "connectorx==0.3.3",
+            "pyarrow==19.0.1",
+            "connectorx==0.4.2",
             "aiosqlite>=0.18.0",
             "pylibmc==1.6.3",
             "aiomcache==0.8.2",
@@ -271,27 +266,26 @@ setup(
             "psycopg-binary>=3.1.8",
             "cassandra-driver==3.29.2",
             "scylla_driver==3.26.9",
-            "acsylla==0.2.0",
+            "acsylla==1.0.0",
             "cqlsh==6.1.2",
             "influxdb==5.3.2",
             "influxdb-client[async]==1.45.0",
             "aioodbc==0.5.0",
             "JayDeBeApi==1.2.3",
-            "pyodbc==5.1.0",
+            "pyodbc==5.2.0",
             "sqlalchemy[asyncio]==2.0.34",
             "elasticsearch[async]==8.15.1",
-            "pymongo==4.10.1",
-            "motor==3.6.0",
+            "pymongo==4.11.1",
+            "motor==3.7.0",
             "pymssql==2.3.1",
             "aiocouch==3.0.0",
             "asyncmy==0.2.9",
             "mysqlclient==2.2.0",
             "aiomysql==0.2.0",
-            "pyspark==3.5.0",
-            "oracledb==2.2.1",
+            "oracledb==2.5.1",
             "hazelcast-python-client==5.4.0",
             "deltalake==0.19.2",
-            "duckdb==1.1.0",
+            "duckdb==1.2.0",
             "aiobotocore[boto3]==2.15.2",
             "aioboto3==13.2.0",
             "google-cloud-bigquery==3.25.0",

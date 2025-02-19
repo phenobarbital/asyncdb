@@ -51,9 +51,9 @@ async def test_pool_by_dsn(event_loop):
     """ test creation using DSN """
     pool = AsyncPool(DRIVER, dsn=DSN, loop=event_loop)
     assert pool.application_name == 'NAV'
-    pytest.assume(pool.is_connected() is False)
+    assert not pool.is_connected()
     await pool.connect()
-    pytest.assume(pool.is_connected() is True)
+    assert pool.is_connected() is True
     await pool.wait_close(True, 5)
     assert pool.is_closed() is True
 
@@ -61,12 +61,12 @@ async def test_pool_by_dsn(event_loop):
 async def test_pool_by_params(event_loop):
     pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
     assert pool.get_dsn() == DSN
-    pytest.assume(pool.is_connected() is False)
+    assert pool.is_connected() is False
     await pool.connect()
-    pytest.assume(pool.is_connected() is True)
+    assert pool.is_connected() is True
     result, error = await pool.test_connection()
-    pytest.assume(not error)
-    pytest.assume(result == 'SELECT 1')
+    assert not error
+    assert result == 'SELECT 1'
     await pool.close()
     assert pool.is_closed() is True
 
@@ -89,7 +89,7 @@ async def test_context(pooler, event_loop):
     assert pooler.is_closed() is False
     async with pooler as conn:
         result = await conn.execute("SELECT 1")
-        pytest.assume(result == 'SELECT 1')
+        assert result == 'SELECT 1'
 
 
 async def test_pool_connect(event_loop):
@@ -99,37 +99,37 @@ async def test_pool_connect(event_loop):
         }
     }
     pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop, **args)
-    pytest.assume(pool.application_name == 'Navigator')
+    assert pool.application_name == 'Navigator'
     await pool.connect()
-    pytest.assume(pool.is_connected() is True)
+    assert pool.is_connected() is True
     db = await pool.acquire()
-    pytest.assume(db.is_connected() is True)
+    assert db.is_connected() is True
     result = await pool.execute("SELECT 1")
-    pytest.assume(result == 'SELECT 1')
+    assert result == 'SELECT 1'
     result, error = await pool.test_connection()
-    pytest.assume(not error)
-    pytest.assume(result == 'SELECT 1')
+    assert not error
+    assert result == 'SELECT 1'
     await pool.release(
         connection=db
     )
     async with await pool.acquire() as conn:
-        assert (conn.is_connected() is True)
+        assert conn.is_connected() is True
         result, error = await conn.test_connection()
-        pytest.assume(not error)
-        pytest.assume(result[0][0] == 1)
+        assert not error
+        assert result[0][0] == 1
     await pool.wait_close()
     assert pool.is_closed() is True
 
 
 async def test_connection(conn):
-    pytest.assume(conn.is_connected() is True)
+    assert conn.is_connected() is True
     result, error = await conn.test_connection()
     row = result[0]
-    pytest.assume(row[0] == 1)
+    assert row[0] == 1
     prepared, error = await conn.prepare(
         "SELECT store_id, store_name FROM walmart.stores"
     )
-    pytest.assume(conn.get_columns() == ["store_id", "store_name"])
+    assert conn.get_columns() == ["store_id", "store_name"]
     assert not error
 
 
@@ -137,14 +137,14 @@ async def test_huge_query(event_loop):
     sql = 'SELECT * FROM trocplaces.stores LIMIT 1000'
     pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
     await pool.connect()
-    pytest.assume(pool.is_connected() is True)
+    assert pool.is_connected() is True
     async with await pool.acquire() as conn:
         result, error = await conn.execute("SET TIMEZONE TO 'America/New_York'")
-        pytest.assume(not error)
+        assert not error
         result, error = await conn.query(sql)
-        pytest.assume(not error)
-        pytest.assume(result is not None)
-        pytest.assume(len(result) == 1000)
+        assert not error
+        assert result is not None
+        assert len(result) == 1000
     await pool.wait_close()
     assert pool.is_closed() is True
 
@@ -171,11 +171,12 @@ async def test_cursor(conn, moveto, fetched, count, first, last):
         async with await conn.cursor("SELECT generate_series(0, 100) as serie") as cur:
             await cur.forward(moveto)
             row = await cur.fetchrow()
-            pytest.assume(row['serie'] == moveto)
+            assert row['serie'] == moveto
             rows = await cur.fetch(fetched)
-            pytest.assume(len(list(rows)) == count)
-            pytest.assume(rows[0]['serie'] == first)
-            pytest.assume(rows[-1]['serie'] == last)
+            assert len(list(rows)) == count
+            assert rows[0]['serie'] == first
+            assert rows[-1]['serie'] == last
+
 
 test_table = """ CREATE TABLE IF NOT EXISTS test.stores
 (
@@ -193,21 +194,21 @@ async def test_cicle(conn):
     async with await conn.connection() as conn:
         await conn.execute("CREATE SCHEMA IF NOT EXISTS test")
         result, error = await conn.execute(test_table)
-        pytest.assume(not error)
+        assert not error
         # create a store list:
         stores, error = await conn.query(
             "SELECT store_id, store_name FROM walmart.stores LIMIT 1500"
         )
         st = [(k, v) for k, v in stores]
         # check the prepared sentences:
-        pytest.assume(len(st) == 1500)
+        assert len(st) == 1500
         result, error = await conn.execute_many(
             "INSERT INTO test.stores (store_id, store_name) VALUES ($1, $2)", st
         )
-        pytest.assume(not error)
+        assert not error
         # checking integrity:
         result, error = await conn.queryrow('SELECT count(*) as count FROM test.stores')
-        pytest.assume(len(st) == result['count'])
+        assert len(st) == result['count']
         # testing the cursor iterator:
         # iterate a cursor:
         rows = []
@@ -215,10 +216,10 @@ async def test_cicle(conn):
             "SELECT store_id, store_name FROM test.stores"
         ):
             rows.append(record['store_id'])
-        pytest.assume(len(rows) == 1500)
+        assert len(rows) == 1500
         # truncate the table
         result, error = await conn.execute("DELETE FROM test.stores")
-        pytest.assume(not error)
+        assert not error
         # check the copy from array
         result = await conn.copy_into_table(
             table="stores",
@@ -226,7 +227,7 @@ async def test_cicle(conn):
             columns=["store_id", "store_name"],
             source=st,
         )
-        pytest.assume(result == 'COPY 1500')
+        assert result == 'COPY 1500'
         ## copying into a file-like object:
         file = BytesIO()
         file.seek(0)
@@ -236,21 +237,21 @@ async def test_cicle(conn):
             columns=["store_id", "store_name"],
             output=file,
         )
-        pytest.assume(result and file is not None)
-        pytest.assume(result == 'COPY 1500')
+        assert result and file is not None
+        assert result == 'COPY 1500'
         # drop the table
         drop, error = await conn.execute('DROP TABLE test.stores')
-        pytest.assume(drop == 'DROP TABLE')
+        assert drop == 'DROP TABLE'
         # check if really dropped
         result, error = await conn.query('SELECT * FROM test.stores')
-        pytest.assume(error)
+        assert error
 
 
 async def test_copy_to_table(conn):
     """ test copy to table functionality """
     async with await conn.connection() as conn:
         result, error = await conn.execute(test_table)
-        pytest.assume(not error)
+        assert not error
         file = 'stores.csv'
         filepath = Path(__file__).resolve().parent
         filepath = filepath.joinpath(file)
@@ -260,9 +261,9 @@ async def test_copy_to_table(conn):
             columns=['store_id', 'store_name'],
             source=filepath
         )
-        pytest.assume(result == 'COPY 1470')
+        assert result == 'COPY 1470'
         result, error = await conn.execute('DROP TABLE test.stores')
-        pytest.assume(result == 'DROP TABLE')
+        assert result == 'DROP TABLE'
 
 
 async def test_huge_datasets(pooler):
@@ -271,17 +272,17 @@ async def test_huge_datasets(pooler):
         start = datetime.now()
         rows = 0
         result, error = await conn.query('SELECT * FROM trocplaces.stores')
-        pytest.assume(not error)
+        assert not error
         rows += len(result)
         if not error:
             for row in result:
-                pytest.assume(row is not None)
+                assert row is not None
         result, error = await conn.query('SELECT * FROM troc.dashboards')
-        pytest.assume(not error)
+        assert not error
         rows += len(result)
         if not error:
             for row in result:
-                pytest.assume(row is not None)
+                assert row is not None
         exec_time = (datetime.now() - start).total_seconds()
         print(f"Rows: {rows}, Execution Time {exec_time:.3f}s\n")
         assert exec_time > 0
@@ -290,52 +291,52 @@ async def test_huge_datasets(pooler):
 async def test_formats(event_loop):
     db = AsyncDB('pg', params=PARAMS, loop=event_loop)
     async with await db.connection() as conn:
-        pytest.assume(db.is_connected() is True)
+        assert db.is_connected() is True
         # first-format, native:
         conn.row_format('iterable')  # change output format to dict
         result, error = await conn.query("SELECT * FROM walmart.stores")
-        pytest.assume(type(result) == list)
+        assert type(result) == list
         conn.output_format('json')  # change output format to json
         result, error = await conn.query("SELECT * FROM walmart.stores")
-        pytest.assume(type(result) == str)
+        assert type(result) == str
         conn.output_format('pandas')  # change output format to pandas
         result, error = await conn.query("SELECT * FROM walmart.stores")
         print(result)
-        pytest.assume(type(result) == pandas.core.frame.DataFrame)
+        assert type(result) == pandas.core.frame.DataFrame
         # change output format to iter generator
         conn.output_format('iterable')
         result, error = await conn.query("SELECT * FROM walmart.stores")
         print(result)
-        # pytest.assume(callable(result)) # TODO: test method for generator exp
+        # assert callable(result) # TODO: test method for generator exp
         conn.output_format('polars')  # change output format to iter generator
         result, error = await conn.query("SELECT * FROM walmart.stores")
         print(result)
-        pytest.assume(type(result) == pl.DataFrame)
+        assert type(result) == pl.DataFrame
         # change output format to iter generator
         conn.output_format('dt')
         # TODO: error when a python list is on a column
         result, error = await conn.query("SELECT store_id, store_name FROM walmart.stores")
         print(result)
         print(type(result))
-        pytest.assume(type(result) == dt.Frame)
+        assert type(result) == dt.Frame
         # conn.output_format('csv')  # change output format to iter generator
         # result, error = await conn.query("SELECT * FROM walmart.stores")
-        # pytest.assume(type(result) == str)
+        # assert type(result) == str
         # testing Record Object
         conn.output_format('record')   # change output format to iter generator
         result, error = await conn.query("SELECT * FROM walmart.stores")
-        pytest.assume(type(result) == list)
+        assert type(result) == list
         for row in result:
-            pytest.assume(type(row) == Record)
+            assert type(row) == Record
         # testing Recordset Object
         conn.output_format('recordset')  # change output format to ResultSet
         result, error = await conn.query("SELECT * FROM walmart.stores")
-        pytest.assume(type(result) == Recordset)
+        assert type(result) == Recordset
         # working with slices:
         obj = result[0:2]
-        pytest.assume(len(obj) == 2)
+        assert len(obj) == 2
         for row in result:
-            pytest.assume(type(row) == Record)
+            assert type(row) == Record
 
 
 def pytest_sessionfinish(session, exitstatus):
