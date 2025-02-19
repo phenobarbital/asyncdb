@@ -13,8 +13,8 @@ install_uvloop()
 class AsyncPool:
     """
     AsyncPool.
-       Base class for Asyncio-based DB Pools.
-       Factory interface for Pool-based connectors.
+    Base class for Asyncio-based DB Pools.
+    Factory interface for Pool-based connectors.
     """
 
     def __new__(cls: Type[T_aobj], driver: str = "dummy", **kwargs) -> AbstractDriver:
@@ -22,8 +22,7 @@ class AsyncPool:
         pool = f"{driver}Pool"
         try:
             mdl = module_exists(pool, classpath)
-            obj = mdl(**kwargs)
-            return obj
+            return mdl(**kwargs)
         except Exception as err:
             logging.exception(err)
             raise DriverError(message=f"Cannot Load Backend Pool: {pool}") from err
@@ -39,8 +38,7 @@ class AsyncDB:
         classpath = f"asyncdb.drivers.{driver}"
         try:
             mdl = module_exists(driver, classpath)
-            obj = mdl(**kwargs)
-            return obj
+            return mdl(**kwargs)
         except Exception as err:
             logging.exception(err)
             raise DriverError(message=f"Cannot Load Backend {driver}") from err
@@ -53,16 +51,10 @@ class Asyncdb:
     Getting a Database Driver Connection.
     """
 
-    async def __new__(cls: Type[T_aobj], driver: str, *args, **kwargs) -> T_aobj:
+    async def __new__(cls: Type[T_aobj], driver: str, *args, credentials: dict = None, **kwargs) -> T_aobj:
         clspath = f"asyncdb.drivers.{driver}"
         mdl = module_exists(driver, clspath)
-        obj = mdl(**kwargs)
-        await obj.__ainit__(*args, **kwargs)
+        obj = mdl(params=credentials, *args, **kwargs)
+        # Open a connection:
+        await obj.connection()
         return obj
-
-    async def __call__(self):
-        print(f"Running job {self.name} asynchronously.")
-
-    async def __ainit__(self, *args, **kwargs) -> None:
-        # Add any additional async initialization logic here
-        pass
