@@ -515,10 +515,6 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                 self.sslctx.load_cert_chain(**certs)
             self.sslctx.check_hostname = check_hostname
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        # clean up anything you need to clean up
-        return await self.close()
-
     async def close(self, timeout=5):
         """
         Closing a Connection.
@@ -535,12 +531,12 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             except InterfaceError as err:
                 raise ProviderError(f"AsyncPg: Closing Error: {err}") from err
             except Exception as err:
-                try:
+                with contextlib.suppress(TypeError):
                     await self._connection.terminate()
                     self._connection = None
-                    raise ProviderError(f"Connection Error, Terminated: {err}") from err
-                except TypeError:
-                    pass
+                    raise ProviderError(
+                        f"Connection Error, Terminated: {err}"
+                    ) from err
             finally:
                 self._connected = False
                 self._connection = None
@@ -554,11 +550,9 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         return self._connection.is_in_transaction()
 
     def is_connected(self):
-        try:
+        with contextlib.suppress(AttributeError, InterfaceError):
             if self._connection:
                 return not (self._connection.is_closed())
-        except (AttributeError, InterfaceError):
-            pass
         return self._connected
 
     async def connection(self):
@@ -566,8 +560,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
 
         Get an asyncpg connection
         """
-        if self._connection:
-            if not self._connection.is_closed():
+        if self._connection and not self._connection.is_closed():
                 self._connected = True
                 return self
         self._connection = None
@@ -613,12 +606,17 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     **custom_class,
                     **_ssl,
                 )
-                await self._connection.set_type_codec("json", encoder=_encoder, decoder=_decoder, schema="pg_catalog")
-                await self._connection.set_type_codec("jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog")
-                try:
-                    await self._connection.set_builtin_type_codec("hstore", codec_name="pg_contrib.hstore")
-                except Exception:
-                    pass
+                await self._connection.set_type_codec(
+                    "json", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
+                )
+                await self._connection.set_type_codec(
+                    "jsonb", encoder=_encoder, decoder=_decoder, schema="pg_catalog"
+                )
+                with contextlib.suppress(Exception):
+                    await self._connection.set_builtin_type_codec(
+                        "hstore",
+                        codec_name="pg_contrib.hstore"
+                    )
 
                 def _uuid_encoder(value):
                     if isinstance(value, uuid.UUID):
@@ -630,10 +628,7 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
                     return val
 
                 def _uuid_decoder(value):
-                    if value is None:
-                        return b""
-                    else:
-                        return uuid.UUID(bytes=value)
+                    return b"" if value is None else uuid.UUID(bytes=value)
 
                 try:
                     await self._connection.set_type_codec(

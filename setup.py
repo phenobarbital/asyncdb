@@ -69,7 +69,7 @@ extensions = [
 setup(
     name="asyncdb",
     version=__version__,
-    python_requires=">=3.9.13",
+    python_requires=">=3.10.0",
     url="https://github.com/phenobarbital/asyncdb",
     description=__description__,
     keywords=[
@@ -92,10 +92,10 @@ setup(
         "Topic :: Software Development :: Build Tools",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Database :: Front-Ends",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Programming Language :: Python :: 3 :: Only",
         "Framework :: AsyncIO",
     ],
@@ -125,7 +125,8 @@ setup(
         "python-datamodel>=0.7.0",
         "aiosqlite>=0.18.0",
         "looseversion==1.3.0",
-        "aiofiles==24.1.0"
+        "aiofiles==24.1.0",
+        "pgvector==0.3.6"
     ],
     extras_require={
         "uvloop": [
