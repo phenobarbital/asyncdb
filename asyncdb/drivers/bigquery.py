@@ -3,12 +3,14 @@ from typing import Any, Union
 from collections.abc import Iterable
 import uuid
 from enum import Enum
+import re
 from pathlib import Path, PurePath
 from dataclasses import is_dataclass
 import asyncio
 import aiofiles
 import pandas_gbq
 import pandas as pd
+import pyarrow
 from google.cloud import storage
 from google.cloud import bigquery as bq
 from google.cloud.exceptions import Conflict, NotFound
@@ -28,7 +30,7 @@ class bigquery(SQLDriver, ModelBackend):
     _dsn_template: str = ""
 
     def __init__(self, dsn: str = "", loop: asyncio.AbstractEventLoop = None, params: dict = None, **kwargs) -> None:
-        self._credentials = params.get("credentials", None)
+        self._credentials = params.get("credentials")
         if self._credentials:
             if isinstance(self._credentials, str):
                 self._credentials = Path(self._credentials).expanduser().resolve()
@@ -36,7 +38,7 @@ class bigquery(SQLDriver, ModelBackend):
                 self._credentials = self._credentials.resolve()
         self._account = None
         self._dsn = ""
-        self._project_id = params.get("project_id", None)
+        self._project_id = params.get("project_id")
         super().__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         if not self._credentials:
             self._account = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", None)
@@ -308,7 +310,31 @@ class bigquery(SQLDriver, ModelBackend):
         try:
             if isinstance(data, pd.DataFrame):
                 if use_pandas:
-                    job = await self._thread_func(self._connection.load_table_from_dataframe, data, table, **kwargs)
+                    try:
+                        job = await self._thread_func(
+                            self._connection.load_table_from_dataframe, data, table, **kwargs
+                        )
+                    except pyarrow.lib.ArrowTypeError as err:
+                        err_msg = str(err)
+                        if col_match := re.search(
+                            r'column with name:\s*"([^"]+)"\s+and datatype:\s*"([^"]+)"', err_msg
+                        ):
+                            column_name = col_match[1]
+                            received_dtype = col_match[2]
+                        else:
+                            column_name = "Unknown"
+                            received_dtype = "Unknown"
+                        # Try to extract expected datatype details
+                        if expected_match := re.search(
+                            r'to an appropriate pyarrow datatype:\s*(.+)$', err_msg):
+                            expected_dtype = expected_match[1].strip()
+                        else:
+                            expected_dtype = "Unknown"
+                        raise DriverError(
+                            f"BigQuery: Error writing to table: "
+                            f"Column '{column_name}' has datatype '{received_dtype}', "
+                            f"but expected '{expected_dtype}'"
+                        ) from err
                 else:
                     object_cols = data.select_dtypes(include=["object"]).columns
                     for column in object_cols:
