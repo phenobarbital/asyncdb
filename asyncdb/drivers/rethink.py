@@ -16,6 +16,7 @@ from typing import Any, Optional, Union
 from collections.abc import Iterable
 import pandas
 import rethinkdb
+from rethinkdb.ast import RqlQuery
 from rethinkdb.errors import (
     ReqlDriverError,
     ReqlError,
@@ -27,10 +28,19 @@ from rethinkdb.errors import (
 )
 from rethinkdb import RethinkDB, r
 from datamodel import BaseModel
+from datamodel.parsers.json import JSONContent
 from ..interfaces.cursors import DBCursorBackend, CursorBackend
 from ..exceptions import DriverError, DataError, NoDataFound, StatementError
 from .base import InitDriver
 from .cursor import BaseCursor
+
+
+class JSONEncoder(JSONContent):
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, Point):
+            return obj.as_point()
+        return obj.build() if isinstance(obj, RqlQuery) else super().default(obj)
+
 
 
 class Point(BaseModel):
@@ -114,7 +124,11 @@ class rethink(InitDriver, DBCursorBackend):
         self._connection = None
         self.params["timeout"] = self._timeout
         try:
-            self._connection = await self._engine.connect(**self.params)
+            self._connection = await self._engine.connect(
+                **self.params,
+                json_encoder=JSONEncoder,
+                json_decoder=JSONEncoder
+            )
             if self.params["db"]:
                 await self.db(self.params["db"])
         except ReqlRuntimeError as err:
