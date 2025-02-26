@@ -4,6 +4,7 @@ import asyncio
 import time
 import ssl
 from urllib.parse import urlencode
+from bson import ObjectId
 import motor.motor_asyncio
 import pymongo
 import pandas as pd
@@ -616,7 +617,9 @@ class mongo(BaseDriver):
             elif isinstance(data, Iterable):
                 documents = list(data)
             else:
-                raise ValueError("Mongo: Data must be an iterable of dicts, pandas DataFrame, Arrow Table, or dataclass instances.")
+                raise ValueError(
+                    "Mongo: Data must be an iterable of dicts, pandas DataFrame, Arrow Table, or dataclass instances."
+                )
         except Exception as e:
             raise DataError(f"Error processing input data: {e}") from e
 
@@ -631,7 +634,7 @@ class mongo(BaseDriver):
                 for doc in documents:
                     if key_field not in doc:
                         # If key_field is not in document, generate a unique identifier
-                        doc[key_field] = pymongo.ObjectId()
+                        doc[key_field] = ObjectId()
                     filter_condition = {key_field: doc[key_field]}
                     operations.append(pymongo.UpdateOne(filter_condition, {"$set": doc}, upsert=True))
             else:
@@ -792,4 +795,32 @@ class mongo(BaseDriver):
         except Exception as e:
             raise DriverError(
                 f"Error dropping database '{database_name}': {e}"
+            ) from e
+
+    async def create_collection(
+        self,
+        database: str,
+        collection: str,
+        unique_index: bool = False,
+        pk: str = None
+    ):
+        """Create a new collection in the database and optionally set a unique index."""
+        try:
+            db = self._connection[database]
+            try:
+                await db.create_collection("my_new_collection")
+            except Exception as e:
+                self._logger.error(f"Error creating collection '{collection}': {e}")
+                return False
+            if unique_index:
+                coll = db[collection]
+                # await coll.create_index(pk, unique=True)
+                await coll.create_index([(pk, 1)], unique=True)
+            self._logger.info(
+                f"Created collection '{collection}' in database '{database}'."
+            )
+            return True
+        except Exception as e:
+            raise DriverError(
+                f"Error creating collection '{collection}' in database '{database}': {e}"
             ) from e
