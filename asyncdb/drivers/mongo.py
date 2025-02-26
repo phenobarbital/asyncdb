@@ -368,6 +368,55 @@ class mongo(BaseDriver):
 
     executemany = execute_many
 
+    async def update_many(
+        self,
+        collection_name,
+        conditions: dict,
+        operation: str = "$set",
+        query: Optional[dict] = None
+    ):
+        if not query:
+            query = {}
+        db = await self._select_database()
+        collection = db[collection_name]
+        try:
+            if self._dbtype == 'documentdb':
+                # using Update simple:
+                fields = {key: 1 for key in conditions}
+                cursor = collection.find(query, fields)
+                docs = await cursor.to_list(length=None)
+                results = []
+                for doc in docs:
+                    fields = {}
+                    for key, value in conditions.items():
+                        if value == "$toDate":
+                            fields[key] = pd.to_datetime(doc[key])
+                    # Update the document to store actual datetime objects
+                    result = await collection.update_one(
+                        {"_id": doc["_id"]},
+                        {
+                            operation: fields
+                        }
+                    )
+                    results.append(result)
+                return results
+            else:
+                # Use update_many with an aggregation pipeline:
+                fields = {key: {value: f"${key}"} for key, value in conditions.items()}
+                print('FIELDS > ', fields)
+                return await collection.update_many(
+                    query,
+                    [
+                        {
+                            operation: fields
+                        }
+                    ]
+                )
+        except Exception as err:
+            raise DriverError(
+                f"Error counting documents in '{collection_name}': {err}"
+            ) from err
+
     async def __aenter__(self) -> "mongo":
         """
         Asynchronous context manager entry.
@@ -406,10 +455,35 @@ class mongo(BaseDriver):
         """
         await self.close()
 
+    async def count_documents(self, collection_name: str, query: Optional[dict] = None):
+        """
+        Counts the number of documents in a collection asynchronously.
+
+        Parameters:
+        -----------
+        collection_name : str
+            The name of the collection to count documents from.
+        query : dict, optional
+            The filter criteria for the count operation. Defaults to None.
+
+        Returns:
+        --------
+        int
+            The number of documents that match the query.
+        """
+        try:
+            db = await self._select_database()
+            collection = db[collection_name]
+            return await collection.count_documents(query or {})
+        except Exception as err:
+            raise DriverError(
+                f"Error counting documents in '{collection_name}': {err}"
+            ) from err
+
     async def query(
         self,
         collection_name: str,
-        filter: Optional[dict] = None,
+        query: Optional[dict] = None,
         *args,
         **kwargs
     ) -> Iterable[Any]:
@@ -420,7 +494,7 @@ class mongo(BaseDriver):
         -----------
         collection_name : str
             The name of the collection to query.
-        filter : dict, optional
+        query : dict, optional
             The filter criteria for the query. Defaults to None (no filter).
         args : tuple
             Additional positional arguments to be passed to the query.
@@ -435,10 +509,8 @@ class mongo(BaseDriver):
         try:
             db = await self._select_database()
             collection = db[collection_name]
-            cursor = collection.find(filter or {}, *args, **kwargs)
-            result = []
-            async for document in cursor:
-                result.append(document)
+            cursor = collection.find(query or {}, *args, **kwargs)
+            result = await cursor.to_list(length=None)
             return await self._serializer(result, None)
         except Exception as err:
             return await self._serializer(None, err)
@@ -446,7 +518,7 @@ class mongo(BaseDriver):
     async def queryrow(
         self,
         collection_name: str,
-        filter: Optional[dict] = None,
+        query: Optional[dict] = None,
         *args,
         **kwargs
     ) -> Optional[dict]:
@@ -457,8 +529,8 @@ class mongo(BaseDriver):
         -----------
         collection_name : str
             The name of the collection to query.
-        filter : dict, optional
-            The filter criteria for the query. Defaults to None (no filter).
+        query : dict, optional
+            The query criteria for the query. Defaults to None (no query).
         args : tuple
             Additional positional arguments to be passed to the query.
         kwargs : dict
@@ -472,7 +544,7 @@ class mongo(BaseDriver):
         try:
             db = await self._select_database()
             collection = db[collection_name]
-            result = await collection.find_one(filter or {}, *args, **kwargs)
+            result = await collection.find_one(query or {}, *args, **kwargs)
             return await self._serializer(result, None)
         except Exception as err:
             return await self._serializer(None, err)
@@ -480,7 +552,7 @@ class mongo(BaseDriver):
     async def fetch(
         self,
         collection_name: str,
-        filter: Optional[dict] = None,
+        query: Optional[dict] = None,
         *args,
         **kwargs
     ) -> Iterable[Any]:
@@ -491,7 +563,7 @@ class mongo(BaseDriver):
         -----------
         collection_name : str
             The name of the collection to query.
-        filter : dict, optional
+        query : dict, optional
             The filter criteria for the query. Defaults to None (no filter).
         args : tuple
             Additional positional arguments to be passed to the query.
@@ -509,7 +581,7 @@ class mongo(BaseDriver):
         try:
             db = await self._select_database()
             collection = db[collection_name]
-            cursor = collection.find(filter or {}, *args, **kwargs)
+            cursor = collection.find(query or {}, *args, **kwargs)
             async for document in cursor:
                 result.append(document)
             return (result, None)
@@ -521,7 +593,7 @@ class mongo(BaseDriver):
     async def fetch_one(
         self,
         collection_name: str,
-        filter: Optional[dict] = None,
+        query: Optional[dict] = None,
         *args,
         **kwargs
     ) -> Optional[dict]:
@@ -532,7 +604,7 @@ class mongo(BaseDriver):
         -----------
         collection_name : str
             The name of the collection to query.
-        filter : dict, optional
+        query : dict, optional
             The filter criteria for the query. Defaults to None (no filter).
         args : tuple
             Additional positional arguments to be passed to the query.
@@ -544,7 +616,7 @@ class mongo(BaseDriver):
         Optional[dict]
             The document returned by the query, or None if no document matches.
         """
-        return await self.queryrow(collection_name, filter, *args, **kwargs)
+        return await self.queryrow(collection_name, query, *args, **kwargs)
 
     fetchrow = fetch_one
     fetchone = fetch_one
@@ -555,6 +627,7 @@ class mongo(BaseDriver):
         collection: str = None,
         database: Optional[str] = None,
         use_pandas: bool = True,
+        use_bulk: bool = False,
         if_exists: str = "append",
         **kwargs,
     ) -> bool:
@@ -603,7 +676,8 @@ class mongo(BaseDriver):
             raise ValueError("No collection specified for write operation.")
 
         coll = db[collection]
-
+        # Get key_field from kwargs or default to '_id'
+        key_field = kwargs.get("key_field", "_id")
         # Process data based on type
         try:
             if use_pandas and isinstance(data, pd.DataFrame):
@@ -622,15 +696,32 @@ class mongo(BaseDriver):
                 )
         except Exception as e:
             raise DataError(f"Error processing input data: {e}") from e
-
-        # Get key_field from kwargs or default to '_id'
-        key_field = kwargs.get("key_field", "_id")
         operations = []
         try:
             if if_exists == "append":
+                if use_bulk:
+                    return await coll.insert_many(documents)
                 # Insert new documents without checking for existing ones
                 operations = [pymongo.InsertOne(doc) for doc in documents]
             elif if_exists == "replace":
+                if use_bulk:
+                    # extract the keys from dataset
+                    list_of_keys = (
+                        [
+                            row[field]
+                            for row in documents
+                            if field in row
+                            for field in key_field
+                        ]
+                        if isinstance(key_field, list)
+                        else [
+                            row[key_field] for row in documents if key_field in row
+                        ]
+                    )
+                    # Delete all documents from List of Keys:
+                    await coll.delete_many({key_field: {"$in": list_of_keys}})
+                    # Then Insert all new documents at once
+                    return await coll.insert_many(documents)
                 for doc in documents:
                     if key_field not in doc:
                         # If key_field is not in document, generate a unique identifier
