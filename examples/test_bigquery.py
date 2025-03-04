@@ -1,4 +1,5 @@
 import asyncio
+import pandas as pd
 from google.cloud import bigquery as gbq
 from asyncdb.drivers.bigquery import bigquery
 
@@ -91,11 +92,34 @@ async def connect(loop):
         print('TEST > ', df)
     await bq.close()
 
+async def test_write():
+    bq = bigquery(params=params)
+    async with await bq.connection() as conn:
+        print(
+            f"Connected: {conn.is_connected()}"
+        )
+    # Create a fake Dataframe Object:
+    df = pd.DataFrame({
+        'store_id': ['store_1', 'store_2', 'store_3'],
+        'sale_qty': [100, 200, 300],
+        'return_qty': [10, 20, 30]
+    })
+    # Write the Dataframe to BigQuery
+    result = await conn.write(
+        df,
+        table_id='sales_test',
+        dataset_id='troc',
+        if_exists='replace',
+        use_pandas=True
+    )
+    print(result)
+
 
 if __name__ == '__main__':
     try:
         loop = asyncio.get_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(connect(loop))
+        #asyncio.set_event_loop(loop)
+        #loop.run_until_complete(connect(loop))
+        asyncio.run(test_write())
     finally:
         loop.stop()
