@@ -81,7 +81,10 @@ class mongo(BaseDriver):
         self._connection = None
         self._database = None
         self._databases: List[str] = []
-        self._database_name = params.get("database", kwargs.get("database", None))
+        self._database_name = params.get(
+            "database",
+            kwargs.get("database", None)
+        )
         self._dbtype: str = params.get("dbtype", kwargs.get("dbtype", "mongodb"))
         super(mongo, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         self._dsn = self._construct_dsn(params)
@@ -858,13 +861,34 @@ class mongo(BaseDriver):
             ) from e
 
 
-    async def drop_database(self, database_name: str) -> bool:
+    async def create_database(self, database: str) -> None:
+        """
+        Creates a new database in the MongoDB server.
+
+        Parameters:
+        -----------
+        database : str
+            The name of the database to create.
+        """
+        try:
+            if not self._connection:
+                raise DriverError("Not connected to MongoDB.")
+            self._database = self._connection[database]
+            self._database_name = database
+            self._logger.info(f"Created database '{database}'.")
+            return self._database
+        except Exception as e:
+            raise DriverError(
+                f"Error creating database '{database}': {e}"
+            ) from e
+
+    async def drop_database(self, database: str) -> bool:
         """
         Drops a database from the MongoDB server.
 
         Parameters:
         -----------
-        database_name : str
+        database : str
             The name of the database to drop.
 
         Returns:
@@ -880,12 +904,12 @@ class mongo(BaseDriver):
         try:
             if not self._connection:
                 raise DriverError("Not connected to MongoDB.")
-            result = await self._connection.drop_database(database_name)
-            self._logger.info(f"Dropped database '{database_name}': {result}")
+            result = await self._connection.drop_database(database)
+            self._logger.info(f"Dropped database '{database}': {result}")
             return True
         except Exception as e:
             raise DriverError(
-                f"Error dropping database '{database_name}': {e}"
+                f"Error dropping database '{database}': {e}"
             ) from e
 
     async def create_collection(

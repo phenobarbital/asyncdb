@@ -39,16 +39,16 @@ async def test_connect(params):
             query=query,
         )
         print('Filtered Result :', result)
-        # Convert all dates to datetime objects:
-        conditions = {
-            "race_start_date": "$toDate",
-            "race_end_date": "$toDate"
-        }
-        result = await conn.update_many(
-            collection_name='races',
-            conditions=conditions,
-        )
-        print('Updated Result :', result)
+        # # Convert all dates to datetime objects:
+        # conditions = {
+        #     "race_start_date": "$toDate",
+        #     "race_end_date": "$toDate"
+        # }
+        # result = await conn.update_many(
+        #     collection_name='races',
+        #     conditions=conditions,
+        # )
+        # print('Updated Result :', result)
 
 async def check_connection():
     async with mongo(

@@ -7,7 +7,6 @@ https://github.com/phenobarbital/asyncdb
 """
 import ast
 from os import path
-
 from Cython.Build import cythonize
 from setuptools import Extension, find_packages, setup
 

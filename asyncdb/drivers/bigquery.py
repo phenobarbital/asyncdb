@@ -1,5 +1,5 @@
 import os
-from typing import Any, Union
+from typing import Any, Optional, Union
 from collections.abc import Iterable
 import uuid
 from enum import Enum
@@ -297,6 +297,7 @@ class bigquery(SQLDriver, ModelBackend):
         dataset_id: str = None,
         use_streams: bool = False,
         use_pandas: bool = True,  # by default using BigQuery
+        use_schema: Optional[Any] = None,
         if_exists: str = "append",
         **kwargs,
     ):
@@ -311,8 +312,23 @@ class bigquery(SQLDriver, ModelBackend):
             if isinstance(data, pd.DataFrame):
                 if use_pandas:
                     try:
+                        if if_exists == 'replace':
+                            disposition = 'WRITE_TRUNCATE',
+                        elif if_exists == 'append':
+                            disposition = 'WRITE_APPEND',
+                        else:
+                            disposition = 'WRITE_EMPTY',
+                        job_config = bq.LoadJobConfig(
+                            schema=use_schema,
+                            write_disposition=disposition,
+                        )
                         job = await self._thread_func(
-                            self._connection.load_table_from_dataframe, data, table, **kwargs
+                            self._connection.load_table_from_dataframe,
+                            data,
+                            table,
+                            # if_exists=if_exists,
+                            job_config=job_config,
+                            **kwargs
                         )
                     except pyarrow.lib.ArrowTypeError as err:
                         err_msg = str(err)
