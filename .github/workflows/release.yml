@@ -35,7 +35,8 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           pip install cibuildwheel
-          cibuildwheel --output-dir dist --platform windows --config-setting="CIBW_SKIP=pp*"
+          set CIBW_SKIP=pp*
+          cibuildwheel --output-dir dist
           # You may need to adjust the above command based on your package's specific requirements
 
       - name: Upload wheel artifacts
