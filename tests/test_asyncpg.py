@@ -127,14 +127,14 @@ async def test_connection(conn):
     row = result[0]
     assert row[0] == 1
     prepared, error = await conn.prepare(
-        "SELECT store_id, store_name FROM walmart.stores"
+        "SELECT store_id, store_name FROM hisense.stores"
     )
     assert conn.get_columns() == ["store_id", "store_name"]
     assert not error
 
 
 async def test_huge_query(event_loop):
-    sql = 'SELECT * FROM trocplaces.stores LIMIT 1000'
+    sql = 'SELECT * FROM placerai.stores LIMIT 1000'
     pool = AsyncPool(DRIVER, params=PARAMS, loop=event_loop)
     await pool.connect()
     assert pool.is_connected() is True
@@ -180,7 +180,7 @@ async def test_cursor(conn, moveto, fetched, count, first, last):
 
 test_table = """ CREATE TABLE IF NOT EXISTS test.stores
 (
-  store_id integer NOT NULL,
+  store_id varchar NOT NULL,
   store_name character varying(60),
   CONSTRAINT test_stores_pkey PRIMARY KEY (store_id)
 )
@@ -197,11 +197,11 @@ async def test_cicle(conn):
         assert not error
         # create a store list:
         stores, error = await conn.query(
-            "SELECT store_id, store_name FROM walmart.stores LIMIT 1500"
+            "SELECT store_id, store_name FROM bestbuy.stores LIMIT 500"
         )
         st = [(k, v) for k, v in stores]
         # check the prepared sentences:
-        assert len(st) == 1500
+        assert len(st) == 500
         result, error = await conn.execute_many(
             "INSERT INTO test.stores (store_id, store_name) VALUES ($1, $2)", st
         )
@@ -216,7 +216,7 @@ async def test_cicle(conn):
             "SELECT store_id, store_name FROM test.stores"
         ):
             rows.append(record['store_id'])
-        assert len(rows) == 1500
+        assert len(rows) == 500
         # truncate the table
         result, error = await conn.execute("DELETE FROM test.stores")
         assert not error
@@ -227,7 +227,7 @@ async def test_cicle(conn):
             columns=["store_id", "store_name"],
             source=st,
         )
-        assert result == 'COPY 1500'
+        assert result == 'COPY 500'
         ## copying into a file-like object:
         file = BytesIO()
         file.seek(0)
@@ -238,7 +238,7 @@ async def test_cicle(conn):
             output=file,
         )
         assert result and file is not None
-        assert result == 'COPY 1500'
+        assert result == 'COPY 500'
         # drop the table
         drop, error = await conn.execute('DROP TABLE test.stores')
         assert drop == 'DROP TABLE'
@@ -271,13 +271,13 @@ async def test_huge_datasets(pooler):
         # a huge dataset:
         start = datetime.now()
         rows = 0
-        result, error = await conn.query('SELECT * FROM trocplaces.stores')
+        result, error = await conn.query('SELECT * FROM hisense.stores')
         assert not error
         rows += len(result)
         if not error:
             for row in result:
                 assert row is not None
-        result, error = await conn.query('SELECT * FROM troc.dashboards')
+        result, error = await conn.query('SELECT * FROM navigator.dashboards')
         assert not error
         rows += len(result)
         if not error:
@@ -294,43 +294,43 @@ async def test_formats(event_loop):
         assert db.is_connected() is True
         # first-format, native:
         conn.row_format('iterable')  # change output format to dict
-        result, error = await conn.query("SELECT * FROM walmart.stores")
+        result, error = await conn.query("SELECT * FROM bestbuy.stores")
         assert type(result) == list
         conn.output_format('json')  # change output format to json
-        result, error = await conn.query("SELECT * FROM walmart.stores")
+        result, error = await conn.query("SELECT * FROM bestbuy.stores")
         assert type(result) == str
         conn.output_format('pandas')  # change output format to pandas
-        result, error = await conn.query("SELECT * FROM walmart.stores")
+        result, error = await conn.query("SELECT * FROM bestbuy.stores")
         print(result)
         assert type(result) == pandas.core.frame.DataFrame
         # change output format to iter generator
         conn.output_format('iterable')
-        result, error = await conn.query("SELECT * FROM walmart.stores")
+        result, error = await conn.query("SELECT * FROM bestbuy.stores")
         print(result)
         # assert callable(result) # TODO: test method for generator exp
         conn.output_format('polars')  # change output format to iter generator
-        result, error = await conn.query("SELECT * FROM walmart.stores")
+        result, error = await conn.query("SELECT * FROM bestbuy.stores")
         print(result)
         assert type(result) == pl.DataFrame
         # change output format to iter generator
         conn.output_format('dt')
         # TODO: error when a python list is on a column
-        result, error = await conn.query("SELECT store_id, store_name FROM walmart.stores")
+        result, error = await conn.query("SELECT store_id, store_name FROM bestbuy.stores")
         print(result)
         print(type(result))
         assert type(result) == dt.Frame
-        # conn.output_format('csv')  # change output format to iter generator
-        # result, error = await conn.query("SELECT * FROM walmart.stores")
-        # assert type(result) == str
+        conn.output_format('csv')  # change output format to iter generator
+        result, error = await conn.query("SELECT * FROM bestbuy.stores")
+        assert type(result) == str
         # testing Record Object
         conn.output_format('record')   # change output format to iter generator
-        result, error = await conn.query("SELECT * FROM walmart.stores")
+        result, error = await conn.query("SELECT * FROM bestbuy.stores")
         assert type(result) == list
         for row in result:
             assert type(row) == Record
         # testing Recordset Object
         conn.output_format('recordset')  # change output format to ResultSet
-        result, error = await conn.query("SELECT * FROM walmart.stores")
+        result, error = await conn.query("SELECT * FROM bestbuy.stores")
         assert type(result) == Recordset
         # working with slices:
         obj = result[0:2]
