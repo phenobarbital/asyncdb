@@ -125,7 +125,10 @@ setup(
         "aiosqlite>=0.18.0",
         "looseversion==1.3.0",
         "aiofiles==24.1.0",
-        "pgvector==0.3.6"
+        "pgvector==0.3.6",
+        "google-cloud-bigquery==3.30.0",
+        "google-cloud-core==2.4.3",
+        "google-cloud-storage==3.1.0"
     ],
     extras_require={
         "uvloop": [
@@ -140,9 +143,9 @@ setup(
             "influxdb==5.3.2",
             "influxdb-client[async]==1.45.0",
             "pymssql==2.3.1",
-            "redis==5.0.8",
+            "redis==5.2.1",
             "deltalake==0.19.2",
-            "duckdb==1.2.0",
+            "duckdb==1.2.1",
         ],
         "dataframe": [
             "dask==2024.8.2",
@@ -152,7 +155,7 @@ setup(
             "pyarrow==19.0.1",
             "connectorx==0.4.2",
             "deltalake==0.19.2",
-            "duckdb==1.2.0",
+            "duckdb==1.2.1",
         ],
         "sqlite": [
             "aiosqlite>=0.18.0",
@@ -164,7 +167,7 @@ setup(
         "redis": [
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
-            "redis==5.0.8",
+            "redis==5.2.1",
             "objectpath==0.6.1",
         ],
         "rethinkdb": [
@@ -189,10 +192,10 @@ setup(
             "aioboto3==13.2.0"
         ],
         "bigquery": [
-          "google-cloud-bigquery==3.27.0",
-          "google-cloud-bigquery-storage==2.27.0",
-          "pandas-gbq==0.24.0",
-          "google-cloud-storage>=2.17.0"
+            "google-cloud-bigquery==3.30.0",
+            "google-cloud-bigquery-storage==2.29.1",
+            "pandas-gbq==0.28.0",
+            "google-cloud-storage>=2.17.0"
         ],
         "cassandra": [
             "cassandra-driver==3.29.2",
@@ -258,7 +261,7 @@ setup(
             "aiomcache==0.8.2",
             "jsonpath-rw==1.4.0",
             "jsonpath-rw-ext==1.2.2",
-            "redis==5.0.8",
+            "redis==5.2.1",
             "objectpath==0.6.1",
             "rethinkdb==2.4.10.post1",
             "aiopg==1.4.0",
@@ -284,7 +287,7 @@ setup(
             "oracledb==2.5.1",
             "hazelcast-python-client==5.4.0",
             "deltalake==0.19.2",
-            "duckdb==1.2.0",
+            "duckdb==1.2.1",
             "aiobotocore[boto3]==2.15.2",
             "aioboto3==13.2.0",
             "google-cloud-bigquery==3.25.0",

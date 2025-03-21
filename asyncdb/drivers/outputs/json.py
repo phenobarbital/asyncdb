@@ -1,3 +1,4 @@
+import pandas
 from ...utils.encoders import DefaultEncoder
 from .base import OutputFormat
 
@@ -12,5 +13,10 @@ class jsonFormat(OutputFormat):
     async def serialize(self, result, error, *args, **kwargs):
         if error:
             return (None, error)
-        dump = [dict(r) for r in result]
+        if isinstance(result, pandas.DataFrame):
+            dump = result.to_dict(orient="records")
+        elif isinstance(result, pandas.Series):
+            dump = result.to_dict()
+        else:
+            dump = [dict(r) for r in result]
         return (self._encoder.dumps(dump), error)

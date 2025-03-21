@@ -222,24 +222,28 @@ class bigquery(SQLDriver, ModelBackend):
                 f"BigQuery: Error truncating table `{dataset_id}.{table_id}`: {e}"
             ) from e
 
-    async def query(self, sentence: str, **kwargs):
+    async def query(self, sentence: str, factory: Optional[str] = None, **kwargs):
         if not self._connection:
             await self.connection()
         await self.valid_operation(sentence)
         self.start_timing()
-        self.output_format(kwargs.pop("factory", "native"))
+        if factory:
+            self.output_format(factory)
         error = None
         result = None
         try:
             job = self._connection.query(sentence, **kwargs)
-            result = job.result()  # Waits for the query to finish
+            if factory == 'pandas':
+                result = job.to_dataframe()
+            elif factory == 'tuple':
+                result = [tuple(row.values()) for row in job]
+            else:
+                result = job.result()
         except Exception as e:
             error = f"BigQuery: Error executing query: {e}"
         finally:
             self.generated_at()
-            if error:
-                return [None, error]
-            return await self._serializer(result, error)  # pylint: disable=W0150
+            return [None, error] if error else await self._serializer(result, error)
 
     async def queryrow(self, sentence: str):
         pass

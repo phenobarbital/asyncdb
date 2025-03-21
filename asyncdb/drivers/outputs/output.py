@@ -5,7 +5,7 @@ All Output formats supported by asyncdb.
 from importlib import import_module
 
 
-class OutputFactory(object):
+class OutputFactory:
     _format: dict = {}
 
     def __new__(cls, driver, frmt: str, *args, **kwargs):

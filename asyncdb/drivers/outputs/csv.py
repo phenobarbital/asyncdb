@@ -12,7 +12,10 @@ class csvFormat(OutputFormat):
     async def serialize(self, result, error, *args, **kwargs):
         df = None
         try:
-            df = pandas.DataFrame(data=result, **kwargs)
+            if isinstance(result, pandas.DataFrame):
+                df = result
+            else:
+                df = pandas.DataFrame(data=result, **kwargs)
             csv_buffer = StringIO()
             df.to_csv(csv_buffer)
             self._result = csv_buffer.getvalue()

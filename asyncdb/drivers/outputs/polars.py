@@ -1,6 +1,8 @@
 import logging
 import pandas
 import io
+from google.cloud.bigquery.table import RowIterator
+from pandas import DataFrame
 import polars as pl
 from .base import OutputFormat
 
@@ -45,9 +47,16 @@ class polarsFormat(OutputFormat):
     async def serialize(self, result, error, *args, **kwargs):
         df = None
         try:
-            result = [dict(row) for row in result]
-            a = pandas.DataFrame(data=result, **kwargs)
-            df = pl.from_pandas(a, **kwargs)
+            if isinstance(result, (RowIterator, list)):
+                data = [dict(row) for row in result]
+                a = pandas.DataFrame(data=data, **kwargs)
+                df = pl.from_pandas(a, **kwargs)
+            elif isinstance(result, DataFrame):
+                df = pl.from_pandas(result, **kwargs)
+            else:
+                result = [dict(row) for row in result]
+                a = pandas.DataFrame(data=result, **kwargs)
+                df = pl.from_pandas(a, **kwargs)
             self._result = df
         except ValueError as err:
             print(err)
