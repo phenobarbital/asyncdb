@@ -24,8 +24,20 @@ class pandasFormat(OutputFormat):
     async def serialize(self, result, error, *args, **kwargs):
         df = None
         try:
-            result = [dict(row) for row in result]
-            df = pandas.DataFrame(data=result, **kwargs)
+            if isinstance(result, pandas.DataFrame):
+                df = result
+            elif isinstance(result, Record):
+                result = [dict(result)]
+                df = pandas.DataFrame(data=result, **kwargs)
+            elif isinstance(result, list):
+                if len(result) == 0:
+                    error = Exception("Empty Data")
+                else:
+                    result = [dict(row) for row in result]
+                    df = pandas.DataFrame(data=result, **kwargs)
+            else:
+                result = [dict(row) for row in result]
+                df = pandas.DataFrame(data=result, **kwargs)
             self._result = df
         except pandas.errors.EmptyDataError as err:
             error = Exception(f"Error with Empty Data: error: {err}")

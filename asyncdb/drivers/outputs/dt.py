@@ -1,5 +1,6 @@
 import logging
 from io import StringIO
+import pandas
 import datatable as dt
 from .base import OutputFormat
 
@@ -35,8 +36,13 @@ class dtFormat(OutputFormat):
         if error:
             return (None, error)
         try:
-            data = [dict(row) for row in result]
-            df = dt.Frame(data, **kwargs)
+            if isinstance(result, dt.Frame):
+                df = result
+            elif isinstance(result, pandas.DataFrame):
+                df = dt.Frame(result)
+            else:
+                data = [dict(row) for row in result]
+                df = dt.Frame(data, **kwargs)
             self._result = df
         except ValueError as err:
             print(err)

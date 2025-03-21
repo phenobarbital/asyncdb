@@ -1,5 +1,7 @@
 import logging
 from io import StringIO
+import pandas
+from google.cloud.bigquery.table import RowIterator
 import pyarrow as pa
 import pyarrow.csv as pc
 from .base import OutputFormat
@@ -60,8 +62,16 @@ class arrowFormat(OutputFormat):
     async def serialize(self, result, error, *args, **kwargs):
         table = None
         try:
-            names = result[0].keys()
-            table = pa.Table.from_arrays(result, names=names, **kwargs)
+            if isinstance(result, RowIterator):
+                for chunk in arrow_parser(result.csv_stream, chunksize=1000):
+                    yield chunk
+            elif isinstance(result, pa.Table):
+                table = result
+            elif isinstance(result, pandas.DataFrame):
+                table = pa.Table.from_pandas(result, **kwargs)
+            else:
+                names = result[0].keys()
+                table = pa.Table.from_arrays(result, names=names, **kwargs)
             self._result = table
         except ValueError as err:
             logging.error(f"Arrow Serialization Error: {err}")

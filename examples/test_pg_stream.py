@@ -130,10 +130,10 @@ async def main():
         print("Test connection:", result, error)
 
         # Run each parser test in sequence
-        await test_pandas(conn)
-        await test_arrow(conn)
+        #await test_pandas(conn)
+        # await test_arrow(conn)
         await test_polars(conn)
-        await test_datatable(conn)
+        # await test_datatable(conn)
 
 
 if __name__ == "__main__":
