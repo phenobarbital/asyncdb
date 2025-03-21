@@ -69,7 +69,7 @@ async def test_pool_connect():
 
 
 async def test_huge_query(event_loop):
-    sql = 'SELECT * FROM trocplaces.stores LIMIT 1000'
+    sql = 'SELECT * FROM placerai.stores LIMIT 1000'
     db = AsyncDB(DRIVER, params=params)
     with db.connect() as conn:
         result, error = conn.perform("SET TIMEZONE TO 'America/New_York'")
