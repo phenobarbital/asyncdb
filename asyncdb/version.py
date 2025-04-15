@@ -3,7 +3,7 @@
 __title__ = "asyncdb"
 __description__ = "Library for Asynchronous data source connections \
     Collection of asyncio drivers."
-__version__ = "2.11.6"
+__version__ = "2.11.7"
 __copyright__ = "Copyright (c) 2020-2024 Jesus Lara"
 __author__ = "Jesus Lara"
 __author_email__ = "jesuslarag@gmail.com"
