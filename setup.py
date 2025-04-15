@@ -193,7 +193,7 @@ setup(
         ],
         "bigquery": [
             "google-cloud-bigquery==3.30.0",
-            "google-cloud-bigquery-storage==2.29.1",
+            "google-cloud-bigquery-storage==2.30.0",
             "pandas-gbq==0.28.0",
             "google-cloud-storage>=2.17.0"
         ],
@@ -222,7 +222,7 @@ setup(
             "elasticsearch[async]==8.15.1",
         ],
         "mongodb": [
-            "pymongo==4.11.1",
+            "pymongo==4.12.0",
             "motor==3.7.0",
         ],
         "msqlserver": [
@@ -277,7 +277,7 @@ setup(
             "pyodbc==5.2.0",
             "sqlalchemy[asyncio]==2.0.34",
             "elasticsearch[async]==8.15.1",
-            "pymongo==4.11.1",
+            "pymongo==4.12.0",
             "motor==3.7.0",
             "pymssql==2.3.1",
             "aiocouch==3.0.0",
@@ -290,7 +290,7 @@ setup(
             "duckdb==1.2.1",
             "aiobotocore[boto3]==2.15.2",
             "aioboto3==13.2.0",
-            "google-cloud-bigquery==3.25.0",
+            "google-cloud-bigquery==3.30.0",
             "google-cloud-storage>=2.17.0",
             "pandas-gbq==0.24.0",
             "tqdm==4.66.4"
