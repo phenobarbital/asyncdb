@@ -151,7 +151,7 @@ setup(
             "dask==2024.8.2",
             # 'datatable==1.1.0',
             # "python-datatable==1.1.3",  # TODO: not compatible 3.13
-            "polars==1.12.0",
+            "polars>=1.12.0,<=1.27.1",
             "pyarrow==19.0.1",
             "connectorx==0.4.2",
             "deltalake==0.19.2",
@@ -253,7 +253,7 @@ setup(
             "dask==2024.8.2",
             # "datatable==1.1.0",
             # "python-datatable==1.1.3",
-            "polars==1.12.0",
+            "polars>=1.12.0,<=1.27.1",
             "pyarrow==19.0.1",
             "connectorx==0.4.2",
             "aiosqlite>=0.18.0",
