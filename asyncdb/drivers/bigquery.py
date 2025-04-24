@@ -11,6 +11,7 @@ import aiofiles
 import pandas_gbq
 import pandas as pd
 import pyarrow
+import datetime
 from google.cloud import storage
 from google.cloud import bigquery as bq
 from google.cloud.exceptions import Conflict, NotFound
@@ -722,6 +723,12 @@ class bigquery(SQLDriver, ModelBackend):
                 continue  # no changes
             cols.append(name)  # pylint: disable=C0209
             datatype = field.type
+            if value is None:
+                # Convert None type to SQL NULL
+                value = "NULL"
+            elif isinstance(value, datetime.datetime):
+                # Convert datetime to SQL timestamp format
+                value = value.strftime('%Y-%m-%d %H:%M:%S.%f')
             value = Entity.escapeLiteral(value, datatype)
             source[name] = value
             n += 1
@@ -973,6 +980,12 @@ class bigquery(SQLDriver, ModelBackend):
             if name in _filter:
                 new_cond[name] = value
             datatype = field.type
+            if value is None:
+                # Convert None type to SQL NULL
+                value = "NULL"
+            elif isinstance(value, datetime.datetime):
+                # Convert datetime to SQL timestamp format
+                value = value.strftime('%Y-%m-%d %H:%M:%S.%f')
             value = Entity.escapeLiteral(value, datatype)
             source[name] = value
         try:
