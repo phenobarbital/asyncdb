@@ -3,8 +3,8 @@ Notes on Elastic Provider
 --------------------
 This provider implements a few subset of funcionalities from elasticsearch.
 TODO:
- - use jsonpath to query json-objects
- - implements lists and hash datatypes
+    - use jsonpath to query json-objects
+    - implements lists and hash datatypes
 """
 
 import asyncio
@@ -123,8 +123,12 @@ class elastic(BaseDriver):
             response = await self._connection.get(index=self._database, id=key)
             return response["_source"]
         except Exception as exc:
-            self._logger.error(f"Error getting document with ID {key}: {exc}")
-            raise DriverError(f"Error getting document with ID {key}: {exc}") from exc
+            self._logger.error(
+                f"Error getting document with ID {key}: {exc}"
+            )
+            raise DriverError(
+                f"Error getting document with ID {key}: {exc}"
+            ) from exc
 
     async def set(self, key: str, value: dict, **kwargs):
         """
@@ -133,8 +137,12 @@ class elastic(BaseDriver):
         try:
             await self._connection.index(index=self._database, id=key, document=value, **kwargs)
         except Exception as exc:
-            self._logger.error(f"Error setting document with ID {key}: {exc}")
-            raise DriverError(f"Error setting document with ID {key}: {exc}") from exc
+            self._logger.error(
+                f"Error setting document with ID {key}: {exc}"
+            )
+            raise DriverError(
+                f"Error setting document with ID {key}: {exc}"
+            ) from exc
 
     async def exists(self, key: str, *keys) -> bool:
         """
@@ -154,7 +162,9 @@ class elastic(BaseDriver):
             await self._connection.delete(index=self._database, id=key)
         except Exception as exc:
             self._logger.error(f"Error deleting document with ID {key}: {exc}")
-            raise DriverError(f"Error deleting document with ID {key}: {exc}") from exc
+            raise DriverError(
+                f"Error deleting document with ID {key}: {exc}"
+            ) from exc
 
     async def query(self, sentence: str, *args, **kwargs) -> Any:
         """

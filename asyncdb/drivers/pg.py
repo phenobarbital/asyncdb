@@ -1077,10 +1077,9 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             # a transaction exists:
             await self._transaction.commit()
         async with self.handle_copy_errors("Copy Into Table"):
-            result = await self._connection.copy_records_to_table(
+            return await self._connection.copy_records_to_table(
                 table_name=table, schema_name=schema, columns=columns, records=source
             )
-            return result
 
     ## Model Logic:
     async def column_info(self, tablename: str, schema: str = None):
