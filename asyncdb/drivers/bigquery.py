@@ -541,6 +541,35 @@ class bigquery(SQLDriver, ModelBackend):
         # table_ref = dataset_ref.table(table)
         # return bq.Table(table_ref)
 
+    def _get_param_type(self, value):
+        """
+        Determine the BigQuery parameter type based on Python value.
+        """
+        import datetime
+        
+        if value is None:
+            return 'STRING'
+        elif isinstance(value, bool):
+            return 'BOOL'
+        elif isinstance(value, int):
+            return 'INT64'
+        elif isinstance(value, float):
+            return 'FLOAT64'
+        elif isinstance(value, str):
+            return 'STRING'
+        elif isinstance(value, bytes):
+            return 'BYTES'
+        elif isinstance(value, datetime.datetime):
+            return 'TIMESTAMP'
+        elif isinstance(value, datetime.date):
+            return 'DATE'
+        elif isinstance(value, datetime.time):
+            return 'TIME'
+        # Add more type mappings as needed
+        else:
+            # Default to string for complex types
+            return 'STRING'
+        
     async def _insert_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """
         insert a row from model.
@@ -679,6 +708,7 @@ class bigquery(SQLDriver, ModelBackend):
         _filter = {}
         _updated = {}
         _primary = []
+        param_values = {}
         n = 1
         fields = _model.columns()
         for name, field in fields.items():
@@ -715,6 +745,7 @@ class bigquery(SQLDriver, ModelBackend):
             curval = _model.old_value(name)
             if pk := self._get_attribute(field, curval, attr="primary_key"):
                 _filter[column] = pk
+                param_values[f"where_{column}"] = curval
                 _primary.append(column)
             if pk := self._get_attribute(field, value, attr="primary_key"):
                 _updated[column] = pk
@@ -722,31 +753,141 @@ class bigquery(SQLDriver, ModelBackend):
             if curval == value:
                 continue  # no changes
             cols.append(name)  # pylint: disable=C0209
-            datatype = field.type
-            if value is None:
-                # Convert None type to SQL NULL
-                value = "NULL"
-            elif isinstance(value, datetime.datetime):
-                # Convert datetime to SQL timestamp format
-                value = value.strftime('%Y-%m-%d %H:%M:%S.%f')
-            value = Entity.escapeLiteral(value, datatype)
             source[name] = value
+            param_values[f"set_{column}"] = value  # For parameterized query
             n += 1
         try:
-            set_fields = ", ".join([f"{key} = {val}" for key, val in source.items()])
-            condition = self._where(fields, **_filter)
-            _update = f"UPDATE {table} SET {set_fields} {condition}"
+            # Obtain the table to access its schema
+            table_ref = self.get_table_ref(_model.Meta.schema, _model.Meta.name)
+            # Create a dictionary of column types
+            column_types = {}
+            for field in table_ref.schema:
+                field_type = field.field_type
+                # Detect arrays based on REPEATED mode
+                if field.mode == 'REPEATED':
+                    column_types[field.name] = f"ARRAY<{field_type}>"
+                elif field_type.startswith('ARRAY'):
+                    # Save both the array type and element type
+                    column_types[field.name] = field_type
+                elif field_type == 'INTEGER':
+                    column_types[field.name] = 'INT64'
+                elif field_type == 'FLOAT':
+                    column_types[field.name] = 'FLOAT64'
+                elif field_type == 'BOOLEAN':
+                    column_types[field.name] = 'BOOL'
+                else:
+                    column_types[field.name] = field_type
+            
+            # Build parameterized SET clause
+            set_clauses = []
+            for key in source:
+                set_clauses.append(f"{key} = @set_{key}")
+            set_clause = ", ".join(set_clauses)
+            
+            # Build parameterized WHERE clause
+            where_conditions = []
+            for key in _filter:
+                param_values[f"where_{key}"] = _filter[key]
+                where_conditions.append(f"{key} = @where_{key}")
+            
+            where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+            
+            # Create the parameterized query
+            _update = f"UPDATE {table} SET {set_clause}{where_clause}"
             self._logger.debug(f"UPDATE: {_update}")
-            job = self._connection.query(_update)
-            job.result()  # Waits for the query to finish
-        except Exception as err:
-            raise DriverError(message=f"Error on Update over table {_model.Meta.name}: {err!s}") from err
-        try:
-            condition = self._where(fields, **_updated)
-            _get = f"SELECT * FROM {table} {condition}"
-            job = self._connection.query(_get)
-            result = job.result()  # Waits for the query to finish
-            data = dict(next(iter(result)))
+            
+            # Create query job configuration with parameters
+            query_params = []
+            for param_name, param_value in param_values.items():
+                # Extract the column name from the parameter name (remove prefix)
+                if param_name.startswith('set_'):
+                    column_name = param_name[4:]  # Remove 'set_'
+                elif param_name.startswith('where_'):
+                    column_name = param_name[6:]  # Remove 'where_'
+                elif param_name.startswith('select_'):
+                    column_name = param_name[7:]  # Remove 'select_'
+                else:
+                    column_name = param_name
+                    
+                # Determine the type based on column type
+                if column_name in column_types:
+                    param_type = column_types[column_name]
+                    # For array types, we need special handling
+                    if param_type.startswith('ARRAY'):
+                        try:
+                            # Extract the internal type of the array (between < and >)
+                            inner_type = param_type[param_type.find('<')+1:param_type.find('>')]
+                            array_param = bq.ArrayQueryParameter(
+                                param_name,
+                                inner_type,  # The internal type of the array (STRING, INT64, etc.)
+                                []  # Empty array for NULL
+                            )
+                            query_params.append(array_param)
+                            continue  # Skip to next parameter
+                        except Exception:
+                            # Fallback to scalar if there's a problem
+                            param_type = 'STRING'
+                else:
+                    param_type = self._get_param_type(param_value)
+                    
+                query_params.append(bq.ScalarQueryParameter(param_name, param_type, param_value))
+                
+            job_config = bq.QueryJobConfig(query_parameters=query_params)
+            
+            # Execute the query with parameters
+            job = self._connection.query(_update, job_config=job_config)
+            job.result()  # Wait for completion
+            num_affected_rows = job.num_dml_affected_rows
+            self._logger.info(f"UPDATED rows: {num_affected_rows}")
+            
+            # Retrieve updated records
+            new_conditions = {**_filter, **_updated}
+            # Create new parameterized query for selection
+            select_params = []
+            select_conditions = []
+            select_param_values = {}
+            
+            for key, value in new_conditions.items():
+                select_param_values[f"select_{key}"] = value
+                select_conditions.append(f"{key} = @select_{key}")
+            
+            select_condition = " WHERE " + " AND ".join(select_conditions) if select_conditions else ""
+            
+            for param_name, param_value in select_param_values.items():
+                if param_name.startswith('select_'):
+                    column_name = param_name[7:]  # Remove 'select_'
+                else:
+                    column_name = param_name
+                
+                if param_value is None and column_name in column_types:
+                    param_type = column_types[column_name]
+                    # For array types, we need special handling
+                    if param_type.startswith('ARRAY'):
+                        # Create an empty array parameter with the correct type
+                        try:
+                            # Extract the internal type of the array (between < and >)
+                            inner_type = param_type[param_type.find('<')+1:param_type.find('>')]
+                            array_param = bq.ArrayQueryParameter(
+                                param_name,
+                                inner_type,  # The internal type of the array (STRING, INT64, etc.)
+                                []  # Empty array for NULL
+                            )
+                            select_params.append(array_param)
+                            continue  # Skip to next parameter
+                        except Exception:
+                            # Fallback to scalar if there's a problem
+                            param_type = 'STRING'
+                else:
+                    param_type = self._get_param_type(param_value)
+                
+                select_params.append(bq.ScalarQueryParameter(param_name, param_type, param_value))
+                
+            select_config = bq.QueryJobConfig(query_parameters=select_params)
+            
+            _all = f"SELECT * FROM {table}{select_condition}"
+            job = self._connection.query(_all, job_config=select_config)
+            result = job.result()
+            data = dict(next(iter(result))) if result.total_rows > 0 else {}
             _model.reset_values()
             for f, val in data.items():
                 setattr(_model, f, val)
@@ -953,6 +1094,7 @@ class bigquery(SQLDriver, ModelBackend):
         """
         Updating records using Model.
         """
+        param_values = {}
         try:
             model = kwargs["_model"]
         except KeyError as e:
@@ -977,30 +1119,142 @@ class bigquery(SQLDriver, ModelBackend):
                 continue
             ## getting the value of column:
             value = self._get_value(field, val)
+            column = name
             if name in _filter:
                 new_cond[name] = value
-            datatype = field.type
-            if value is None:
-                # Convert None type to SQL NULL
-                value = "NULL"
-            elif isinstance(value, datetime.datetime):
-                # Convert datetime to SQL timestamp format
-                value = value.strftime('%Y-%m-%d %H:%M:%S.%f')
-            value = Entity.escapeLiteral(value, datatype)
             source[name] = value
+            param_values[f"set_{name}"] = value  # For parameterized query
+        
         try:
-            set_fields = ", ".join([f"{key} = {val}" for key, val in source.items()])
-            condition = self._where(fields, **_filter)
-            _update = f"UPDATE {table} SET {set_fields} {condition}"
+            # Obtain the table to access its schema
+            table_ref = self.get_table_ref(model.Meta.schema, model.Meta.name)
+            # Create a dictionary of column types
+            column_types = {}
+            for field in table_ref.schema:
+                field_type = field.field_type
+                # Detect arrays based on REPEATED mode
+                if field.mode == 'REPEATED':
+                    column_types[field.name] = f"ARRAY<{field_type}>"
+                elif field_type.startswith('ARRAY'):
+                    # Save both the array type and element type
+                    column_types[field.name] = field_type
+                elif field_type == 'INTEGER':
+                    column_types[field.name] = 'INT64'
+                elif field_type == 'FLOAT':
+                    column_types[field.name] = 'FLOAT64'
+                elif field_type == 'BOOLEAN':
+                    column_types[field.name] = 'BOOL'
+                else:
+                    column_types[field.name] = field_type
+            
+            # Build parameterized SET clause
+            set_clauses = []
+            for key in source:
+                set_clauses.append(f"{key} = @set_{key}")
+            set_clause = ", ".join(set_clauses)
+            
+            # Build parameterized WHERE clause
+            where_conditions = []
+            for key in _filter:
+                param_values[f"where_{key}"] = _filter[key]
+                where_conditions.append(f"{key} = @where_{key}")
+            
+            where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+            
+            # Create the parameterized query
+            _update = f"UPDATE {table} SET {set_clause}{where_clause}"
             self._logger.debug(f"UPDATE: {_update}")
-            job = self._connection.query(_update)
-            job.result()  # Waits for the query to finish
+            
+            # Create query job configuration with parameters
+            query_params = []
+            for param_name, param_value in param_values.items():
+                # Extract the column name from the parameter name (remove prefix)
+                if param_name.startswith('set_'):
+                    column_name = param_name[4:]  # Remove 'set_'
+                elif param_name.startswith('where_'):
+                    column_name = param_name[6:]  # Remove 'where_'
+                elif param_name.startswith('select_'):
+                    column_name = param_name[7:]  # Remove 'select_'
+                else:
+                    column_name = param_name
+                    
+                # Determine the type based on column type
+                if column_name in column_types:
+                    param_type = column_types[column_name]
+                    # For array types, we need special handling
+                    if param_type.startswith('ARRAY'):
+                        try:
+                            # Extract the internal type of the array (between < and >)
+                            inner_type = param_type[param_type.find('<')+1:param_type.find('>')]
+                            array_param = bq.ArrayQueryParameter(
+                                param_name,
+                                inner_type,  # The internal type of the array (STRING, INT64, etc.)
+                                []  # Empty array for NULL
+                            )
+                            query_params.append(array_param)
+                            continue  # Skip to next parameter
+                        except Exception:
+                            # Fallback to scalar if there's a problem
+                            param_type = 'STRING'
+                else:
+                    param_type = self._get_param_type(param_value)
+                    
+                query_params.append(bq.ScalarQueryParameter(param_name, param_type, param_value))
+                
+            job_config = bq.QueryJobConfig(query_parameters=query_params)
+            
+            # Execute the query with parameters
+            job = self._connection.query(_update, job_config=job_config)
+            job.result()  # Wait for completion
             num_affected_rows = job.num_dml_affected_rows
-            print(f"UPDATED rows: {num_affected_rows}")
+            self._logger.info(f"UPDATED rows: {num_affected_rows}")
+            
+            # Retrieve updated records
             new_conditions = {**_filter, **new_cond}
-            condition = self._where(fields, **new_conditions)
-            _all = f"SELECT * FROM {table} {condition}"
-            job = self._connection.query(_all)
+            # Create new parameterized query for selection
+            select_params = []
+            select_conditions = []
+            select_param_values = {}
+            
+            for key, value in new_conditions.items():
+                select_param_values[f"select_{key}"] = value
+                select_conditions.append(f"{key} = @select_{key}")
+            
+            select_condition = " WHERE " + " AND ".join(select_conditions) if select_conditions else ""
+            
+            for param_name, param_value in select_param_values.items():
+                if param_name.startswith('select_'):
+                    column_name = param_name[7:]  # Remove 'select_'
+                else:
+                    column_name = param_name
+                
+                if param_value is None and column_name in column_types:
+                    param_type = column_types[column_name]
+                    # For array types, we need special handling
+                    if param_type.startswith('ARRAY'):
+                        # Create an empty array parameter with the correct type
+                        try:
+                            # Extract the internal type of the array (between < and >)
+                            inner_type = param_type[param_type.find('<')+1:param_type.find('>')]
+                            array_param = bq.ArrayQueryParameter(
+                                param_name,
+                                inner_type,  # The internal type of the array (STRING, INT64, etc.)
+                                []  # Empty array for NULL
+                            )
+                            select_params.append(array_param)
+                            continue  # Skip to next parameter
+                        except Exception:
+                            # Fallback to scalar if there's a problem
+                            param_type = 'STRING'
+                else:
+                    param_type = self._get_param_type(param_value)
+                
+                select_params.append(bq.ScalarQueryParameter(param_name, param_type, param_value))
+                
+            select_config = bq.QueryJobConfig(query_parameters=select_params)
+            
+            _all = f"SELECT * FROM {table}{select_condition}"
+            job = self._connection.query(_all, job_config=select_config)
             result = job.result()
             return [model(**dict(r)) for r in result]
         except Exception as err:
