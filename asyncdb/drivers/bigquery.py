@@ -63,7 +63,6 @@ class bigquery(SQLDriver, ModelBackend):
             else:
                 self.credentials = self._account
                 self._connection = bq.Client(project=self._project_id)
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(self._credentials)
         except Exception as e:
             raise DriverError(f"BigQuery: Error initializing client: {e}")
         return self
@@ -546,7 +545,7 @@ class bigquery(SQLDriver, ModelBackend):
         Determine the BigQuery parameter type based on Python value.
         """
         import datetime
-        
+
         if value is None:
             return 'STRING'
         elif isinstance(value, bool):
@@ -569,7 +568,7 @@ class bigquery(SQLDriver, ModelBackend):
         else:
             # Default to string for complex types
             return 'STRING'
-        
+
     async def _insert_(self, _model: Model, **kwargs):  # pylint: disable=W0613
         """
         insert a row from model.
@@ -777,25 +776,25 @@ class bigquery(SQLDriver, ModelBackend):
                     column_types[field.name] = 'BOOL'
                 else:
                     column_types[field.name] = field_type
-            
+
             # Build parameterized SET clause
             set_clauses = []
             for key in source:
                 set_clauses.append(f"{key} = @set_{key}")
             set_clause = ", ".join(set_clauses)
-            
+
             # Build parameterized WHERE clause
             where_conditions = []
             for key in _filter:
                 param_values[f"where_{key}"] = _filter[key]
                 where_conditions.append(f"{key} = @where_{key}")
-            
+
             where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
-            
+
             # Create the parameterized query
             _update = f"UPDATE {table} SET {set_clause}{where_clause}"
             self._logger.debug(f"UPDATE: {_update}")
-            
+
             # Create query job configuration with parameters
             query_params = []
             for param_name, param_value in param_values.items():
@@ -808,7 +807,7 @@ class bigquery(SQLDriver, ModelBackend):
                     column_name = param_name[7:]  # Remove 'select_'
                 else:
                     column_name = param_name
-                    
+
                 # Determine the type based on column type
                 if column_name in column_types:
                     param_type = column_types[column_name]
@@ -829,36 +828,36 @@ class bigquery(SQLDriver, ModelBackend):
                             param_type = 'STRING'
                 else:
                     param_type = self._get_param_type(param_value)
-                    
+
                 query_params.append(bq.ScalarQueryParameter(param_name, param_type, param_value))
-                
+
             job_config = bq.QueryJobConfig(query_parameters=query_params)
-            
+
             # Execute the query with parameters
             job = self._connection.query(_update, job_config=job_config)
             job.result()  # Wait for completion
             num_affected_rows = job.num_dml_affected_rows
             self._logger.info(f"UPDATED rows: {num_affected_rows}")
-            
+
             # Retrieve updated records
             new_conditions = {**_filter, **_updated}
             # Create new parameterized query for selection
             select_params = []
             select_conditions = []
             select_param_values = {}
-            
+
             for key, value in new_conditions.items():
                 select_param_values[f"select_{key}"] = value
                 select_conditions.append(f"{key} = @select_{key}")
-            
+
             select_condition = " WHERE " + " AND ".join(select_conditions) if select_conditions else ""
-            
+
             for param_name, param_value in select_param_values.items():
                 if param_name.startswith('select_'):
                     column_name = param_name[7:]  # Remove 'select_'
                 else:
                     column_name = param_name
-                
+
                 if param_value is None and column_name in column_types:
                     param_type = column_types[column_name]
                     # For array types, we need special handling
@@ -879,11 +878,11 @@ class bigquery(SQLDriver, ModelBackend):
                             param_type = 'STRING'
                 else:
                     param_type = self._get_param_type(param_value)
-                
+
                 select_params.append(bq.ScalarQueryParameter(param_name, param_type, param_value))
-                
+
             select_config = bq.QueryJobConfig(query_parameters=select_params)
-            
+
             _all = f"SELECT * FROM {table}{select_condition}"
             job = self._connection.query(_all, job_config=select_config)
             result = job.result()
@@ -1124,7 +1123,7 @@ class bigquery(SQLDriver, ModelBackend):
                 new_cond[name] = value
             source[name] = value
             param_values[f"set_{name}"] = value  # For parameterized query
-        
+
         try:
             # Obtain the table to access its schema
             table_ref = self.get_table_ref(model.Meta.schema, model.Meta.name)
@@ -1146,25 +1145,25 @@ class bigquery(SQLDriver, ModelBackend):
                     column_types[field.name] = 'BOOL'
                 else:
                     column_types[field.name] = field_type
-            
+
             # Build parameterized SET clause
             set_clauses = []
             for key in source:
                 set_clauses.append(f"{key} = @set_{key}")
             set_clause = ", ".join(set_clauses)
-            
+
             # Build parameterized WHERE clause
             where_conditions = []
             for key in _filter:
                 param_values[f"where_{key}"] = _filter[key]
                 where_conditions.append(f"{key} = @where_{key}")
-            
+
             where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
-            
+
             # Create the parameterized query
             _update = f"UPDATE {table} SET {set_clause}{where_clause}"
             self._logger.debug(f"UPDATE: {_update}")
-            
+
             # Create query job configuration with parameters
             query_params = []
             for param_name, param_value in param_values.items():
@@ -1177,7 +1176,7 @@ class bigquery(SQLDriver, ModelBackend):
                     column_name = param_name[7:]  # Remove 'select_'
                 else:
                     column_name = param_name
-                    
+
                 # Determine the type based on column type
                 if column_name in column_types:
                     param_type = column_types[column_name]
@@ -1198,36 +1197,36 @@ class bigquery(SQLDriver, ModelBackend):
                             param_type = 'STRING'
                 else:
                     param_type = self._get_param_type(param_value)
-                    
+
                 query_params.append(bq.ScalarQueryParameter(param_name, param_type, param_value))
-                
+
             job_config = bq.QueryJobConfig(query_parameters=query_params)
-            
+
             # Execute the query with parameters
             job = self._connection.query(_update, job_config=job_config)
             job.result()  # Wait for completion
             num_affected_rows = job.num_dml_affected_rows
             self._logger.info(f"UPDATED rows: {num_affected_rows}")
-            
+
             # Retrieve updated records
             new_conditions = {**_filter, **new_cond}
             # Create new parameterized query for selection
             select_params = []
             select_conditions = []
             select_param_values = {}
-            
+
             for key, value in new_conditions.items():
                 select_param_values[f"select_{key}"] = value
                 select_conditions.append(f"{key} = @select_{key}")
-            
+
             select_condition = " WHERE " + " AND ".join(select_conditions) if select_conditions else ""
-            
+
             for param_name, param_value in select_param_values.items():
                 if param_name.startswith('select_'):
                     column_name = param_name[7:]  # Remove 'select_'
                 else:
                     column_name = param_name
-                
+
                 if param_value is None and column_name in column_types:
                     param_type = column_types[column_name]
                     # For array types, we need special handling
@@ -1248,11 +1247,11 @@ class bigquery(SQLDriver, ModelBackend):
                             param_type = 'STRING'
                 else:
                     param_type = self._get_param_type(param_value)
-                
+
                 select_params.append(bq.ScalarQueryParameter(param_name, param_type, param_value))
-                
+
             select_config = bq.QueryJobConfig(query_parameters=select_params)
-            
+
             _all = f"SELECT * FROM {table}{select_condition}"
             job = self._connection.query(_all, job_config=select_config)
             result = job.result()
