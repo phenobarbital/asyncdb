@@ -292,8 +292,7 @@ setup(
             "aioboto3==13.2.0",
             "google-cloud-bigquery==3.30.0",
             "google-cloud-storage>=2.17.0",
-            "pandas-gbq==0.24.0",
-            "tqdm==4.66.4"
+            "pandas-gbq==0.24.0"
         ]
     },
     tests_require=[
