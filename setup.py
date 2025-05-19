@@ -182,7 +182,7 @@ setup(
         ],
         "mysql": [
             "asyncmy==0.2.9",
-            "mysqlclient==2.2.0"
+            "mysqlclient==2.2.7"
         ],
         "mariadb": [
             "aiomysql==0.2.0"
@@ -244,7 +244,7 @@ setup(
             "clickhouse-driver==0.2.9",
             "clickhouse-cityhash==1.0.2.4",
             "aiochclient[httpx-speedups]==2.6.0",
-            "clickhouse-connect==0.7.19"  # Support for SuperSet
+            "clickhouse-connect==0.8.13"  # Support for SuperSet
         ],
         "redpanda": [
             "aiokafka==0.11.0"
@@ -282,7 +282,7 @@ setup(
             "pymssql==2.3.1",
             "aiocouch==3.0.0",
             "asyncmy==0.2.9",
-            "mysqlclient==2.2.0",
+            "mysqlclient==2.2.7",
             "aiomysql==0.2.0",
             "oracledb==2.5.1",
             "hazelcast-python-client==5.4.0",
