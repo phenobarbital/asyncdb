@@ -145,7 +145,7 @@ setup(
             "pymssql==2.3.1",
             "redis==5.2.1",
             "deltalake==0.19.2",
-            "duckdb==1.2.1",
+            "duckdb==1.2.2",
         ],
         "dataframe": [
             "dask==2024.8.2",
@@ -155,7 +155,7 @@ setup(
             "pyarrow==19.0.1",
             "connectorx==0.4.2",
             "deltalake==0.19.2",
-            "duckdb==1.2.1",
+            "duckdb==1.2.2",
         ],
         "sqlite": [
             "aiosqlite>=0.18.0",
@@ -287,7 +287,7 @@ setup(
             "oracledb==2.5.1",
             "hazelcast-python-client==5.4.0",
             "deltalake==0.19.2",
-            "duckdb==1.2.1",
+            "duckdb==1.2.2",
             "aiobotocore[boto3]==2.15.2",
             "aioboto3==13.2.0",
             "google-cloud-bigquery==3.30.0",
