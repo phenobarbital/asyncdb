@@ -174,7 +174,6 @@ setup(
             "rethinkdb==2.4.10.post1",
         ],
         "postgres": [
-            "aiopg==1.4.0",
             "psycopg-binary>=3.1.8",
         ],
         "postgresql": [
@@ -264,7 +263,6 @@ setup(
             "redis==5.2.1",
             "objectpath==0.6.1",
             "rethinkdb==2.4.10.post1",
-            "aiopg==1.4.0",
             "psycopg-binary>=3.1.8",
             "cassandra-driver==3.29.2",
             "scylla_driver==3.26.9",
