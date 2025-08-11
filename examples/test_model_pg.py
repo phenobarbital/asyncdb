@@ -78,6 +78,8 @@ async def test_model(db):
             ("SVO", "Moscow Sheremétievo", "Moscow", "Russia"),
         ]
         for air in data:
+            print(Airport)
+            print('DATA > ', air)
             airport = Airport(*air)
             result = await airport.insert()
             print('INSERT: ', result)
@@ -94,6 +96,19 @@ async def test_model(db):
         print(' == Test Many ==')
         moscow = await Airport.filter(city='Moscow')
         for airport in moscow:
+            print(airport)
+        # OR Filter:
+        print(' == FILTER BY OR ==')
+        _filter = {
+            "where": {
+                "$or": [
+                    "country = 'United States'",
+                    "country = 'Russia'"
+                ]
+            }
+        }
+        ap = await Airport.filter(**_filter)
+        for airport in ap:
             print(airport)
         # test query SELECT
         print('== Test Query SELECT =')
