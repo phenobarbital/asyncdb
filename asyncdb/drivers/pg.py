@@ -1364,30 +1364,30 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         Returns one Row using Model.
         """
         try:
-            schema = ""
             sc = _model.Meta.schema
-            if sc:
-                schema = f"{sc}."
+            schema = f"{sc}." if sc else ""
             table = f"{schema}{_model.Meta.name}"
         except AttributeError:
             table = _model.__name__
         fields = _model.columns()
         _filter = {}
-        for name, field in fields.items():
-            if name in kwargs:
-                try:
-                    val = kwargs[name]
-                except AttributeError:
-                    continue
-                ## getting the value of column:
-                datatype = field.type
-                value = Entity.toSQL(val, datatype)
-                _filter[name] = value
-        condition = self._where(fields, **_filter)
+        if "where" in kwargs:
+            condition = self._where(fields, **kwargs["where"])
+        else:
+            for name, field in fields.items():
+                if name in kwargs:
+                    try:
+                        val = kwargs[name]
+                    except AttributeError:
+                        continue
+                    ## getting the value of column:
+                    datatype = field.type
+                    value = Entity.toSQL(val, datatype)
+                    _filter[name] = value
+            condition = self._where(fields, **_filter)
         _get = f"SELECT * FROM {table} {condition}"
         try:
-            result = await self._connection.fetchrow(_get)
-            return result
+            return await self._connection.fetchrow(_get)
         except Exception as e:
             raise DriverError(f"Error: Model Fetch over {table}: {e}") from e
 
@@ -1396,34 +1396,33 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         Filter a Model using Fields.
         """
         try:
-            schema = ""
             sc = _model.Meta.schema
-            if sc:
-                schema = f"{sc}."
+            schema = f"{sc}." if sc else ""
             table = f"{schema}{_model.Meta.name}"
         except AttributeError:
             table = _model.__name__
         fields = _model.columns(_model)
         _filter = {}
-        if args:
-            columns = ",".join(args)
+        columns = ",".join(args) if args else "*"
+
+        # NEW: allow a logical expression via "where"
+        if "where" in kwargs:
+            condition = self._where(fields, **kwargs["where"])
         else:
-            columns = "*"
-        for name, field in fields.items():
-            if name in kwargs:
-                try:
-                    val = kwargs[name]
-                except AttributeError:
-                    continue
-                ## getting the value of column:
-                datatype = field.type
-                value = Entity.toSQL(val, datatype)
-                _filter[name] = value
-        condition = self._where(fields, **_filter)
+            for name, field in fields.items():
+                if name in kwargs:
+                    try:
+                        val = kwargs[name]
+                    except AttributeError:
+                        continue
+                    ## getting the value of column:
+                    datatype = field.type
+                    value = Entity.toSQL(val, datatype)
+                    _filter[name] = value
+            condition = self._where(fields, **_filter)
         _get = f"SELECT {columns} FROM {table} {condition}"
         try:
-            result = await self._connection.fetch(_get)
-            return result
+            return await self._connection.fetch(_get)
         except Exception as e:
             raise DriverError(f"Error: Model GET over {table}: {e}") from e
 
@@ -1463,34 +1462,32 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         Get one row from model.
         """
         try:
-            schema = ""
             sc = _model.Meta.schema
-            if sc:
-                schema = f"{sc}."
+            schema = f"{sc}." if sc else ""
             table = f"{schema}{_model.Meta.name}"
         except AttributeError:
             table = _model.__name__
         fields = _model.columns(_model)
         _filter = {}
-        if args:
-            columns = ",".join(args)
+        columns = ",".join(args) if args else ",".join(fields)
+
+        if "where" in kwargs:
+            condition = self._where(fields, **kwargs["where"])
         else:
-            columns = ",".join(fields)  # getting only selected fields
-        for name, field in fields.items():
-            if name in kwargs:
-                try:
-                    val = kwargs[name]
-                except AttributeError:
-                    continue
-                ## getting the value of column:
-                datatype = field.type
-                value = Entity.toSQL(val, datatype)
-                _filter[name] = value
-        condition = self._where(fields, **_filter)
+            for name, field in fields.items():
+                if name in kwargs:
+                    try:
+                        val = kwargs[name]
+                    except AttributeError:
+                        continue
+                    ## getting the value of column:
+                    datatype = field.type
+                    value = Entity.toSQL(val, datatype)
+                    _filter[name] = value
+            condition = self._where(fields, **_filter)
         _get = f"SELECT {columns} FROM {table} {condition}"
         try:
-            result = await self._connection.fetchrow(_get)
-            return result
+            return await self._connection.fetchrow(_get)
         except Exception as e:
             raise DriverError(f"Error: Model GET over {table}: {e}") from e
 
@@ -1499,21 +1496,14 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         Get all rows on a Model.
         """
         try:
-            schema = ""
-            # sc = _model.Meta.schema
-            if sc := _model.Meta.schema:
-                schema = f"{sc}."
+            schema = f"{sc}." if (sc := _model.Meta.schema) else ""
             table = f"{schema}{_model.Meta.name}"
         except AttributeError:
             table = _model.__name__
-        if "fields" in kwargs:
-            columns = ",".join(kwargs["fields"])
-        else:
-            columns = "*"
+        columns = ",".join(kwargs["fields"]) if "fields" in kwargs else "*"
         _all = f"SELECT {columns} FROM {table}"
         try:
-            result = await self._connection.fetch(_all)
-            return result
+            return await self._connection.fetch(_all)
         except Exception as e:
             raise DriverError(f"Error: Model All over {table}: {e}") from e
 
@@ -1530,13 +1520,16 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             table = _model.__name__
         fields = _model.columns(_model)
         _filter = {}
-        for name, field in fields.items():
-            datatype = field.type
-            if name in kwargs:
-                val = kwargs[name]
-                value = Entity.toSQL(val, datatype)
-                _filter[name] = value
-        condition = self._where(fields, **_filter)
+        if "where" in kwargs:
+            condition = self._where(fields, **kwargs["where"])
+        else:
+            for name, field in fields.items():
+                datatype = field.type
+                if name in kwargs:
+                    val = kwargs[name]
+                    value = Entity.toSQL(val, datatype)
+                    _filter[name] = value
+            condition = self._where(fields, **_filter)
         _delete = f"DELETE FROM {table} {condition}"
         try:
             self._logger.debug(f"DELETE: {_delete}")
@@ -1562,9 +1555,8 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
         except AttributeError:
             table = model.__name__
         fields = model.columns(model)
-        if _filter is None:
-            if args:
-                _filter = args[0]
+        if _filter is None and args:
+            _filter = args[0]
         cols = []
         source = []
         new_cond = {}
