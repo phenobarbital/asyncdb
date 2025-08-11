@@ -125,7 +125,7 @@ setup(
         "aiosqlite>=0.18.0",
         "looseversion==1.3.0",
         "aiofiles==24.1.0",
-        "pgvector==0.3.6",
+        "pgvector==0.4.1",
         "google-cloud-bigquery==3.30.0",
         "google-cloud-core==2.4.3",
         "google-cloud-storage>=2.17.0"

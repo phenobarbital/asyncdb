@@ -74,13 +74,19 @@ class elastic(BaseDriver):
         args = {"timeout": self._timeout, **self.kwargs}
         try:
             # Use asyncio.wait_for to apply a timeout to the connection attempt
-            self._connection = await asyncio.wait_for(AsyncElasticsearch(hosts=self._dsn, **args), timeout=timeout)
+            self._connection = await asyncio.wait_for(
+                AsyncElasticsearch(hosts=self._dsn, **args), timeout=timeout
+            )
             self._connected = True
             return self
-        except asyncio.TimeoutError:
-            raise ConnectionTimeout(f"Elasticsearch connection timed out after {timeout} seconds")
+        except asyncio.TimeoutError as e:
+            raise ConnectionTimeout(
+                f"Elasticsearch connection timed out after {timeout} seconds"
+            ) from e
         except Exception as exc:
-            raise DriverError(f"Elasticsearch Connection Error: {exc}") from exc
+            raise DriverError(
+                f"Elasticsearch Connection Error: {exc}"
+            ) from exc
 
     def is_closed(self) -> bool:
         return self._connection is None
@@ -279,19 +285,30 @@ class elastic(BaseDriver):
         """
         try:
             actions = []
-            for sentence in sentences:
+            actions.extend(iter(sentences))
+            # for sentence in sentences:
                 # Assuming each sentence is a dict representing an action
                 # For example: {'_op_type': 'index', '_index': 'my-index', '_id': '1', '_source': {...}}
-                actions.append(sentence)
+            #    actions.append(sentence)
             if actions:
-                await self._connection.bulk(body=actions)
+                await self._connection.bulk(
+                    body=actions
+                )
         except Exception as exc:
-            self._logger.error(f"Error executing bulk operations: {exc}")
-            raise DriverError(f"Error executing bulk operations: {exc}") from exc
+            self._logger.error(
+                f"Error executing bulk operations: {exc}"
+            )
+            raise DriverError(
+                f"Error executing bulk operations: {exc}"
+            ) from exc
 
     async def fetchall(self, sentence: str, *args, **kwargs) -> Any:
         try:
-            response = await self._connection.search(index=self._database, body=sentence, **kwargs)
+            response = await self._connection.search(
+                index=self._database,
+                body=sentence,
+                **kwargs
+            )
             return response["hits"]["hits"]
         except Exception as exc:
             raise DriverError(f"Error executing query: {exc}") from exc
@@ -300,7 +317,12 @@ class elastic(BaseDriver):
 
     async def fetchone(self, sentence: str, *args, **kwargs) -> Any:
         try:
-            response = await self._connection.search(index=self._database, body=sentence, size=1, **kwargs)
+            response = await self._connection.search(
+                index=self._database,
+                body=sentence,
+                size=1,
+                **kwargs
+            )
             hits = response["hits"]["hits"]
             return hits[0] if hits else None
         except Exception as exc:
