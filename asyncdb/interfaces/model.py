@@ -137,13 +137,97 @@ class ModelBackend(ABC):
                 return value
         return None
 
+    def _condition_for_value(self, key: str, field: Field, value: Any) -> str:
+        """Leaf condition builder (supports small operator dicts)."""
+        datatype = field.type
+        # operator-object form: {"$in": [...]} etc.
+        if isinstance(value, dict):
+            parts = []
+            for op, val in value.items():
+                if op == "$in":
+                    values = ",".join(self._format_value(v) for v in val)
+                    parts.append(f"{key} IN ({values})")
+                elif op == "$nin":
+                    values = ",".join(self._format_value(v) for v in val)
+                    parts.append(f"{key} NOT IN ({values})")
+                elif op == "$ne":
+                    parts.append(f"{key} <> {Entity.escapeLiteral(val, datatype)}")
+                elif op == "$gt":
+                    parts.append(f"{key} > {Entity.escapeLiteral(val, datatype)}")
+                elif op == "$lt":
+                    parts.append(f"{key} < {Entity.escapeLiteral(val, datatype)}")
+                elif op == "$gte":
+                    parts.append(f"{key} >= {Entity.escapeLiteral(val, datatype)}")
+                elif op == "$lte":
+                    parts.append(f"{key} <= {Entity.escapeLiteral(val, datatype)}")
+                elif op == "$like":
+                    parts.append(f"{key} LIKE {self._format_value(val)}")
+                elif op == "$ilike":
+                    parts.append(f"{key} ILIKE {self._format_value(val)}")
+                elif op == "$is":
+                    if val is None or val in null_values:
+                        parts.append(f"{key} IS NULL")
+                    elif val in not_null_values:
+                        parts.append(f"{key} IS NOT NULL")
+                    else:
+                        parts.append(f"{key} IS {Entity.escapeLiteral(val, datatype)}")
+                else:
+                    parts.append(f"{key}={Entity.escapeLiteral(val, datatype)}")
+            return "(" + " AND ".join(parts) + ")"
+        # fallback to existing scalar/list handling:
+        return self._get_condition(key, field, value, datatype)
+
+    def _parse_where(self, fields: dict, where: Any) -> str:
+        """Recursive parser for {'$or': [...]} / {'$and': [...]} / {'$not': {...}} + leaves."""
+        if not where:
+            return ""
+        if isinstance(where, str):
+            s = where.strip()
+            return f"({s})" if s else ""
+        if isinstance(where, list):
+            inner = [self._parse_where(fields, w) for w in where]
+            inner = [c for c in inner if c]
+            return " AND ".join(inner)
+        if isinstance(where, dict):
+            parts = []
+            if "$or" in where:
+                ors = [self._parse_where(fields, w) for w in where["$or"]]
+                ors = [o for o in ors if o]
+                if ors:
+                    parts.append("(" + " OR ".join(ors) + ")")
+            if "$and" in where:
+                ands = [self._parse_where(fields, w) for w in where["$and"]]
+                ands = [a for a in ands if a]
+                if ands:
+                    parts.append("(" + " AND ".join(ands) + ")")
+            if "$not" in where:
+                if not_part := self._parse_where(fields, where["$not"]):
+                    parts.append(f"(NOT {not_part})")
+            # plain field conditions at this level are ANDed
+            for k, v in where.items():
+                if k.startswith("$"):
+                    continue
+                if k in fields:
+                    parts.append(self._condition_for_value(k, fields[k], v))
+            return " AND ".join(parts)
+        return ""
+
     def _where(self, fields: dict[Field], **where):
         """
-        TODO: add conditions for BETWEEN, NOT NULL, NULL, etc
-           Re-think functionality for parsing where conditions.
+        Build WHERE clause. Backwards compatible:
+        - Plain kwargs -> ANDed (previous behavior)
+        - If logical ops present -> use recursive parser
         """
         if not fields or not where or not isinstance(where, dict):
             return ""
+        # If using the logical mini-DSL:
+        if any(
+            k.startswith("$") for k in where.keys()) or any(isinstance(v, (dict, list)) for v in where.values()
+        ):
+            expr = self._parse_where(fields, where)
+            return f"\nWHERE {expr}" if expr else ""
+
+        # Previous behavior (all AND)
         _cond = []
         for k, v in where.items():
             f = fields[k]
@@ -151,8 +235,8 @@ class ModelBackend(ABC):
             condition = self._get_condition(k, f, v, datatype)
             _cond.append(condition)
         _and = " AND ".join(_cond)
-        result = f"\nWHERE {_and}"
-        return result
+        return f"\nWHERE {_and}"
+
 
     def _get_condition(self, key: str, field: Field, value: Any, datatype: Any) -> str:
         condition = ""
