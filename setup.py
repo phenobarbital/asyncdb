@@ -148,7 +148,7 @@ setup(
             "duckdb==1.2.2",
         ],
         "dataframe": [
-            "dask==2024.8.2",
+            "dask==2025.9.0",
             # 'datatable==1.1.0',
             # "python-datatable==1.1.3",  # TODO: not compatible 3.13
             "polars>=1.12.0,<=1.27.1",
@@ -249,7 +249,7 @@ setup(
             "aiokafka==0.11.0"
         ],
         "all": [
-            "dask==2024.8.2",
+            "dask==2025.9.0",
             # "datatable==1.1.0",
             # "python-datatable==1.1.3",
             "polars>=1.12.0,<=1.27.1",
