@@ -1589,3 +1589,449 @@ FOR doc IN {collection}
         )
 
         return graph_name
+
+    async def create_arangosearch_view(
+        self,
+        view_name: str,
+        links: Dict[str, Dict],
+        primary_sort: List[Dict] = None,
+        stored_values: List[List[str]] = None,
+        **kwargs
+    ) -> Any:
+        """
+        Create an ArangoSearch view for full-text and vector search.
+
+        Args:
+            view_name: Name of the view
+            links: Dictionary mapping collection names to their field configurations
+            primary_sort: Optional primary sort order
+            stored_values: Optional fields to store in the view
+
+        Example:
+            links = {
+                'documents': {
+                    'fields': {
+                        'title': {'analyzers': ['text_en']},
+                        'content': {'analyzers': ['text_en']},
+                        'embedding': {'analyzers': ['identity']}
+                    }
+                }
+            }
+        """
+        try:
+            # Check if view exists
+            if view_name in [v['name'] for v in self._connection.views()]:
+                self._logger.warning(f"View {view_name} already exists")
+                return self._connection.view(view_name)
+
+            properties = {
+                'links': links
+            }
+
+            if primary_sort:
+                properties['primarySort'] = primary_sort
+
+            if stored_values:
+                properties['storedValues'] = stored_values
+
+            # Add any additional properties
+            properties.update(kwargs)
+
+            view = self._connection.create_view(
+                name=view_name,
+                view_type='arangosearch',
+                properties=properties
+            )
+
+            self._logger.info(f"ArangoSearch view '{view_name}' created")
+            return view
+
+        except Exception as err:
+            raise DriverError(f"Error creating ArangoSearch view: {err}") from err
+
+    async def update_arangosearch_view(
+        self,
+        view_name: str,
+        links: Dict[str, Dict] = None,
+        **kwargs
+    ) -> bool:
+        """
+        Update an existing ArangoSearch view.
+
+        Args:
+            view_name: Name of the view to update
+            links: Updated link configurations
+            **kwargs: Additional properties to update
+        """
+        try:
+            view = self._connection.view(view_name)
+
+            properties = {}
+            if links:
+                properties['links'] = links
+            properties.update(kwargs)
+
+            view.replace_properties(properties)
+
+            self._logger.info(f"ArangoSearch view '{view_name}' updated")
+            return True
+
+        except Exception as err:
+            raise DriverError(f"Error updating ArangoSearch view: {err}") from err
+
+    async def drop_arangosearch_view(self, view_name: str) -> bool:
+        """Drop an ArangoSearch view."""
+        try:
+            self._connection.delete_view(view_name)
+            self._logger.info(f"ArangoSearch view '{view_name}' dropped")
+            return True
+        except Exception as err:
+            raise DriverError(f"Error dropping ArangoSearch view: {err}") from err
+
+    async def arangosearch(
+        self,
+        view_name: str,
+        search_expression: str = None,
+        filter_conditions: List[str] = None,
+        sort_by: List[Dict] = None,
+        limit: int = 10,
+        offset: int = 0,
+        bind_vars: Dict = None,
+        **kwargs
+    ) -> List[Dict]:
+        """
+        Perform an ArangoSearch query.
+
+        Args:
+            view_name: Name of the ArangoSearch view
+            search_expression: SEARCH expression (AQL syntax)
+            filter_conditions: Additional FILTER conditions
+            sort_by: Sorting criteria
+            limit: Maximum results
+            offset: Skip first N results
+            bind_vars: Bind variables for the query
+
+        Example:
+            results = await db.arangosearch(
+                'documents_view',
+                search_expression="ANALYZER(doc.title IN TOKENS(@query, 'text_en'), 'text_en')",
+                sort_by=[{'field': 'BM25(doc)', 'direction': 'DESC'}],
+                bind_vars={'query': 'machine learning'},
+                limit=10
+            )
+        """
+        try:
+            # Build SEARCH clause
+            search_clause = ""
+            if search_expression:
+                search_clause = f"SEARCH {search_expression}"
+
+            # Build FILTER clauses
+            filter_clause = ""
+            if filter_conditions:
+                filter_clause = "\n".join(f"FILTER {cond}" for cond in filter_conditions)
+
+            # Build SORT clause
+            sort_clause = ""
+            if sort_by:
+                sorts = []
+                for sort_item in sort_by:
+                    field = sort_item.get('field', '')
+                    direction = sort_item.get('direction', 'ASC')
+                    sorts.append(f"{field} {direction}")
+                sort_clause = f"SORT {', '.join(sorts)}"
+
+            # Build complete query
+            query = f"""
+            FOR doc IN {view_name}
+                {search_clause}
+                {filter_clause}
+                {sort_clause}
+                LIMIT @offset, @limit
+                RETURN doc
+            """
+
+            # Add offset and limit to bind vars
+            if bind_vars is None:
+                bind_vars = {}
+            bind_vars['offset'] = offset
+            bind_vars['limit'] = limit
+
+            results, error = await self.query(query, bind_vars=bind_vars)
+
+            if error:
+                raise DriverError(f"ArangoSearch query error: {error}")
+
+            return results
+
+        except Exception as err:
+            raise DriverError(f"Error performing ArangoSearch: {err}") from err
+
+    async def vector_search(
+        self,
+        view_name: str,
+        collection: str,
+        query_vector: List[float],
+        vector_field: str = 'embedding',
+        top_k: int = 10,
+        filter_conditions: List[str] = None,
+        include_similarity: bool = True,
+        **kwargs
+    ) -> List[Dict]:
+        """
+        Perform vector similarity search using ArangoSearch.
+
+        Args:
+            view_name: ArangoSearch view name
+            collection: Collection name within the view
+            query_vector: Query embedding vector
+            vector_field: Field name containing embeddings
+            top_k: Number of nearest neighbors
+            filter_conditions: Additional filters
+            include_similarity: Include similarity score in results
+
+        Example:
+            results = await db.vector_search(
+                'embeddings_view',
+                'documents',
+                query_vector=[0.1, 0.2, ...],
+                top_k=5,
+                filter_conditions=["doc.category == 'research'"]
+            )
+        """
+        try:
+            # Build filter clause
+            filter_clause = ""
+            if filter_conditions:
+                filter_clause = "\n".join(f"FILTER {cond}" for cond in filter_conditions)
+
+            # Calculate cosine similarity
+            similarity_calc = f"""
+            LET dotProduct = SUM(
+                FOR i IN 0..LENGTH(doc.{vector_field})-1
+                    RETURN doc.{vector_field}[i] * @query_vector[i]
+            )
+            LET docMagnitude = SQRT(SUM(
+                FOR val IN doc.{vector_field}
+                    RETURN val * val
+            ))
+            LET queryMagnitude = SQRT(SUM(
+                FOR val IN @query_vector
+                    RETURN val * val
+            ))
+            LET similarity = dotProduct / (docMagnitude * queryMagnitude)
+            """
+
+            # Build query
+            if include_similarity:
+                return_clause = """
+                RETURN {
+                    document: doc,
+                    similarity: similarity
+                }
+                """
+            else:
+                return_clause = "RETURN doc"
+
+            query = f"""
+            FOR doc IN {view_name}
+                SEARCH doc.{vector_field} != null
+                {filter_clause}
+                {similarity_calc}
+                FILTER similarity > 0
+                SORT similarity DESC
+                LIMIT @top_k
+                {return_clause}
+            """
+
+            bind_vars = {
+                'query_vector': query_vector,
+                'top_k': top_k
+            }
+
+            results, error = await self.query(query, bind_vars=bind_vars)
+
+            if error:
+                raise DriverError(f"Vector search error: {error}")
+
+            return results
+
+        except Exception as err:
+            raise DriverError(f"Error performing vector search: {err}") from err
+
+    async def fulltext_search(
+        self,
+        view_name: str,
+        query_text: str,
+        fields: List[str] = None,
+        analyzer: str = 'text_en',
+        top_k: int = 10,
+        min_score: float = 0.0,
+        **kwargs
+    ) -> List[Dict]:
+        """
+        Perform full-text search using ArangoSearch.
+
+        Args:
+            view_name: ArangoSearch view name
+            query_text: Search query text
+            fields: Fields to search (if None, searches all)
+            analyzer: Text analyzer to use
+            top_k: Maximum results
+            min_score: Minimum BM25 score threshold
+
+        Example:
+            results = await db.fulltext_search(
+                'documents_view',
+                'machine learning algorithms',
+                fields=['title', 'content'],
+                analyzer='text_en',
+                top_k=20
+            )
+        """
+        try:
+            # Build SEARCH expression for multiple fields
+            if fields:
+                search_conditions = []
+                for field in fields:
+                    search_conditions.append(
+                        f"ANALYZER(doc.{field} IN TOKENS(@query_text, @analyzer), @analyzer)"
+                    )
+                search_expr = " OR ".join(search_conditions)
+            else:
+                search_expr = "PHRASE(doc, @query_text, @analyzer)"
+
+            query = f"""
+            FOR doc IN {view_name}
+                SEARCH {search_expr}
+                LET score = BM25(doc)
+                FILTER score >= @min_score
+                SORT score DESC
+                LIMIT @top_k
+                RETURN {{
+                    document: doc,
+                    score: score
+                }}
+            """
+
+            bind_vars = {
+                'query_text': query_text,
+                'analyzer': analyzer,
+                'min_score': min_score,
+                'top_k': top_k
+            }
+
+            results, error = await self.query(query, bind_vars=bind_vars)
+
+            if error:
+                raise DriverError(f"Full-text search error: {error}")
+
+            return results
+
+        except Exception as err:
+            raise DriverError(f"Error performing full-text search: {err}") from err
+
+    async def hybrid_search(
+        self,
+        view_name: str,
+        collection: str,
+        query_text: str,
+        query_vector: List[float] = None,
+        text_fields: List[str] = None,
+        vector_field: str = 'embedding',
+        text_weight: float = 0.5,
+        vector_weight: float = 0.5,
+        analyzer: str = 'text_en',
+        top_k: int = 10,
+        **kwargs
+    ) -> List[Dict]:
+        """
+        Perform hybrid search combining full-text and vector similarity.
+
+        Args:
+            view_name: ArangoSearch view name
+            collection: Collection name
+            query_text: Search query text
+            query_vector: Query embedding (optional)
+            text_fields: Fields for text search
+            vector_field: Field containing embeddings
+            text_weight: Weight for text score (0-1)
+            vector_weight: Weight for vector similarity (0-1)
+            analyzer: Text analyzer
+            top_k: Maximum results
+
+        Example:
+            results = await db.hybrid_search(
+                'documents_view',
+                'documents',
+                query_text='neural networks',
+                query_vector=embedding,
+                text_fields=['title', 'abstract'],
+                text_weight=0.4,
+                vector_weight=0.6,
+                top_k=10
+            )
+        """
+        try:
+            # Build text search
+            if text_fields:
+                text_conditions = []
+                for field in text_fields:
+                    text_conditions.append(
+                        f"ANALYZER(doc.{field} IN TOKENS(@query_text, @analyzer), @analyzer)"
+                    )
+                text_search = " OR ".join(text_conditions)
+            else:
+                text_search = "PHRASE(doc, @query_text, @analyzer)"
+
+            # Build vector similarity calculation
+            vector_calc = ""
+            if query_vector:
+                vector_calc = f"""
+                LET dotProduct = SUM(
+                    FOR i IN 0..LENGTH(doc.{vector_field})-1
+                        RETURN doc.{vector_field}[i] * @query_vector[i]
+                )
+                LET docMag = SQRT(SUM(FOR v IN doc.{vector_field} RETURN v * v))
+                LET queryMag = SQRT(SUM(FOR v IN @query_vector RETURN v * v))
+                LET vectorSim = dotProduct / (docMag * queryMag)
+                """
+            else:
+                vector_calc = "LET vectorSim = 0"
+
+            query = f"""
+            FOR doc IN {view_name}
+                SEARCH {text_search}
+                LET textScore = BM25(doc)
+                {vector_calc}
+                LET combinedScore = (@text_weight * textScore) + (@vector_weight * vectorSim)
+                SORT combinedScore DESC
+                LIMIT @top_k
+                RETURN {{
+                    document: doc,
+                    combined_score: combinedScore,
+                    text_score: textScore,
+                    vector_similarity: vectorSim
+                }}
+            """
+
+            bind_vars = {
+                'query_text': query_text,
+                'analyzer': analyzer,
+                'text_weight': text_weight,
+                'vector_weight': vector_weight,
+                'top_k': top_k
+            }
+
+            if query_vector:
+                bind_vars['query_vector'] = query_vector
+
+            results, error = await self.query(query, bind_vars=bind_vars)
+
+            if error:
+                raise DriverError(f"Hybrid search error: {error}")
+
+            return results
+
+        except Exception as err:
+            raise DriverError(f"Error performing hybrid search: {err}") from err

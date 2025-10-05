@@ -521,6 +521,117 @@ async def example_error_handling():
     finally:
         await db.close()
 
+async def example_arangosearch():
+    """
+    Example: ArangoSearch for full-text and vector search
+    """
+    print("\n=== Example: ArangoSearch ===\n")
+
+    db = arangodb(
+        params={
+            'host': 'localhost',
+            'port': 8529,
+            'username': 'root',
+            'password': '12345678',
+            'database': 'navigator'
+        }
+    )
+
+    await db.connection()
+
+    # Clean up
+    try:
+        await db.drop_arangosearch_view('articles_search')
+        await db.drop_collection('articles')
+    except Exception:
+        pass
+
+    # Create collection
+    await db.create_collection('articles')
+
+    # Insert sample documents with embeddings
+    import random
+    articles = [
+        {
+            '_key': 'art1',
+            'title': 'Introduction to Machine Learning',
+            'content': 'Machine learning is a subset of artificial intelligence...',
+            'category': 'AI',
+            'embedding': [random.random() for _ in range(128)]
+        },
+        {
+            '_key': 'art2',
+            'title': 'Deep Learning Fundamentals',
+            'content': 'Deep learning uses neural networks with multiple layers...',
+            'category': 'AI',
+            'embedding': [random.random() for _ in range(128)]
+        },
+        {
+            '_key': 'art3',
+            'title': 'Python Programming Guide',
+            'content': 'Python is a versatile programming language...',
+            'category': 'Programming',
+            'embedding': [random.random() for _ in range(128)]
+        }
+    ]
+
+    for article in articles:
+        await db.insert_document('articles', article)
+
+    # Create ArangoSearch view
+    links = {
+        'articles': {
+            'fields': {
+                'title': {'analyzers': ['text_en']},
+                'content': {'analyzers': ['text_en']},
+                'category': {'analyzers': ['identity']},
+                'embedding': {'analyzers': ['identity']}
+            }
+        }
+    }
+
+    await db.create_arangosearch_view('articles_search', links)
+
+    print("1. Full-text search:")
+    results = await db.fulltext_search(
+        'articles_search',
+        'machine learning',
+        fields=['title', 'content'],
+        top_k=5
+    )
+    for r in results:
+        print(f"   - {r['document']['title']} (score: {r['score']:.2f})")
+
+    print("\n2. Vector search:")
+    query_embedding = [random.random() for _ in range(128)]
+    results = await db.vector_search(
+        'articles_search',
+        'articles',
+        query_embedding,
+        top_k=3
+    )
+    for r in results:
+        print(f"   - {r['document']['title']} (similarity: {r['similarity']:.4f})")
+
+    print("\n3. Hybrid search:")
+    results = await db.hybrid_search(
+        'articles_search',
+        'articles',
+        query_text='neural networks',
+        query_vector=query_embedding,
+        text_fields=['title', 'content'],
+        text_weight=0.6,
+        vector_weight=0.4,
+        top_k=3
+    )
+    for r in results:
+        print(f"   - {r['document']['title']}")
+        print(f"     Combined: {r['combined_score']:.4f}, "
+              f"Text: {r['text_score']:.4f}, "
+              f"Vector: {r['vector_similarity']:.4f}")
+
+    await db.close()
+
 
 async def main():
     """
@@ -534,6 +645,7 @@ async def main():
     await example_semantic_search()
     await example_build_graph_from_documents()
     await example_error_handling()
+    await example_arangosearch()
 
     print("\n=== All examples completed ===")
 
