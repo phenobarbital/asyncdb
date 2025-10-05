@@ -199,6 +199,12 @@ setup(
         "cassandra": [
             "cassandra-driver==3.29.2",
         ],
+        "arangodb": [
+            "networkx==3.5",
+            "pyjwt==2.10.1",
+            "python-arango==8.2.2",
+            "scipy==1.16.2"
+        ],
         "influxdb": [
             "influxdb==5.3.2",
             "influxdb-client[async]==1.45.0",
