@@ -225,6 +225,7 @@ setup(
         ],
         "elasticsearch": [
             "elasticsearch[async]==8.15.1",
+            "opensearch-py==3.1.0"
         ],
         "mongodb": [
             "pymongo==4.12.0",
