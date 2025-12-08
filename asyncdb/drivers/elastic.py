@@ -66,7 +66,6 @@ class elastic(BaseDriver):
         self._client_type = kwargs.pop("client_type", "auto")
         super(elastic, self).__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         self.kwargs = kwargs  # extra args for the client connection
-        print('DSN > ', self._dsn)
 
     def create_dsn(self, params: Union[dict, ElasticConfig]) -> str:
         if isinstance(params, ElasticConfig):
