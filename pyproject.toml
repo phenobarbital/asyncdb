@@ -1,44 +1,249 @@
 [build-system]
 requires = [
-    'setuptools==74.0.0',
-    'Cython==3.0.11',
-    'wheel==0.44.0'
+    "setuptools>=67.6.1",
+    "setuptools_scm[toml]>=3.4",
+    "Cython==3.0.11",
+    "wheel>=0.44.0",
+    "navconfig>=1.7.0",
 ]
 build-backend = "setuptools.build_meta"
 
-[tool.flit.metadata]
-module = "asyncdb"
-author = "Jesus Lara Gimenez"
-author-email = "jesuslarag@gmail.com"
-home-page = "https://github.com/phenobarbital/asyncdb"
-classifiers=[
-  "Development Status :: 4 - Beta",
-  "Intended Audience :: Developers",
-  "Intended Audience :: System Administrators",
-  "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python",
-  "Typing :: Typed",
-  "Environment :: Web Environment",
-  "Framework :: AsyncIO",
-  "Topic :: Software Development :: Libraries :: Application Frameworks",
-  "Topic :: Software Development :: Libraries :: Python Modules",
-  "Topic :: Software Development :: Build Tools",
-  "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
-  "Topic :: Internet :: WWW/HTTP",
-  "License :: OSI Approved :: BSD License",
+[project]
+name = "asyncdb"
+dynamic = ["version"]
+description = "Asynchronous library for data source connections, used by Navigator."
+authors = [
+    {name = "Jesus Lara", email = "jesuslara@phenobarbital.info"}
 ]
-description-file = "README.md"
-requires-python = ">=3.10.0"
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+requires-python = ">=3.10"
+keywords = [
+    "asyncio",
+    "asyncpg",
+    "aioredis",
+    "aiomcache",
+    "cassandra",
+    "scylladb",
+    "database",
+    "navigator"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Environment :: Web Environment",
+    "License :: OSI Approved :: BSD License",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Database :: Front-Ends",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Framework :: AsyncIO",
+]
+
+dependencies = [
+    "cryptography>=43.0.1",
+    "aiohttp>=3.9.5",
+    "asyncpg==0.30.0",
+    "asyncio>=3.4.3",
+    "pandas>=2.2.3",
+    "xlrd==2.0.1",
+    "openpyxl==3.1.2",
+    "lz4==4.3.2",
+    "charset-normalizer>=2.0.7",
+    "iso8601==2.1.0",
+    "python-magic==0.4.27",
+    "dateparser==1.1.8",
+    "python-datamodel>=0.7.0",
+    "aiosqlite>=0.18.0",
+    "looseversion==1.3.0",
+    "aiofiles==24.1.0",
+    "pgvector==0.4.1",
+    "google-cloud-bigquery>=3.30.0",
+    "google-cloud-core>=2.4.3",
+    "google-cloud-storage>=2.17.0"
+]
+
+[project.optional-dependencies]
+uvloop = [
+    "uvloop==0.21.0"
+]
+default = [
+    "pylibmc==1.6.3",
+    "aiomcache==0.8.2",
+    "aiosqlite>=0.18.0",
+    "cassandra-driver==3.29.2",
+    "rethinkdb==2.4.10.post1",
+    "influxdb==5.3.2",
+    "influxdb-client[async]==1.45.0",
+    "pymssql==2.3.1",
+    "redis==5.2.1",
+    "deltalake==0.19.2",
+    "duckdb==1.2.2",
+]
+dataframe = [
+    "dask==2024.8.2",
+    "polars>=1.12.0",
+    "pyarrow==19.0.1",
+    "connectorx==0.4.2",
+    "deltalake==0.19.2",
+    "duckdb==1.2.2",
+]
+sqlite = [
+    "aiosqlite>=0.18.0",
+]
+memcache = [
+    "pylibmc==1.6.3",
+    "aiomcache==0.8.2",
+]
+redis = [
+    "jsonpath-rw==1.4.0",
+    "jsonpath-rw-ext==1.2.2",
+    "redis==5.2.1",
+    "objectpath==0.6.1",
+]
+rethinkdb = [
+    "rethinkdb==2.4.10.post1",
+]
+postgres = [
+    "psycopg-binary>=3.1.8",
+]
+postgresql = [
+    "psycopg[binary,pool]>=3.1.8",
+]
+mysql = [
+    "asyncmy==0.2.9",
+    "mysqlclient==2.2.7"
+]
+mariadb = [
+    "aiomysql==0.2.0"
+]
+boto3 = [
+    "aiobotocore[boto3]==2.15.2",
+    "aioboto3==13.2.0"
+]
+bigquery = [
+    "google-cloud-bigquery>=3.30.0",
+    "google-cloud-bigquery-storage==2.30.0",
+    "pandas-gbq==0.29.0",
+    "google-cloud-storage>=2.17.0"
+]
+cassandra = [
+    "cassandra-driver==3.29.2",
+]
+arangodb = [
+    "networkx==3.4.2",
+    "pyjwt==2.10.1",
+    "python-arango==8.2.2",
+    "scipy==1.15.1"
+]
+influxdb = [
+    "influxdb==5.3.2",
+    "influxdb-client[async]==1.45.0",
+]
+odbc = [
+    "aioodbc==0.5.0",
+    "pyodbc==5.2.0",
+]
+jdbc = [
+    "JPype1==1.5.0",
+    "JayDeBeApi==1.2.3"
+]
+oracle = [
+    "oracledb==2.5.1"
+]
+sqlalchemy = [
+    "sqlalchemy[asyncio]==2.0.34",
+]
+elasticsearch = [
+    "elasticsearch[async]==8.15.1",
+    "opensearch-py==3.1.0"
+]
+mongodb = [
+    "pymongo==4.12.0",
+    "motor==3.7.0",
+]
+msqlserver = [
+    "pymssql==2.3.1",
+]
+couchdb = [
+    "aiocouch==3.0.0"
+]
+hazelcast = [
+    "hazelcast-python-client==5.4.0"
+]
+scylla = [
+    "scylla_driver==3.26.9",
+    "cassandra-driver==3.29.2",
+    "acsylla==1.0.0",
+    "cqlsh==6.1.2"
+]
+clickhouse = [
+    "clickhouse-driver==0.2.9",
+    "clickhouse-cityhash==1.0.2.4",
+    "aiochclient[httpx-speedups]==2.6.0",
+    "clickhouse-connect==0.8.13"
+]
+redpanda = [
+    "aiokafka==0.11.0"
+]
+all = [
+    "asyncdb[uvloop,default,dataframe,sqlite,memcache,redis,rethinkdb,postgres,postgresql,mysql,mariadb,boto3,bigquery,cassandra,arangodb,influxdb,odbc,jdbc,oracle,sqlalchemy,elasticsearch,mongodb,msqlserver,couchdb,hazelcast,scylla,clickhouse,redpanda]"
+]
+
+dev = [
+    "pytest>=7.2.2",
+    "pytest-asyncio==0.24.0",
+    "pytest-xdist==3.6.1",
+    "pytest-assume==2.4.3",
+    "black",
+    "pylint",
+    "mypy",
+    "coverage",
+]
+
+[project.urls]
+Homepage = "https://github.com/phenobarbital/asyncdb"
+Source = "https://github.com/phenobarbital/asyncdb"
+Tracker = "https://github.com/phenobarbital/asyncdb/issues"
+Documentation = "https://github.com/phenobarbital/asyncdb/"
+Funding = "https://paypal.me/phenobarbital"
+"Say Thanks!" = "https://saythanks.io/to/phenobarbital"
+
+[tool.setuptools]
+license-files = ["LICENSE*"]
+
+# Version from asyncdb/version.py
+[tool.setuptools_scm]
+write_to = "asyncdb/_version.py"
+
+[tool.setuptools.dynamic]
+version = {attr = "asyncdb.version.__version__"}
+
+# Package discovery
+[tool.setuptools.packages.find]
+exclude = [
+    "bin*",
+    "contrib*",
+    "docs*",
+    "tests*",
+    "examples*",
+    "libraries*",
+    ".jupyter*",
+    "notebooks*",
+]
+
+[tool.setuptools.package-data]
+asyncdb = ["py.typed"]
 
 [tool.pytest.ini_options]
 addopts = [
-  "--strict-config",
-  "--strict-markers",
+    "--strict-config",
+    "--strict-markers",
 ]
 log_cli = true
 log_cli_level = "DEBUG"
@@ -65,3 +270,11 @@ exclude = '''
   | dist
 )/
 '''
+
+[tool.pylint.messages_control]
+disable = ["C0330", "C0326"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
