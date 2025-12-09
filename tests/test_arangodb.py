@@ -760,7 +760,8 @@ class TestGraphOperations:
         result = await db_instance_mock.traverse(
             'persons/alice',
             direction='outbound',
-            max_depth=2
+            max_depth=2,
+            graph_name='social'
         )
 
         assert len(result) == 2
@@ -779,7 +780,8 @@ class TestGraphOperations:
 
         result = await db_instance_mock.shortest_path(
             'persons/alice',
-            'persons/bob'
+            'persons/bob',
+            graph_name='social'
         )
 
         assert result is not None

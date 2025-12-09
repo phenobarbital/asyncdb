@@ -3,7 +3,6 @@ import iso8601
 import pytest
 import pytest_asyncio
 import pandas
-import datatable as dt
 from asyncdb.meta.record import Record
 from asyncdb.meta.recordset import Recordset
 from asyncdb import AsyncDB

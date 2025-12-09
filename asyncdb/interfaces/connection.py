@@ -22,12 +22,7 @@ class ConnectionBackend(AbstractDriver, DriverContextManager, EventLoopManager):
     def __init__(self, params: dict[Any] = Any, **kwargs) -> None:
         if "credentials" in kwargs:
             params = kwargs.get("credentials", {})
-        AbstractDriver.__init__(self, **kwargs)
-        DriverContextManager.__init__(
-            self,
-            **kwargs,
-        )
-        EventLoopManager.__init__(self, **kwargs)
+        super().__init__(params=params, **kwargs)
         self._cursor = None
         self._generated: datetime = None
         self._starttime: datetime = None
@@ -107,12 +102,13 @@ class ConnectionDSNBackend(ABC):
     """
     _dsn_template: str
 
-    def __init__(self, dsn: str = None, params: Optional[dict] = None) -> None:
+    def __init__(self, dsn: str = None, params: Optional[dict] = None, **kwargs) -> None:
         self._dsn = dsn or self.create_dsn(params)
         try:
             self._params = params.copy()
         except (TypeError, AttributeError, ValueError):
             self._params = {}
+        super().__init__()
 
     def create_dsn(self, params: dict):
         try:

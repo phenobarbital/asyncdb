@@ -42,11 +42,12 @@ class DatabaseBackend(ABC):
 
     _test_query: Optional[Any] = None
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
         self._columns: list = []
         self._attributes = None
         self._result: list = []
         self._prepared: Any = None
+        super().__init__(**kwargs)
 
     @property
     def columns(self):
