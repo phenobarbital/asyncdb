@@ -156,3 +156,7 @@ env/
 asyncdb/utils/types.cpp
 asyncdb/exceptions/exceptions.c
 docs/nyc_taxi/*
+
+# uv-related
+uv.lock
+asyncdb/_version.py

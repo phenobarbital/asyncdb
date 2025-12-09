@@ -96,7 +96,7 @@ class DBCursorBackend(ABC):
 
     _provider: str = "base"
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
         self._columns: list = []
         self._attributes = None
         self._result: Iterable[Any] = None
@@ -114,6 +114,7 @@ class DBCursorBackend(ABC):
         except ImportError as err:
             logging.exception(f"Error Loading Cursor Class: {err}")
             self.__cursor__ = None
+        super().__init__(**kwargs)
 
     def cursor(
         self, sentence: Union[str, any], params: Union[Iterable[Any], None] = None, **kwargs

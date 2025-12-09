@@ -699,6 +699,17 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             self._logger.exception(f"Asyncpg Unknown Error: {ex}", stack_info=True)
             raise DriverError(f"Asyncpg Unknown Error: {ex}") from ex
 
+    @contextlib.asynccontextmanager
+    async def connection_context(self):
+        """
+        Async Context Manager for Connection.
+        """
+        await self.connection()
+        try:
+            yield self
+        finally:
+            await self.close()
+
     async def release(self):
         try:
             if not await self._connection.is_closed():

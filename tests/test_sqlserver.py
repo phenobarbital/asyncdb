@@ -6,7 +6,6 @@ from io import BytesIO
 from pathlib import Path
 import pytest_asyncio
 import pandas
-import datatable as dt
 from asyncdb.meta.record import Record
 from asyncdb.meta.recordset import Recordset
 
@@ -169,14 +168,6 @@ async def test_formats(conn):
     pytest.assume(type(result) == Recordset)
     for row in result:
         pytest.assume(type(row) == Record)
-    # Bug with Datatable and UUID support.
-    # conn.output_format('datatable')  # change output format to Datatable Frame
-    # result, error = await conn.query(
-    #     sql
-    # )
-    # pytest.assume(not error)
-    # print(result)
-    # pytest.assume(type(result) == dt.Frame)
     conn.output_format('pandas')  # change output format to Pandas Dataframe
     result, error = await conn.query(
         sql
