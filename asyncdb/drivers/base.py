@@ -8,6 +8,7 @@ from abc import (
 )
 from collections.abc import Iterable
 import traceback
+import contextlib
 from ..exceptions import EmptyStatement
 from ..interfaces import PoolBackend, ConnectionDSNBackend, ConnectionBackend, DatabaseBackend
 from .outputs import OutputFactory
@@ -26,8 +27,7 @@ class BasePool(PoolBackend, ConnectionDSNBackend, ABC):
         params: Optional[Union[dict, None]] = None,
         **kwargs,
     ):
-        ConnectionDSNBackend.__init__(self, dsn=dsn, params=params)
-        PoolBackend.__init__(self, loop=loop, params=params, **kwargs)
+        super().__init__(dsn=dsn, loop=loop, params=params, **kwargs)
 
 
 class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
@@ -42,14 +42,13 @@ class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
 
     def __init__(self, loop: Union[asyncio.AbstractEventLoop, None] = None, params: Union[dict, None] = None, **kwargs):
         if params is None:
-            params = {}
+            params = kwargs.get("credentials", {})
         self._max_connections = 4
         self._parameters = ()
         # noinspection PyTypeChecker
         self._serializer: OutputFactory = None
         self._row_format = "native"
-        ConnectionBackend.__init__(self, loop=loop, params=params, **kwargs)
-        DatabaseBackend.__init__(self)
+        super().__init__(loop=loop, params=params, **kwargs)
         self._initialized_on = None
         # always starts output format to native:
         self.output_format("native")
@@ -61,6 +60,17 @@ class InitDriver(ConnectionBackend, DatabaseBackend, ABC):
 
     def __exit__(self, *args):
         pass
+
+    @contextlib.asynccontextmanager
+    async def connection_context(self):
+        """
+        Async Context Manager for Connection.
+        """
+        await self.connection()
+        try:
+            yield self
+        finally:
+            await self.close()
 
     def row_format(self, frmt: str = "native"):
         """
@@ -107,8 +117,7 @@ class BaseDriver(InitDriver, ConnectionDSNBackend, ABC):
         params: dict = None,
         **kwargs,
     ):
-        InitDriver.__init__(self, loop=loop, params=params, **kwargs)
-        ConnectionDSNBackend.__init__(self, dsn=dsn, params=params)
+        super().__init__(dsn=dsn, loop=loop, params=params, **kwargs)
         # always starts output format to native:
         self.output_format("native")
         self._pool = None

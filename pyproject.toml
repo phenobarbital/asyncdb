@@ -5,6 +5,7 @@ requires = [
     "Cython==3.0.11",
     "wheel>=0.44.0",
     "navconfig>=1.7.0",
+    "numpy>=1.26",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -65,7 +66,8 @@ dependencies = [
     "pgvector==0.4.1",
     "google-cloud-bigquery>=3.30.0",
     "google-cloud-core>=2.4.3",
-    "google-cloud-storage>=2.17.0"
+    "google-cloud-storage>=2.17.0",
+    "orjson>=3.10.0"
 ]
 
 [project.optional-dependencies]
@@ -204,6 +206,7 @@ dev = [
     "pylint",
     "mypy",
     "coverage",
+    "Cython==3.0.11",
 ]
 
 [project.urls]
@@ -226,6 +229,7 @@ version = {attr = "asyncdb.version.__version__"}
 
 # Package discovery
 [tool.setuptools.packages.find]
+include = ["asyncdb*"]
 exclude = [
     "bin*",
     "contrib*",
