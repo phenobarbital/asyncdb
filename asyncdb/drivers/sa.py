@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 from collections.abc import Callable, Iterable
 from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError, ProgrammingError, InvalidRequestError
 from sqlalchemy import text
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from asyncdb.meta.record import Record
 from ..exceptions import (
@@ -77,6 +78,7 @@ class sa(SQLDriver, DBCursorBackend):
             self._driver = params.get("driver", "postgresql+asyncpg")
         else:
             params = {"driver": "postgresql+asyncpg"}
+            self._driver = params["driver"]
         SQLDriver.__init__(self, dsn=dsn, loop=loop, params=params, **kwargs)
         DBCursorBackend.__init__(self)
         self._options = self._engine_options
@@ -111,6 +113,12 @@ class sa(SQLDriver, DBCursorBackend):
         self._connection = None
         self._connected = False
         try:
+            # Normalize DSN to async driver if needed
+            if self._dsn:
+                url = make_url(self._dsn)
+                if url.drivername == "postgresql":
+                    url = url.set(drivername="postgresql+asyncpg")
+                    self._dsn = str(url)
             self._connection = create_async_engine(self._dsn, **self._options)
             self._session = AsyncSession(bind=self._connection)
             self._connected = True
@@ -132,8 +140,10 @@ class sa(SQLDriver, DBCursorBackend):
     async def get_result(self, resultset):
         result = None
         if self._row_format == "native":
-            result = resultset.fetchone()
-        if self._row_format == "dict":
+            # print(f"DEBUG: resultset type {type(resultset)}")
+            result = resultset.fetchall()
+            # print(f"DEBUG: fetchall result {result}")
+        elif self._row_format == "dict":
             result = dict(resultset.mappings().one())
         elif self._row_format == "iterable":
             result = resultset.mappings().one()
@@ -150,18 +160,22 @@ class sa(SQLDriver, DBCursorBackend):
     def get_engine(self):
         return self._session
 
-    async def get_resultset(self, resultset):
-        result = None
-        if self._row_format == "list":
-            result = resultset.mappings().all()
+    async def get_result(self, resultset):
+        if self._row_format == "native":
+            return resultset.fetchone()
+
+        elif self._row_format == "dict":
+            row = resultset.mappings().one_or_none()
+            return dict(row) if row else None
+
         elif self._row_format == "iterable":
-            result = resultset.mappings().all()
+            return resultset.mappings().one_or_none()
+
         elif self._row_format == "record":
-            rows = resultset.mappings().all()
-            result = [Record(row, row.keys()) for row in rows]
-        else:
-            result = resultset.fetchall()
-        return result
+            row = resultset.mappings().one_or_none()
+            return Record(row, row.keys()) if row else None
+
+        return resultset.fetchone()
 
     def text(self, sentence: str):
         return text(sentence)
@@ -180,11 +194,12 @@ class sa(SQLDriver, DBCursorBackend):
             async with self._connection.begin() as conn:
                 result = await conn.execute(text(self._test_query))
                 row = await self.get_result(result)
+                if row is None:
+                     row = []
             if error:
                 self._logger.info(f"Test Error: {error!s}")
         except Exception as err:
             error = str(err)
-            raise DriverError(message=str(err), code=0)
         finally:
             return [row, error]
 
@@ -368,14 +383,15 @@ class sa(SQLDriver, DBCursorBackend):
         """
         self._result = None
         error = None
-        self.valid_operation(sentence)
+        await self.valid_operation(sentence)
         try:
             if isinstance(sentence, str):
                 sentence = text(sentence)
             async with self._connection.begin() as conn:
                 result = await conn.execute(sentence, params)
-                # row = await self.get_result(result)
-                self._result = result
+                if result.returns_rows:
+                    row = await self.get_result(result)
+                    self._result = row
         except (DatabaseError, OperationalError) as err:
             error = DriverError(f"Execute Error: {err!s}")
         except Exception as err:
@@ -387,16 +403,24 @@ class sa(SQLDriver, DBCursorBackend):
         """Execute multiples transactions."""
         self._result = None
         error = None
-        self.valid_operation(sentence)
+        await self.valid_operation(sentence)
         try:
-            async with self._connection.begin() as conn:
-                results = []
-                for query in sentence:
-                    if isinstance(query, str):
-                        query = text(query)
-                    result = await conn.execute(query, params)
-                    results.append(result)
-                self._result = results
+            if isinstance(sentence, str):
+                sentence = text(sentence)
+                async with self._connection.begin() as conn:
+                     result = await conn.execute(sentence, params)
+                     if result.returns_rows:
+                        row = await self.get_result(result)
+                        self._result = row
+            else:
+                async with self._connection.begin() as conn:
+                    results = []
+                    for query in sentence:
+                        if isinstance(query, str):
+                            query = text(query)
+                        result = await conn.execute(query, params)
+                        results.append(result)
+                    self._result = results
         except (DatabaseError, OperationalError) as err:
             error = DriverError(f"Execute Error: {err}")
         except Exception as err:
@@ -442,19 +466,28 @@ class sa(SQLDriver, DBCursorBackend):
     Context magic Methods
     """
 
+    async def __aenter__(self):
+        if not self._connection:
+            await self.connection()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        if self._transaction:
+            self.close_transaction()
+        await self.release()
+
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc, tb):
         if self._transaction:
             self.close_transaction()
-        self.release()
 
     """
     DDL Information.
     """
 
-    def create(self, obj: str = "table", name: str = "", fields: Optional[List] = None) -> bool:
+    async def create(self, obj: str = "table", name: str = "", fields: Optional[List] = None) -> bool:
         """
         Create is a generic method for Database Objects Creation.
         """
@@ -463,7 +496,8 @@ class sa(SQLDriver, DBCursorBackend):
             columns = ", ".join(["{name} {type}".format(**e) for e in fields])
             sql = sql.format(name=name, columns=columns)
             try:
-                result = self._connection.execute(sql)
+                async with self._connection.begin() as conn:
+                    result = await conn.execute(text(sql))
                 if result:
                     return True
                 else:
@@ -491,7 +525,7 @@ class sa(SQLDriver, DBCursorBackend):
             table = f"{schema}.{tablename}"
         else:
             table = tablename
-        if self._driver == "postgresql":
+        if "postgresql" in self._driver:
             sql = f"SELECT a.attname AS name, a.atttypid::regtype AS type, \
             format_type(a.atttypid, a.atttypmod) as format_type, a.attnotnull::boolean as notnull, \
             coalesce((SELECT true FROM pg_index i WHERE i.indrelid = a.attrelid \

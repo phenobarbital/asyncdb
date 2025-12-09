@@ -63,7 +63,8 @@ class CursorBackend(ABC):
 
         raise: StopAsyncIteration when done.
         """
-        if row := await self._cursor.fetchone() is not None:
+        row = await self._cursor.fetchone()
+        if row is not None:
             return row
         else:
             raise StopAsyncIteration
@@ -145,7 +146,8 @@ class DBCursorBackend(ABC):
         Returns:
             _type_: Single record for iteration.
         """
-        if data := await self._cursor.fetchrow() is not None:
+        data = await self._cursor.fetchrow()
+        if data is not None:
             return data
         else:
             raise StopAsyncIteration
