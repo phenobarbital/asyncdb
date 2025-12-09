@@ -108,7 +108,7 @@ class ConnectionDSNBackend(ABC):
             self._params = params.copy()
         except (TypeError, AttributeError, ValueError):
             self._params = {}
-        super().__init__(**kwargs)
+        super().__init__()
 
     def create_dsn(self, params: dict):
         try:

@@ -35,7 +35,10 @@ logging.getLogger("arango").setLevel(logging.INFO)
 AQLJob = Union[str, Tuple[str, Dict[str, Any]]]
 
 
-class arangodb(InitDriver):
+from ..interfaces.connection import ConnectionDSNBackend
+
+
+class arangodb(InitDriver, ConnectionDSNBackend):
     """
     ArangoDB Driver with Graph and RAG support.
 

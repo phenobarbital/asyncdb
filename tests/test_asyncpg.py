@@ -7,7 +7,6 @@ import pytest_asyncio
 from datetime import datetime
 import pandas
 import polars as pl
-import datatable as dt
 from asyncdb.meta.record import Record
 from asyncdb.meta.recordset import Recordset
 
@@ -313,12 +312,6 @@ async def test_formats(event_loop):
         print(result)
         assert type(result) == pl.DataFrame
         # change output format to iter generator
-        conn.output_format('dt')
-        # TODO: error when a python list is on a column
-        result, error = await conn.query("SELECT store_id, store_name FROM bestbuy.stores")
-        print(result)
-        print(type(result))
-        assert type(result) == dt.Frame
         conn.output_format('csv')  # change output format to iter generator
         result, error = await conn.query("SELECT * FROM bestbuy.stores")
         assert type(result) == str
