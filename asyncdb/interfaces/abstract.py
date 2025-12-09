@@ -1,9 +1,9 @@
 from typing import Union, Any
 import asyncio
 from collections.abc import Awaitable
-from abc import ABC
+from abc import ABC, abstractmethod
 import logging
-from contextlib import AbstractAsyncContextManager
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from ..exceptions import default_exception_handler
 
 
@@ -17,15 +17,29 @@ class AbstractDriver(ABC):
         self._encoding = kwargs.get("encoding", "utf-8")
         self._timeout = kwargs.get("timeout", 600)
         self._logger = logging.getLogger(f"DB.{self.__class__.__name__}")
+        super().__init__(**kwargs)
 
     @property
     def log(self):
         return self._logger
 
+    @asynccontextmanager
+    async def connection_context(self):
+        """
+        Async Context Manager for Connection.
+        """
+        await self.connection()
+        try:
+            yield self
+        finally:
+            await self.close()
+
+    @abstractmethod
     async def connection(self) -> Any:
         raise NotImplementedError()  # pragma: no cover
 
-    open = connection
+    async def open(self) -> Any:
+        return await self.connection()
 
     def set_connection(self, connection):
         self._connection = connection
@@ -33,11 +47,14 @@ class AbstractDriver(ABC):
     async def close(self, timeout: int = 10) -> None:
         raise NotImplementedError()  # pragma: no cover
 
-    disconnect = close
+    async def disconnect(self, timeout: int = 10) -> None:
+        return await self.close(timeout=timeout)
 
     def is_closed(self):
         if not self._connected:
-            self._logger.debug(f"Connection closed on: {self._pool}")
+            self._logger.debug(
+                f"Connection closed on: {self._pool}"
+            )
             return True
         return False
 
@@ -82,6 +99,7 @@ class EventLoopManager:
             asyncio.set_event_loop(self._loop)
         # exception handler
         self._loop.set_exception_handler(default_exception_handler)
+        super().__init__(**kwargs)
 
     def get_loop(self):
         return self._loop
@@ -93,11 +111,12 @@ class EventLoopManager:
 
 
 class PoolContextManager(Awaitable, AbstractAsyncContextManager):
-    """Async Conext version for AsyncDB pool-based drivers."""
+    """Async Context version for AsyncDB pool-based drivers."""
 
     def __init__(self, **kwargs):
         self._connection: Awaitable = None
         self._pool: Awaitable = None
+        super().__init__(**kwargs)
 
     # Magic Methods:
     async def __aenter__(self):
@@ -119,11 +138,12 @@ class PoolContextManager(Awaitable, AbstractAsyncContextManager):
 
 
 class DriverContextManager(Awaitable, AbstractAsyncContextManager):
-    """Async Conext version for AsyncDB drivers."""
+    """Async Context version for AsyncDB drivers."""
 
     def __init__(self, **kwargs):
         self._connection: Awaitable = None
         self._pool: Awaitable = None
+        super().__init__(**kwargs)
 
     ### Async Context magic Methods
     async def __aenter__(self):

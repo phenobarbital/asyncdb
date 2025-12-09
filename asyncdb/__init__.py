@@ -5,7 +5,7 @@ Asyncio-based database connectors.
 """
 from pathlib import Path
 
-from .connections import AsyncDB, AsyncPool, Asyncdb
+from .connections import AsyncDB, AsyncPool, asyncdb
 from .version import __author__, __author_email__, __description__, __title__, __version__
 
 

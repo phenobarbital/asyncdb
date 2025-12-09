@@ -24,12 +24,7 @@ class PoolBackend(AbstractDriver, PoolContextManager, EventLoopManager):
         self._timeout = kwargs.get("timeout", 600)
         if "credentials" in kwargs:
             params = kwargs.get("credentials", {})
-        AbstractDriver.__init__(self, **kwargs)
-        PoolContextManager.__init__(
-            self,
-            **kwargs,
-        )
-        EventLoopManager.__init__(self, **kwargs)
+        super().__init__(params=params, **kwargs)
         try:
             self._debug = bool(params.get("DEBUG", False))
         except (TypeError, KeyError, AttributeError):

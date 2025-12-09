@@ -19,6 +19,9 @@ class ModelBackend(ABC):
     Interface for Backends with Dataclass-based Models Support.
     """
 
+    def __init__(self, **kwargs):
+        super().__init__()
+
     # ## Class-based Methods.
     async def _create_(self, _model: Model, rows: list):
         """

@@ -6,7 +6,7 @@ from .utils.modules import module_exists
 from .utils import install_uvloop
 
 
-T_aobj = TypeVar("T_aobj", bound="Asyncdb")
+T_aobj = TypeVar("T_aobj", bound="asyncdb")
 install_uvloop()
 
 
@@ -44,17 +44,17 @@ class AsyncDB:
             raise DriverError(message=f"Cannot Load Backend {driver}") from err
 
 
-class Asyncdb:
-    """
-    Asyncdb.
+def asyncdb(driver: str = "pg", *args, **kwargs) -> T_aobj:
+    """asyncdb.
 
-    Getting a Database Driver Connection.
+    Async Context Manager for Database Drivers.
     """
-
-    async def __new__(cls: Type[T_aobj], driver: str, *args, credentials: dict = None, **kwargs) -> T_aobj:
-        clspath = f"asyncdb.drivers.{driver}"
-        mdl = module_exists(driver, clspath)
-        obj = mdl(params=credentials, *args, **kwargs)
-        # Open a connection:
-        await obj.connection()
-        return obj
+    credentials = kwargs.pop("credentials", None)
+    if credentials:
+        kwargs["params"] = credentials
+    # Create the Driver Instance
+    clspath = f"asyncdb.drivers.{driver}"
+    mdl = module_exists(driver, clspath)
+    factory = mdl(*args, **kwargs)
+    # Get the connection
+    return factory.connection_context()
