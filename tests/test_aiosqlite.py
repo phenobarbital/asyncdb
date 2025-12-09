@@ -1,7 +1,6 @@
 import asyncio
 import pytest
 import polars as pl
-import datatable as dt
 from asyncdb import AsyncDB
 from asyncdb.meta.record import Record
 from asyncdb.meta.recordset import Recordset

@@ -1,6 +1,7 @@
 import logging
 import pandas
 import io
+import uuid
 from google.cloud.bigquery.table import RowIterator
 from pandas import DataFrame
 import polars as pl
@@ -50,12 +51,21 @@ class polarsFormat(OutputFormat):
             if isinstance(result, (RowIterator, list)):
                 data = [dict(row) for row in result]
                 a = pandas.DataFrame(data=data, **kwargs)
+                for col in a.select_dtypes(include=['object']):
+                    if len(a) > 0 and isinstance(a[col].iloc[0], uuid.UUID):
+                        a[col] = a[col].astype(str)
                 df = pl.from_pandas(a, **kwargs)
             elif isinstance(result, DataFrame):
+                for col in result.select_dtypes(include=['object']):
+                    if len(result) > 0 and isinstance(result[col].iloc[0], uuid.UUID):
+                        result[col] = result[col].astype(str)
                 df = pl.from_pandas(result, **kwargs)
             else:
                 result = [dict(row) for row in result]
                 a = pandas.DataFrame(data=result, **kwargs)
+                for col in a.select_dtypes(include=['object']):
+                    if len(a) > 0 and isinstance(a[col].iloc[0], uuid.UUID):
+                        a[col] = a[col].astype(str)
                 df = pl.from_pandas(a, **kwargs)
             self._result = df
         except ValueError as err:

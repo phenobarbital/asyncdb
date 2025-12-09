@@ -1,7 +1,7 @@
 from typing import Union, Any
 import asyncio
 from collections.abc import Awaitable
-from abc import ABC, abstractmethod
+from abc import ABC
 import logging
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from ..exceptions import default_exception_handler
@@ -34,7 +34,6 @@ class AbstractDriver(ABC):
         finally:
             await self.close()
 
-    @abstractmethod
     async def connection(self) -> Any:
         raise NotImplementedError()  # pragma: no cover
 

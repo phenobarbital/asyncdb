@@ -22,10 +22,6 @@ import pyarrow.dataset as ds
 from pyarrow import fs
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
-try:
-    import datatable as dt
-except ImportError:
-    dt = None
 from deltalake import DeltaTable, write_deltalake
 from deltalake.exceptions import DeltaError, DeltaProtocolError
 from ..exceptions import DriverError
@@ -359,9 +355,6 @@ class delta(InitDriver):
                 finally:
                     if parquet_writer:
                         parquet_writer.close()
-            elif factory == "datatable":
-                frame = dt.fread(filename, **arguments)
-                df = frame.to_pandas()
             elif factory == "arrow":
                 atable = pcsv.read_csv(filename, **arguments)
         elif ext in [".xls", ".xlsx"]:
@@ -382,7 +375,7 @@ class delta(InitDriver):
 
     async def write(
         self,
-        data: Union[pd.DataFrame, dt.Frame, pl.DataFrame, Iterable],
+        data: Union[pd.DataFrame, pl.DataFrame, Iterable],
         table_id: str,
         path: PurePath,
         if_exists: str = "append",
@@ -394,7 +387,7 @@ class delta(InitDriver):
 
         Args:
         - data: Data to be written,
-          it can be a Pandas DataFrame, a Polars DataFrame, a DataTable Frame or a list.
+          it can be a Pandas DataFrame, a Polars DataFrame or a list.
         - table_id: Table Identifier
         - path: Path to the Delta Table.
         - if_exists: if_exists mode, default is "append", can be "error", "overwrite" or "ignore".
@@ -406,9 +399,7 @@ class delta(InitDriver):
             destination = path.joinpath(table_id)
             if isinstance(data, pd.DataFrame):
                 write_deltalake(destination, data, **args)
-            elif isinstance(data, (dt.Frame, pl.DataFrame)):
-                if isinstance(data, dt.Frame):
-                    data = pl.DataFrame(data.to_pandas())
+            elif isinstance(data, pl.DataFrame):
                 data.write_delta(destination, **args)
             else:
                 # assuming a pyarrow:
@@ -434,7 +425,7 @@ class delta(InitDriver):
         - partitions: List of Partitions.
         - columns: List of Columns.
         - factory: Factory to be used, default is "pandas",
-            can be "arrow", "polars" or "datatable".
+            can be "arrow", "polars".
         """
         result = None
         error = None
