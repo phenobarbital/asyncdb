@@ -488,6 +488,7 @@ class mongo(BaseDriver):
         collection_name: str,
         query: Optional[dict] = None,
         *args,
+        limit: Optional[int] = None,
         **kwargs
     ) -> Iterable[Any]:
         """
@@ -513,6 +514,8 @@ class mongo(BaseDriver):
             db = await self._select_database()
             collection = db[collection_name]
             cursor = collection.find(query or {}, *args, **kwargs)
+            if limit:
+                cursor = cursor.limit(limit)
             result = await cursor.to_list(length=None)
             return await self._serializer(result, None)
         except Exception as err:
@@ -557,6 +560,7 @@ class mongo(BaseDriver):
         collection_name: str,
         query: Optional[dict] = None,
         *args,
+        limit: Optional[int] = None,
         **kwargs
     ) -> Iterable[Any]:
         """
@@ -585,6 +589,8 @@ class mongo(BaseDriver):
             db = await self._select_database()
             collection = db[collection_name]
             cursor = collection.find(query or {}, *args, **kwargs)
+            if limit:
+                cursor = cursor.limit(limit)
             async for document in cursor:
                 result.append(document)
             return (result, None)
