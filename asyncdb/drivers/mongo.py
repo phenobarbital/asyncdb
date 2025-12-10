@@ -514,7 +514,7 @@ class mongo(BaseDriver):
             db = await self._select_database()
             collection = db[collection_name]
             cursor = collection.find(query or {}, *args, **kwargs)
-            if limit:
+            if limit is not None:
                 cursor = cursor.limit(limit)
             result = await cursor.to_list(length=None)
             return await self._serializer(result, None)
