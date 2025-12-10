@@ -9,7 +9,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -28,6 +28,7 @@ jobs:
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
           CIBW_ARCHS_WINDOWS: "AMD64"
           CIBW_ARCHS_LINUX: "auto64"
+          CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_SKIP: "pp* *-win32 *i686 *musllinux*"
           CIBW_PRERELEASE_PYTHONS: "0"
         run: |
@@ -66,6 +67,10 @@ jobs:
             echo "Found Windows wheels."
             echo "HAS_WINDOWS_WHEELS=true" >> $GITHUB_ENV
           fi
+          if ls dist/*-macosx_*.whl 1> /dev/null 2>&1; then
+            echo "Found macOS wheels."
+            echo "HAS_MACOS_WHEELS=true" >> $GITHUB_ENV
+          fi
 
       - name: List files in dist
         run: ls -l dist
@@ -91,3 +96,10 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.ASYNCDB_PYPI_API_TOKEN }}
         run: twine upload dist/*-win_*.whl
+
+      - name: Publish macOS wheels to Production PyPI
+        if: env.HAS_MACOS_WHEELS == 'true'
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.ASYNCDB_PYPI_API_TOKEN }}
+        run: twine upload dist/*-macosx_*.whl
