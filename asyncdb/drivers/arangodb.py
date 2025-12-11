@@ -84,6 +84,7 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         try:
             self._username = self.params.get("username", "root")
             self._password = self.params.get("password", "")
+            self._auth_method: str = self.params.get("auth_method", "basic")
         except (KeyError, AttributeError):
             self._username = "root"
             self._password = ""
@@ -104,14 +105,23 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         try:
             # Create ArangoDB client
             url = f"{self._protocol}://{self._host}:{self._port}"
-            self._client = ArangoClient(hosts=url)
-
-            # Connect to system database first
-            sys_db = self._client.db(
-                '_system',
-                username=self._username,
-                password=self._password
+            self._client = ArangoClient(
+                hosts=url
             )
+            # Connect to system database first
+            if self._auth_method == "jwt":
+                token = self.params.get('jwt_token', self._password)
+                sys_db = self._client.db(
+                    '_system',
+                    auth_method="jwt",
+                    password=token
+                )
+            elif self._auth_method == "basic":
+                sys_db = self._client.db(
+                    '_system',
+                    username=self._username,
+                    password=self._password
+                )
 
             # Check if database exists, create if needed
             if self._database_name not in sys_db.databases():
