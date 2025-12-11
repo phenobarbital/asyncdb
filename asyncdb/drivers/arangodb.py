@@ -105,7 +105,9 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         try:
             # Create ArangoDB client
             url = f"{self._protocol}://{self._host}:{self._port}"
-            self._client = ArangoClient(hosts=url)
+            self._client = ArangoClient(
+                hosts=url
+            )
             # Connect to system database first
             if self._auth_method == "jwt":
                 token = self.params.get('jwt_token', self._password)
