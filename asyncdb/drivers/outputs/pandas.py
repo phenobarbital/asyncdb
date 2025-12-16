@@ -31,13 +31,13 @@ class pandasFormat(OutputFormat):
                 df = pandas.DataFrame(data=result, **kwargs)
             elif isinstance(result, list):
                 if len(result) == 0:
-                    error = Exception("Empty Data")
+                    df = pandas.DataFrame()
                 else:
                     result = [dict(row) for row in result]
                     df = pandas.DataFrame(data=result, **kwargs)
             else:
-                result = [dict(row) for row in result]
-                df = pandas.DataFrame(data=result, **kwargs)
+                result = result or []
+                df = pandas.DataFrame(data=[dict(row) for row in result], **kwargs)
             self._result = df
         except pandas.errors.EmptyDataError as err:
             error = Exception(f"Error with Empty Data: error: {err}")
