@@ -1,5 +1,6 @@
 import asyncio
-
+import time
+import timeit
 from asyncdb import AsyncDB
 from asyncdb.drivers.pg import pgPool
 
@@ -68,7 +69,24 @@ async def test_pg(loop):
         result, error = await conn.execute("SET TIMEZONE TO 'America/New_York'")
         print(result)
 
-#
+async def timed_pandas(loop):
+    args = {
+        "server_settings": {
+            "application_name": "Testing"
+        }
+    }
+    db = AsyncDB("pg", params=params, **args)
+    print(db)
+    async with await db.connection() as conn:
+        # Using Pandas:
+        start_time = time.time()
+        conn.output_format('pandas')  # change output format to pandas
+        result, _ = await conn.query('SELECT * FROM epson.sales LIMIT 100000')
+        print(type(result))
+        end_time = time.time()
+        print(f"Time taken: {end_time - start_time}")
+
+
 # from sqlalchemy import (Column, Integer, MetaData, Table, Text, create_engine,
 #                         select)
 # from sqlalchemy.schema import CreateTable, DropTable
@@ -113,7 +131,7 @@ if __name__ == '__main__':
     try:
         loop = asyncio.get_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(pooler(loop))
-        # loop.run_until_complete(test_pg(loop))
+        # loop.run_until_complete(pooler(loop))
+        loop.run_until_complete(timed_pandas(loop))
     finally:
         loop.stop()
