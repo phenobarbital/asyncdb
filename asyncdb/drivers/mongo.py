@@ -945,3 +945,147 @@ class mongo(BaseDriver):
             raise DriverError(
                 f"Error creating collection '{collection}' in database '{database}': {e}"
             ) from e
+
+    async def create_index(self, collection_name: str, keys: Union[str, List[tuple], List[str]], **kwargs) -> str:
+        """
+        Creates an index on a collection.
+
+        Parameters:
+        -----------
+        collection_name : str
+            The name of the collection.
+        keys : str or list
+            The key or list of keys (tuples) to create the index on.
+        kwargs : dict
+            Additional arguments for index creation (e.g. unique=True).
+
+        Returns:
+        --------
+        str
+            The name of the created index.
+        """
+        try:
+            db = await self._select_database()
+            collection = db[collection_name]
+            return await collection.create_index(keys, **kwargs)
+        except Exception as e:
+            raise DriverError(f"Error creating index on '{collection_name}': {e}") from e
+
+    async def create_indexes(self, collection_name: str, indexes: List[Any], **kwargs) -> List[str]:
+        """
+        Creates multiple indexes on a collection.
+
+        Parameters:
+        -----------
+        collection_name : str
+            The name of the collection.
+        indexes : list
+            A list of IndexModel objects or index specifications.
+
+        Returns:
+        --------
+        list
+            List of created index names.
+        """
+        try:
+            db = await self._select_database()
+            collection = db[collection_name]
+            return await collection.create_indexes(indexes, **kwargs)
+        except Exception as e:
+            raise DriverError(f"Error creating indexes on '{collection_name}': {e}") from e
+
+    async def list_collections(self, filter: Optional[dict] = None, **kwargs) -> List[str]:
+        """
+        List collection names in the current database.
+
+        Parameters:
+        -----------
+        filter : dict, optional
+            A query document to filter the list of collections.
+
+        Returns:
+        --------
+        list
+            List of collection names.
+        """
+        try:
+            db = await self._select_database()
+            return await db.list_collection_names(filter=filter, **kwargs)
+        except Exception as e:
+            raise DriverError(f"Error listing collections: {e}") from e
+
+    async def insert(self, collection_name: str, data: Union[dict, List[dict]], **kwargs):
+        """
+        Insert one or more documents into a collection.
+
+        Parameters:
+        -----------
+        collection_name : str
+            The name of the collection.
+        data : dict or list
+            A dictionary (single document) or a list of dictionaries (multiple documents).
+
+        Returns:
+        --------
+        InsertOneResult or InsertManyResult
+            The result of the insertion.
+        """
+        try:
+            db = await self._select_database()
+            collection = db[collection_name]
+            if isinstance(data, list):
+                return await collection.insert_many(data, **kwargs)
+            else:
+                return await collection.insert_one(data, **kwargs)
+        except Exception as e:
+            raise DriverError(f"Error inserting into '{collection_name}': {e}") from e
+
+    async def update(self, collection_name: str, filter: dict, update: dict, many: bool = False, **kwargs):
+        """
+        Update documents in a collection.
+
+        Parameters:
+        -----------
+        collection_name : str
+            The name of the collection.
+        filter : dict
+            The selection criteria for the update.
+        update : dict
+            The modifications to apply.
+        many : bool, optional
+            If True, update all documents that match the filter.
+            If False, update only the first document that matches.
+            Defaults to False.
+
+        Returns:
+        --------
+        UpdateResult
+            The result of the update operation.
+        """
+        try:
+            db = await self._select_database()
+            collection = db[collection_name]
+            if many:
+                return await collection.update_many(filter, update, **kwargs)
+            else:
+                return await collection.update_one(filter, update, **kwargs)
+        except Exception as e:
+            raise DriverError(f"Error updating '{collection_name}': {e}") from e
+
+    async def batch_insert(self, collection_name: str, data: List[dict], **kwargs):
+        """
+        Insert multiple documents into a collection (alias for insert with list).
+
+        Parameters:
+        -----------
+        collection_name : str
+            The name of the collection.
+        data : list
+            A list of dictionary documents.
+
+        Returns:
+        --------
+        InsertManyResult
+            The result of the insertion.
+        """
+        return await self.insert(collection_name, data, **kwargs)
