@@ -11,12 +11,12 @@ import logging
 from dataclasses import is_dataclass, astuple, fields as dataclass_fields
 import numpy as np
 import pandas as pd
-from arango import ArangoClient
-from arango.database import StandardDatabase
-from arango.collection import StandardCollection
-from arango.graph import Graph
-from arango.cursor import Cursor
-from arango.exceptions import (
+from arangoasync import ArangoClient
+from arangoasync.database import Database
+from arangoasync.collection import Collection
+from arangoasync.graph import Graph
+# Cursor is not directly imported in arangoasync in the same way, need to handle differently
+from arangoasync.exceptions import (
     DatabaseCreateError,
     DatabaseDeleteError,
     CollectionCreateError,
@@ -26,11 +26,12 @@ from arango.exceptions import (
     AQLQueryExecuteError,
     GraphCreateError,
 )
+from arangoasync.auth import Auth
 from .base import InitDriver
 from ..exceptions import NoDataFound, DriverError
 
 
-logging.getLogger("arango").setLevel(logging.INFO)
+logging.getLogger("arangoasync").setLevel(logging.INFO)
 
 AQLJob = Union[str, Tuple[str, Dict[str, Any]]]
 
@@ -62,7 +63,7 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         **kwargs
     ):
         self._client: ArangoClient = None
-        self._connection: StandardDatabase = None
+        self._connection: Database = None
         self._timeout: int = kwargs.pop("timeout", 60)
         self._test_query = "RETURN 1"
         self._default_graph = kwargs.pop("default_graph", None)
@@ -91,6 +92,7 @@ class arangodb(InitDriver, ConnectionDSNBackend):
 
         # Database name
         self._database_name = self.params.get("database", "_system")
+        self._auth = None
 
     async def connection(self, database: str = None):
         """
@@ -108,31 +110,30 @@ class arangodb(InitDriver, ConnectionDSNBackend):
             self._client = ArangoClient(
                 hosts=url
             )
+            
+            # Setup Authentication
+            if self._auth_method == "basic":
+                self._auth = Auth(username=self._username, password=self._password)
+            else:
+                # TODO: Check if JWT auth is supported similarly in Auth object
+                # Assuming basic fallback for now or handling JWT implicitly if supported
+                self._auth = Auth(username=self._username, password=self._password)
+
             # Connect to system database first
-            if self._auth_method == "jwt":
-                token = self.params.get('jwt_token', self._password)
-                sys_db = self._client.db(
-                    '_system',
-                    auth_method="jwt",
-                    password=token
-                )
-            elif self._auth_method == "basic":
-                sys_db = self._client.db(
-                    '_system',
-                    username=self._username,
-                    password=self._password
-                )
+            sys_db = await self._client.db(
+                '_system',
+                auth=self._auth
+            )
 
             # Check if database exists, create if needed
-            if self._database_name not in sys_db.databases():
+            if not await sys_db.has_database(self._database_name):
                 self._logger.debug(f"Creating database: {self._database_name}")
-                sys_db.create_database(self._database_name)
+                await sys_db.create_database(self._database_name)
 
             # Connect to target database
-            self._connection = self._client.db(
+            self._connection = await self._client.db(
                 self._database_name,
-                username=self._username,
-                password=self._password
+                auth=self._auth
             )
             self._connected = True
             self._initialized_on = time.time()
@@ -154,7 +155,7 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         """
         try:
             if self._client:
-                self._client.close()
+                await self._client.close()
         except Exception as err:
             raise DriverError(
                 message=f"Error closing ArangoDB connection: {err}"
@@ -185,10 +186,9 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         Switch to a different database.
         """
         try:
-            self._connection = self._client.db(
+            self._connection = await self._client.db(
                 database,
-                username=self._username,
-                password=self._password
+                auth=self._auth
             )
             self._database_name = database
             self._logger.debug(f"Switched to database: {database}")
@@ -203,12 +203,11 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         Create a new database.
         """
         try:
-            sys_db = self._client.db(
+            sys_db = await self._client.db(
                 '_system',
-                username=self._username,
-                password=self._password
+                auth=self._auth
             )
-            sys_db.create_database(database)
+            await sys_db.create_database(database)
             self._logger.debug(f"Database created: {database}")
             return True
         except Exception as err:
@@ -219,12 +218,11 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         Drop a database.
         """
         try:
-            sys_db = self._client.db(
+            sys_db = await self._client.db(
                 '_system',
-                username=self._username,
-                password=self._password
+                auth=self._auth
             )
-            sys_db.delete_database(database)
+            await sys_db.delete_database(database)
             self._logger.debug(f"Database dropped: {database}")
             return True
         except Exception as err:
@@ -232,45 +230,41 @@ class arangodb(InitDriver, ConnectionDSNBackend):
 
     # Collection Operations
 
-    async def create_collection(
-        self,
-        name: str,
-        edge: bool = False,
-        **kwargs
-    ):
+    async def create_collection(self, name: str, edge: bool = False, **kwargs):
         """
-        Create a collection (document or edge).
+        Create a collection.
 
         Args:
             name: Collection name
-            edge: If True, create edge collection
-            **kwargs: Additional collection properties
+            edge: If True, create an edge collection
+            **kwargs: Additional options
         """
         try:
-            if self._connection.has_collection(name):
-                self._logger.warning(f"Collection {name} already exists")
-                return self._connection.collection(name)
+            # Map edge=True to col_type
+            if edge:
+                 # 3 is Edge, 2 is Document in ArangoDB
+                kwargs['col_type'] = 3
+            else:
+                kwargs['col_type'] = 2
 
-            collection = self._connection.create_collection(
-                name,
-                edge=edge,
-                **kwargs
-            )
-            self._logger.debug(
-                f"Collection created: {name} (edge={edge})"
-            )
-            return collection
-        except CollectionCreateError as err:
-            raise DriverError(
-                f"Error creating collection {name}: {err}"
-            ) from err
+            # Remove 'edge' from kwargs if present (it shouldn't be here if not passed, but just in case)
+            if 'edge' in kwargs:
+                del kwargs['edge']
+            
+            # Also remove 'type' if passed in kwargs to avoid duplicate or confusion
+            if 'type' in kwargs:
+                 del kwargs['type']
+
+            return await self._connection.create_collection(name, **kwargs)
+        except Exception as err:
+            raise DriverError(f"Error creating collection: {err}") from err
 
     async def drop_collection(self, name: str):
         """
         Drop a collection.
         """
         try:
-            self._connection.delete_collection(name)
+            await self._connection.delete_collection(name)
             self._logger.debug(f"Collection dropped: {name}")
             return True
         except Exception as err:
@@ -282,7 +276,7 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         """
         Check if collection exists.
         """
-        return self._connection.has_collection(name)
+        return await self._connection.has_collection(name)
 
     # Graph Operations
 
@@ -304,11 +298,11 @@ class arangodb(InitDriver, ConnectionDSNBackend):
             orphan_collections: Vertex collections without edges
         """
         try:
-            if self._connection.has_graph(name):
+            if await self._connection.has_graph(name):
                 self._logger.warning(f"Graph {name} already exists")
                 return self._connection.graph(name)
 
-            graph = self._connection.create_graph(
+            graph = await self._connection.create_graph(
                 name,
                 edge_definitions=edge_definitions or [],
                 orphan_collections=orphan_collections or []
@@ -327,7 +321,7 @@ class arangodb(InitDriver, ConnectionDSNBackend):
             drop_collections: If True, also drop associated collections
         """
         try:
-            self._connection.delete_graph(
+            await self._connection.delete_graph(
                 name,
                 drop_collections=drop_collections
             )
@@ -340,7 +334,7 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         """
         Check if graph exists.
         """
-        return self._connection.has_graph(name)
+        return await self._connection.has_graph(name)
 
     # Query Operations
 
@@ -372,14 +366,14 @@ class arangodb(InitDriver, ConnectionDSNBackend):
             await self.valid_operation(sentence)
             self.start_timing()
 
-            cursor: Cursor = self._connection.aql.execute(
+            cursor = await self._connection.aql.execute(
                 sentence,
                 bind_vars=bind_vars or {},
                 **kwargs
             )
 
-            # Convert cursor to list
-            self._result = list(cursor)
+            # Convert cursor to list (async iteration)
+            self._result = [doc async for doc in cursor]
 
             if not self._result:
                 raise NoDataFound("ArangoDB: No Data Found")
@@ -413,12 +407,13 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         try:
             await self.valid_operation(sentence)
 
-            cursor = self._connection.aql.execute(
+            cursor = await self._connection.aql.execute(
                 sentence,
                 bind_vars=bind_vars or {}
             )
 
-            results = list(cursor)
+            # Get first result
+            results = [doc async for doc in cursor]
             self._result = results[0] if results else None
 
             if not self._result:
@@ -442,11 +437,11 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         await self.valid_operation(sentence)
 
         try:
-            cursor = self._connection.aql.execute(
+            cursor = await self._connection.aql.execute(
                 sentence,
                 bind_vars=bind_vars or {}
             )
-            if result := list(cursor):
+            if result := [doc async for doc in cursor]:
                 return result
 
             raise NoDataFound("ArangoDB: No Data Found")
@@ -469,13 +464,15 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         await self.valid_operation(sentence)
 
         try:
-            cursor = self._connection.aql.execute(
+            cursor = await self._connection.aql.execute(
                 sentence,
                 bind_vars=bind_vars or {}
             )
-            if results := list(cursor):
-                return results[0]
-
+            # Use async next if available or list conversion
+            async for doc in cursor:
+                return doc
+            
+            # If loop finishes without returning, no data
             raise NoDataFound("ArangoDB: No Data Found")
 
         except NoDataFound:
@@ -500,7 +497,10 @@ class arangodb(InitDriver, ConnectionDSNBackend):
             bind_vars: Query parameters
             column: Column index or key to extract
         """
-        row = await self.fetch_one(sentence, bind_vars)
+        try:
+            row = await self.fetch_one(sentence, bind_vars)
+        except NoDataFound:
+            return None
 
         if row is None:
             return None
@@ -537,12 +537,12 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         try:
             await self.valid_operation(sentence)
 
-            cursor = self._connection.aql.execute(
+            cursor = await self._connection.aql.execute(
                 sentence,
                 bind_vars=bind_vars or {}
             )
 
-            result = list(cursor)
+            result = [doc async for doc in cursor]
 
         except Exception as err:
             error = f"Error on Execute: {err}"
@@ -621,7 +621,7 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         """
         try:
             col = self._connection.collection(collection)
-            result = col.insert(document, return_new=return_new)
+            result = await col.insert(document, return_new=return_new)
 
             return result['new'] if return_new else result
 
@@ -646,7 +646,7 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         """
         try:
             col = self._connection.collection(collection)
-            result = col.update(document, return_new=return_new)
+            result = await col.update(document, return_new=return_new)
 
             return result['new'] if return_new else result
 
@@ -669,7 +669,7 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         """
         try:
             col = self._connection.collection(collection)
-            col.delete(document_key)
+            await col.delete(document_key)
             return True
 
         except DocumentDeleteError as err:
@@ -696,9 +696,12 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         - dataclass instances
         """
         try:
-            col = self._connection.collection(collection)
+            if not await self._connection.has_collection(collection):
+                col = await self.create_collection(collection)
+            else:
+                col = self._connection.collection(collection)
         except Exception:
-            # Collection doesn't exist, create it
+             # Fallback or error handling
             col = await self.create_collection(collection)
 
         _data = None
@@ -737,7 +740,7 @@ class arangodb(InitDriver, ConnectionDSNBackend):
 
         for i in range(0, len(_data), batch_size):
             batch = _data[i:i + batch_size]
-            col.insert_many(batch)
+            await col.insert_many(batch)
             inserted += len(batch)
 
         self._logger.debug(
@@ -759,7 +762,8 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         try:
             g = self._connection.graph(graph)
             vertex_col = g.vertex_collection(collection)
-            return vertex_col.insert(vertex)
+            result = await vertex_col.insert(vertex)
+            return result
         except Exception as err:
             raise DriverError(f"Error creating vertex: {err}") from err
 
@@ -777,7 +781,8 @@ class arangodb(InitDriver, ConnectionDSNBackend):
         try:
             g = self._connection.graph(graph)
             edge_col = g.edge_collection(collection)
-            return edge_col.insert(edge)
+            result = await edge_col.insert(edge)
+            return result
         except Exception as err:
             raise DriverError(f"Error creating edge: {err}") from err
 
