@@ -140,7 +140,7 @@ cassandra = [
 arangodb = [
     "networkx==3.4.2",
     "pyjwt==2.10.1",
-    "python-arango==8.2.2",
+    "python-arango-async>=1.2.0",
     "scipy==1.15.1"
 ]
 influxdb = [
