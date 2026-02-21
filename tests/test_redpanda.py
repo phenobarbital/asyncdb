@@ -94,3 +94,20 @@ async def test_redpanda_query_and_queryrow(patch_aiokafka):
     row, error = await db.queryrow("events")
     assert error is None
     assert row["value"] == '{"event":"created"}'
+
+
+async def test_redpanda_execute_many(patch_aiokafka):
+    db = AsyncDB("redpanda", params={"host": "127.0.0.1", "port": 9092, "topic": "events"})
+    await db.connection()
+
+    messages = [
+        {"event": "created", "id": 1},
+        {"event": "updated", "id": 2},
+    ]
+
+    results, error = await db.execute_many(messages)
+    assert error is None
+    assert isinstance(results, list)
+    assert len(results) == len(messages)
+
+    await db.close()
