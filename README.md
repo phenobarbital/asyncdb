@@ -56,6 +56,7 @@ Currently AsyncDB supports the following databases:
 * MongoDB (using motor and pymongo)
 * SQLAlchemy (requires sqlalchemy async (+3.14))
 * Oracle (requires oracledb)
+* Redpanda (Kafka-compatible, requires aiokafka)
 
 ### Quick Tutorial ###
 
@@ -89,6 +90,7 @@ Every Driver has a simple name to call it:
 * mcache: aiomcache (Memcache)
 * odbc: aiodbc (ODBC)
 * oracle: oracle (oracledb)
+* redpanda: Redpanda/Kafka (aiokafka)
 
 ### Output Support ###
 
