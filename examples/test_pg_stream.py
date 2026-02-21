@@ -4,13 +4,11 @@ import time
 import pandas as pd
 import pyarrow as pa
 import polars as pl
-import datatable as dt
 
 from asyncdb.drivers.pg import pg
 from asyncdb.drivers.outputs.pandas import pandas_parser
 from asyncdb.drivers.outputs.arrow import arrow_parser
 from asyncdb.drivers.outputs.polars import polars_parser
-from asyncdb.drivers.outputs.dt import dt_parser
 
 # Connection parameters (adjust as needed)
 params = {
@@ -93,33 +91,6 @@ async def test_polars(conn):
     elapsed = time.perf_counter() - start_time
     print(f"[Polars] Loaded {total_rows} rows in {elapsed:.2f} seconds.")
 
-async def test_datatable(conn):
-    """
-    Stream data into Python datatable in chunks and measure time.
-    """
-    start_time = time.perf_counter()
-
-    dt_frames = []
-    async for frame in conn.stream_query(
-        QUERY,
-        parser=dt_parser,
-        chunksize=CHUNKSIZE
-    ):
-        dt_frames.append(frame)
-
-    final_frame = dt.rbind(dt_frames)  # or dt.rbind(dt_frames, force=True)
-    total_rows = final_frame.nrows
-
-    elapsed = time.perf_counter() - start_time
-    print(f"[datatable] Loaded {total_rows} rows in {elapsed:.2f} seconds.")
-
-    # 2. Convert datatable.Frame => Pandas DataFrame
-    start_conv = time.perf_counter()
-    df = final_frame.to_pandas()
-    conv_elapsed = time.perf_counter() - start_conv
-
-    print(f"[Conversion] datatable.Frame -> Pandas took {conv_elapsed:.2f} seconds.")
-    print(f"Final Pandas DataFrame has {len(df)} rows.")
 
 async def main():
     # Create a pg driver instance and connect
@@ -133,7 +104,6 @@ async def main():
         #await test_pandas(conn)
         # await test_arrow(conn)
         await test_polars(conn)
-        # await test_datatable(conn)
 
 
 if __name__ == "__main__":

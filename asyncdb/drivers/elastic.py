@@ -6,11 +6,9 @@ TODO:
     - use jsonpath to query json-objects
     - implements lists and hash datatypes
 """
-
 import asyncio
-import time
 from typing import Any, Union
-from dataclasses import dataclass, is_dataclass
+from dataclasses import dataclass
 
 # Try to import both elasticsearch and opensearch clients
 try:
