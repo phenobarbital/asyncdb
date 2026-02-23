@@ -181,7 +181,7 @@ hazelcast = [
 scylla = [
     "scylla_driver==3.26.9",
     "cassandra-driver==3.29.2",
-    "acsylla==1.0.0",
+    "acsylla==1.0.2",
     "cqlsh==6.1.2"
 ]
 clickhouse = [
