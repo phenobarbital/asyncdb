@@ -91,7 +91,7 @@ dataframe = [
     "dask==2024.8.2",
     "polars>=1.12.0",
     "pyarrow==19.0.1",
-    "connectorx==0.4.2",
+    "connectorx==0.4.5",
     "deltalake==0.19.2",
     "duckdb==1.2.2",
 ]
