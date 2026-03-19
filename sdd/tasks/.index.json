@@ -25,7 +25,7 @@
       "feature_id": "FEAT-001",
       "feature": "exception-migration",
       "spec": "sdd/specs/exception-migration.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "S",
       "depends_on": ["TASK-001"],
@@ -33,7 +33,8 @@
       "parallelism_notes": "Must run after TASK-001 so the pure Python module exists before Cython is removed.",
       "assigned_to": null,
       "started_at": "2026-03-19T00:00:00Z",
-      "file": "sdd/tasks/active/TASK-002-remove-cython-update-exports.md"
+      "completed_at": "2026-03-20T00:00:00Z",
+      "file": "sdd/tasks/completed/TASK-002-remove-cython-update-exports.md"
     },
     {
       "id": "TASK-003",
@@ -59,7 +60,7 @@
       "feature_id": "FEAT-002",
       "feature": "apache-iceberg-support",
       "spec": "sdd/specs/apache-iceberg-support.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [],
@@ -67,7 +68,8 @@
       "parallelism_notes": "Creates the core driver file that all subsequent FEAT-002 tasks depend on.",
       "assigned_to": null,
       "started_at": "2026-03-19T00:00:00Z",
-      "file": "sdd/tasks/active/TASK-004-iceberg-driver-scaffold.md"
+      "completed_at": "2026-03-20T00:00:00Z",
+      "file": "sdd/tasks/completed/TASK-004-iceberg-driver-scaffold.md"
     },
     {
       "id": "TASK-005",
