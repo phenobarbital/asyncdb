@@ -78,7 +78,7 @@
       "feature_id": "FEAT-002",
       "feature": "apache-iceberg-support",
       "spec": "sdd/specs/apache-iceberg-support.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "S",
       "depends_on": ["TASK-004"],
@@ -86,7 +86,8 @@
       "parallelism_notes": "Requires the driver scaffold from TASK-004.",
       "assigned_to": null,
       "started_at": "2026-03-19T00:00:00Z",
-      "file": "sdd/tasks/active/TASK-005-iceberg-namespace-ops.md"
+      "completed_at": "2026-03-20T00:00:00Z",
+      "file": "sdd/tasks/completed/TASK-005-iceberg-namespace-ops.md"
     },
     {
       "id": "TASK-006",
@@ -95,7 +96,7 @@
       "feature_id": "FEAT-002",
       "feature": "apache-iceberg-support",
       "spec": "sdd/specs/apache-iceberg-support.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": ["TASK-005"],
@@ -103,7 +104,8 @@
       "parallelism_notes": "Requires namespace operations from TASK-005.",
       "assigned_to": null,
       "started_at": "2026-03-19T00:00:00Z",
-      "file": "sdd/tasks/active/TASK-006-iceberg-table-lifecycle.md"
+      "completed_at": "2026-03-20T00:00:00Z",
+      "file": "sdd/tasks/completed/TASK-006-iceberg-table-lifecycle.md"
     },
     {
       "id": "TASK-007",
@@ -112,7 +114,7 @@
       "feature_id": "FEAT-002",
       "feature": "apache-iceberg-support",
       "spec": "sdd/specs/apache-iceberg-support.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "L",
       "depends_on": ["TASK-006"],
@@ -120,7 +122,8 @@
       "parallelism_notes": "Requires table lifecycle from TASK-006.",
       "assigned_to": null,
       "started_at": "2026-03-19T00:00:00Z",
-      "file": "sdd/tasks/active/TASK-007-iceberg-read-ops.md"
+      "completed_at": "2026-03-20T00:00:00Z",
+      "file": "sdd/tasks/completed/TASK-007-iceberg-read-ops.md"
     },
     {
       "id": "TASK-008",
@@ -129,7 +132,7 @@
       "feature_id": "FEAT-002",
       "feature": "apache-iceberg-support",
       "spec": "sdd/specs/apache-iceberg-support.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "L",
       "depends_on": ["TASK-006"],
@@ -137,7 +140,8 @@
       "parallelism_notes": "Requires table lifecycle from TASK-006.",
       "assigned_to": null,
       "started_at": "2026-03-19T00:00:00Z",
-      "file": "sdd/tasks/active/TASK-008-iceberg-write-ops.md"
+      "completed_at": "2026-03-20T00:00:00Z",
+      "file": "sdd/tasks/completed/TASK-008-iceberg-write-ops.md"
     },
     {
       "id": "TASK-009",
@@ -146,7 +150,7 @@
       "feature_id": "FEAT-002",
       "feature": "apache-iceberg-support",
       "spec": "sdd/specs/apache-iceberg-support.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "medium",
       "effort": "S",
       "depends_on": ["TASK-006"],
@@ -154,7 +158,8 @@
       "parallelism_notes": "Requires table lifecycle from TASK-006.",
       "assigned_to": null,
       "started_at": "2026-03-19T00:00:00Z",
-      "file": "sdd/tasks/active/TASK-009-iceberg-metadata-history.md"
+      "completed_at": "2026-03-20T00:00:00Z",
+      "file": "sdd/tasks/completed/TASK-009-iceberg-metadata-history.md"
     },
     {
       "id": "TASK-010",
