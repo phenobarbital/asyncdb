@@ -180,14 +180,14 @@
       "feature_id": "FEAT-003",
       "feature": "migrate-delta-driver",
       "spec": "sdd/specs/migrate-delta-driver.spec.md",
-      "status": "pending",
+      "status": "in-progress",
       "priority": "high",
       "effort": "M",
       "depends_on": [],
       "parallel": false,
       "parallelism_notes": "Core refactor that TASK-012, TASK-013, and TASK-014 depend on.",
       "assigned_to": null,
-      "started_at": null,
+      "started_at": "2026-03-20T00:00:00Z",
       "file": "sdd/tasks/active/TASK-011-refactor-write-method.md"
     },
     {
