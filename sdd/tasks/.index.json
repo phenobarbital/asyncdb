@@ -203,7 +203,7 @@
       "feature_id": "FEAT-003",
       "feature": "migrate-delta-driver",
       "spec": "sdd/specs/migrate-delta-driver.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "S",
       "depends_on": ["TASK-011"],
@@ -211,7 +211,8 @@
       "parallelism_notes": "Modifies same file as TASK-011; must run after write() is refactored.",
       "assigned_to": null,
       "started_at": "2026-03-20T00:00:00Z",
-      "file": "sdd/tasks/active/TASK-012-refactor-create-method.md"
+      "completed_at": "2026-03-20T00:00:00Z",
+      "file": "sdd/tasks/completed/TASK-012-refactor-create-method.md"
     },
     {
       "id": "TASK-013",
