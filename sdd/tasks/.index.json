@@ -7,14 +7,14 @@
       "feature_id": "FEAT-001",
       "feature": "exception-migration",
       "spec": "sdd/specs/exception-migration.spec.md",
-      "status": "pending",
+      "status": "in-progress",
       "priority": "high",
       "effort": "S",
       "depends_on": [],
       "parallel": false,
       "parallelism_notes": "Creates the core module that TASK-002 and TASK-003 depend on.",
       "assigned_to": null,
-      "started_at": null,
+      "started_at": "2026-03-19T00:00:00Z",
       "file": "sdd/tasks/active/TASK-001-pure-python-exceptions.md"
     },
     {
@@ -24,14 +24,14 @@
       "feature_id": "FEAT-001",
       "feature": "exception-migration",
       "spec": "sdd/specs/exception-migration.spec.md",
-      "status": "pending",
+      "status": "in-progress",
       "priority": "high",
       "effort": "S",
       "depends_on": ["TASK-001"],
       "parallel": false,
       "parallelism_notes": "Must run after TASK-001 so the pure Python module exists before Cython is removed.",
       "assigned_to": null,
-      "started_at": null,
+      "started_at": "2026-03-19T00:00:00Z",
       "file": "sdd/tasks/active/TASK-002-remove-cython-update-exports.md"
     },
     {
@@ -41,14 +41,14 @@
       "feature_id": "FEAT-001",
       "feature": "exception-migration",
       "spec": "sdd/specs/exception-migration.spec.md",
-      "status": "pending",
+      "status": "in-progress",
       "priority": "medium",
       "effort": "S",
       "depends_on": ["TASK-001", "TASK-002"],
       "parallel": false,
       "parallelism_notes": "Needs both the pure Python module and Cython removal complete to test the final state.",
       "assigned_to": null,
-      "started_at": null,
+      "started_at": "2026-03-19T00:00:00Z",
       "file": "sdd/tasks/active/TASK-003-exception-unit-tests.md"
     }
   ]
