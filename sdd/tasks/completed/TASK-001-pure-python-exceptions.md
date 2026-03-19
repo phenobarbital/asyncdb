@@ -111,4 +111,7 @@ When complete, the agent must:
 3. Add a brief completion note below
 
 ### Completion Note
-(Agent fills this in when done)
+Completed 2026-03-20. Created `asyncdb/exceptions/exceptions.py` with all 15 pure Python
+exception classes. Class hierarchy, `__init__` signatures, `__repr__`/`__str__`/`get()`,
+and `NoDataFound` defaults all verified. `Exception.args` is not shadowed — kwargs are
+stored in `self.kwargs`. All acceptance-criteria tests pass.
