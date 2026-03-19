@@ -134,14 +134,36 @@ class delta(InitDriver):
             return [result, error]  # pylint: disable=W0150
 
     async def create(
-        self, path: Union[str, Path], data: Any, name: Optional[str] = None, mode: str = "append", **kwargs
-    ):
+        self,
+        path: Union[str, Path],
+        data: Any,
+        name: Optional[str] = None,
+        mode: str = "append",
+        schema_mode: Optional[str] = None,
+        configuration: Optional[dict[str, Optional[str]]] = None,
+        **kwargs,
+    ) -> None:
+        """Create a new Delta Table from data or a file path.
+
+        Args:
+            path: Destination path for the Delta Table.
+            data: Input data — DataFrame, PyArrow Table, or file path
+                (CSV, Excel, Parquet).
+            name: User-provided table name in metadata.
+            mode: Write mode — 'error', 'append', 'overwrite', 'ignore'.
+            schema_mode: Schema evolution — 'merge' or 'overwrite'.
+            configuration: Delta table configuration metadata.
+            **kwargs: Additional arguments forwarded to ``write_deltalake``.
+
+        Raises:
+            DriverError: On any delta creation failure.
+        """
         if isinstance(path, str):
-            path = Path(str).resolve()
+            path = Path(path).resolve()
         if isinstance(data, str):
-            data = Path(str).resolve()
+            data = Path(data).resolve()
         if isinstance(data, Path):
-            # open this file with Pandas or Arrow
+            # Read file into Arrow/Pandas based on extension
             ext = data.suffix
             if ext == ".csv":
                 read_options = pcsv.ReadOptions()
@@ -151,15 +173,23 @@ class delta(InitDriver):
                     data, read_options=read_options, parse_options=parse_options, convert_options=convert_options
                 )
             elif ext in [".xls", ".xlsx"]:
-                if ext == ".xls":
-                    engine = "xlrd"
-                else:
-                    engine = "openpyxl"
+                engine = "xlrd" if ext == ".xls" else "openpyxl"
                 data = pd.read_excel(data, engine=engine)
             elif ext == ".parquet":
                 data = pq.read_table(data)
+        # Normalize Polars DataFrame to Arrow
+        if isinstance(data, pl.DataFrame):
+            data = data.to_arrow()
+        # Build write arguments, omitting None values
+        args: dict[str, Any] = {"mode": mode, **kwargs}
+        if name is not None:
+            args["name"] = name
+        if schema_mode is not None:
+            args["schema_mode"] = schema_mode
+        if configuration is not None:
+            args["configuration"] = configuration
         try:
-            write_deltalake(path, data, name=name, mode=mode, **kwargs)
+            await asyncio.to_thread(write_deltalake, path, data, **args)
         except DeltaError as exc:
             raise DriverError(f"Delta: can't create a table in path {path}, error: {exc}") from exc
         except Exception as exc:
