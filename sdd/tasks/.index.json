@@ -1,0 +1,55 @@
+{
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "slug": "pure-python-exceptions",
+      "title": "Create Pure Python Exception Classes",
+      "feature_id": "FEAT-001",
+      "feature": "exception-migration",
+      "spec": "sdd/specs/exception-migration.spec.md",
+      "status": "pending",
+      "priority": "high",
+      "effort": "S",
+      "depends_on": [],
+      "parallel": false,
+      "parallelism_notes": "Creates the core module that TASK-002 and TASK-003 depend on.",
+      "assigned_to": null,
+      "started_at": null,
+      "file": "sdd/tasks/active/TASK-001-pure-python-exceptions.md"
+    },
+    {
+      "id": "TASK-002",
+      "slug": "remove-cython-update-exports",
+      "title": "Remove Cython Files and Update Build Config & Exports",
+      "feature_id": "FEAT-001",
+      "feature": "exception-migration",
+      "spec": "sdd/specs/exception-migration.spec.md",
+      "status": "pending",
+      "priority": "high",
+      "effort": "S",
+      "depends_on": ["TASK-001"],
+      "parallel": false,
+      "parallelism_notes": "Must run after TASK-001 so the pure Python module exists before Cython is removed.",
+      "assigned_to": null,
+      "started_at": null,
+      "file": "sdd/tasks/active/TASK-002-remove-cython-update-exports.md"
+    },
+    {
+      "id": "TASK-003",
+      "slug": "exception-unit-tests",
+      "title": "Write Unit Tests for Exception Hierarchy",
+      "feature_id": "FEAT-001",
+      "feature": "exception-migration",
+      "spec": "sdd/specs/exception-migration.spec.md",
+      "status": "pending",
+      "priority": "medium",
+      "effort": "S",
+      "depends_on": ["TASK-001", "TASK-002"],
+      "parallel": false,
+      "parallelism_notes": "Needs both the pure Python module and Cython removal complete to test the final state.",
+      "assigned_to": null,
+      "started_at": null,
+      "file": "sdd/tasks/active/TASK-003-exception-unit-tests.md"
+    }
+  ]
+}
