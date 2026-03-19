@@ -7,7 +7,7 @@
       "feature_id": "FEAT-001",
       "feature": "exception-migration",
       "spec": "sdd/specs/exception-migration.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "S",
       "depends_on": [],
@@ -15,7 +15,8 @@
       "parallelism_notes": "Creates the core module that TASK-002 and TASK-003 depend on.",
       "assigned_to": null,
       "started_at": "2026-03-19T00:00:00Z",
-      "file": "sdd/tasks/active/TASK-001-pure-python-exceptions.md"
+      "completed_at": "2026-03-20T00:00:00Z",
+      "file": "sdd/tasks/completed/TASK-001-pure-python-exceptions.md"
     },
     {
       "id": "TASK-002",
