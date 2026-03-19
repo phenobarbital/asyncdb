@@ -118,4 +118,8 @@ When complete, the agent must:
 3. Add a brief completion note below
 
 ### Completion Note
-(Agent fills this in when done)
+Completed 2026-03-20. Created `tests/test_exceptions.py` with 62 tests covering:
+construction of all 15 classes, full inheritance hierarchy, `__repr__`/`__str__`/`get()`,
+`NoDataFound` defaults (code=404), kwargs handling, stacktrace extraction, `Exception.args`
+integrity, raise/catch with parent classes, and a pure-Python module check.
+All 62 tests pass: `pytest tests/test_exceptions.py -v`.
