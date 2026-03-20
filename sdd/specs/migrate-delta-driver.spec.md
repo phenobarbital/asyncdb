@@ -1,7 +1,7 @@
 # FEAT-003: Migrate Delta Driver to delta-rs
 
 **Title**: Migrate Delta Driver to delta-rs
-**Status**: draft
+**Status**: approved
 **Created**: 2026-03-19
 **Author**: Jesus Lara
 
