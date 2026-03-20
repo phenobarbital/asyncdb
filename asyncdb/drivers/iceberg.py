@@ -24,19 +24,40 @@ try:
     import polars as pl
     from pyiceberg.catalog import load_catalog
     from pyiceberg.exceptions import (
-        IcebergError,
         NamespaceAlreadyExistsError,
         NamespaceNotEmptyError,
         NoSuchNamespaceError,
         NoSuchTableError,
         TableAlreadyExistsError,
     )
+    # IcebergError is not a stable public base class across versions;
+    # use Exception as the catch-all for PyIceberg errors.
+    IcebergError = Exception
     _PYICEBERG_AVAILABLE = True
 except ImportError:
     _PYICEBERG_AVAILABLE = False
+    IcebergError = Exception  # type: ignore[assignment,misc]
 
 from ..exceptions import DriverError
 from .base import InitDriver
+
+
+class _KwargsTerminator:
+    """Terminate the cooperative __init__ MRO chain.
+
+    Drivers that extend ``InitDriver`` (but not ``BaseDriver``) lack the
+    ``ConnectionDSNBackend`` class in their MRO.  ``ConnectionDSNBackend``
+    happens to call ``super().__init__()`` without args, which stops residual
+    kwargs (e.g. ``params``) from propagating to ``object.__init__`` and
+    raising ``TypeError``.
+
+    This class provides the same termination for ``InitDriver``-only drivers.
+    """
+
+    def __init__(self, **kwargs):  # noqa: ANN001
+        # Intentionally swallow remaining kwargs and call object.__init__()
+        # without arguments to satisfy cooperative MI requirements.
+        super().__init__()
 
 
 def _require_pyiceberg() -> None:
@@ -75,7 +96,7 @@ def _parse_table_id(table_id: Union[str, tuple]) -> tuple:
     return (table_id,)
 
 
-class iceberg(InitDriver):
+class iceberg(InitDriver, _KwargsTerminator):
     """Async Apache Iceberg driver backed by PyIceberg.
 
     Extends ``InitDriver`` to provide catalog management, namespace CRUD,
@@ -518,7 +539,17 @@ class iceberg(InitDriver):
         self._require_connection()
         tid = self._resolve_table_id(table_id)
         try:
-            await asyncio.to_thread(self._connection.drop_table, tid, purge_requested=purge)
+            # Note: the purge parameter is not supported by all catalog
+            # implementations (e.g. SqlCatalog). We attempt it and fall back
+            # to a plain drop if the kwarg is rejected.
+            def _drop() -> None:
+                try:
+                    self._connection.drop_table(tid, purge_requested=purge)
+                except TypeError:
+                    # Catalog does not support purge_requested – drop without it.
+                    self._connection.drop_table(tid)
+
+            await asyncio.to_thread(_drop)
             if self._current_table is not None:
                 self._current_table = None
         except NoSuchTableError as exc:
@@ -853,30 +884,50 @@ class iceberg(InitDriver):
     # Write operations  (TASK-008)
     # ------------------------------------------------------------------
 
-    def _to_arrow(self, data: Any) -> Any:
-        """Convert data to a PyArrow Table.
+    def _to_arrow(self, data: Any, target_schema: Optional[Any] = None) -> Any:
+        """Convert data to a PyArrow Table, optionally casting to a target schema.
 
         Accepts ``pa.Table``, ``pd.DataFrame``, or ``pl.DataFrame``.
+        When ``target_schema`` is provided (a ``pa.Schema``), the resulting
+        Arrow table is cast to match that schema so that type mismatches
+        (e.g. int64 vs int32) are resolved automatically.
 
         Args:
             data: Input data in one of the supported formats.
+            target_schema: Optional PyArrow schema to cast the output to.
 
         Returns:
-            A ``pa.Table``.
+            A ``pa.Table`` (cast to ``target_schema`` when provided).
 
         Raises:
-            DriverError: When the data type is not supported.
+            DriverError: When the data type is not supported or casting fails.
         """
         if isinstance(data, pa.Table):
-            return data
-        if isinstance(data, pd.DataFrame):
-            return pa.Table.from_pandas(data)
-        if isinstance(data, pl.DataFrame):
-            return data.to_arrow()
-        raise DriverError(
-            f"Unsupported data type for write: {type(data).__name__}. "
-            "Expected pa.Table, pd.DataFrame, or pl.DataFrame."
-        )
+            arrow_table = data
+        elif isinstance(data, pd.DataFrame):
+            arrow_table = pa.Table.from_pandas(data, preserve_index=False)
+        elif isinstance(data, pl.DataFrame):
+            arrow_table = data.to_arrow()
+        else:
+            raise DriverError(
+                f"Unsupported data type for write: {type(data).__name__}. "
+                "Expected pa.Table, pd.DataFrame, or pl.DataFrame."
+            )
+
+        if target_schema is not None:
+            try:
+                arrow_table = arrow_table.cast(target_schema)
+            except (pa.ArrowInvalid, pa.ArrowNotImplementedError):
+                # If direct cast fails, try field-by-field safe cast.
+                arrays = []
+                for field in target_schema:
+                    col = arrow_table.column(field.name)
+                    arrays.append(col.cast(field.type, safe=False))
+                arrow_table = pa.table(
+                    {field.name: arr for field, arr in zip(target_schema, arrays)},
+                    schema=target_schema,
+                )
+        return arrow_table
 
     async def write(
         self,
@@ -903,7 +954,8 @@ class iceberg(InitDriver):
         """
         self._require_connection()
         tbl = await self._load_table_ref(table_id)
-        arrow_table = self._to_arrow(data)
+        target_schema = tbl.schema().as_arrow()
+        arrow_table = self._to_arrow(data, target_schema=target_schema)
         try:
             if mode == "append":
                 await asyncio.to_thread(tbl.append, arrow_table)
@@ -944,7 +996,8 @@ class iceberg(InitDriver):
         """
         self._require_connection()
         tbl = await self._load_table_ref(table_id)
-        arrow_table = self._to_arrow(data)
+        target_schema = tbl.schema().as_arrow()
+        arrow_table = self._to_arrow(data, target_schema=target_schema)
         try:
             def _overwrite():
                 if overwrite_filter is not None:
@@ -991,7 +1044,8 @@ class iceberg(InitDriver):
         """
         self._require_connection()
         tbl = await self._load_table_ref(table_id)
-        arrow_table = self._to_arrow(data)
+        target_schema = tbl.schema().as_arrow()
+        arrow_table = self._to_arrow(data, target_schema=target_schema)
         if not hasattr(tbl, "upsert"):
             raise DriverError(
                 "The installed PyIceberg version does not support upsert. "
@@ -1123,12 +1177,26 @@ class iceberg(InitDriver):
                 snapshots = tbl.metadata.snapshots
                 if not snapshots:
                     return []
+
+                def _summary_dict(summary) -> dict:
+                    """Safely convert a PyIceberg Summary to a plain dict."""
+                    if summary is None:
+                        return {}
+                    try:
+                        return summary.model_dump()
+                    except AttributeError:
+                        pass
+                    try:
+                        return {k: v for k, v in summary.additional_properties.items()}
+                    except AttributeError:
+                        return {}
+
                 return [
                     {
                         "snapshot_id": s.snapshot_id,
                         "timestamp_ms": s.timestamp_ms,
                         "parent_id": s.parent_snapshot_id,
-                        "summary": dict(s.summary) if s.summary else {},
+                        "summary": _summary_dict(s.summary),
                     }
                     for s in snapshots
                 ]
@@ -1186,11 +1254,25 @@ class iceberg(InitDriver):
                 snap = tbl.current_snapshot()
                 if snap is None:
                     return {}
+
+                def _summary_dict(summary) -> dict:
+                    """Safely convert a PyIceberg Summary to a plain dict."""
+                    if summary is None:
+                        return {}
+                    try:
+                        return summary.model_dump()
+                    except AttributeError:
+                        pass
+                    try:
+                        return {k: v for k, v in summary.additional_properties.items()}
+                    except AttributeError:
+                        return {}
+
                 return {
                     "snapshot_id": snap.snapshot_id,
                     "timestamp_ms": snap.timestamp_ms,
                     "parent_id": snap.parent_snapshot_id,
-                    "summary": dict(snap.summary) if snap.summary else {},
+                    "summary": _summary_dict(snap.summary),
                 }
 
             return await asyncio.to_thread(_current)
