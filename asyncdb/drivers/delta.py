@@ -10,8 +10,9 @@ import asyncio
 from collections.abc import Iterable
 import time
 import gc
+import warnings
 import duckdb
-from typing import Any, Union, Optional
+from typing import Any, Literal, Union, Optional
 from datetime import datetime
 from pathlib import Path, PurePath
 import polars as pl
@@ -133,14 +134,36 @@ class delta(InitDriver):
             return [result, error]  # pylint: disable=W0150
 
     async def create(
-        self, path: Union[str, Path], data: Any, name: Optional[str] = None, mode: str = "append", **kwargs
-    ):
+        self,
+        path: Union[str, Path],
+        data: Any,
+        name: Optional[str] = None,
+        mode: str = "append",
+        schema_mode: Optional[str] = None,
+        configuration: Optional[dict[str, Optional[str]]] = None,
+        **kwargs,
+    ) -> None:
+        """Create a new Delta Table from data or a file path.
+
+        Args:
+            path: Destination path for the Delta Table.
+            data: Input data — DataFrame, PyArrow Table, or file path
+                (CSV, Excel, Parquet).
+            name: User-provided table name in metadata.
+            mode: Write mode — 'error', 'append', 'overwrite', 'ignore'.
+            schema_mode: Schema evolution — 'merge' or 'overwrite'.
+            configuration: Delta table configuration metadata.
+            **kwargs: Additional arguments forwarded to ``write_deltalake``.
+
+        Raises:
+            DriverError: On any delta creation failure.
+        """
         if isinstance(path, str):
-            path = Path(str).resolve()
+            path = Path(path).resolve()
         if isinstance(data, str):
-            data = Path(str).resolve()
+            data = Path(data).resolve()
         if isinstance(data, Path):
-            # open this file with Pandas or Arrow
+            # Read file into Arrow/Pandas based on extension
             ext = data.suffix
             if ext == ".csv":
                 read_options = pcsv.ReadOptions()
@@ -150,15 +173,23 @@ class delta(InitDriver):
                     data, read_options=read_options, parse_options=parse_options, convert_options=convert_options
                 )
             elif ext in [".xls", ".xlsx"]:
-                if ext == ".xls":
-                    engine = "xlrd"
-                else:
-                    engine = "openpyxl"
+                engine = "xlrd" if ext == ".xls" else "openpyxl"
                 data = pd.read_excel(data, engine=engine)
             elif ext == ".parquet":
                 data = pq.read_table(data)
+        # Normalize Polars DataFrame to Arrow
+        if isinstance(data, pl.DataFrame):
+            data = data.to_arrow()
+        # Build write arguments, omitting None values
+        args: dict[str, Any] = {"mode": mode, **kwargs}
+        if name is not None:
+            args["name"] = name
+        if schema_mode is not None:
+            args["schema_mode"] = schema_mode
+        if configuration is not None:
+            args["configuration"] = configuration
         try:
-            write_deltalake(path, data, name=name, mode=mode, **kwargs)
+            await asyncio.to_thread(write_deltalake, path, data, **args)
         except DeltaError as exc:
             raise DriverError(f"Delta: can't create a table in path {path}, error: {exc}") from exc
         except Exception as exc:
@@ -375,36 +406,82 @@ class delta(InitDriver):
 
     async def write(
         self,
-        data: Union[pd.DataFrame, pl.DataFrame, Iterable],
+        data: Union[pd.DataFrame, pl.DataFrame, Table, Iterable],
         table_id: str,
-        path: PurePath,
-        if_exists: str = "append",
-        partition_by: list = None,
+        path: Union[str, Path, PurePath],
+        *,
+        mode: Literal["error", "append", "overwrite", "ignore"] = "append",
+        schema_mode: Optional[Literal["merge", "overwrite"]] = None,
+        partition_by: Optional[Union[list[str], str]] = None,
+        configuration: Optional[dict[str, Optional[str]]] = None,
+        storage_options: Optional[dict[str, str]] = None,
+        predicate: Optional[str] = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        if_exists: Optional[str] = None,
         **kwargs,
-    ):
-        """write.
-        Writing Data into Delta Table.
+    ) -> None:
+        """Write data to a Delta Table.
+
+        Wraps ``deltalake.write_deltalake`` with full parameter support.
 
         Args:
-        - data: Data to be written,
-          it can be a Pandas DataFrame, a Polars DataFrame or a list.
-        - table_id: Table Identifier
-        - path: Path to the Delta Table.
-        - if_exists: if_exists mode, default is "append", can be "error", "overwrite" or "ignore".
+            data: Input data — Pandas DataFrame, Polars DataFrame,
+                PyArrow Table, or any Arrow-compatible iterable.
+            table_id: Table name (appended to path as subdirectory).
+            path: Root path for the Delta Table.
+            mode: Write mode — 'error', 'append', 'overwrite', 'ignore'.
+            schema_mode: Schema evolution — 'merge' or 'overwrite'.
+            partition_by: Column(s) to partition by.
+            configuration: Delta table configuration metadata.
+            storage_options: Storage backend options (S3, Azure, GCS).
+                Defaults to the driver's ``self.storage_options`` when None.
+            predicate: SQL predicate for targeted overwrite.
+            name: User-provided table identifier in metadata.
+            description: User-provided table description in metadata.
+            if_exists: **Deprecated** — use ``mode`` instead.
+            **kwargs: Additional arguments forwarded to ``write_deltalake``
+                (e.g., writer_properties, target_file_size,
+                commit_properties, post_commithook_properties).
+
+        Raises:
+            DriverError: On any delta write failure.
         """
-        args = {"mode": if_exists, "engine": "rust", **kwargs}
+        # Handle deprecated if_exists parameter
+        if if_exists is not None:
+            warnings.warn(
+                "if_exists is deprecated, use mode instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            mode = if_exists
+
+        # Normalize Polars DataFrame to Arrow for a unified code path
+        if isinstance(data, pl.DataFrame):
+            data = data.to_arrow()
+
+        # Build destination path
+        destination = Path(path) / table_id
+
+        # Build write arguments, omitting None values
+        args: dict[str, Any] = {"mode": mode, **kwargs}
+        if schema_mode is not None:
+            args["schema_mode"] = schema_mode
         if partition_by is not None:
             args["partition_by"] = partition_by
+        if configuration is not None:
+            args["configuration"] = configuration
+        if predicate is not None:
+            args["predicate"] = predicate
+        if name is not None:
+            args["name"] = name
+        if description is not None:
+            args["description"] = description
+        # Use per-write storage_options or fall back to driver defaults
+        args["storage_options"] = storage_options or self.storage_options
+
         try:
-            destination = path.joinpath(table_id)
-            if isinstance(data, pd.DataFrame):
-                write_deltalake(destination, data, **args)
-            elif isinstance(data, pl.DataFrame):
-                data.write_delta(destination, **args)
-            else:
-                # assuming a pyarrow:
-                write_deltalake(destination, data, **args)
-            # Destination will be the new file path:
+            await asyncio.to_thread(write_deltalake, destination, data, **args)
             self._delta = destination
         except (DeltaError, DeltaProtocolError) as exc:
             raise DriverError(f"DeltaTable Error: {exc}") from exc
