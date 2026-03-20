@@ -1,7 +1,7 @@
 # FEAT-001: exception-migration
 
 **Title**: Migrate Exception Classes from Cython to Pure Python
-**Status**: draft
+**Status**: approved
 **Created**: 2026-03-19
 **Author**: Jesus Lara
 
