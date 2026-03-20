@@ -2,6 +2,7 @@
 """
 
 from .exceptions import (
+    AsyncDBException,
     ProviderError,
     DriverError,
     DataError,
@@ -24,6 +25,7 @@ __all__ = (
     "default_exception_handler",
     "handle_done_tasks",
     "shutdown",
+    "AsyncDBException",
     "ProviderError",
     "DriverError",
     "DataError",
