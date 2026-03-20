@@ -166,3 +166,13 @@ activities.csv
 *.csv
 examples/internals/test_db.py
 examples/test_elastic.py
+
+# Large data files
+data.arrow
+*.parquet
+
+# Certificates
+global-bundle.pem
+
+# Claude worktree refs
+.claude/worktrees/
