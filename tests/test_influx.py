@@ -1,55 +1,60 @@
-import pytest
-from asyncdb import AsyncDB, AsyncPool
 import asyncio
-import asyncpg
-from io import BytesIO
-from pathlib import Path
+import pytest
+from influxdb_client.domain.health_check import HealthCheck
+from asyncdb import AsyncDB
+from .conftest import (
+    conn,
+    pooler
+)
 
-@pytest.fixture
-def event_loop():
-    loop = asyncio.get_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
 
-params = {
-    "host": "127.0.0.1",
-    "port": "8086",
-    "database": 'testdb'
-}
+@pytest.fixture()
+def driver():
+    return 'influx'
 
-DRIVER='influx'
 
-@pytest.fixture
-async def conn(event_loop):
-    db = AsyncDB(DRIVER, params=params, loop=event_loop)
-    await db.connection()
-    yield db
-    await db.close()
+@pytest.fixture()
+def params():
+    return {
+        "host": "127.0.0.1",
+        "port": "8086",
+        "database": 'navigator',
+        "token": "FL2XDVzRheR9-apXJu0csK3HaBSjfEG3d15R9uIu8xG8WwL9ICAGyrPWLoPct4IHtacpjtKd1y3NbYbAFPs20g==",
+        "user": "troc_pgdata",
+        "password": "12345678",
+        "org": "navigator"
+    }
+
 
 pytestmark = pytest.mark.asyncio
 
-@pytest.mark.parametrize("driver", [
-    (DRIVER)
-])
-async def test_pool_by_params(driver, event_loop):
+
+@pytest.mark.usefixtures("driver", "params")
+async def test_pool_by_params(driver, params, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
     assert db.is_connected() is False
 
-@pytest.mark.parametrize("driver", [
-    (DRIVER)
-])
-async def test_connect(driver, event_loop):
+
+@pytest.mark.usefixtures("driver", "params")
+async def test_connect(driver, params, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
     await db.connection()
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection()
-    pytest.assume(type(result) == list)
+    pytest.assume(not error)
+    pytest.assume(isinstance(result, HealthCheck))
     await db.close()
 
 
-async def test_connection(conn):
-    #await conn.connection()
-    pytest.assume(conn.is_connected() is True)
-    result, error = await conn.test_connection()
-    pytest.assume(type(result) == list)
+@pytest.mark.usefixtures("connection", "driver")
+async def test_connection(connection, event_loop):
+    assert connection is not None
+    async with await connection.connection() as db:
+        pytest.assume(db.is_connected() is True)
+        result, error = await db.test_connection()
+        assert not error
+        pytest.assume(isinstance(result, HealthCheck))
+
+
+def pytest_sessionfinish(session, exitstatus):
+    asyncio.get_event_loop().close()

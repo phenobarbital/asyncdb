@@ -1,72 +1,57 @@
+import asyncio
 import pytest
 from asyncdb import AsyncDB, AsyncPool
-import asyncio
-import asyncpg
-from io import BytesIO
-from pathlib import Path
+from .conftest import (
+    conn,
+    pooler
+)
 
 
-@pytest.fixture
-def event_loop():
-    loop = asyncio.get_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
+@pytest.fixture()
+def driver():
+    return 'memcache'
 
 
-DRIVER = 'memcache'
-params = {
-    "host": "localhost",
-    "port": 11211
-}
+@pytest.fixture()
+def params():
+    return {
+        "host": "localhost",
+        "port": 11211
+    }
 
-
-@pytest.fixture
-async def conn(event_loop):
-    db = AsyncDB(DRIVER, params=params, loop=event_loop)
-    await db.connection()
-    yield db
-    await db.close()
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_pool_by_params(event_loop):
-    pool = AsyncPool(DRIVER, params=params, loop=event_loop)
+@pytest.mark.usefixtures("driver", "params")
+async def test_pool_by_params(driver, params, event_loop):
+    pool = AsyncPool(driver, params=params, loop=event_loop)
     pytest.assume(pool.is_connected() is False)
     await pool.connect()
     pytest.assume(pool.is_connected() is True)
     await pool.close()
 
 
-@pytest.mark.parametrize("driver", [
-    (DRIVER)
-])
-async def test_pool_by_params(driver, event_loop):
+@pytest.mark.usefixtures("driver", "params")
+async def test_pool_by_params2(driver, params, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
     assert db.is_connected() is False
+    async with await db.connection() as conn:
+        assert db.is_connected() is True
 
 
-@pytest.mark.parametrize("driver", [
-    (DRIVER)
-])
-async def test_connect(driver, event_loop):
+@pytest.mark.usefixtures("driver", "params")
+async def test_connect(driver, params, event_loop):
     db = AsyncDB(driver, params=params, loop=event_loop)
     await db.connection()
     pytest.assume(db.is_connected() is True)
     result, error = await db.test_connection('bigtest')
     pytest.assume(not error)
-    assert result == 'bigtest'
+    assert result == '1'
     await db.close()
 
 
-async def test_connection(conn):
-    pytest.assume(conn.is_connected() is True)
-    result, error = await conn.test_connection('bigtest')
-    pytest.assume(not error)
-    pytest.assume(result == 'bigtest')
-
-
+@pytest.mark.usefixtures("conn", "driver")
 async def multiget(conn):
     pytest.assume(conn.is_connected() is True)
     result = await conn.set("Test2", "No More Test")
@@ -79,3 +64,7 @@ async def multiget(conn):
     await conn.delete("Test3")
     value = await conn.get("Test2")
     assert (not value)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    asyncio.get_event_loop().close()

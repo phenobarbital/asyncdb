@@ -1,0 +1,105 @@
+name: Python package build and publish
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install twine cibuildwheel
+
+      - name: Build wheels
+        env:
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+          CIBW_ARCHS_WINDOWS: "AMD64"
+          CIBW_ARCHS_LINUX: "auto64"
+          CIBW_ARCHS_MACOS: "x86_64 arm64"
+          CIBW_SKIP: "pp* *-win32 *i686 *musllinux*"
+          CIBW_PRERELEASE_PYTHONS: "0"
+        run: |
+          cibuildwheel --output-dir dist
+
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: dist/*.whl
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4.1.7
+        with:
+          path: dist
+
+      - name: Move wheel files to 'dist' directory
+        run: |
+          find dist -name '*.whl' -exec mv {} dist \;
+
+      - name: Check for wheel types
+        id: check_wheels
+        run: |
+          echo "Checking for wheel types..."
+          if ls dist/*-manylinux*.whl 1> /dev/null 2>&1; then
+            echo "Found manylinux wheels."
+            echo "HAS_MANYLINUX_WHEELS=true" >> $GITHUB_ENV
+          fi
+          if ls dist/*-win_*.whl 1> /dev/null 2>&1; then
+            echo "Found Windows wheels."
+            echo "HAS_WINDOWS_WHEELS=true" >> $GITHUB_ENV
+          fi
+          if ls dist/*-macosx_*.whl 1> /dev/null 2>&1; then
+            echo "Found macOS wheels."
+            echo "HAS_MACOS_WHEELS=true" >> $GITHUB_ENV
+          fi
+
+      - name: List files in dist
+        run: ls -l dist
+
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.x'
+
+      - name: Install twine
+        run: pip install twine
+
+      - name: Publish manylinux wheels to Production PyPI
+        if: env.HAS_MANYLINUX_WHEELS == 'true'
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.ASYNCDB_PYPI_API_TOKEN }}
+        run: twine upload dist/*-manylinux*.whl
+
+      - name: Publish Windows wheels to Production PyPI
+        if: env.HAS_WINDOWS_WHEELS == 'true'
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.ASYNCDB_PYPI_API_TOKEN }}
+        run: twine upload dist/*-win_*.whl
+
+      - name: Publish macOS wheels to Production PyPI
+        if: env.HAS_MACOS_WHEELS == 'true'
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.ASYNCDB_PYPI_API_TOKEN }}
+        run: twine upload dist/*-macosx_*.whl
