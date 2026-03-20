@@ -18,4 +18,4 @@ pytest-assume==2.4.3
 sdist==0.0.0
 sphinx==7.3.7
 tox==4.18.0
-twine==4.0.2
+twine==6.2.0
