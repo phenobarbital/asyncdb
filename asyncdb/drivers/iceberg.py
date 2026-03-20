@@ -11,15 +11,13 @@ All blocking PyIceberg calls are offloaded to the default thread-pool
 executor via ``asyncio.to_thread()`` so the event loop is never blocked.
 """
 import asyncio
-import gc
+import logging
 import time
 from typing import Any, Optional, Union
 
-import duckdb
-
 try:
+    import duckdb
     import pyarrow as pa
-    import pyarrow.dataset as ds
     import pandas as pd
     import polars as pl
     from pyiceberg.catalog import load_catalog
@@ -31,7 +29,8 @@ try:
         TableAlreadyExistsError,
     )
     # IcebergError is not a stable public base class across versions;
-    # use Exception as the catch-all for PyIceberg errors.
+    # we keep a named alias so exception clauses read clearly, and rely on
+    # the ordered except chain (specific → generic) to avoid swallowing bugs.
     IcebergError = Exception
     _PYICEBERG_AVAILABLE = True
 except ImportError:
@@ -209,18 +208,10 @@ class iceberg(InitDriver, _KwargsTerminator):
         return self
 
     async def close(self) -> None:
-        """Release the catalog reference and clean up resources.
-
-        Raises:
-            DriverError: On any unexpected error during cleanup.
-        """
-        try:
-            self._connection = None
-            self._current_table = None
-            self._connected = False
-            gc.collect()
-        except Exception as exc:
-            raise DriverError(f"Iceberg close error: {exc}") from exc
+        """Release the catalog reference and clean up resources."""
+        self._connection = None
+        self._current_table = None
+        self._connected = False
 
     disconnect = close
 
@@ -255,8 +246,10 @@ class iceberg(InitDriver, _KwargsTerminator):
     # Namespace operations  (TASK-005)
     # ------------------------------------------------------------------
 
-    async def use(self, namespace: str = "") -> None:
+    def use(self, namespace: str = "") -> None:
         """Set the default namespace for subsequent table operations.
+
+        This is a synchronous convenience setter; no catalog I/O is performed.
 
         Args:
             namespace: Namespace identifier to activate.
@@ -369,10 +362,20 @@ class iceberg(InitDriver, _KwargsTerminator):
 
         Returns:
             A tuple suitable for PyIceberg catalog calls.
+
+        Raises:
+            DriverError: When the identifier has no namespace and no default
+                namespace has been configured via ``use()`` or the constructor.
         """
         parsed = _parse_table_id(table_id)
         if len(parsed) == 1 and self._namespace:
             return (self._namespace, parsed[0])
+        if len(parsed) == 1 and not self._namespace:
+            raise DriverError(
+                f"Table '{table_id}' has no namespace. Either include the "
+                "namespace in the table_id ('namespace.table') or set a "
+                "default via use() or the 'namespace' constructor param."
+            )
         return parsed
 
     async def create_table(
@@ -559,8 +562,8 @@ class iceberg(InitDriver, _KwargsTerminator):
         except Exception as exc:
             raise DriverError(f"Iceberg unexpected error: {exc}") from exc
 
-    def tables(self, namespace: str = "") -> list[str]:
-        """List table identifiers in the given namespace (synchronous).
+    async def tables(self, namespace: str = "") -> list[str]:
+        """List table identifiers in the given namespace.
 
         Args:
             namespace: Namespace to list tables in. Uses the default
@@ -575,17 +578,18 @@ class iceberg(InitDriver, _KwargsTerminator):
         self._require_connection()
         ns = namespace or self._namespace
         try:
-            raw = self._connection.list_tables(ns)
+            raw = await asyncio.to_thread(self._connection.list_tables, ns)
             return [".".join(t) for t in raw]
         except NoSuchNamespaceError as exc:
             raise DriverError(f"Namespace '{ns}' does not exist: {exc}") from exc
         except IcebergError as exc:
             raise DriverError(f"Iceberg list_tables error: {exc}") from exc
         except Exception as exc:
+            self._logger.exception("Unexpected error in tables()")
             raise DriverError(f"Iceberg unexpected error: {exc}") from exc
 
-    def table(self, tablename: str = "") -> dict:
-        """Return schema and metadata for a table (synchronous).
+    async def table(self, tablename: str = "") -> dict:
+        """Return schema and metadata for a table.
 
         Args:
             tablename: Table identifier. Uses ``_current_table`` when empty.
@@ -598,24 +602,36 @@ class iceberg(InitDriver, _KwargsTerminator):
             DriverError: When no table is specified/loaded or on error.
         """
         self._require_connection()
-        if tablename:
-            tid = self._resolve_table_id(tablename)
-            tbl = self._connection.load_table(tid)
-        elif self._current_table is not None:
-            tbl = self._current_table
-        else:
-            raise DriverError("No table specified and no current table is loaded.")
-        meta = tbl.metadata
-        return {
-            "table_id": str(tbl.identifier),
-            "schema": str(tbl.schema()),
-            "location": meta.location,
-            "properties": dict(meta.properties),
-            "snapshot_count": len(meta.snapshots),
-        }
 
-    def schema(self, table_id: Union[str, tuple] = "") -> Any:
-        """Return the PyArrow schema for a table (synchronous).
+        def _load_and_describe() -> dict:
+            if tablename:
+                tid = self._resolve_table_id(tablename)
+                tbl = self._connection.load_table(tid)
+            elif self._current_table is not None:
+                tbl = self._current_table
+            else:
+                raise DriverError("No table specified and no current table is loaded.")
+            meta = tbl.metadata
+            return {
+                "table_id": str(tbl.identifier),
+                "schema": str(tbl.schema()),
+                "location": meta.location,
+                "properties": dict(meta.properties),
+                "snapshot_count": len(meta.snapshots),
+            }
+
+        try:
+            return await asyncio.to_thread(_load_and_describe)
+        except DriverError:
+            raise
+        except IcebergError as exc:
+            raise DriverError(f"Iceberg table() error: {exc}") from exc
+        except Exception as exc:
+            self._logger.exception("Unexpected error in table()")
+            raise DriverError(f"Iceberg unexpected error: {exc}") from exc
+
+    async def schema(self, table_id: Union[str, tuple] = "") -> Any:
+        """Return the PyArrow schema for a table.
 
         Args:
             table_id: Table identifier. Uses ``_current_table`` when empty.
@@ -627,18 +643,58 @@ class iceberg(InitDriver, _KwargsTerminator):
             DriverError: When the table is not found or not loaded.
         """
         self._require_connection()
-        if table_id:
-            tid = self._resolve_table_id(table_id)
-            tbl = self._connection.load_table(tid)
-        elif self._current_table is not None:
-            tbl = self._current_table
-        else:
-            raise DriverError("No table specified and no current table is loaded.")
-        return tbl.schema().as_arrow()
+
+        def _get_schema() -> Any:
+            if table_id:
+                tid = self._resolve_table_id(table_id)
+                tbl = self._connection.load_table(tid)
+            elif self._current_table is not None:
+                tbl = self._current_table
+            else:
+                raise DriverError("No table specified and no current table is loaded.")
+            return tbl.schema().as_arrow()
+
+        try:
+            return await asyncio.to_thread(_get_schema)
+        except DriverError:
+            raise
+        except IcebergError as exc:
+            raise DriverError(f"Iceberg schema() error: {exc}") from exc
+        except Exception as exc:
+            self._logger.exception("Unexpected error in schema()")
+            raise DriverError(f"Iceberg unexpected error: {exc}") from exc
 
     # ------------------------------------------------------------------
     # Read operations  (TASK-007)
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _summary_dict(summary: Any) -> dict:
+        """Safely convert a PyIceberg ``Summary`` object to a plain dict.
+
+        PyIceberg's ``Summary`` type has changed across versions; this helper
+        tries the stable public interfaces in order before falling back.
+
+        Args:
+            summary: A PyIceberg ``Summary`` (or ``None``).
+
+        Returns:
+            A plain ``dict`` of summary key/value pairs, or ``{}`` on failure.
+        """
+        if summary is None:
+            return {}
+        try:
+            return summary.model_dump()
+        except AttributeError:
+            pass
+        try:
+            return dict(summary.additional_properties)
+        except AttributeError:
+            pass
+        try:
+            return dict(summary)
+        except TypeError:
+            return {}
 
     def _to_factory(self, arrow_table: Any, factory: str) -> Any:
         """Convert a PyArrow Table to the requested output format.
@@ -800,6 +856,7 @@ class iceberg(InitDriver, _KwargsTerminator):
         except DriverError:
             raise
         except Exception as exc:
+            self._logger.error("Iceberg query error: %s", exc, exc_info=True)
             error = exc
         return [result, error]
 
@@ -838,20 +895,23 @@ class iceberg(InitDriver, _KwargsTerminator):
             with duckdb.connect() as con:
                 con.register(tablename, arrow_table)
                 rst = con.execute(sentence)
+                # Always return a single-row container consistent with the
+                # factory type — never a Series, tuple, or scalar.
                 if factory == "pandas":
                     df = rst.df()
-                    result = df.iloc[0] if not df.empty else None
+                    result = df.head(1) if not df.empty else df
                 elif factory == "polars":
                     pl_df = rst.pl()
-                    result = pl_df.row(0) if pl_df.shape[0] > 0 else None
+                    result = pl_df.head(1) if pl_df.shape[0] > 0 else pl_df
                 elif factory == "arrow":
                     at = rst.arrow()
-                    result = at.slice(0, 1) if at.num_rows > 0 else None
+                    result = at.slice(0, 1) if at.num_rows > 0 else at
                 else:
                     result = rst.arrow()
         except DriverError:
             raise
         except Exception as exc:
+            self._logger.error("Iceberg queryrow error: %s", exc, exc_info=True)
             error = exc
         return [result, error]
 
@@ -952,6 +1012,11 @@ class iceberg(InitDriver, _KwargsTerminator):
             DriverError: On unsupported mode, conversion error, or
                 PyIceberg write error.
         """
+        _VALID_MODES = {"append", "overwrite"}
+        if mode not in _VALID_MODES:
+            raise DriverError(
+                f"Unsupported write mode: '{mode}'. Valid modes: {sorted(_VALID_MODES)}"
+            )
         self._require_connection()
         tbl = await self._load_table_ref(table_id)
         target_schema = tbl.schema().as_arrow()
@@ -961,8 +1026,6 @@ class iceberg(InitDriver, _KwargsTerminator):
                 await asyncio.to_thread(tbl.append, arrow_table)
             elif mode == "overwrite":
                 await asyncio.to_thread(tbl.overwrite, arrow_table)
-            else:
-                raise DriverError(f"Unsupported write mode: '{mode}'")
             return True
         except DriverError:
             raise
@@ -1051,11 +1114,23 @@ class iceberg(InitDriver, _KwargsTerminator):
                 "The installed PyIceberg version does not support upsert. "
                 "Upgrade to pyiceberg>=0.11.0."
             )
+        if join_cols:
+            # join_cols is informational: PyIceberg matches rows via the
+            # identifier_field_ids already set on the table schema. The
+            # columns listed here must be pre-configured as identifier fields
+            # when the table was created — this driver does not modify the
+            # schema at upsert time.
+            self._logger.debug(
+                "upsert: join_cols=%s must be set as identifier_field_ids "
+                "on the schema at table-creation time; not applied dynamically.",
+                join_cols,
+            )
         try:
             return await asyncio.to_thread(tbl.upsert, arrow_table)
         except IcebergError as exc:
             raise DriverError(f"Iceberg upsert error: {exc}") from exc
         except Exception as exc:
+            self._logger.exception("Unexpected error in upsert()")
             raise DriverError(f"Iceberg unexpected upsert error: {exc}") from exc
 
     async def add_files(
@@ -1177,26 +1252,12 @@ class iceberg(InitDriver, _KwargsTerminator):
                 snapshots = tbl.metadata.snapshots
                 if not snapshots:
                     return []
-
-                def _summary_dict(summary) -> dict:
-                    """Safely convert a PyIceberg Summary to a plain dict."""
-                    if summary is None:
-                        return {}
-                    try:
-                        return summary.model_dump()
-                    except AttributeError:
-                        pass
-                    try:
-                        return {k: v for k, v in summary.additional_properties.items()}
-                    except AttributeError:
-                        return {}
-
                 return [
                     {
                         "snapshot_id": s.snapshot_id,
                         "timestamp_ms": s.timestamp_ms,
                         "parent_id": s.parent_snapshot_id,
-                        "summary": _summary_dict(s.summary),
+                        "summary": iceberg._summary_dict(s.summary),
                     }
                     for s in snapshots
                 ]
@@ -1254,25 +1315,11 @@ class iceberg(InitDriver, _KwargsTerminator):
                 snap = tbl.current_snapshot()
                 if snap is None:
                     return {}
-
-                def _summary_dict(summary) -> dict:
-                    """Safely convert a PyIceberg Summary to a plain dict."""
-                    if summary is None:
-                        return {}
-                    try:
-                        return summary.model_dump()
-                    except AttributeError:
-                        pass
-                    try:
-                        return {k: v for k, v in summary.additional_properties.items()}
-                    except AttributeError:
-                        return {}
-
                 return {
                     "snapshot_id": snap.snapshot_id,
                     "timestamp_ms": snap.timestamp_ms,
                     "parent_id": snap.parent_snapshot_id,
-                    "summary": _summary_dict(snap.summary),
+                    "summary": iceberg._summary_dict(snap.summary),
                 }
 
             return await asyncio.to_thread(_current)

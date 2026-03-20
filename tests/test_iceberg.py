@@ -249,7 +249,7 @@ async def test_use_namespace(tmp_path: Path) -> None:
     """
     params = _sqlite_params(tmp_path)
     async with iceberg(params=params) as driver:
-        await driver.use("another_ns")
+        driver.use("another_ns")
         assert driver._namespace == "another_ns"
 
 
@@ -337,7 +337,7 @@ async def test_tables_list(tmp_path: Path, arrow_schema: pa.Schema) -> None:
         await driver.create_namespace("test_ns")
         await driver.create_table("test_ns.table_a", schema=arrow_schema)
         await driver.create_table("test_ns.table_b", schema=arrow_schema)
-        table_list = driver.tables("test_ns")
+        table_list = await driver.tables("test_ns")
         assert any("table_a" in t for t in table_list)
         assert any("table_b" in t for t in table_list)
 
@@ -355,7 +355,7 @@ async def test_table_schema(tmp_path: Path, arrow_schema: pa.Schema) -> None:
         await driver.create_namespace("test_ns")
         await driver.create_table("test_ns.schema_table", schema=arrow_schema)
         await driver.load_table("test_ns.schema_table")
-        returned_schema = driver.schema()
+        returned_schema = await driver.schema()
         assert isinstance(returned_schema, pa.Schema)
         assert "id" in returned_schema.names
 
@@ -837,3 +837,294 @@ async def test_fetch_one_alias(
         )
         assert error is None
         assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# Upsert operations
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upsert_inserts_and_updates(tmp_path: Path) -> None:
+    """Test upsert() inserts new rows and updates existing ones.
+
+    The table schema must declare identifier_field_ids so PyIceberg knows
+    which column acts as the primary key for matching.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+    """
+    from pyiceberg.schema import Schema
+    from pyiceberg.types import IntegerType, NestedField, StringType
+
+    iceberg_schema = Schema(
+        NestedField(1, "city", StringType(), required=True),
+        NestedField(2, "inhabitants", IntegerType(), required=True),
+        identifier_field_ids=[1],  # "city" is the primary key
+    )
+    arrow_schema = pa.schema(
+        [
+            pa.field("city", pa.string(), nullable=False),
+            pa.field("inhabitants", pa.int32(), nullable=False),
+        ]
+    )
+
+    params = {
+        "catalog_name": "upsert_catalog",
+        "catalog_type": "sql",
+        "catalog_properties": {
+            "uri": f"sqlite:///{tmp_path}/upsert.db",
+            "warehouse": str(tmp_path / "warehouse"),
+        },
+        "namespace": "upsert_ns",
+    }
+
+    initial_data = pa.Table.from_pylist(
+        [
+            {"city": "Amsterdam", "inhabitants": 921402},
+            {"city": "Paris", "inhabitants": 2103000},
+            {"city": "Drachten", "inhabitants": 45019},
+        ],
+        schema=arrow_schema,
+    )
+    upsert_data = pa.Table.from_pylist(
+        [
+            # updated — inhabitants changed
+            {"city": "Drachten", "inhabitants": 45505},
+            # new row — will be inserted
+            {"city": "Berlin", "inhabitants": 3432000},
+            # ignored — identical to existing row
+            {"city": "Paris", "inhabitants": 2103000},
+        ],
+        schema=arrow_schema,
+    )
+
+    async with iceberg(params=params) as driver:
+        await driver.create_namespace("upsert_ns")
+        await driver.create_table("upsert_ns.cities", schema=iceberg_schema)
+        await driver.write(initial_data, "upsert_ns.cities", mode="append")
+
+        result = await driver.upsert(upsert_data, "upsert_ns.cities", join_cols=["city"])
+
+        # PyIceberg UpsertResult exposes rows_updated and rows_inserted
+        assert result.rows_updated == 1, f"Expected 1 update, got {result.rows_updated}"
+        assert result.rows_inserted == 1, f"Expected 1 insert, got {result.rows_inserted}"
+
+        # Verify final state: 4 cities total (Amsterdam + Paris + updated Drachten + Berlin)
+        final = await driver.scan("upsert_ns.cities")
+        assert final.num_rows == 4
+
+
+@pytest.mark.asyncio
+async def test_upsert_raises_on_unsupported_version(
+    tmp_path: Path,
+    arrow_schema: pa.Schema,
+    sample_arrow_table: pa.Table,
+) -> None:
+    """Test upsert() raises DriverError when tbl.upsert is missing.
+
+    Simulates an older PyIceberg version by temporarily removing the
+    ``upsert`` attribute from the table object via monkeypatching.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+        arrow_schema: PyArrow schema fixture.
+        sample_arrow_table: Sample data fixture.
+    """
+    params = _sqlite_params(tmp_path)
+    async with iceberg(params=params) as driver:
+        await driver.create_namespace("test_ns")
+        tbl = await driver.create_table("test_ns.no_upsert", schema=arrow_schema)
+        await driver.write(sample_arrow_table, "test_ns.no_upsert")
+
+        # Patch the table to simulate a version that lacks upsert.
+        # The stub must expose schema() so _to_arrow() can proceed; the
+        # version check fires immediately after.
+        class _NoUpsert:
+            def schema(self):
+                class _S:
+                    def as_arrow(self_):
+                        return arrow_schema
+                return _S()
+
+        original = driver._current_table
+        driver._current_table = _NoUpsert()
+        with pytest.raises(DriverError, match="does not support upsert"):
+            await driver.upsert(sample_arrow_table, table_id=None)
+        driver._current_table = original  # restore
+
+
+# ---------------------------------------------------------------------------
+# add_files operations
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_add_files_registers_parquet(
+    tmp_path: Path,
+    arrow_schema: pa.Schema,
+    sample_arrow_table: pa.Table,
+) -> None:
+    """Test add_files() registers existing Parquet files into an Iceberg table.
+
+    Writes a Parquet file manually, then calls add_files() to register it
+    into an empty table and verifies the row count increases.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+        arrow_schema: PyArrow schema fixture.
+        sample_arrow_table: Sample data with 3 rows.
+    """
+    import pyarrow.parquet as pq
+
+    parquet_path = tmp_path / "data.parquet"
+    pq.write_table(sample_arrow_table, str(parquet_path))
+
+    params = _sqlite_params(tmp_path)
+    async with iceberg(params=params) as driver:
+        await driver.create_namespace("test_ns")
+        await driver.create_table("test_ns.files_table", schema=arrow_schema)
+
+        ok = await driver.add_files(
+            "test_ns.files_table",
+            file_paths=[str(parquet_path)],
+        )
+        assert ok is True
+
+        result = await driver.scan("test_ns.files_table")
+        assert result.num_rows == 3
+
+
+@pytest.mark.asyncio
+async def test_add_files_raises_on_empty_paths(
+    tmp_path: Path,
+    arrow_schema: pa.Schema,
+) -> None:
+    """Test add_files() raises DriverError when file_paths is empty.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+        arrow_schema: PyArrow schema fixture.
+    """
+    params = _sqlite_params(tmp_path)
+    async with iceberg(params=params) as driver:
+        await driver.create_namespace("test_ns")
+        await driver.create_table("test_ns.empty_files_table", schema=arrow_schema)
+        with pytest.raises(DriverError, match="file_paths must be a non-empty"):
+            await driver.add_files("test_ns.empty_files_table", file_paths=[])
+
+
+# ---------------------------------------------------------------------------
+# Partial overwrite (overwrite() with filter)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_partial_overwrite_with_filter(
+    tmp_path: Path,
+    arrow_schema: pa.Schema,
+    sample_arrow_table: pa.Table,
+) -> None:
+    """Test overwrite() with a filter expression replaces only matching rows.
+
+    Writes 3 rows, then overwrites rows where id > 1 with 1 new row.
+    Expects the table to contain the 1 surviving original row + the 1 new row.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+        arrow_schema: PyArrow schema fixture (id, name, value).
+        sample_arrow_table: 3-row sample data (ids 1, 2, 3).
+    """
+    from pyiceberg.expressions import GreaterThan
+
+    replacement = pa.Table.from_pylist(
+        [{"id": 99, "name": "Replacement", "value": 99.9}],
+        schema=arrow_schema,
+    )
+    params = _sqlite_params(tmp_path)
+    async with iceberg(params=params) as driver:
+        await driver.create_namespace("test_ns")
+        await driver.create_table("test_ns.partial_ow", schema=arrow_schema)
+        await driver.write(sample_arrow_table, "test_ns.partial_ow", mode="append")
+
+        ok = await driver.overwrite(
+            replacement,
+            "test_ns.partial_ow",
+            overwrite_filter=GreaterThan("id", 1),
+        )
+        assert ok is True
+
+        final = await driver.scan("test_ns.partial_ow")
+        # Row id=1 survives; ids 2 & 3 were replaced by the single new row (id=99)
+        ids = final.column("id").to_pylist()
+        assert 1 in ids
+        assert 99 in ids
+        assert 2 not in ids
+        assert 3 not in ids
+
+
+# ---------------------------------------------------------------------------
+# Async tables() / schema() / table() — must be awaited
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_tables_is_async(tmp_path: Path, arrow_schema: pa.Schema) -> None:
+    """Test that tables() is a coroutine that must be awaited.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+        arrow_schema: PyArrow schema fixture.
+    """
+    import inspect
+
+    params = _sqlite_params(tmp_path)
+    async with iceberg(params=params) as driver:
+        await driver.create_namespace("test_ns")
+        await driver.create_table("test_ns.async_t", schema=arrow_schema)
+        coro = driver.tables("test_ns")
+        assert inspect.iscoroutine(coro), "tables() must return a coroutine"
+        result = await coro
+        assert isinstance(result, list)
+
+
+@pytest.mark.asyncio
+async def test_schema_is_async(tmp_path: Path, arrow_schema: pa.Schema) -> None:
+    """Test that schema() is a coroutine that must be awaited.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+        arrow_schema: PyArrow schema fixture.
+    """
+    import inspect
+
+    params = _sqlite_params(tmp_path)
+    async with iceberg(params=params) as driver:
+        await driver.create_namespace("test_ns")
+        await driver.create_table("test_ns.schema_async", schema=arrow_schema)
+        await driver.load_table("test_ns.schema_async")
+        coro = driver.schema()
+        assert inspect.iscoroutine(coro), "schema() must return a coroutine"
+        result = await coro
+        assert isinstance(result, pa.Schema)
+
+
+@pytest.mark.asyncio
+async def test_write_invalid_mode_raises_before_conversion(
+    tmp_path: Path,
+    arrow_schema: pa.Schema,
+) -> None:
+    """Test write() raises DriverError for invalid mode before doing any I/O.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+        arrow_schema: PyArrow schema fixture.
+    """
+    params = _sqlite_params(tmp_path)
+    async with iceberg(params=params) as driver:
+        await driver.create_namespace("test_ns")
+        await driver.create_table("test_ns.mode_early", schema=arrow_schema)
+        # Pass a valid pa.Table; the error should fire before any conversion
+        data = pa.Table.from_pylist([{"id": 1, "name": "x", "value": 1.0}], schema=arrow_schema)
+        with pytest.raises(DriverError, match="Unsupported write mode"):
+            await driver.write(data, "test_ns.mode_early", mode="bad_mode")
