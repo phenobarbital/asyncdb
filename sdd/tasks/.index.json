@@ -240,14 +240,14 @@
       "feature_id": "FEAT-003",
       "feature": "migrate-delta-driver",
       "spec": "sdd/specs/migrate-delta-driver.spec.md",
-      "status": "pending",
+      "status": "in-progress",
       "priority": "low",
       "effort": "S",
       "depends_on": ["TASK-011"],
       "parallel": false,
       "parallelism_notes": "Depends on TASK-011 for the new write() signature; modifies examples/.",
       "assigned_to": null,
-      "started_at": null,
+      "started_at": "2026-03-20T00:00:00Z",
       "file": "sdd/tasks/active/TASK-014-update-delta-example.md"
     }
   ]
