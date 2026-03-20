@@ -1,7 +1,9 @@
 import asyncio
 from pathlib import Path
 import time
+import types
 import gc
+import pandas as pd
 from asyncdb.drivers.delta import delta
 from asyncdb import AsyncDB
 
@@ -132,6 +134,81 @@ async def test_epson(evt: asyncio.AbstractEventLoop):
     #         print(f"Error executing queryrow: {error}")
     #     else:
     #         print(result)
+
+async def test_write_new_api(tmp_dir: Path):
+    """Demonstrates the new write() API with full delta-rs parameter support."""
+    # Create a lightweight driver stub (bypasses MRO init chain)
+    stub = object.__new__(delta)
+    stub.storage_options = {"timeout": "120s"}
+    stub._delta = None
+    stub.write = types.MethodType(delta.write, stub)
+    stub.create = types.MethodType(delta.create, stub)
+
+    df = pd.DataFrame({
+        "id": [1, 2, 3],
+        "region": ["us", "eu", "us"],
+        "value": [10, 20, 30],
+    })
+
+    # 1. Basic write with mode="overwrite"
+    await stub.write(df, "sales", tmp_dir, mode="overwrite")
+    print("[1] Overwrite write complete")
+
+    # 2. Write with schema_mode="merge" — add new columns without error
+    df_extra = pd.DataFrame({
+        "id": [4],
+        "region": ["eu"],
+        "value": [40],
+        "discount": [0.1],  # new column
+    })
+    await stub.write(
+        df_extra, "sales", tmp_dir,
+        mode="append",
+        schema_mode="merge",  # allows the new 'discount' column
+    )
+    print("[2] Schema merge write complete")
+
+    # 3. Write with configuration metadata
+    await stub.write(
+        df, "configured_table", tmp_dir,
+        mode="append",
+        configuration={"delta.appendOnly": "true"},
+    )
+    print("[3] Configuration write complete")
+
+    # 4. Targeted overwrite with predicate
+    df_base = pd.DataFrame({"id": [1, 2, 3], "region": ["us", "eu", "us"], "value": [10, 20, 30]})
+    await stub.write(df_base, "predicate_table", tmp_dir, mode="append")
+    df_update = pd.DataFrame({"id": [99], "region": ["us"], "value": [999]})
+    await stub.write(
+        df_update, "predicate_table", tmp_dir,
+        mode="overwrite",
+        predicate="region = 'us'",  # only overwrite US rows
+    )
+    print("[4] Predicate overwrite complete")
+
+    # 5. Write with name and description metadata
+    await stub.write(
+        df, "documented_table", tmp_dir,
+        name="sales_summary",
+        description="Monthly sales aggregation",
+    )
+    print("[5] Named table write complete")
+
+    # 6. Backward-compatible if_exists (deprecated, use mode instead)
+    await stub.write(
+        df, "compat_table", tmp_dir,
+        if_exists="overwrite",  # Deprecated: emits DeprecationWarning
+    )
+    print("[6] Backward-compatible if_exists write complete")
+
+    # 7. Write with partition_by
+    await stub.write(
+        df, "partitioned_sales", tmp_dir,
+        partition_by=["region"],
+    )
+    print("[7] Partitioned write complete")
+
 
 if __name__ == '__main__':
     try:
