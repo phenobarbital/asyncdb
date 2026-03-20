@@ -286,8 +286,50 @@ def test_exceptions_module_is_pure_python():
 # ---------------------------------------------------------------------------
 
 
-def test_all_exceptions_exported():
-    """All 15 exception classes must be importable from asyncdb.exceptions."""
+def test_all_exceptions_in_package_all():
+    """Every exception class must appear in asyncdb.exceptions.__all__."""
+    import asyncdb.exceptions as pkg
+
     assert len(ALL_EXCEPTIONS) == 15
     for cls in ALL_EXCEPTIONS:
-        assert cls is not None
+        assert cls.__name__ in pkg.__all__, (
+            f"{cls.__name__} missing from asyncdb.exceptions.__all__"
+        )
+
+
+# ---------------------------------------------------------------------------
+# message-object branch (hasattr guard)
+# ---------------------------------------------------------------------------
+
+
+def test_message_from_object_with_message_attr():
+    """Constructor must extract and str()-coerce .message from message objects."""
+
+    class FakeError:
+        message = "inner message"
+
+    exc = AsyncDBException(FakeError())
+    assert exc.message == "inner message"
+    assert isinstance(exc.message, str)
+
+
+def test_message_from_object_non_string_message_attr():
+    """A non-string .message attribute must be coerced to str."""
+
+    class WeirdError:
+        message = 42  # int, not str
+
+    exc = AsyncDBException(WeirdError())
+    assert exc.message == "42"
+    assert isinstance(exc.message, str)
+
+
+# ---------------------------------------------------------------------------
+# NoDataFound positional-args behaviour (intentional limitation)
+# ---------------------------------------------------------------------------
+
+
+def test_no_data_found_rejects_extra_positional_args():
+    """NoDataFound does not accept extra positional args (matches Cython behaviour)."""
+    with pytest.raises(TypeError):
+        NoDataFound("msg", "unexpected_positional")  # type: ignore[call-arg]
