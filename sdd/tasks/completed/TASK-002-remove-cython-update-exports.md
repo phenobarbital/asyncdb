@@ -100,4 +100,8 @@ When complete, the agent must:
 3. Add a brief completion note below
 
 ### Completion Note
-(Agent fills this in when done)
+Completed 2026-03-20. Deleted `exceptions.pyx` and `exceptions.pxd` via `git rm`.
+Removed the `asyncdb.exceptions.exceptions` Extension entry from `setup.py`.
+Added `AsyncDBException` to imports and `__all__` in `asyncdb/exceptions/__init__.py`.
+No `cimport` references found in source code. Compiled `.c`/`.so` artifacts were
+not present in the worktree (not git-tracked). All acceptance criteria met.

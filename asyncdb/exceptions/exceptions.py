@@ -19,9 +19,10 @@ class AsyncDBException(Exception):
         kwargs: Extra keyword arguments passed to the constructor.
     """
 
-    code: int = 0
-    message: str = ""
-    stacktrace: Optional[str] = None
+    code: int
+    message: str
+    stacktrace: Optional[str]
+    kwargs: "dict[str, Any]"
 
     def __init__(
         self,
@@ -44,19 +45,21 @@ class AsyncDBException(Exception):
         """
         super().__init__(message, *args)
         if hasattr(message, "message"):
-            self.message = message.message
+            self.message = str(message.message)
         else:
             self.message = str(message)
-        self.stacktrace: Optional[str] = kwargs.pop("stacktrace", None)
+        self.stacktrace = kwargs.pop("stacktrace", None)
         # Store remaining kwargs separately — do NOT assign to self.args to
         # avoid shadowing Exception.args (which is a tuple of positional args).
-        self.kwargs: dict[str, Any] = kwargs
-        self.code: int = int(code)
+        self.kwargs = kwargs
+        self.code = int(code)
 
-    def __repr__(self) -> str:  # noqa: D105
+    def __repr__(self) -> str:
+        """Return ``'{message}, code: {code}'``."""
         return f"{self.message}, code: {self.code}"
 
-    def __str__(self) -> str:  # noqa: D105
+    def __str__(self) -> str:
+        """Return ``'{message}, code: {code}'``."""
         return f"{self.message}, code: {self.code}"
 
     def get(self) -> str:
