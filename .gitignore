@@ -16,15 +16,19 @@ migrations/
 migrations/*
 apps/troc/migrations/
 apps/troc/migrations/__init__.py
-
+bin/
+bin/jar/
 # Distribution / packaging
 .Python
 env/
 .venv/
 .venv/*
+.venv12/
+.venv12/*
 .troc/
 develop-eggs/
-#dist/
+dist/
+dist/*
 downloads/
 eggs/
 .eggs/
@@ -32,6 +36,8 @@ eggs/
 lib64/
 parts/
 sdist/
+dist/
+build/
 var/
 wheels/
 *.egg-info/
@@ -120,6 +126,7 @@ files/
 # dumps de bd
 *.backup
 *.dump
+docs/
 
 # Translations
 *.mo
@@ -142,3 +149,14 @@ target/
 
 # Mac
 .DS_Store
+etc/
+env/
+*.cpp
+*.c
+asyncdb/utils/types.cpp
+asyncdb/exceptions/exceptions.c
+docs/nyc_taxi/*
+
+# uv-related
+uv.lock
+asyncdb/_version.py

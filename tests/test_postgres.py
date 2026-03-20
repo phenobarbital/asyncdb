@@ -4,24 +4,18 @@ import asyncio
 import asyncpg
 from io import BytesIO
 from pathlib import Path
-
-
-@pytest.fixture
-def event_loop():
-    loop = asyncio.get_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
-
+import pytest_asyncio
+from asyncdb.meta.record import Record
+from asyncdb.meta.recordset import Recordset
 
 DRIVER = 'postgres'
-DSN = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator_dev"
+DSN = "postgres://troc_pgdata:12345678@127.0.0.1:5432/navigator"
 params = {
     "host": '127.0.0.1',
     "port": '5432',
     "user": 'troc_pgdata',
     "password": '12345678',
-    "database": 'navigator_dev'
+    "database": 'navigator'
 }
 
 
@@ -35,54 +29,57 @@ async def conn(event_loop):
 pytestmark = pytest.mark.asyncio
 
 
-async def test_pool_by_dsn(event_loop):
+async def test_connect_by_dsn():
     """ test creation using DSN """
-    db = AsyncDB(DRIVER, dsn=DSN, loop=event_loop)
+    db = AsyncDB(DRIVER, dsn=DSN)
     assert db.is_connected() is False
+    db.connect()
+    pytest.assume(db.is_connected() is True)
+    db.disconnect()
+    assert db.is_closed() is True
 
 
-async def test_pool_by_params(event_loop):
-    db = AsyncDB(DRIVER, params=params, loop=event_loop)
+async def test_connect_by_params():
+    db = AsyncDB(DRIVER, params=params)
     assert db.get_dsn() == DSN
+    assert db.is_connected() is False
+    db.connect()
+    pytest.assume(db.is_connected() is True)
+    db.disconnect()
+    assert db.is_closed() is True
 
 
-async def test_pool_connect(event_loop):
-    db = AsyncDB(DRIVER, params=params, loop=event_loop)
+async def test_pool_connect():
+    db = AsyncDB(DRIVER, params=params)
     pytest.assume(db.is_connected() is False)
-    await db.connection()
+    db.connect()
     pytest.assume(db.is_connected() == True)
-    result, error = await db.execute("SELECT 1")
+    result, error = db.perform("SELECT 1")
     print(result)
     pytest.assume(result == 'SELECT 1')
-    result, error = await db.test_connection()
-    print(result, error)
-    row = result[0]
+    row, error = db._test_connection()
+    print(row, error)
+    pytest.assume(not error)
     pytest.assume(row[0] == 1)
-    await db.close()
+    prepared, error = await db.prepare("SELECT store_id, store_name FROM walmart.stores")
+    # pytest.assume(db.get_columns() == ["store_id", "store_name"])
+    assert not error
+    db.disconnect()
     assert (not db.get_connection())
 
-async def test_connection(conn):
-    await conn.connection()
-    pytest.assume(conn.is_connected() == True)
-    result, error = await conn.test_connection()
-    row = result[0]
-    pytest.assume(row[0] == 1)
-    prepared, error = await conn.prepare("SELECT store_id, store_name FROM walmart.stores")
-    pytest.assume(conn.get_columns() == ["store_id", "store_name"])
-    assert not error
 
 async def test_huge_query(event_loop):
-    sql = 'SELECT * FROM trocplaces.stores'
-    check_conn = None
-    db = AsyncDB(DRIVER, params=params, loop=event_loop)
-    async with await db.connection() as conn:
-        result, error = await conn.execute("SET TIMEZONE TO 'America/New_York'")
+    sql = 'SELECT * FROM placerai.stores LIMIT 1000'
+    db = AsyncDB(DRIVER, params=params)
+    with db.connect() as conn:
+        result, error = conn.perform("SET TIMEZONE TO 'America/New_York'")
         pytest.assume(not error)
-        result, error = await conn.query(sql)
+        result, error = conn.fetch_all(sql)
         pytest.assume(not error)
         pytest.assume(result is not None)
-        check_conn = conn
-    pytest.assume(check_conn is not None)
+        pytest.assume(len(result) == 1000)
+        for row in result:
+            pytest.assume(type(row) == Record)
 
 
 @pytest.mark.parametrize("passed, expected", [

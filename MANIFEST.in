@@ -1,0 +1,20 @@
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include SECURITY.md
+include INSTALL.md
+include README.md
+include Makefile
+
+graft asyncdb
+graft tests
+
+# Exclude tests, settings, env, examples, and bin folders
+global-exclude *.pyc
+prune docs
+prune settings
+prune env
+prune examples
+prune bin
+recursive-exclude */__pycache__
+prune */__pycache__

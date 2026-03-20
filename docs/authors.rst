@@ -1,5 +1,5 @@
 =======
-AUTHORS
+Authors
 =======
 
 Development Lead
