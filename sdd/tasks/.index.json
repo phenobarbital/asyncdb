@@ -169,7 +169,7 @@
       "feature_id": "FEAT-002",
       "feature": "apache-iceberg-support",
       "spec": "sdd/specs/apache-iceberg-support.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": ["TASK-007", "TASK-008", "TASK-009"],
@@ -177,7 +177,8 @@
       "parallelism_notes": "Requires all read/write/metadata operations to be complete.",
       "assigned_to": null,
       "started_at": "2026-03-19T00:00:00Z",
-      "file": "sdd/tasks/active/TASK-010-iceberg-tests-example.md"
+      "completed_at": "2026-03-20T00:00:00Z",
+      "file": "sdd/tasks/completed/TASK-010-iceberg-tests-example.md"
     },
     {
       "id": "TASK-011",
