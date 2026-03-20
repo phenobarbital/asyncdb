@@ -160,3 +160,10 @@ docs/nyc_taxi/*
 # uv-related
 uv.lock
 asyncdb/_version.py
+
+# Sensitive files - never commit
+activities.csv
+*.csv
+examples/internals/test_db.py
+examples/test_elastic.py
+asyncdb/_version.py
