@@ -119,7 +119,7 @@ postgresql = [
 ]
 mysql = [
     "asyncmy==0.2.9",
-    "mysqlclient==2.2.7"
+    "mysqlclient==2.2.8"
 ]
 mariadb = [
     "aiomysql==0.2.0"
