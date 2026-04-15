@@ -625,11 +625,15 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
     async def connection(self):
         """connection.
 
-        Get an asyncpg connection
+        Get a new asyncpg connection.
+
+        Always creates a fresh connection since __aexit__ closes it.
         """
         if self._connection and not self._connection.is_closed():
-                self._connected = True
-                return self
+            try:
+                await self._connection.close(timeout=5)
+            except Exception:  # pylint: disable=broad-except
+                pass
         self._connection = None
         self._connected = False
 
