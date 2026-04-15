@@ -64,5 +64,5 @@ async def connect(db):
 if __name__ == "__main__":
     loop = asyncio.new_event_loop()
     loop.set_exception_handler(default_exception_handler)
-    driver = AsyncDB("duckdb", params={"database": ":memory:"}, loop=loop)
+    driver = AsyncDB("duckdb", params={"database": ":memory:"})
     loop.run_until_complete(connect(driver))
