@@ -285,7 +285,7 @@
       "feature_id": "FEAT-004",
       "feature": "dynamodb-driver",
       "spec": "sdd/specs/dynamodb-driver.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [],
@@ -293,7 +293,8 @@
       "parallelism_notes": "Creates the core driver file that all subsequent FEAT-004 tasks depend on.",
       "assigned_to": null,
       "started_at": "2026-04-15T23:57:32Z",
-      "file": "sdd/tasks/active/TASK-015-dynamodb-driver-scaffold.md"
+      "file": "sdd/tasks/completed/TASK-015-dynamodb-driver-scaffold.md",
+      "completed_at": "2026-04-16T00:20:42Z"
     },
     {
       "id": "TASK-016",
@@ -302,7 +303,7 @@
       "feature_id": "FEAT-004",
       "feature": "dynamodb-driver",
       "spec": "sdd/specs/dynamodb-driver.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [
@@ -312,7 +313,8 @@
       "parallelism_notes": "Modifies dynamodb.py created by TASK-015; must run after scaffold exists.",
       "assigned_to": null,
       "started_at": "2026-04-15T23:57:32Z",
-      "file": "sdd/tasks/active/TASK-016-dynamodb-crud-ops.md"
+      "file": "sdd/tasks/completed/TASK-016-dynamodb-crud-ops.md",
+      "completed_at": "2026-04-16T00:20:42Z"
     },
     {
       "id": "TASK-017",
@@ -321,7 +323,7 @@
       "feature_id": "FEAT-004",
       "feature": "dynamodb-driver",
       "spec": "sdd/specs/dynamodb-driver.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [
@@ -331,7 +333,8 @@
       "parallelism_notes": "Modifies dynamodb.py; depends on scaffold but independent of TASK-016.",
       "assigned_to": null,
       "started_at": "2026-04-15T23:57:32Z",
-      "file": "sdd/tasks/active/TASK-017-dynamodb-query-scan.md"
+      "file": "sdd/tasks/completed/TASK-017-dynamodb-query-scan.md",
+      "completed_at": "2026-04-16T00:20:42Z"
     },
     {
       "id": "TASK-018",
@@ -340,7 +343,7 @@
       "feature_id": "FEAT-004",
       "feature": "dynamodb-driver",
       "spec": "sdd/specs/dynamodb-driver.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "medium",
       "effort": "S",
       "depends_on": [
@@ -350,7 +353,8 @@
       "parallelism_notes": "Extends execute() from TASK-017 with dedicated PartiQL methods.",
       "assigned_to": null,
       "started_at": "2026-04-15T23:57:32Z",
-      "file": "sdd/tasks/active/TASK-018-dynamodb-partiql.md"
+      "file": "sdd/tasks/completed/TASK-018-dynamodb-partiql.md",
+      "completed_at": "2026-04-16T00:20:42Z"
     },
     {
       "id": "TASK-019",
@@ -359,7 +363,7 @@
       "feature_id": "FEAT-004",
       "feature": "dynamodb-driver",
       "spec": "sdd/specs/dynamodb-driver.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [
@@ -369,7 +373,8 @@
       "parallelism_notes": "Extends CRUD patterns from TASK-016 to batch operations.",
       "assigned_to": null,
       "started_at": "2026-04-15T23:57:32Z",
-      "file": "sdd/tasks/active/TASK-019-dynamodb-batch-ops.md"
+      "file": "sdd/tasks/completed/TASK-019-dynamodb-batch-ops.md",
+      "completed_at": "2026-04-16T00:20:42Z"
     },
     {
       "id": "TASK-020",
@@ -378,7 +383,7 @@
       "feature_id": "FEAT-004",
       "feature": "dynamodb-driver",
       "spec": "sdd/specs/dynamodb-driver.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "medium",
       "effort": "M",
       "depends_on": [
@@ -388,7 +393,8 @@
       "parallelism_notes": "Modifies dynamodb.py; depends on scaffold but independent of CRUD/query tasks.",
       "assigned_to": null,
       "started_at": "2026-04-15T23:57:32Z",
-      "file": "sdd/tasks/active/TASK-020-dynamodb-ddl.md"
+      "file": "sdd/tasks/completed/TASK-020-dynamodb-ddl.md",
+      "completed_at": "2026-04-16T00:20:42Z"
     },
     {
       "id": "TASK-021",
@@ -397,7 +403,7 @@
       "feature_id": "FEAT-004",
       "feature": "dynamodb-driver",
       "spec": "sdd/specs/dynamodb-driver.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "medium",
       "effort": "M",
       "depends_on": [
@@ -407,7 +413,8 @@
       "parallelism_notes": "Creates dynamodbPool in same file; depends on scaffold for dynamodb class.",
       "assigned_to": null,
       "started_at": "2026-04-15T23:57:32Z",
-      "file": "sdd/tasks/active/TASK-021-dynamodb-pool.md"
+      "file": "sdd/tasks/completed/TASK-021-dynamodb-pool.md",
+      "completed_at": "2026-04-16T00:20:42Z"
     },
     {
       "id": "TASK-022",
@@ -416,7 +423,7 @@
       "feature_id": "FEAT-004",
       "feature": "dynamodb-driver",
       "spec": "sdd/specs/dynamodb-driver.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "L",
       "depends_on": [
@@ -431,7 +438,8 @@
       "parallelism_notes": "Tests require all driver functionality to be implemented.",
       "assigned_to": null,
       "started_at": "2026-04-15T23:57:32Z",
-      "file": "sdd/tasks/active/TASK-022-dynamodb-tests.md"
+      "file": "sdd/tasks/completed/TASK-022-dynamodb-tests.md",
+      "completed_at": "2026-04-16T00:20:42Z"
     }
   ]
 }
