@@ -41,6 +41,7 @@ from .base import InitDriver, BasePool
 try:
     from aiobotocore.session import AioSession
     from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
+    from botocore.exceptions import BotoCoreError, ClientError, EndpointConnectionError
 except ImportError as _import_err:
     raise DriverError(
         "DynamoDB driver requires 'aiobotocore' and 'boto3'. "
@@ -57,6 +58,59 @@ class _KwargsTerminator:
 
     def __init__(self, **kwargs):
         super().__init__()
+
+
+def _build_client_kwargs(
+    region_name: str,
+    endpoint_url: Optional[str] = None,
+    aws_access_key_id: Optional[str] = None,
+    aws_secret_access_key: Optional[str] = None,
+    aws_session_token: Optional[str] = None,
+) -> dict[str, Any]:
+    """Build kwargs dict for aiobotocore create_client calls.
+
+    Args:
+        region_name: AWS region string.
+        endpoint_url: Optional custom endpoint (e.g. DynamoDB Local).
+        aws_access_key_id: Optional AWS access key.
+        aws_secret_access_key: Optional AWS secret key.
+        aws_session_token: Optional session token for temporary credentials.
+
+    Returns:
+        Dictionary of client configuration arguments.
+    """
+    kwargs: dict[str, Any] = {"region_name": region_name}
+    if endpoint_url:
+        kwargs["endpoint_url"] = endpoint_url
+    if aws_access_key_id:
+        kwargs["aws_access_key_id"] = aws_access_key_id
+    if aws_secret_access_key:
+        kwargs["aws_secret_access_key"] = aws_secret_access_key
+    if aws_session_token:
+        kwargs["aws_session_token"] = aws_session_token
+    return kwargs
+
+
+def _is_dynamodb_format(value: Any) -> bool:
+    """Detect if a value is already in DynamoDB wire format.
+
+    DynamoDB wire format is a single-key dict where the key is a
+    DynamoDB type descriptor (S, N, B, BOOL, NULL, M, L, SS, NS, BS).
+
+    Args:
+        value: Value to inspect.
+
+    Returns:
+        True if the value looks like a DynamoDB-formatted attribute.
+    """
+    _DYNAMODB_TYPE_KEYS = frozenset(
+        {"S", "N", "B", "BOOL", "NULL", "M", "L", "SS", "NS", "BS"}
+    )
+    return (
+        isinstance(value, dict)
+        and len(value) == 1
+        and next(iter(value)) in _DYNAMODB_TYPE_KEYS
+    )
 
 
 class dynamodb(InitDriver, _KwargsTerminator):
@@ -128,18 +182,13 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Returns:
             Dictionary of client configuration arguments.
         """
-        kwargs: dict[str, Any] = {
-            "region_name": self._region_name,
-        }
-        if self._endpoint_url:
-            kwargs["endpoint_url"] = self._endpoint_url
-        if self._aws_access_key_id:
-            kwargs["aws_access_key_id"] = self._aws_access_key_id
-        if self._aws_secret_access_key:
-            kwargs["aws_secret_access_key"] = self._aws_secret_access_key
-        if self._aws_session_token:
-            kwargs["aws_session_token"] = self._aws_session_token
-        return kwargs
+        return _build_client_kwargs(
+            region_name=self._region_name,
+            endpoint_url=self._endpoint_url,
+            aws_access_key_id=self._aws_access_key_id,
+            aws_secret_access_key=self._aws_secret_access_key,
+            aws_session_token=self._aws_session_token,
+        )
 
     # ── Connection Lifecycle ──────────────────────────────────────────
 
@@ -153,22 +202,26 @@ class dynamodb(InitDriver, _KwargsTerminator):
             Self, with an active DynamoDB connection.
 
         Raises:
-            ConnectionTimeout: If unable to connect to DynamoDB.
+            ConnectionTimeout: If unable to connect to DynamoDB due to
+                network or credential errors.
         """
         try:
-            self._session = AioSession(
-                profile=self._profile_name
-            ) if self._profile_name else AioSession()
+            self._session = (
+                AioSession(profile=self._profile_name)
+                if self._profile_name
+                else AioSession()
+            )
             client_kwargs = self._get_client_kwargs()
             self._client_ctx = self._session.create_client("dynamodb", **client_kwargs)
             self._connection = await self._client_ctx.__aenter__()
             self._connected = True
             self._logger.info(
-                f"Connected to DynamoDB (region={self._region_name}, "
-                f"endpoint={self._endpoint_url or 'default'})"
+                "Connected to DynamoDB (region=%s, endpoint=%s)",
+                self._region_name,
+                self._endpoint_url or "default",
             )
             return self
-        except Exception as err:
+        except (BotoCoreError, EndpointConnectionError, ClientError) as err:
             self._connected = False
             raise ConnectionTimeout(
                 f"Unable to connect to DynamoDB: {err}"
@@ -184,7 +237,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
             if self._client_ctx is not None:
                 await self._client_ctx.__aexit__(None, None, None)
         except Exception as err:
-            self._logger.warning(f"Error closing DynamoDB client: {err}")
+            self._logger.warning("Error closing DynamoDB client: %s", err)
         finally:
             self._connection = None
             self._client_ctx = None
@@ -216,6 +269,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: If the connection test fails.
         """
+        self._assert_connected()
         try:
             await self._connection.list_tables(Limit=1)
             return True
@@ -288,17 +342,27 @@ class dynamodb(InitDriver, _KwargsTerminator):
         """Auto-paginate Query or Scan operations.
 
         Uses LastEvaluatedKey to fetch all pages of results.
+        Automatically serializes ExpressionAttributeValues to DynamoDB
+        wire format so callers can pass plain Python values.
 
         Args:
             method: The DynamoDB API method name ("query" or "scan").
             table: Table name.
-            **kwargs: Additional arguments for the API call.
+            **kwargs: Additional arguments for the API call. Any
+                ExpressionAttributeValues dict should use plain Python
+                values — they are serialized automatically.
 
         Returns:
             List of deserialized items from all pages.
         """
         items: list[dict] = []
         kwargs["TableName"] = table
+        # Auto-serialize ExpressionAttributeValues if provided as plain Python
+        if "ExpressionAttributeValues" in kwargs:
+            eav = kwargs["ExpressionAttributeValues"]
+            # Only serialize if values are plain Python (not already DynamoDB format)
+            if eav and not _is_dynamodb_format(next(iter(eav.values()))):
+                kwargs["ExpressionAttributeValues"] = self._serialize(eav)
         api_method = getattr(self._connection, method)
         while True:
             response = await api_method(**kwargs)
@@ -327,6 +391,18 @@ class dynamodb(InitDriver, _KwargsTerminator):
             raise EmptyStatement("No table name provided and no default table set.")
         return resolved
 
+    def _assert_connected(self) -> None:
+        """Assert the driver has an active connection.
+
+        Raises:
+            DriverError: If not connected to DynamoDB.
+        """
+        if not self._connected or self._connection is None:
+            raise DriverError(
+                "Not connected to DynamoDB. "
+                "Call connection() or use 'async with' context manager."
+            )
+
     # ── Abstract Method: use ──────────────────────────────────────────
 
     async def use(self, database: str) -> None:
@@ -336,7 +412,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
             database: Table name to use as default.
         """
         self._default_table = database
-        self._logger.debug(f"Default table set to: {database}")
+        self._logger.debug("Default table set to: %s", database)
 
     # ── CRUD Operations (TASK-016) ────────────────────────────────────
 
@@ -355,6 +431,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
             DriverError: On DynamoDB client errors.
             EmptyStatement: If key is empty or missing.
         """
+        self._assert_connected()
         table = self._resolve_table(table)
         if not key:
             raise EmptyStatement("Cannot get item without a key.")
@@ -389,6 +466,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
             DriverError: On DynamoDB client errors.
             EmptyStatement: If item is empty.
         """
+        self._assert_connected()
         table = self._resolve_table(table)
         if not item:
             raise EmptyStatement("Cannot put an empty item.")
@@ -417,6 +495,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
             DriverError: On DynamoDB client errors.
             EmptyStatement: If key is empty.
         """
+        self._assert_connected()
         table = self._resolve_table(table)
         if not key:
             raise EmptyStatement("Cannot delete item without a key.")
@@ -468,6 +547,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
             DriverError: On DynamoDB client errors.
             EmptyStatement: If key or update_expression is missing.
         """
+        self._assert_connected()
         table = self._resolve_table(table)
         if not key:
             raise EmptyStatement("Cannot update item without a key.")
@@ -515,6 +595,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         table = self._resolve_table(table)
         try:
             return await self._paginate_query("query", table, **kwargs)
@@ -552,6 +633,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         table = self._resolve_table(table)
         try:
             return await self._paginate_query("scan", table, **kwargs)
@@ -588,6 +670,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         if self._is_partiql(sentence):
             params = args[0] if args else None
             return await self.partiql(sentence, parameters=params, **kwargs)
@@ -615,6 +698,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         if not sentences:
             return None
         # Check if PartiQL batch
@@ -626,9 +710,10 @@ class dynamodb(InitDriver, _KwargsTerminator):
             if "Statement" in sentences[0]:
                 return await self.partiql_batch(sentences)
             # Otherwise treat as items to write
-            table = None
+            # Resolve table upfront so we get a clear error before looping
+            resolved = self._resolve_table(None)
             for item in sentences:
-                await self.set(table=table, item=item)
+                await self.set(table=resolved, item=item)
             return True
         return None
 
@@ -661,6 +746,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         try:
             api_kwargs: dict[str, Any] = {"Statement": statement}
             if parameters:
@@ -700,6 +786,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         try:
             results: list[dict] = []
             # Chunk into groups of 25 (DynamoDB limit)
@@ -718,14 +805,25 @@ class dynamodb(InitDriver, _KwargsTerminator):
                     Statements=serialized_stmts,
                     **kwargs,
                 )
+                failed: list[dict] = []
                 for resp in response.get("Responses", []):
                     if "Error" in resp:
                         self._logger.warning(
-                            f"PartiQL batch error: {resp['Error']}"
+                            "PartiQL batch statement error: %s", resp["Error"]
                         )
+                        failed.append(resp["Error"])
                     elif "Item" in resp:
                         results.append(self._deserialize(resp["Item"]))
+                if failed:
+                    raise DriverError(
+                        f"PartiQL batch had {len(failed)} statement error(s): "
+                        + "; ".join(
+                            f"{e.get('Code')}: {e.get('Message')}" for e in failed
+                        )
+                    )
             return results
+        except DriverError:
+            raise
         except Exception as err:
             raise DriverError(f"DynamoDB PartiQL batch error: {err}") from err
 
@@ -753,6 +851,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors or max retries exceeded.
         """
+        self._assert_connected()
         table = self._resolve_table(table)
         if not items:
             return True
@@ -807,6 +906,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         table = self._resolve_table(table)
         if not keys:
             return []
@@ -868,6 +968,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         try:
             api_kwargs: dict[str, Any] = {
                 "TableName": table,
@@ -893,6 +994,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         try:
             await self._connection.delete_table(TableName=table)
             return True
@@ -911,6 +1013,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         try:
             response = await self._connection.describe_table(TableName=table)
             return response.get("Table", {})
@@ -931,6 +1034,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         try:
             table_names: list[str] = []
             while True:
@@ -975,14 +1079,18 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: If timeout is exceeded.
         """
+        self._assert_connected()
         start = time.monotonic()
         while time.monotonic() - start < timeout:
             try:
                 desc = await self.describe_table(table)
                 if desc.get("TableStatus") == status:
                     return True
-            except DriverError:
-                pass  # Table may not exist yet during creation
+            except DriverError as poll_err:
+                # Re-raise if it's not a "table not found" transient error
+                if "ResourceNotFoundException" not in str(poll_err):
+                    raise
+                # Table doesn't exist yet — keep polling
             await asyncio.sleep(2)
         raise DriverError(
             f"Table '{table}' did not reach status '{status}' within {timeout}s"
@@ -1011,6 +1119,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         try:
             create_action: dict[str, Any] = {
                 "IndexName": index_name,
@@ -1046,6 +1155,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         try:
             response = await self._connection.update_table(
                 TableName=table,
@@ -1069,6 +1179,7 @@ class dynamodb(InitDriver, _KwargsTerminator):
         Raises:
             DriverError: On DynamoDB client errors.
         """
+        self._assert_connected()
         desc = await self.describe_table(table)
         indexes: list[dict] = []
         for gsi in desc.get("GlobalSecondaryIndexes", []):
@@ -1148,18 +1259,13 @@ class dynamodbPool(BasePool):
         Returns:
             Dictionary of client configuration arguments.
         """
-        kwargs: dict[str, Any] = {
-            "region_name": self._region_name,
-        }
-        if self._endpoint_url:
-            kwargs["endpoint_url"] = self._endpoint_url
-        if self._aws_access_key_id:
-            kwargs["aws_access_key_id"] = self._aws_access_key_id
-        if self._aws_secret_access_key:
-            kwargs["aws_secret_access_key"] = self._aws_secret_access_key
-        if self._aws_session_token:
-            kwargs["aws_session_token"] = self._aws_session_token
-        return kwargs
+        return _build_client_kwargs(
+            region_name=self._region_name,
+            endpoint_url=self._endpoint_url,
+            aws_access_key_id=self._aws_access_key_id,
+            aws_secret_access_key=self._aws_secret_access_key,
+            aws_session_token=self._aws_session_token,
+        )
 
     async def connect(self, **kwargs) -> "dynamodbPool":
         """Create shared AioSession for connection pooling.
@@ -1184,8 +1290,9 @@ class dynamodbPool(BasePool):
                 await ctx.__aexit__(None, None, None)
             self._connected = True
             self._logger.info(
-                f"DynamoDB pool connected (region={self._region_name}, "
-                f"max_connections={self._max_pool_connections})"
+                "DynamoDB pool connected (region=%s, max_connections=%d)",
+                self._region_name,
+                self._max_pool_connections,
             )
             return self
         except Exception as err:
@@ -1207,7 +1314,7 @@ class dynamodbPool(BasePool):
                     await conn._client_ctx.__aexit__(None, None, None)
                 conn._connected = False
             except Exception as err:
-                self._logger.warning(f"Error closing pool connection: {err}")
+                self._logger.warning("Error closing pool connection: %s", err)
         self._acquired_connections.clear()
         self._session = None
         self._connected = False
@@ -1259,4 +1366,4 @@ class dynamodbPool(BasePool):
             if connection in self._acquired_connections:
                 self._acquired_connections.remove(connection)
         except Exception as err:
-            self._logger.warning(f"Error releasing pool connection: {err}")
+            self._logger.warning("Error releasing pool connection: %s", err)

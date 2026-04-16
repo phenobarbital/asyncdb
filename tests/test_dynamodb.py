@@ -243,7 +243,7 @@ class TestQueryScan:
         results = await dynamo.query(
             composite_table,
             KeyConditionExpression="pk = :pk",
-            ExpressionAttributeValues={":pk": {"S": "user1"}},
+            ExpressionAttributeValues={":pk": "user1"},
         )
         assert len(results) == 5
 
@@ -257,7 +257,7 @@ class TestQueryScan:
         result = await dynamo.queryrow(
             composite_table,
             KeyConditionExpression="pk = :pk",
-            ExpressionAttributeValues={":pk": {"S": "qr_user"}},
+            ExpressionAttributeValues={":pk": "qr_user"},
         )
         assert result is not None
         assert result["pk"] == "qr_user"
@@ -284,7 +284,7 @@ class TestQueryScan:
             composite_table,
             IndexName="gsi_index",
             KeyConditionExpression="gsi_pk = :gpk",
-            ExpressionAttributeValues={":gpk": {"S": "shared_group"}},
+            ExpressionAttributeValues={":gpk": "shared_group"},
         )
         assert len(results) == 3
 
@@ -404,6 +404,18 @@ class TestBatchOperations:
         """Test batch get with empty keys list."""
         results = await dynamo.get_batch(test_table, [])
         assert results == []
+
+    @pytest.mark.asyncio
+    async def test_get_batch_over_100_keys(self, dynamo: dynamodb, test_table: str):
+        """Test batch get with >100 keys triggers auto-chunking."""
+        # Write 110 items
+        items = [{"pk": f"big_{i:04d}", "val": i} for i in range(110)]
+        await dynamo.write_batch(test_table, items)
+
+        # Read all 110 back — requires two BatchGetItem calls (100 + 10)
+        keys = [{"pk": f"big_{i:04d}"} for i in range(110)]
+        results = await dynamo.get_batch(test_table, keys)
+        assert len(results) == 110
 
 
 # ── DDL Tests ─────────────────────────────────────────────────────────
@@ -588,6 +600,16 @@ class TestErrorHandling:
         with pytest.raises(NotImplementedError):
             await dynamo.prepare("SELECT 1")
 
+    @pytest.mark.asyncio
+    async def test_unconnected_raises_driver_error(self):
+        """Test that calling CRUD without connecting raises DriverError."""
+        from asyncdb.exceptions import DriverError
+
+        db = dynamodb(params=DYNAMO_PARAMS.copy())
+        # Do NOT call connection() or use async with
+        with pytest.raises(DriverError, match="Not connected"):
+            await db.get("any_table", {"pk": "x"})
+
 
 # ── Type Marshalling Tests ────────────────────────────────────────────
 
@@ -643,3 +665,36 @@ class TestTypeMarshalling:
         assert chunks[0] == [0, 1, 2]
         assert chunks[1] == [3, 4, 5]
         assert chunks[2] == [6]
+
+
+# ── Factory Auto-Discovery Tests ──────────────────────────────────────
+
+
+class TestFactory:
+    """Tests for AsyncDB/AsyncPool factory auto-discovery."""
+
+    @pytest.mark.asyncio
+    async def test_asyncdb_factory(self):
+        """Test AsyncDB("dynamodb") factory auto-discovery."""
+        from asyncdb import AsyncDB
+
+        db = AsyncDB("dynamodb", params=DYNAMO_PARAMS.copy())
+        async with db as conn:
+            assert conn.is_connected() is True
+            result = await conn.test_connection()
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_asyncpool_factory(self):
+        """Test AsyncPool("dynamodb") factory auto-discovery."""
+        from asyncdb import AsyncPool
+
+        pool = AsyncPool("dynamodb", params=DYNAMO_PARAMS.copy())
+        await pool.connect()
+        assert pool.is_connected() is True
+        conn = await pool.acquire()
+        assert isinstance(conn, dynamodb)
+        assert conn.is_connected() is True
+        await pool.release(conn)
+        await pool.disconnect()
+        assert pool.is_connected() is False
