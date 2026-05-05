@@ -1,11 +1,8 @@
 [build-system]
 requires = [
     "setuptools>=67.6.1",
-    "setuptools_scm[toml]>=3.4",
     "Cython==3.0.11",
     "wheel>=0.44.0",
-    "navconfig>=1.7.0",
-    "numpy>=1.26",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -223,9 +220,6 @@ Funding = "https://paypal.me/phenobarbital"
 license-files = ["LICENSE*"]
 
 # Version from asyncdb/version.py
-[tool.setuptools_scm]
-write_to = "asyncdb/_version.py"
-
 [tool.setuptools.dynamic]
 version = {attr = "asyncdb.version.__version__"}
 
