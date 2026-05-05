@@ -92,6 +92,72 @@ class pgRecord(asyncpg.Record):
         return {key: self[key] for key in self.keys()}
 
 
+class _pgAcquireContext:
+    """Concurrent-safe acquire context returned by pgPool.acquire().
+
+    Mirrors asyncpg's PoolAcquireContext. Each coroutine gets its own
+    instance; _raw stored here, never on the pool. Supports three patterns:
+
+        async with pool.acquire() as conn:      # Pattern C (preferred)
+        conn = await pool.acquire()              # Pattern A (backward compat)
+        async with await pool.acquire() as conn: # Pattern B (backward compat)
+    """
+    __slots__ = ('_pgpool', '_raw', '_done')
+
+    def __init__(self, pgpool: 'pgPool') -> None:
+        self._pgpool = pgpool
+        self._raw = None
+        self._done = False
+
+    async def _do_acquire(self):
+        """Acquire raw connection and wrap in pg driver."""
+        raw = None
+        try:
+            raw = await self._pgpool._pool.acquire()
+        except TooManyConnectionsError as err:
+            self._pgpool._logger.error(f"Too Many Connections Error: {err}")
+            raise TooManyConnections(f"Too Many Connections Error: {err}") from err
+        except TimeoutError as err:
+            raise ConnectionTimeout(f"Unable to connect to database: {err}") from err
+        except ConnectionRefusedError as err:
+            raise UninitializedError(f"Unable to connect to database, connection Refused: {err}") from err
+        except ConnectionDoesNotExistError as err:
+            raise ProviderError(f"Connection Error: {err}") from err
+        except InternalClientError as err:
+            raise ProviderError(f"Internal Error: {err}") from err
+        except InterfaceError as err:
+            raise ProviderError(f"Interface Error: {err}") from err
+        except InterfaceWarning as err:
+            self._pgpool._logger.warning(f"Interface Warning: {err}")
+        except Exception as err:  # pylint: disable=W0703
+            self._pgpool._logger.error(f"Unknown Error on Acquire: {err}")
+        if raw is None:
+            return None
+        db = pg(pool=self._pgpool)
+        db.set_connection(raw)
+        self._raw = raw
+        return db
+
+    async def __aenter__(self) -> 'pg':
+        if self._raw is not None or self._done:
+            raise InterfaceError('connection already acquired')
+        return await self._do_acquire()
+
+    async def __aexit__(self, *exc) -> None:
+        self._done = True
+        raw = self._raw
+        self._raw = None
+        if raw is not None:
+            try:
+                await self._pgpool._pool.release(raw)
+            except Exception:  # pylint: disable=W0703
+                pass
+
+    def __await__(self):
+        self._done = True  # mirrors asyncpg PoolAcquireContext line 1034
+        return self._do_acquire().__await__()
+
+
 class pgPool(BasePool):
     """
     pgPool.
@@ -318,36 +384,15 @@ class pgPool(BasePool):
             self._logger.exception(f"Asyncpg Unknown Error: {ex}", stack_info=True)
             raise DriverError(f"Asyncpg Unknown Error: {ex}") from ex
 
-    async def acquire(self):
+    def acquire(self) -> '_pgAcquireContext':
+        """Return a concurrent-safe acquire context.
+
+        Supports both patterns without caller changes:
+            async with pool.acquire() as conn:   # preferred (Pattern C)
+            conn = await pool.acquire()           # backward compat (Pattern A)
+            async with await pool.acquire() as conn:  # backward compat (Pattern B)
         """
-        Takes a connection from the pool.
-        """
-        db = None
-        self._connection = None
-        # Take a connection from the pool.
-        try:
-            self._connection = await self._pool.acquire()
-        except TooManyConnectionsError as err:
-            self._logger.error(f"Too Many Connections Error: {err}")
-            raise TooManyConnections(f"Too Many Connections Error: {err}") from err
-        except TimeoutError as err:
-            raise ConnectionTimeout(f"Unable to connect to database: {err}") from err
-        except ConnectionRefusedError as err:
-            raise UninitializedError(f"Unable to connect to database, connection Refused: {err}") from err
-        except ConnectionDoesNotExistError as err:
-            raise ProviderError(f"Connection Error: {err}") from err
-        except InternalClientError as err:
-            raise ProviderError(f"Internal Error: {err}") from err
-        except InterfaceError as err:
-            raise ProviderError(f"Interface Error: {err}") from err
-        except InterfaceWarning as err:
-            self._logger.warning(f"Interface Warning: {err}")
-        except Exception as err:  # pylint: disable=W0703
-            self._logger.error(f"Unknown Error on Acquire: {err}")
-        if self._connection:
-            db = pg(pool=self)
-            db.set_connection(self._connection)
-        return db
+        return _pgAcquireContext(self)
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         # clean up anything you need to clean up
@@ -362,7 +407,7 @@ class pgPool(BasePool):
         else:
             conn = connection
         if isinstance(conn, pg):
-            conn = connection.engine()
+            conn = conn.engine()
         if not conn:
             return True
         try:
