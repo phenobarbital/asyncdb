@@ -88,7 +88,7 @@ class TestPatternA:
         """await pool.acquire() returns a pg wrapper that can execute queries."""
         conn = await pool.acquire()
         assert conn is not None, "acquire() must return a non-None pg wrapper"
-        row = await conn.fetchrow("SELECT 1 AS n")
+        row = await conn.fetch_one("SELECT 1 AS n")
         assert row["n"] == 1, "Expected query result n=1"
         await pool.release(conn)
 
@@ -110,7 +110,7 @@ class TestPatternB:
     async def test_pattern_b_cm_with_await(self, pool):
         """async with await pool.acquire() as conn: works and can run a query."""
         async with await pool.acquire() as conn:
-            row = await conn.fetchrow("SELECT 2 AS n")
+            row = await conn.fetch_one("SELECT 2 AS n")
             assert row["n"] == 2, "Expected query result n=2"
 
     async def test_pattern_b_conn_is_pg_wrapper(self, pool):
@@ -128,7 +128,7 @@ class TestPatternC:
     async def test_pattern_c_cm_no_await(self, pool):
         """async with pool.acquire() as conn: works without explicit await."""
         async with pool.acquire() as conn:
-            row = await conn.fetchrow("SELECT 3 AS n")
+            row = await conn.fetch_one("SELECT 3 AS n")
             assert row["n"] == 3, "Expected query result n=3"
 
     async def test_pattern_c_conn_is_pg_wrapper(self, pool):
@@ -154,14 +154,14 @@ class TestConnectionRelease:
 
         # Must be able to acquire again right away.
         async with pool.acquire() as conn:
-            row = await conn.fetchrow("SELECT 1 AS n")
+            row = await conn.fetch_one("SELECT 1 AS n")
             assert row["n"] == 1
 
     async def test_sequential_acquires_do_not_exhaust_pool(self, pool):
         """Repeated sequential acquires must all succeed without leak."""
         for i in range(5):
             async with pool.acquire() as conn:
-                row = await conn.fetchrow("SELECT $1::int AS n", i)
+                row = await conn.fetch_one("SELECT $1::int AS n", i)
                 assert row["n"] == i
 
 

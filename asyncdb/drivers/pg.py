@@ -129,10 +129,10 @@ class _pgAcquireContext:
             raise ProviderError(f"Interface Error: {err}") from err
         except InterfaceWarning as err:
             self._pgpool._logger.warning(f"Interface Warning: {err}")
+            raise ProviderError(f"Interface Warning: {err}") from err
         except Exception as err:  # pylint: disable=W0703
             self._pgpool._logger.error(f"Unknown Error on Acquire: {err}")
-        if raw is None:
-            return None
+            raise ProviderError(f"Unknown Error on Acquire: {err}") from err
         db = pg(pool=self._pgpool)
         db.set_connection(raw)
         self._raw = raw
