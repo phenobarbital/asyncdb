@@ -92,6 +92,36 @@ class pgRecord(asyncpg.Record):
         return {key: self[key] for key in self.keys()}
 
 
+class _PoolConnection:
+    """Concurrent-safe connection context manager returned by pgPool.acquire().
+
+    Each coroutine gets its own instance with its own raw_conn reference,
+    so concurrent acquire() calls never share state on the pool instance.
+
+    Usage::
+
+        async with await pool.acquire() as conn:
+            row = await conn.fetch_one(sql, *args)
+    """
+
+    __slots__ = ("_raw", "_db", "_asyncpg_pool")
+
+    def __init__(self, raw_conn, db_wrapper, asyncpg_pool):
+        self._raw = raw_conn
+        self._db = db_wrapper
+        self._asyncpg_pool = asyncpg_pool
+
+    async def __aenter__(self):
+        return self._db
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        try:
+            await self._asyncpg_pool.release(self._raw)
+        except Exception:  # pylint: disable=W0703
+            pass
+        return False
+
+
 class pgPool(BasePool):
     """
     pgPool.
@@ -321,12 +351,17 @@ class pgPool(BasePool):
     async def acquire(self):
         """
         Takes a connection from the pool.
+
+        Returns a :class:`_PoolConnection` context manager so each caller
+        owns its connection lifecycle independently — safe for concurrent
+        coroutines::
+
+            async with await pool.acquire() as conn:
+                row = await conn.fetch_one(sql, *args)
         """
-        db = None
-        self._connection = None
-        # Take a connection from the pool.
+        raw_conn = None
         try:
-            self._connection = await self._pool.acquire()
+            raw_conn = await self._pool.acquire()
         except TooManyConnectionsError as err:
             self._logger.error(f"Too Many Connections Error: {err}")
             raise TooManyConnections(f"Too Many Connections Error: {err}") from err
@@ -344,10 +379,11 @@ class pgPool(BasePool):
             self._logger.warning(f"Interface Warning: {err}")
         except Exception as err:  # pylint: disable=W0703
             self._logger.error(f"Unknown Error on Acquire: {err}")
-        if self._connection:
-            db = pg(pool=self)
-            db.set_connection(self._connection)
-        return db
+        if raw_conn is None:
+            return None
+        db = pg(pool=self)
+        db.set_connection(raw_conn)
+        return _PoolConnection(raw_conn, db, self._pool)
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         # clean up anything you need to clean up
