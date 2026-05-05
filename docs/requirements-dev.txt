@@ -1,6 +1,6 @@
 aiounittest==1.4.2
 black==25.9.0
-build==1.2.1
+build==1.4.0
 coverage[toml]==7.5.3
 flit==3.9.0
 hypothesis==6.91.0
