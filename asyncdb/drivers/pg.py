@@ -397,8 +397,10 @@ class pgPool(BasePool):
             conn = self._connection
         else:
             conn = connection
+        if isinstance(conn, _PoolConnection):
+            conn = conn._raw
         if isinstance(conn, pg):
-            conn = connection.engine()
+            conn = conn.engine()
         if not conn:
             return True
         try:
