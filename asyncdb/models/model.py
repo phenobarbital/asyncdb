@@ -107,18 +107,30 @@ class Model(BaseModel):
             logging.exception(err)
             raise RuntimeError(f"{err}") from err
 
+    def _resolve_connection(self, _connection):
+        """Pick a connection for this call.
+
+        Prefer an explicit per-call connection over the shared
+        ``Meta.connection`` class slot. Passing ``_connection`` makes the
+        operation safe under concurrent use of the same Model class.
+        """
+        if _connection is not None:
+            return _connection
+        if not self.Meta.connection:
+            self.get_connection()
+        return self.Meta.connection
+
     ### Instance method for Dataclasses.
-    async def insert(self, **kwargs):
+    async def insert(self, *, _connection=None, **kwargs):
         """
         Insert a new Dataclass Model to Database.
         """
-        if not self.Meta.connection:
-            self.get_connection()
-        if not self.Meta.connection.is_connected():
-            await self.Meta.connection.connection()
+        conn = self._resolve_connection(_connection)
+        if not conn.is_connected():
+            await conn.connection()
         result = None
         try:
-            result = await self.Meta.connection._insert_(_model=self, **kwargs)
+            result = await conn._insert_(_model=self, **kwargs)
             return result
         except StatementError:
             raise
@@ -128,17 +140,16 @@ class Model(BaseModel):
             logging.debug(traceback.format_exc())
             raise ModelError(f"Error on INSERT {self.Meta.name}: {err}") from err
 
-    async def update(self, **kwargs):
+    async def update(self, *, _connection=None, **kwargs):
         """
         Saving a Dataclass Model to Database.
         """
-        if not self.Meta.connection:
-            self.get_connection()
-        if not self.Meta.connection.is_connected():
-            await self.Meta.connection.connection()
+        conn = self._resolve_connection(_connection)
+        if not conn.is_connected():
+            await conn.connection()
         result = None
         try:
-            result = await self.Meta.connection._update_(_model=self, **kwargs)
+            result = await conn._update_(_model=self, **kwargs)
             return result
         except DriverError:
             raise
@@ -146,17 +157,16 @@ class Model(BaseModel):
             logging.debug(traceback.format_exc())
             raise ModelError(f"Error on UPDATE {self.Meta.name}: {err}") from err
 
-    async def delete(self, _filter: dict = None, **kwargs):
+    async def delete(self, _filter: dict = None, *, _connection=None, **kwargs):
         """
         Deleting a row Model based on Primary Key
         """
-        if not self.Meta.connection:
-            self.get_connection()
-        if not self.Meta.connection.is_connected():
-            await self.Meta.connection.connection()
+        conn = self._resolve_connection(_connection)
+        if not conn.is_connected():
+            await conn.connection()
         result = None
         try:
-            result = await self.Meta.connection._delete_(_model=self, _filter=_filter, **kwargs)
+            result = await conn._delete_(_model=self, _filter=_filter, **kwargs)
             return result
         except StatementError:
             raise
@@ -166,17 +176,16 @@ class Model(BaseModel):
             logging.debug(traceback.format_exc())
             raise ModelError(f"Error on DELETE {self.Meta.name}: {err}") from err
 
-    async def save(self, **kwargs):
+    async def save(self, *, _connection=None, **kwargs):
         """
         Saving a Dataclass Model to Database.
         """
-        if not self.Meta.connection:
-            self.get_connection()
-        if not self.Meta.connection.is_connected():
-            await self.Meta.connection.connection()
+        conn = self._resolve_connection(_connection)
+        if not conn.is_connected():
+            await conn.connection()
         result = None
         try:
-            result = await self.Meta.connection._save_(_model=self, **kwargs)
+            result = await conn._save_(_model=self, **kwargs)
             return result
         except StatementError:
             raise
@@ -186,16 +195,15 @@ class Model(BaseModel):
             logging.debug(traceback.format_exc())
             raise ModelError(f"Error on DELETE {self.Meta.name}: {err}") from err
 
-    async def fetch(self, **kwargs):
+    async def fetch(self, *, _connection=None, **kwargs):
         """
         Return a new single record based on filter criteria
         """
-        if not self.Meta.connection:
-            self.get_connection()
-        if not self.Meta.connection.is_connected():
-            await self.Meta.connection.connection()
+        conn = self._resolve_connection(_connection)
+        if not conn.is_connected():
+            await conn.connection()
         try:
-            result = await self.Meta.connection._fetch_(_model=self, **kwargs)
+            result = await conn._fetch_(_model=self, **kwargs)
             if result:
                 for f, val in result.items():
                     setattr(self, f, val)
@@ -214,15 +222,28 @@ class Model(BaseModel):
             logging.debug(traceback.format_exc())
             raise ModelError(f"Error on get {self.Meta.name}: {err}") from err
 
+    @classmethod
+    def _resolve_class_connection(cls, _connection):
+        """Pick a connection for a classmethod call.
+
+        Prefer an explicit per-call connection over the shared
+        ``Meta.connection`` class slot. Passing ``_connection`` makes the
+        operation safe under concurrent use of the same Model class
+        (avoids the race where one coroutine clears ``Meta.connection``
+        between another coroutine setting it and reading it).
+        """
+        return _connection if _connection is not None else cls.Meta.connection
+
     ### Class-based methods for Dataclasses.
     @classmethod
-    async def create(cls, records: list):
-        if not cls.Meta.connection:
+    async def create(cls, records: list, *, _connection=None):
+        conn = cls._resolve_class_connection(_connection)
+        if not conn:
             raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         # working always with native format:
-        cls.Meta.connection.output_format("native")
+        conn.output_format("native")
         try:
-            result = await cls.Meta.connection._create_(_model=cls, rows=records)
+            result = await conn._create_(_model=cls, rows=records)
             if result:
                 return result
         except ValidationError:
@@ -236,12 +257,13 @@ class Model(BaseModel):
             raise ModelError(f"Error Updating Table {cls.Meta.name}: {err}") from err
 
     @classmethod
-    async def remove(cls, **kwargs):
-        if not cls.Meta.connection:
+    async def remove(cls, *, _connection=None, **kwargs):
+        conn = cls._resolve_class_connection(_connection)
+        if not conn:
             raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         result = []
         try:
-            result = await cls.Meta.connection._remove_(_model=cls, **kwargs)
+            result = await conn._remove_(_model=cls, **kwargs)
             return result
         except (AttributeError, StatementError) as err:
             raise StatementError(f"Error on Attribute {cls.Meta.name}: {err}") from err
@@ -252,11 +274,12 @@ class Model(BaseModel):
             raise ModelError(f"Error Deleting Table {cls.Meta.name}: {err}") from err
 
     @classmethod
-    async def updating(cls, *args, _filter: dict = None, **kwargs):
-        if not cls.Meta.connection:
+    async def updating(cls, *args, _filter: dict = None, _connection=None, **kwargs):
+        conn = cls._resolve_class_connection(_connection)
+        if not conn:
             raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         try:
-            result = await cls.Meta.connection._updating_(_model=cls, _filter=_filter, *args, **kwargs)
+            result = await conn._updating_(_model=cls, _filter=_filter, *args, **kwargs)
             if result:
                 return result
             else:
@@ -270,11 +293,12 @@ class Model(BaseModel):
             raise ModelError(f"Error Updating Table {cls.Meta.name}: {err}") from err
 
     @classmethod
-    async def deleting(cls, *args, _filter: dict = None, **kwargs):
-        if not cls.Meta.connection:
+    async def deleting(cls, *args, _filter: dict = None, _connection=None, **kwargs):
+        conn = cls._resolve_class_connection(_connection)
+        if not conn:
             raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         try:
-            result = await cls.Meta.connection._deleting_(_model=cls, _filter=_filter, *args, **kwargs)
+            result = await conn._deleting_(_model=cls, _filter=_filter, *args, **kwargs)
             if result:
                 return result
             else:
@@ -288,16 +312,17 @@ class Model(BaseModel):
             raise ModelError(f"Error Updating Table {cls.Meta.name}: {err}") from err
 
     @classmethod
-    async def select(cls, *args, **kwargs):
+    async def select(cls, *args, _connection=None, **kwargs):
         """Select.
         passing a where condition directly to model.
         :raises DriverError, Exception
         """
-        if not cls.Meta.connection:
+        conn = cls._resolve_class_connection(_connection)
+        if not conn:
             raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         result = []
         try:
-            result = await cls.Meta.connection._select_(_model=cls, *args, **kwargs)
+            result = await conn._select_(_model=cls, *args, **kwargs)
             if result:
                 cls.reset_values(cls)
                 return [cls(**dict(r)) for r in result]
@@ -316,15 +341,16 @@ class Model(BaseModel):
             raise ModelError(f"Error on Select {cls.Meta.name}: {err}") from err
 
     @classmethod
-    async def filter(cls, *args, **kwargs):
+    async def filter(cls, *args, _connection=None, **kwargs):
         """
         Need to return a ***collection*** of nested DataClasses
         """
-        if not cls.Meta.connection:
+        conn = cls._resolve_class_connection(_connection)
+        if not conn:
             raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         result = []
         try:
-            result = await cls.Meta.connection._filter_(_model=cls, *args, **kwargs)
+            result = await conn._filter_(_model=cls, *args, **kwargs)
             if result:
                 cls.reset_values(cls)
                 return [cls(**dict(r)) for r in result]
@@ -343,14 +369,15 @@ class Model(BaseModel):
             raise ModelError(f"Error on filter {cls.Meta.name}: {err}") from err
 
     @classmethod
-    async def get(cls, **kwargs):
+    async def get(cls, *, _connection=None, **kwargs):
         """
         Return a new single record based on filter criteria
         """
-        if not cls.Meta.connection:
+        conn = cls._resolve_class_connection(_connection)
+        if not conn:
             raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         try:
-            result = await cls.Meta.connection._get_(_model=cls, **kwargs)
+            result = await conn._get_(_model=cls, **kwargs)
             if result:
                 fields = cls.get_fields(cls)
                 result = {k: v for k, v in dict(result).items() if k in fields}
@@ -372,11 +399,12 @@ class Model(BaseModel):
 
     # get all data of a model
     @classmethod
-    async def all(cls, **kwargs):
-        if not cls.Meta.connection:
+    async def all(cls, *, _connection=None, **kwargs):
+        conn = cls._resolve_class_connection(_connection)
+        if not conn:
             raise ConnectionMissing(f"Missing Connection for Model: {cls}")
         try:
-            result = await cls.Meta.connection._all_(_model=cls, **kwargs)
+            result = await conn._all_(_model=cls, **kwargs)
             cls.reset_values(cls)
             return [cls(**dict(row)) for row in result]
         except ValidationError:
