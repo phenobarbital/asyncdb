@@ -62,6 +62,45 @@ from .sql import SQLCursor, SQLDriver
 max_cached_statement_lifetime = 600
 max_cacheable_statement_size = 1024 * 15
 
+# Valid libpq sslmode values accepted by asyncpg (see SSLMode enum).
+VALID_SSLMODES = (
+    "disable",
+    "allow",
+    "prefer",
+    "require",
+    "verify-ca",
+    "verify-full",
+)
+
+
+def _resolve_sslmode(value: Optional[str]) -> Optional[str]:
+    """Normalize and validate a libpq ``sslmode`` value.
+
+    Falls back to the ``PGSSLMODE`` environment variable when no explicit
+    value is provided.
+
+    Args:
+        value: Explicit sslmode passed to the driver (e.g. ``"require"``),
+            or ``None`` to fall back to the environment.
+
+    Returns:
+        A lowercase, validated sslmode string, or ``None`` when neither an
+        explicit value nor ``PGSSLMODE`` is set.
+
+    Raises:
+        ValueError: If the resolved sslmode is not a valid libpq value.
+    """
+    if value is None:
+        value = os.environ.get("PGSSLMODE")
+    if value is None:
+        return None
+    mode = str(value).strip().lower()
+    if mode not in VALID_SSLMODES:
+        raise ValueError(
+            f"Invalid sslmode '{value}'. Must be one of: {', '.join(VALID_SSLMODES)}"
+        )
+    return mode
+
 
 class NAVConnection(asyncpg.Connection):
     """
@@ -206,6 +245,15 @@ class pgPool(BasePool):
         self._encoder = DefaultEncoder()
         ### SSL Support:
         self.ssl: bool = False
+        # Explicit libpq sslmode (e.g. "disable", "require", "verify-full").
+        # Takes effect only when a full SSL context is not configured; falls
+        # back to the PGSSLMODE environment variable when not provided.
+        _sslmode = None
+        if params and "sslmode" in params:
+            _sslmode = params.pop("sslmode")
+        elif "sslmode" in kwargs:
+            _sslmode = kwargs.pop("sslmode")
+        self._sslmode: Optional[str] = _resolve_sslmode(_sslmode)
         if params and "ssl" in params:
             ssloptions = params["ssl"]
         elif "ssl" in kwargs:
@@ -338,8 +386,16 @@ class pgPool(BasePool):
                 custom_class = {"record_class": self._record_class_}
             if self.ssl:
                 _ssl = {"ssl": self.sslctx}
+            elif self._sslmode:
+                # Explicit libpq sslmode (or PGSSLMODE). asyncpg parses the
+                # string and applies the matching SSL behavior.
+                _ssl = {"ssl": self._sslmode}
             else:
-                _ssl = {}
+                # Pass ssl=False explicitly so asyncpg does not fall back to
+                # its default sslmode='prefer' for TCP connections, which would
+                # probe ~/.postgresql/postgresql.key and may raise a
+                # PermissionError when HOME points to an unreadable directory.
+                _ssl = {"ssl": False}
             self._pool = await asyncpg.create_pool(
                 dsn=self._dsn,
                 max_queries=self._max_queries,
@@ -550,6 +606,15 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             self._connection_config = {}
         ### SSL Support:
         self.ssl: bool = False
+        # Explicit libpq sslmode (e.g. "disable", "require", "verify-full").
+        # Takes effect only when a full SSL context is not configured; falls
+        # back to the PGSSLMODE environment variable when not provided.
+        _sslmode = None
+        if params and "sslmode" in params:
+            _sslmode = params.pop("sslmode")
+        elif "sslmode" in kwargs:
+            _sslmode = kwargs.pop("sslmode")
+        self._sslmode: Optional[str] = _resolve_sslmode(_sslmode)
         if params and "ssl" in params:
             ssloptions = params.pop("ssl")
         elif "ssl" in kwargs:
@@ -688,7 +753,17 @@ class pg(SQLDriver, DBCursorBackend, ModelBackend):
             "max_parallel_workers": "512",
         }
         server_settings = {**server_settings, **self._server_settings}
-        _ssl = {"ssl": self.sslctx} if self.ssl else {}
+        # Resolve SSL config: full context wins, then explicit sslmode/PGSSLMODE,
+        # otherwise ssl=False so asyncpg does not fall back to its default
+        # sslmode='prefer' for TCP connections, which would probe
+        # ~/.postgresql/postgresql.key and may raise a PermissionError when HOME
+        # points to an unreadable directory.
+        if self.ssl:
+            _ssl = {"ssl": self.sslctx}
+        elif self._sslmode:
+            _ssl = {"ssl": self._sslmode}
+        else:
+            _ssl = {"ssl": False}
         custom_class = {}
         if self._custom_record:
             custom_class = {"record_class": self._record_class_}
