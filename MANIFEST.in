@@ -5,16 +5,24 @@ include SECURITY.md
 include INSTALL.md
 include README.md
 include Makefile
+include pyproject.toml
+include setup.py
 
-graft asyncdb
-graft tests
+# Ship only the sources needed to build the package.
+# (Compiled .so/.pyd are produced at build time by build_ext, not shipped in the sdist.)
+recursive-include asyncdb *.py *.pyx *.pxd *.pyi
+include asyncdb/py.typed
 
-# Exclude tests, settings, env, examples, and bin folders
-global-exclude *.pyc
+# --- Never ship build artifacts, caches or compiled blobs in the sdist ---
+global-exclude *.pyc *.pyo *.pyd *.so *.o *.obj
+global-exclude *.cpp
+global-exclude *.c
+recursive-exclude * __pycache__
+
+# Exclude tests, settings, env, examples, docs and bin folders
 prune docs
 prune settings
 prune env
 prune examples
 prune bin
-recursive-exclude */__pycache__
-prune */__pycache__
+prune tests

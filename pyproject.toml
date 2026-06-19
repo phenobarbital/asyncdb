@@ -86,7 +86,7 @@ default = [
 dataframe = [
     "dask==2024.8.2",
     "polars>=1.12.0",
-    "pyarrow==19.0.1",
+    "pyarrow>=23.0.1",
     "connectorx==0.4.2",
     "deltalake==0.19.2",
     "duckdb==1.2.2",
@@ -114,11 +114,14 @@ postgresql = [
     "psycopg[binary,pool]>=3.1.8",
 ]
 mysql = [
-    "asyncmy==0.2.9",
+    # NOTE (security): asyncmy <=0.2.11 has no patched release for GHSA-qhqw-rrw9-25rm
+    # (SQL injection via crafted dict keys). Risk accepted: do NOT pass dicts with
+    # untrusted/attacker-controlled keys as query parameters. See SECURITY.md.
+    "asyncmy==0.2.11",
     "mysqlclient==2.2.7"
 ]
 mariadb = [
-    "aiomysql==0.2.0"
+    "aiomysql==0.3.2"
 ]
 boto3 = [
     "aiobotocore[boto3]==2.15.2",
@@ -135,7 +138,7 @@ cassandra = [
 ]
 arangodb = [
     "networkx==3.4.2",
-    "pyjwt==2.10.1",
+    "pyjwt>=2.13.0",
     "python-arango-async>=1.2.0",
     "scipy==1.15.1"
 ]
