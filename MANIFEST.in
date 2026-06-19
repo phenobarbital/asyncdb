@@ -13,11 +13,7 @@ include setup.py
 recursive-include asyncdb *.py *.pyx *.pxd *.pyi
 include asyncdb/py.typed
 
-# Rust extension sources (NOT the build cache under target/)
-recursive-include asyncdb/conversions/rst_convert *.rs Cargo.toml Cargo.lock
-
 # --- Never ship build artifacts, caches or compiled blobs in the sdist ---
-prune asyncdb/conversions/rst_convert/target
 global-exclude *.pyc *.pyo *.pyd *.so *.o *.obj
 global-exclude *.cpp
 global-exclude *.c
