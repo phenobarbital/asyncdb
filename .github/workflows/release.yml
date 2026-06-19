@@ -31,18 +31,28 @@ jobs:
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_SKIP: "pp* *-win32 *i686 *musllinux*"
           CIBW_PRERELEASE_PYTHONS: "0"
-          # Fail the build if a wheel is ever produced without the compiled
-          # Cython extension (asyncdb/utils/types.*.so / .pyd). This prevents
-          # publishing a broken wheel that raises "No module named
-          # 'asyncdb.utils.types'" at import time.
-          CIBW_TEST_COMMAND: >-
-            python -c "import glob, os, sysconfig;
-            d = os.path.join(sysconfig.get_paths()['platlib'], 'asyncdb', 'utils');
-            ext = glob.glob(os.path.join(d, 'types.*.so')) + glob.glob(os.path.join(d, 'types.*.pyd'));
-            assert ext, 'compiled Cython extension missing in ' + d;
-            print('compiled Cython extension present:', ext[0])"
         run: |
           cibuildwheel --output-dir dist
+
+      # Fail the build if any wheel is produced without the compiled Cython
+      # extension (asyncdb/utils/types.*.so / .pyd). This prevents publishing a
+      # broken wheel that raises "No module named 'asyncdb.utils.types'" at
+      # import time. We inspect the wheel archive directly instead of using
+      # CIBW_TEST_COMMAND so we never pip-install the wheel's dependencies
+      # (e.g. uvloop, which has no Windows support) just to run this check.
+      - name: Verify compiled Cython extension is present in wheels
+        shell: python
+        run: |
+          import glob, zipfile
+          wheels = glob.glob("dist/*.whl")
+          assert wheels, "no wheels were produced in dist/"
+          for whl in wheels:
+              names = zipfile.ZipFile(whl).namelist()
+              ext = [n for n in names
+                     if n.startswith("asyncdb/utils/types.")
+                     and (n.endswith(".so") or n.endswith(".pyd"))]
+              assert ext, f"compiled Cython extension missing in {whl}"
+              print(f"OK {whl}: {ext[0]}")
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
