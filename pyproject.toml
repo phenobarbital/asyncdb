@@ -56,7 +56,7 @@ dependencies = [
     "iso8601==2.1.0",
     "python-magic==0.4.27",
     "dateparser==1.1.8",
-    "python-datamodel>=0.7.0",
+    "python-datamodel>=0.10.21",
     "aiosqlite>=0.18.0",
     "looseversion==1.3.0",
     "aiofiles==24.1.0",
