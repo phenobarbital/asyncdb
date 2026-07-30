@@ -8,7 +8,16 @@ TODO: add Thread Pool Support.
 import asyncio
 import time
 from typing import Any
-import pylibmc
+
+try:
+    import pylibmc
+except ImportError as exc:
+    raise ImportError(
+        "The 'mcache' driver is deprecated and requires pylibmc, which is no "
+        "longer installed by default (it needs the libmemcached-dev system "
+        "package). Install it manually with 'pip install pylibmc' or use the "
+        "async 'memcache' driver instead (pip install asyncdb[memcache])."
+    ) from exc
 from ..exceptions import DriverError
 from .base import (
     InitDriver,

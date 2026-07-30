@@ -1,4 +1,6 @@
-gcc python3.9-dev python3.9-venv libmemcached-dev zlib1g-dev build-essential libffi-dev unixodbc unixodbc-dev libsqliteodbc libev4 libev-dev
+gcc python3.9-dev python3.9-venv zlib1g-dev build-essential libffi-dev unixodbc unixodbc-dev libsqliteodbc libev4 libev-dev
+# Memcache: the async "memcache" driver (aiomcache) is pure-python and needs no system packages.
+# Only the deprecated "mcache" driver (pylibmc, installed manually) requires: libmemcached-dev
 sudo apt install python3-cassandra
 apt install pkg-config
 # For MySQL is required:
