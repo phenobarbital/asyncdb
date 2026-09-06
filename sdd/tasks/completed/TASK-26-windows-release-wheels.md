@@ -103,7 +103,33 @@ def test_windows_wheel_has_expected_tag_and_extension(wheel_path):
 
 ## Completion Note
 
-**Completed by**: unassigned
-**Date**: YYYY-MM-DD
-**Notes**: Pending implementation.
-**Deviations from spec**: none
+**Completed by**: sdd-worker (Claude Sonnet 5)
+**Date**: 2026-09-06
+**Notes**: The workflow already had `CIBW_ARCHS_WINDOWS`/`_LINUX`/`_MACOS`
+and a `CIBW_BUILD` glob requesting `cp310`–`cp314` uniformly across the
+`[ubuntu-latest, windows-latest, macos-latest]` matrix, plus a compiled-
+extension presence check, so the explicit per-OS wheel *request* was
+already in place. Strengthened the existing "Verify compiled Cython
+extension is present in wheels" step (renamed to "Verify wheel tags and
+compiled Cython extension") in `.github/workflows/release.yml` to also: (1)
+parse each wheel's PEP 427 filename tags, (2) on the Windows runner, assert
+the platform tag starts with `win_amd64` and the compiled extension ends in
+`.pyd` (previously `.so`/`.pyd` were both accepted unconditionally), (3) on
+non-Windows runners assert the platform tag is not a `win*` tag and the
+extension ends in `.so`, and (4) on the Windows runner, assert wheels were
+produced for all of `cp310`–`cp314`, failing the job if any are missing.
+Verified the resulting YAML parses (`yaml.safe_load`) and the embedded
+Python step compiles (`compile(..., 'exec')`). Left Linux/macOS wheel
+building, artifact upload, and the `deploy` job's per-platform PyPI
+publication untouched. Added `tests/test_release_wheel.py` with reusable,
+pure-Python wheel tag/extension validation helpers
+(`parse_wheel_filename`, `find_compiled_extension`,
+`assert_wheel_is_valid_for_platform`) mirroring the CI step's logic,
+exercised against synthetic wheel archives (no cibuildwheel run or
+dependency installation required). 4/4 tests pass
+(`pytest tests/test_release_wheel.py -q`).
+**Deviations from spec**: none. The CI step's Python script duplicates
+(rather than imports) the logic in `tests/test_release_wheel.py`, since the
+release job intentionally installs only `twine`/`cibuildwheel` and not the
+project's dev/test dependencies — importing `tests/` there would require
+adding `pytest` to the release job, which was judged out of scope.

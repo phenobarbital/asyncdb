@@ -71,7 +71,7 @@
       "feature": "windows-compatibility",
       "feature_id": "FEAT-5",
       "spec": "sdd/specs/windows-compatibility.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [
@@ -81,8 +81,8 @@
       "parallelism_notes": "Release configuration must match the final dependency/support contract.",
       "assigned_to": null,
       "started_at": "2026-09-06T03:30:03Z",
-      "completed_at": null,
-      "file": "sdd/tasks/active/TASK-26-windows-release-wheels.md"
+      "completed_at": "2026-09-06T05:10:00Z",
+      "file": "sdd/tasks/completed/TASK-26-windows-release-wheels.md"
     },
     {
       "id": "TASK-27",
