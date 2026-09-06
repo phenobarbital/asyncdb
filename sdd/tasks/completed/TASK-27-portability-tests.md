@@ -113,7 +113,29 @@ def test_supported_windows_tag(wheel_path):
 
 ## Completion Note
 
-**Completed by**: unassigned
-**Date**: YYYY-MM-DD
-**Notes**: Pending implementation.
-**Deviations from spec**: none
+**Completed by**: sdd-worker (Claude Sonnet 5)
+**Date**: 2026-09-06
+**Notes**: Created `tests/test_windows_compatibility.py` assembling the
+cross-module regression suite: (1) a subprocess-based core-import test that
+blocks every optional/native provider module audited in TASK-24 (pymssql,
+MySQLdb, aioodbc, pyodbc, cassandra, acsylla, uvloop) and confirms
+`import asyncdb` plus loading the portable `dummy` driver still succeed in
+a fresh interpreter; (2) two uvloop-policy regression tests reusing the
+TASK-23 contract (safe no-op when absent, and Windows never attempts the
+import while the standard asyncio policy stays usable); (3) a
+factory-level isolation test proving a missing-dependency `DriverError` for
+one provider (`sqlserver`) does not poison subsequent loading of the
+portable `dummy` provider; (4) two wheel tag/extension tests
+(`test_wheel_extension_matches_platform`, `test_supported_windows_tag`)
+that import and reuse the pure-Python helpers and fixtures added in
+`tests/test_release_wheel.py` (TASK-26) via `from .test_release_wheel import
+...`, rather than re-implementing them. No changes were needed in
+`tests/conftest.py` — none of the new tests require its Postgres-oriented
+fixtures. All 6 new tests pass
+(`pytest tests/test_windows_compatibility.py -q`); the full FEAT-5 test
+set (uvloop, optional-drivers, package-metadata, release-wheel,
+windows-compatibility — 25 tests) passes together, and `pytest tests/
+--collect-only` still collects all 375 repository tests with no collection
+errors. No external database service is required by any test added across
+FEAT-5.
+**Deviations from spec**: none.

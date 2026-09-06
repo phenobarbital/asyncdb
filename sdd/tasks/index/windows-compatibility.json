@@ -5,7 +5,7 @@
   "type": "feature",
   "base_branch": "dev",
   "created_at": "2026-09-06T00:00:00+00:00",
-  "completed_at": null,
+  "completed_at": "2026-09-06T05:30:00Z",
   "tasks": [
     {
       "id": "TASK-23",
@@ -91,7 +91,7 @@
       "feature": "windows-compatibility",
       "feature_id": "FEAT-5",
       "spec": "sdd/specs/windows-compatibility.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [
@@ -104,8 +104,8 @@
       "parallelism_notes": "Final regression suite depends on all compatibility contracts and CI behavior being settled.",
       "assigned_to": null,
       "started_at": "2026-09-06T03:30:03Z",
-      "completed_at": null,
-      "file": "sdd/tasks/active/TASK-27-portability-tests.md"
+      "completed_at": "2026-09-06T05:30:00Z",
+      "file": "sdd/tasks/completed/TASK-27-portability-tests.md"
     }
   ]
 }
