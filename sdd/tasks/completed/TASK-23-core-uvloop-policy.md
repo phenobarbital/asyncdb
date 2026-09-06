@@ -117,7 +117,15 @@ def test_asyncdb_factories_keep_dynamic_lookup():
 
 ## Completion Note
 
-**Completed by**: unassigned
-**Date**: YYYY-MM-DD
-**Notes**: Pending implementation.
+**Completed by**: sdd-worker (Claude Sonnet 5)
+**Date**: 2026-09-06
+**Notes**: `install_uvloop()` now checks `sys.platform` and returns early
+(no-op) on Windows before ever attempting to import `uvloop`, and wraps the
+activation call in a defensive `except Exception` in addition to
+`ImportError` so it can never raise during `import asyncdb`. The module-scope
+call in `asyncdb/connections.py` is preserved (factory signatures unchanged)
+with a clarifying comment. Added `tests/test_uvloop.py` with 4 tests covering:
+missing uvloop, Windows skip behavior, automatic activation on a supported
+platform when installed, and preserved dynamic driver lookup for
+`AsyncDB`/`AsyncPool`/`asyncdb`. All 4 tests pass (`pytest tests/test_uvloop.py -q`).
 **Deviations from spec**: none

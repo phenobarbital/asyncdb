@@ -14,7 +14,7 @@
       "feature": "windows-compatibility",
       "feature_id": "FEAT-5",
       "spec": "sdd/specs/windows-compatibility.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [],
@@ -22,8 +22,8 @@
       "parallelism_notes": "Independent core policy task; shares the factory boundary with provider audit but can be developed separately.",
       "assigned_to": null,
       "started_at": "2026-09-06T03:30:03Z",
-      "completed_at": null,
-      "file": "sdd/tasks/active/TASK-23-core-uvloop-policy.md"
+      "completed_at": "2026-09-06T03:45:00Z",
+      "file": "sdd/tasks/completed/TASK-23-core-uvloop-policy.md"
     },
     {
       "id": "TASK-24",
