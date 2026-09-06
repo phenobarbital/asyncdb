@@ -35,24 +35,54 @@ jobs:
           cibuildwheel --output-dir dist
 
       # Fail the build if any wheel is produced without the compiled Cython
-      # extension (asyncdb/utils/types.*.so / .pyd). This prevents publishing a
-      # broken wheel that raises "No module named 'asyncdb.utils.types'" at
-      # import time. We inspect the wheel archive directly instead of using
+      # extension (asyncdb/utils/types.*.so / .pyd), with the wrong platform
+      # tag, or missing a requested CPython ABI on Windows. This prevents
+      # publishing a broken wheel that raises "No module named
+      # 'asyncdb.utils.types'" at import time, or a Windows wheel that was
+      # not actually built for win_amd64 / the full supported CPython range.
+      # We inspect the wheel archive directly instead of using
       # CIBW_TEST_COMMAND so we never pip-install the wheel's dependencies
       # (e.g. uvloop, which has no Windows support) just to run this check.
-      - name: Verify compiled Cython extension is present in wheels
+      - name: Verify wheel tags and compiled Cython extension
         shell: python
         run: |
-          import glob, zipfile
+          import glob, sys, zipfile
+
+          EXPECTED_WINDOWS_CPYTHON_TAGS = {"cp310", "cp311", "cp312", "cp313", "cp314"}
+
           wheels = glob.glob("dist/*.whl")
           assert wheels, "no wheels were produced in dist/"
+
+          is_windows = sys.platform.startswith("win")
+          found_cpython_tags = set()
+
           for whl in wheels:
+              filename = whl.replace("\\", "/").rsplit("/", 1)[-1]
+              # Wheel filename: {name}-{version}-{python_tag}-{abi_tag}-{platform_tag}.whl
+              python_tag, _abi_tag, platform_tag = filename[:-4].split("-")[-3:]
+              found_cpython_tags.add(python_tag)
+
+              if is_windows:
+                  assert platform_tag.startswith("win_amd64"), (
+                      f"unexpected platform tag for Windows wheel {whl}: {platform_tag}"
+                  )
+                  expected_suffix = ".pyd"
+              else:
+                  assert not platform_tag.startswith("win"), (
+                      f"unexpected Windows platform tag on non-Windows runner: {whl}"
+                  )
+                  expected_suffix = ".so"
+
               names = zipfile.ZipFile(whl).namelist()
               ext = [n for n in names
                      if n.startswith("asyncdb/utils/types.")
-                     and (n.endswith(".so") or n.endswith(".pyd"))]
-              assert ext, f"compiled Cython extension missing in {whl}"
-              print(f"OK {whl}: {ext[0]}")
+                     and n.endswith(expected_suffix)]
+              assert ext, f"compiled Cython extension ({expected_suffix}) missing in {whl}"
+              print(f"OK {whl}: {ext[0]} [{python_tag}-{platform_tag}]")
+
+          if is_windows:
+              missing = EXPECTED_WINDOWS_CPYTHON_TAGS - found_cpython_tags
+              assert not missing, f"Windows wheels missing for CPython tags: {sorted(missing)}"
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
