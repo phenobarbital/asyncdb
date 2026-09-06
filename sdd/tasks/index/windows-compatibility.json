@@ -23,7 +23,8 @@
       "assigned_to": null,
       "started_at": "2026-09-06T03:30:03Z",
       "completed_at": "2026-09-06T03:45:00Z",
-      "file": "sdd/tasks/completed/TASK-23-core-uvloop-policy.md"
+      "file": "sdd/tasks/completed/TASK-23-core-uvloop-policy.md",
+      "verification": "verified"
     },
     {
       "id": "TASK-24",
@@ -41,7 +42,8 @@
       "assigned_to": null,
       "started_at": "2026-09-06T03:30:03Z",
       "completed_at": "2026-09-06T04:15:00Z",
-      "file": "sdd/tasks/completed/TASK-24-provider-lazy-imports.md"
+      "file": "sdd/tasks/completed/TASK-24-provider-lazy-imports.md",
+      "verification": "verified"
     },
     {
       "id": "TASK-25",
@@ -62,7 +64,8 @@
       "assigned_to": null,
       "started_at": "2026-09-06T03:30:03Z",
       "completed_at": "2026-09-06T04:45:00Z",
-      "file": "sdd/tasks/completed/TASK-25-dependency-metadata.md"
+      "file": "sdd/tasks/completed/TASK-25-dependency-metadata.md",
+      "verification": "verified"
     },
     {
       "id": "TASK-26",
@@ -82,7 +85,8 @@
       "assigned_to": null,
       "started_at": "2026-09-06T03:30:03Z",
       "completed_at": "2026-09-06T05:10:00Z",
-      "file": "sdd/tasks/completed/TASK-26-windows-release-wheels.md"
+      "file": "sdd/tasks/completed/TASK-26-windows-release-wheels.md",
+      "verification": "verified"
     },
     {
       "id": "TASK-27",
@@ -105,7 +109,8 @@
       "assigned_to": null,
       "started_at": "2026-09-06T03:30:03Z",
       "completed_at": "2026-09-06T05:30:00Z",
-      "file": "sdd/tasks/completed/TASK-27-portability-tests.md"
+      "file": "sdd/tasks/completed/TASK-27-portability-tests.md",
+      "verification": "verified"
     }
   ]
 }
