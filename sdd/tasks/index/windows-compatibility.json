@@ -50,7 +50,7 @@
       "feature": "windows-compatibility",
       "feature_id": "FEAT-5",
       "spec": "sdd/specs/windows-compatibility.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [
@@ -61,8 +61,8 @@
       "parallelism_notes": "Requires the import audit before changing core dependency declarations.",
       "assigned_to": null,
       "started_at": "2026-09-06T03:30:03Z",
-      "completed_at": null,
-      "file": "sdd/tasks/active/TASK-25-dependency-metadata.md"
+      "completed_at": "2026-09-06T04:45:00Z",
+      "file": "sdd/tasks/completed/TASK-25-dependency-metadata.md"
     },
     {
       "id": "TASK-26",

@@ -110,7 +110,30 @@ def test_core_dependency_contract_is_portable():
 
 ## Completion Note
 
-**Completed by**: unassigned
-**Date**: YYYY-MM-DD
-**Notes**: Pending implementation.
-**Deviations from spec**: none
+**Completed by**: sdd-worker (Claude Sonnet 5)
+**Date**: 2026-09-06
+**Notes**: Audited `pyproject.toml`'s `dependencies` array against the
+TASK-24 provider-import audit: none of the core dependencies are native or
+Linux-only (asyncpg, cryptography, pandas, google-cloud-*, pgvector,
+python-magic, xlrd/openpyxl, etc. all ship Windows wheels or are pure
+Python), and every native/optional provider package identified in TASK-24
+(pymssql, MySQLdb/mysqlclient, aioodbc/pyodbc, cassandra-driver,
+scylla_driver/acsylla/cqlsh) was already correctly confined to its own
+extra, not the core dependency list. No dependency was moved between
+`dependencies` and `optional-dependencies` — the audit found the existing
+classification already portable, and moving unrelated pure-Python packages
+(e.g. xlrd/openpyxl, used only by `drivers/delta.py`) was judged out of
+scope for a Windows-compatibility task since they do not affect Windows
+installability. No platform markers were added, since no audited package
+required one. `uvloop` remains solely in its own optional extra (unchanged).
+Added `"Operating System :: Microsoft :: Windows"` and
+`"Operating System :: MacOS"` classifiers to `pyproject.toml` alongside the
+existing Linux classifier. Documented the core/`default`/other-extras
+Windows support boundary in a new "Platform Support" section in
+`README.md`. Added `tests/test_package_metadata.py` with the three named
+tests (`test_uvloop_is_optional`,
+`test_default_extra_contains_approved_provider_dependencies`,
+`test_core_dependency_contract_is_portable`), parsing `pyproject.toml` via
+`tomllib`; all 3 pass (`pytest tests/test_package_metadata.py -q`).
+**Deviations from spec**: none — see notes above for the reasoned decision
+not to reclassify any core dependency.
