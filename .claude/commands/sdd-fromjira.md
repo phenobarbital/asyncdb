@@ -205,7 +205,7 @@ you reference in the brainstorm, you MUST:
 
 1. **Read the actual source file** and record exact signatures (class name, method names,
    parameter types, return types) with file path and line numbers.
-2. **Verify imports** — confirm `from parrot.X import Y` actually works by checking
+2. **Verify imports** — confirm all referenced imports actually resolve by checking
    `__init__.py` files and module structure.
 3. **Capture user-provided code** — if the user pasted code snippets during discovery
    (Steps 4-5), preserve them verbatim in the Code Context section.
@@ -260,9 +260,15 @@ Evaluate the feature's decomposition potential for parallel development:
 
 1. Read the template at `sdd/templates/brainstorm.md`.
 2. Create `sdd/proposals/<issue-key>-<slug>.brainstorm.md` with today's date.
-3. Add Jira metadata block at the top:
+3. Add Jira metadata block at the top, **including the FEAT-145 flow-type
+   fields**:
    ```markdown
    ---
+   # FEAT-145 flow-type fields. Default to feature/dev; flip to hotfix/main
+   # if the Jira issue is tagged as a hotfix (Type=Bug + Priority=Highest,
+   # or component matches a hotfix label your team uses).
+   type: feature
+   base_branch: dev
    jira: NAV-8036
    jira_summary: "Add OAuth 2.0 support for JiraToolkit"
    jira_type: Story
@@ -272,6 +278,8 @@ Evaluate the feature's decomposition potential for parallel development:
    status: exploration
    ---
    ```
+   Validation rule: `type: hotfix` REQUIRES `base_branch: main`. The user
+   can adjust the values before running `/sdd-spec`.
 4. Set `Status: exploration`.
 5. **Commit:**
    ```bash
