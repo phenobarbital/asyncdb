@@ -9,7 +9,7 @@ base_branch: dev
 **Feature ID**: FEAT-5
 **Date**: 2026-09-06
 **Author**: Jesus Lara / Codex
-**Status**: draft
+**Status**: approved
 **Target version**: TBD
 
 ---
@@ -343,23 +343,23 @@ looks up `<driver>Pool` at `asyncdb/connections.py:20-25`.
 
 ## 8. Open Questions
 
-- [ ] Which Python versions are release-supported for Windows: 3.10–3.14 as
+- [x] Which Python versions are release-supported for Windows: 3.10–3.14 as
   the current metadata/workflow suggests, or a narrower tested set? — *Owner:
-  maintainers*
-- [ ] Which providers are in the initial Windows support matrix, and which
+  maintainers*: from 3.10 to 3.14
+- [x] Which providers are in the initial Windows support matrix, and which
   should be marked unsupported despite installable wheels? — *Owner:
-  maintainers*
-- [ ] Should `uvloop` be activated only through an explicit opt-in API/extra,
+  maintainers*: all providers under "default" extra package
+- [x] Should `uvloop` be activated only through an explicit opt-in API/extra,
   or remain automatically activated when present on supported Unix platforms?
-  — *Owner: maintainers*
-- [ ] Which current core dependencies (`asyncpg`, pandas, `python-magic`, NumPy
+  — *Owner: maintainers*: automatically activated when present
+- [x] Which current core dependencies (`asyncpg`, pandas, `python-magic`, NumPy
   transitive paths) are required by the public core import contract versus
-  only by individual drivers? — *Owner: implementation/review*
-- [ ] Should release CI test only the core wheel, or a small portable-provider
-  matrix as well? — *Owner: release maintainers*
-- [ ] Is the SDD tooling/template synchronization from `../ai-parrot` a
+  only by individual drivers? — *Owner: implementation/review*: core dependencies + default drivers
+- [x] Should release CI test only the core wheel, or a small portable-provider
+  matrix as well? — *Owner: release maintainers*: test only core wheel
+- [x] Is the SDD tooling/template synchronization from `../ai-parrot` a
   repository maintenance dependency that should be kept in sync separately?
-  — *Owner: SDD maintainers*
+  — *Owner: SDD maintainers*: no
 
 ## Worktree Strategy
 
