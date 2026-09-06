@@ -32,7 +32,7 @@
       "feature": "windows-compatibility",
       "feature_id": "FEAT-5",
       "spec": "sdd/specs/windows-compatibility.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "L",
       "depends_on": [],
@@ -40,8 +40,8 @@
       "parallelism_notes": "Provider-family audit is independent of uvloop and release workflow work, but final shared-loader changes need integration review.",
       "assigned_to": null,
       "started_at": "2026-09-06T03:30:03Z",
-      "completed_at": null,
-      "file": "sdd/tasks/active/TASK-24-provider-lazy-imports.md"
+      "completed_at": "2026-09-06T04:15:00Z",
+      "file": "sdd/tasks/completed/TASK-24-provider-lazy-imports.md"
     },
     {
       "id": "TASK-25",

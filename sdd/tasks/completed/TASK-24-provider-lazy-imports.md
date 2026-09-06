@@ -117,7 +117,33 @@ def test_provider_runtime_import_error_is_not_rewritten():
 
 ## Completion Note
 
-**Completed by**: unassigned
-**Date**: YYYY-MM-DD
-**Notes**: Pending implementation.
-**Deviations from spec**: none
+**Completed by**: sdd-worker (Claude Sonnet 5)
+**Date**: 2026-09-06
+**Notes**: Guarded module-scope native/optional imports (matching the
+dynamodb.py eager-raise pattern) in `asyncdb/drivers/mssql.py` (pymssql),
+`sqlserver.py` (pymssql), `mysqlclient.py` (MySQLdb), `odbc.py`
+(aioodbc/pyodbc), `cassandra.py` (cassandra-driver) and `scylladb.py`
+(acsylla/cassandra-driver), so a missing native dependency raises a focused
+`DriverError` naming the provider and its `pip install asyncdb[<extra>]`
+hint instead of a bare `ImportError` traceback. The inner optional
+`LibevConnection` detection in `scylladb.py` is preserved unchanged. Also
+improved `asyncdb/drivers/outputs/output.py`'s `OutputFactory` to give an
+actionable extra hint for the `arrow`/`polars` output formats (both backed
+by the `dataframe` extra) on import failure. `asyncdb/utils/modules.py` was
+not modified: `DriverError` is not an `ImportError` subclass, so it already
+propagates unmodified through `module_exists()`'s `except ImportError`
+retry logic — no diagnostic change was required there. Confirmed two
+pre-existing, unrelated issues predate this task and were left untouched
+per file-fidelity/no-scope-creep: (1) `asyncdb/drivers/cassandra.py` has a
+pre-existing `ImportError: cannot import name 'Recordset' from
+'asyncdb.meta'` bug reproduced on the unmodified file via `git stash`; (2)
+`asyncdb/drivers/odbc.py` fails locally because the system-level
+`libodbc.so.2` (unixODBC) shared library is not installed in this
+environment, also reproduced on the unmodified file. Added
+`tests/test_optional_drivers.py` with 8 tests (1 subprocess-based core
+import isolation test, a 6-way parametrized actionable-error test, and 1
+test proving a genuine non-`ImportError` provider failure is not rewritten
+as a missing-dependency error). All 8 tests pass
+(`pytest tests/test_optional_drivers.py -q`); full test collection across
+the repo (362 tests) still succeeds with no collection errors.
+**Deviations from spec**: none.
