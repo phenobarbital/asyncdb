@@ -27,7 +27,7 @@ or existing Jira ticket. Optionally creates subtasks from decomposed SDD tasks.
 |----------|----------|-------------|
 | `<spec_path \| FEAT-ID>` | yes | Path to `.spec.md` or Feature ID to resolve |
 | `--ticket <JIRA_KEY>` | no | Existing Jira ticket to update instead of creating |
-| `--with-subtasks` | no | Create Jira sub-tasks from `sdd/tasks/.index.json` |
+| `--with-subtasks` | no | Create Jira sub-tasks from the feature's per-spec index `sdd/tasks/index/<feature-slug>.json` |
 | `--project <KEY>` | no | Override default project key (default: `NAV`) |
 
 ## Guardrails
@@ -165,16 +165,19 @@ _Feature ID: FEAT-<ID>_
 # Token refresh happens automatically
 ```
 
-**Estimate** from task index (if `--with-subtasks`):
+**Estimate** from the per-spec index (if `--with-subtasks`). The index file
+is already feature-scoped, so read it directly — no cross-feature filtering
+needed:
 ```bash
-TOTAL_SECONDS=$(echo "$TASKS" | jq '[.tasks[] | select(.feature_id=="FEAT-071") |
+INDEX="sdd/tasks/index/<feature-slug>.json"
+TOTAL_SECONDS=$(jq '[.tasks[] |
   if .effort=="S" then 14400
   elif .effort=="M" then 28800
   elif .effort=="L" then 57600
   elif .effort=="XL" then 115200
-  else 28800 end] | add')
+  else 28800 end] | add' "$INDEX")
 ```
-Default: `28800` (8h = 1 day) if no tasks exist.
+Default: `28800` (8h = 1 day) if the index has no tasks.
 
 ### 3. Execute: CREATE or UPDATE
 
@@ -262,7 +265,7 @@ Log which field worked for future reference.
 
 ### 5. Create Subtasks (if --with-subtasks)
 
-If tasks exist in `sdd/tasks/.index.json` for this feature:
+If tasks exist in the feature's per-spec index `sdd/tasks/index/<feature-slug>.json`:
 
 **Pre-check in UPDATE mode**: Check if subtasks already exist on the ticket.
 If they do, only create the missing ones:
@@ -332,7 +335,8 @@ Or in YAML frontmatter: add `jira: NAV-8036`.
 
 ### 7. Update Task Index (if --with-subtasks)
 
-Add Jira keys to each task entry in `sdd/tasks/.index.json`:
+Add Jira keys to each task entry in the per-spec index
+`sdd/tasks/index/<feature-slug>.json`:
 
 ```json
 {
@@ -351,7 +355,7 @@ git reset HEAD
 # Stage ONLY the modified SDD files — NEVER use "git add ." or "git add -A"
 git add sdd/specs/<feature-name>.spec.md
 # If subtasks were created:
-git add sdd/tasks/.index.json
+git add sdd/tasks/index/<feature-slug>.json
 # Verify ONLY the expected files are staged
 git diff --cached --name-only
 # If ANY unrelated files appear, run "git reset HEAD" and start over
@@ -422,8 +426,8 @@ The `jira:` metadata in the spec enables:
 
 ## Reference
 - Jira tool (MCP): `mcp_mcp-atlassian_jira_create_issue`
-- Jira tool (ai-parrot): `JiraToolkit.jira_create_issue()`
+- Jira tool: `JiraToolkit.jira_create_issue()`
 - Spec template: `sdd/templates/spec.md`
-- Task index: `sdd/tasks/.index.json`
+- Per-spec task index: `sdd/tasks/index/<feature-slug>.json`
 - SDD methodology: `sdd/WORKFLOW.md`
 - Auto-commit rule: `CLAUDE.md` (section "SDD Auto-Commit Rule")

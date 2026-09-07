@@ -4,18 +4,28 @@ model: haiku
 
 # /sdd-next — Suggest Next Unblocked SDD Tasks
 
-Read `sdd/tasks/.index.json`, identify unblocked tasks, and suggest assignments.
-Shows worktree context to help the user decide where to run each task.
+Aggregate tasks across all per-spec indexes (`sdd/tasks/index/*.json`),
+identify unblocked tasks, and suggest assignments. Shows worktree context
+to help the user decide where to run each task.
 
 ## Guardrails
 - Only suggest tasks with status `"pending"` and all dependencies `"done"`.
-- If `sdd/tasks/.index.json` does not exist, inform the user and suggest running `/sdd-task` first.
+- If `sdd/tasks/index/` is empty or does not exist, inform the user and suggest running `/sdd-task` first.
+- **Skip `sdd/tasks/index/_orphans.json`** — orphans have no resolvable feature; they are surfaced by `/sdd-status`, never suggested by `/sdd-next`.
 - Sort by priority (high → medium → low), then by effort (S → M → L → XL).
 
 ## Steps
 
-### 1. Read the Index
-Read `sdd/tasks/.index.json`.
+### 1. Read All Per-Spec Indexes (FEAT-145)
+
+Glob `sdd/tasks/index/*.json` (excluding `_orphans.json`) and aggregate
+the `tasks[]` arrays:
+
+```bash
+TASKS=$(jq -s '[.[] | select(.feature != "_orphans") | .tasks[]]' sdd/tasks/index/*.json)
+```
+
+If no per-spec index files exist, suggest the user run `/sdd-task` first.
 
 ### 2. Detect Active Worktrees
 Run `git worktree list` to identify which feature worktrees are currently active.
@@ -82,7 +92,7 @@ After the unblocked list, show a brief summary of what's currently running:
 ```
 
 ## Reference
-- Index file: `sdd/tasks/.index.json`
+- Per-spec index files: `sdd/tasks/index/*.json` (excluding `_orphans.json`)
 - Active worktrees: `git worktree list`
 - Worktree policy: `CLAUDE.md` (section "Worktree Policy")
 - SDD methodology: `sdd/WORKFLOW.md`
