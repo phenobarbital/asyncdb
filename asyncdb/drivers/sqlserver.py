@@ -20,7 +20,7 @@ class sqlserverCursor(SQLCursor):
         try:
             self._cursor.execute(self._sentence, self._params)
             return self
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             print(err)
             error = f"SQL Server Error: {err}"
             raise DriverError(message=error) from err
@@ -95,7 +95,7 @@ class sqlserver(mssql):
             return self
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             raise DriverError(message=f"SQL Server Error: {err}") from err
 
     async def execute(self, sentence, *args, **kwargs):
@@ -113,7 +113,7 @@ class sqlserver(mssql):
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             error = f"SQL Server Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
@@ -137,7 +137,7 @@ class sqlserver(mssql):
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             error = f"SQL Server Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
@@ -164,7 +164,7 @@ class sqlserver(mssql):
             self._result = self._cursor.fetchall()
             if not self._result:
                 return [None, NoDataFound("SQL Server: No Data was Found")]
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             error = f"SQL Server Query Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
@@ -194,7 +194,7 @@ class sqlserver(mssql):
                 self._connection.rollback()
             if not self._result:
                 return [None, NoDataFound("SQL Server: No Data was Found")]
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             error = f"SQL Server Query Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
@@ -217,7 +217,7 @@ class sqlserver(mssql):
             self._result = self._cursor.fetchone()
             if not self._result:
                 return [None, NoDataFound("SQL Server: No Data was Found")]
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             error = f"SQL Server Query Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
@@ -238,7 +238,7 @@ class sqlserver(mssql):
             if not self._result:
                 raise NoDataFound("SQL Server: No Data was Found")
             return self._result
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             raise DataError(f"SQL Server Query Error: {err}") from err
         except RuntimeError as err:
             raise DriverError(f"Runtime Error: {err}") from err
@@ -259,7 +259,7 @@ class sqlserver(mssql):
             if not self._result:
                 raise NoDataFound("SQL Server: No Data was Found")
             return self._result
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             raise DataError(f"SQL Server Query Error: {err}") from err
         except RuntimeError as err:
             raise DriverError(f"Runtime Error: {err}") from err
@@ -278,7 +278,7 @@ class sqlserver(mssql):
             self._result = self._cursor.fetchmany(size)
             if not self._result:
                 raise NoDataFound("SQL Server: No Data was Found")
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             raise DataError(f"SQL Server Query Error: {err}") from err
         except RuntimeError as err:
             raise DriverError(f"Runtime Error: {err}") from err
@@ -338,7 +338,7 @@ class sqlserver(mssql):
                 else:
                     # is not paginated, return as usual:
                     return await self._serializer(result, error)
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             error = f"SQL Server Query Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
