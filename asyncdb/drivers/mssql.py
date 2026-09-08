@@ -166,7 +166,7 @@ class mssql(SQLDriver, DBCursorBackend):
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             error = f"SQL Server Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
@@ -203,7 +203,7 @@ class mssql(SQLDriver, DBCursorBackend):
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             error = f"SQL Server Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
@@ -231,7 +231,7 @@ class mssql(SQLDriver, DBCursorBackend):
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             error = f"SQL Server Error: {err}"
         except RuntimeError as err:
             error = f"Runtime Error: {err}"
@@ -262,7 +262,7 @@ class mssql(SQLDriver, DBCursorBackend):
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             error = f"SQL Server Error: {err}"
             raise DataError(error) from err
         except RuntimeError as err:
@@ -298,7 +298,7 @@ class mssql(SQLDriver, DBCursorBackend):
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             error = f"SQL Server Error: {err}"
             raise DataError(error) from err
         except RuntimeError as err:
@@ -331,7 +331,7 @@ class mssql(SQLDriver, DBCursorBackend):
         except pymssql.Warning as warn:
             logging.warning(f"SQL Server Warning: {warn!s}")
             error = warn
-        except (pymssql.StandardError, pymssql.Error) as err:
+        except pymssql.Error as err:
             error = f"SQL Server Error: {err}"
             raise DataError(error) from err
         except RuntimeError as err:
