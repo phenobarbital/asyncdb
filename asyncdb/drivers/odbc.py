@@ -6,9 +6,6 @@ from typing import (
     Optional,
 )
 from collections.abc import Iterable
-import aioodbc
-from aioodbc.cursor import Cursor
-import pyodbc
 from ..exceptions import (
     ConnectionTimeout,
     DataError,
@@ -20,6 +17,16 @@ from ..exceptions import (
 )
 from ..interfaces.cursors import DBCursorBackend
 from .sql import SQLDriver, SQLCursor
+
+try:
+    import aioodbc
+    from aioodbc.cursor import Cursor
+    import pyodbc
+except ImportError as _import_err:
+    raise DriverError(
+        "ODBC driver requires 'aioodbc' and 'pyodbc'. "
+        "Install with: pip install asyncdb[odbc]"
+    ) from _import_err
 
 
 class odbcCursor(SQLCursor):

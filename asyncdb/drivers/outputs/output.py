@@ -4,6 +4,14 @@ All Output formats supported by asyncdb.
 
 from importlib import import_module
 
+# Output formats whose module imports optional, non-core dependencies.
+# Used to give an actionable install hint when the format module fails to
+# import, instead of a bare `ImportError` repr.
+_OPTIONAL_FORMAT_EXTRAS: dict = {
+    "arrow": "dataframe",
+    "polars": "dataframe",
+}
+
 
 class OutputFactory:
     _format: dict = {}
@@ -21,6 +29,13 @@ class OutputFactory:
                     obj = getattr(mdl, module_name)
                     cls._format[frmt] = obj
                 except ImportError as e:
+                    extra = _OPTIONAL_FORMAT_EXTRAS.get(frmt)
+                    if extra:
+                        raise RuntimeError(
+                            f"Output format '{frmt}' requires optional "
+                            f"dependencies. Install with: "
+                            f"pip install asyncdb[{extra}]"
+                        ) from e
                     raise RuntimeError(f"Error Loading Output Format {module_name}: {e}") from e
             return cls._format[frmt](*args, **kwargs)
 

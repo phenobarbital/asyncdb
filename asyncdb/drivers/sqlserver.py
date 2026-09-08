@@ -4,9 +4,17 @@ import time
 import logging
 from typing import Any, Optional
 from collections.abc import Iterable
-import pymssql
 from ..exceptions import DataError, EmptyStatement, NoDataFound, DriverError
 from .sql import SQLCursor
+
+try:
+    import pymssql
+except ImportError as _import_err:
+    raise DriverError(
+        "SQL Server driver requires 'pymssql'. "
+        "Install with: pip install asyncdb[msqlserver]"
+    ) from _import_err
+
 from .mssql import mssql
 
 

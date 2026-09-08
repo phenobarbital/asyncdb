@@ -58,6 +58,27 @@ Currently AsyncDB supports the following databases:
 * Oracle (requires oracledb)
 * Redpanda (Kafka-compatible, requires aiokafka)
 
+### Platform Support ###
+
+AsyncDB's core package (`pip install asyncdb`) and the `default` extra
+(`pip install asyncdb[default]`) are supported on Linux, macOS, and Windows
+for Python 3.10–3.14. `uvloop` remains an optional performance extra
+(`pip install asyncdb[uvloop]`): it is only available on POSIX platforms and
+is never required to import or run AsyncDB. On Windows, `uvloop` activation
+is automatically and safely skipped, and the standard asyncio event loop
+policy is used instead.
+
+The `default` extra covers SQLite (`aiosqlite`), RethinkDB, InfluxDB, Redis,
+MS SQL Server (`pymssql`), Delta Lake, and DuckDB, in addition to the
+PostgreSQL support (`asyncpg`) that ships with the core package.
+
+Other provider extras (Cassandra, ScyllaDB, MySQL/MySQLdb, ODBC, Oracle,
+JDBC, ClickHouse, etc.) depend on native or platform-sensitive client
+libraries and are not guaranteed to be installable or fully supported on
+every platform, including Windows. Selecting a driver whose optional
+dependency is not installed raises a focused error naming the provider and
+the extra required to install it (e.g. `pip install asyncdb[mysql]`).
+
 ### Quick Tutorial ###
 
 ```python
