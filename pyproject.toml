@@ -77,7 +77,7 @@ default = [
     "rethinkdb==2.4.10.post1",
     "influxdb==5.3.2",
     "influxdb-client[async]==1.45.0",
-    "pymssql==2.3.1",
+    "pymssql>=2.3.13,<3.0",
     "redis==5.2.1",
     "deltalake==0.19.2",
     "duckdb==1.2.2",
@@ -172,7 +172,7 @@ mongodb = [
     "motor==3.7.0",
 ]
 msqlserver = [
-    "pymssql==2.3.1",
+    "pymssql>=2.3.13,<3.0",
 ]
 couchdb = [
     "aiocouch==3.0.0"
