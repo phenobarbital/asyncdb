@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-parrot.local/sdd/research_plan.schema.json",
+  "title": "SDDResearchPlan",
+  "description": "Output of Phase 1 (research planner). Lists ordered queries that the executor will run against the codebase. Persisted at sdd/state/<FEAT-ID>/research_plan.json.",
+  "type": "object",
+  "required": ["schema_version", "mode_hint", "rationale", "queries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "mode_hint": {
+      "enum": ["investigation", "enrichment"],
+      "description": "Planner's prediction of what the synthesis agent will resolve mode to. Biases query selection but is not authoritative."
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 500,
+      "description": "One- or two-sentence rationale for the chosen mode_hint and overall plan shape."
+    },
+    "queries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "items": {"$ref": "#/$defs/query"}
+    },
+    "expected_findings": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Free-text list of what the planner expects to learn. Used by the synthesis linter to flag findings that diverged from the plan."
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "source_signals": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "named_entities": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "verbs": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "polarity": {"enum": ["positive", "negative", "neutral"]}
+          }
+        },
+        "estimated_budget_use": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "files_read": {"type": "integer", "minimum": 0},
+            "grep_calls": {"type": "integer", "minimum": 0},
+            "git_calls": {"type": "integer", "minimum": 0}
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "query": {
+      "type": "object",
+      "required": ["id", "intent", "type", "priority", "params"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^Q[0-9]{3}$",
+          "description": "Stable query ID, used in finding IDs and parent_id linkage."
+        },
+        "intent": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 200,
+          "description": "Why this query exists. Must be specific — not 'look around'."
+        },
+        "type": {
+          "enum": ["grep", "glob", "read", "git_log", "tree"]
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "1 = must run, 5 = optional. Executor walks 1 → 5."
+        },
+        "parent_id": {
+          "type": ["string", "null"],
+          "pattern": "^F[0-9]{3}$",
+          "description": "If this query was added as a recursive follow-up, the finding ID that triggered it."
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Recursion depth. Original plan is depth 0; follow-ups increment."
+        },
+        "params": {
+          "oneOf": [
+            {"$ref": "#/$defs/params_grep"},
+            {"$ref": "#/$defs/params_glob"},
+            {"$ref": "#/$defs/params_read"},
+            {"$ref": "#/$defs/params_git_log"},
+            {"$ref": "#/$defs/params_tree"}
+          ]
+        }
+      }
+    },
+    "params_grep": {
+      "type": "object",
+      "required": ["pattern"],
+      "additionalProperties": false,
+      "properties": {
+        "pattern": {"type": "string"},
+        "path": {"type": "string", "default": "."},
+        "case_sensitive": {"type": "boolean", "default": false},
+        "max_results": {"type": "integer", "minimum": 1, "maximum": 200, "default": 50},
+        "include": {"type": "string", "description": "glob filter, e.g. '*.py'"},
+        "exclude": {"type": "string"}
+      }
+    },
+    "params_glob": {
+      "type": "object",
+      "required": ["pattern"],
+      "additionalProperties": false,
+      "properties": {
+        "pattern": {"type": "string"},
+        "max_results": {"type": "integer", "minimum": 1, "maximum": 500, "default": 100}
+      }
+    },
+    "params_read": {
+      "type": "object",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": "string"},
+        "lines": {
+          "type": ["array", "null"],
+          "items": {"type": "integer"},
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Optional [start, end] line range (1-indexed, inclusive). null = full file."
+        }
+      }
+    },
+    "params_git_log": {
+      "type": "object",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": "string"},
+        "since": {
+          "type": "string",
+          "default": "30.days.ago",
+          "description": "git --since spec, e.g. '30.days.ago', '2026-01-01'"
+        },
+        "max_results": {"type": "integer", "minimum": 1, "maximum": 50, "default": 20},
+        "with_diff": {"type": "boolean", "default": false}
+      }
+    },
+    "params_tree": {
+      "type": "object",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": "string"},
+        "max_depth": {"type": "integer", "minimum": 1, "maximum": 5, "default": 2}
+      }
+    }
+  }
+}

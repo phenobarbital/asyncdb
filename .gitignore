@@ -176,3 +176,6 @@ global-bundle.pem
 
 # Claude worktree refs
 .claude/worktrees/
+# Local MCP / parrot toolkit config (absolute paths)
+.mcp.json
+.parrot/

@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "wikitoolkit": {
+      "command": "/home/jesuslara/proyectos/ai-parrot/.venv/bin/wikitoolkit",
+      "args": [
+        "mcp"
+      ],
+      "cwd": "/home/jesuslara/proyectos/asyncdb"
+    },
+    "parrot-browsing": {
+      "command": "/home/jesuslara/proyectos/ai-parrot/.venv/bin/parrot",
+      "args": [
+        "mcp-local",
+        "browsing"
+      ],
+      "cwd": "/home/jesuslara/proyectos/asyncdb"
+    },
+    "parrot-memory": {
+      "command": "/home/jesuslara/proyectos/ai-parrot/.venv/bin/parrot",
+      "args": [
+        "mcp-local",
+        "memory"
+      ],
+      "cwd": "/home/jesuslara/proyectos/asyncdb"
+    },
+    "parrot-scraping": {
+      "command": "/home/jesuslara/proyectos/ai-parrot/.venv/bin/parrot",
+      "args": [
+        "mcp-local",
+        "scraping"
+      ],
+      "cwd": "/home/jesuslara/proyectos/asyncdb"
+    }
+  }
+}

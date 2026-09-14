@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SDD design research suggestions (FEAT-545)",
+  "type": "object",
+  "required": ["summary", "suggestions"],
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "string",
+      "description": "At most three sentences: how the reviewer read the brief and what it focused on."
+    },
+    "suggestions": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "title", "rationale", "affected_paths", "risk", "confidence"],
+        "additionalProperties": false,
+        "properties": {
+          "id":             { "type": "string", "pattern": "^S[0-9]{1,2}$" },
+          "kind":           { "type": "string", "enum": ["architecture", "api", "testing", "risk", "alternative"] },
+          "title":          { "type": "string", "maxLength": 120 },
+          "rationale":      { "type": "string", "description": "Why this matters and what evidence in the repo supports it." },
+          "affected_paths": { "type": "array", "items": { "type": "string" }, "description": "Repo-relative paths the reviewer actually opened. Unverifiable paths cause the suggestion to be rejected." },
+          "risk":           { "type": "string", "enum": ["low", "medium", "high"] },
+          "confidence":     { "type": "string", "enum": ["low", "medium", "high"] }
+        }
+      }
+    }
+  }
+}

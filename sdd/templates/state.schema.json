@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-parrot.local/sdd/state.schema.json",
+  "title": "SDDProposalState",
+  "description": "Persistent state for /sdd-proposal runs. One file per FEAT-ID at sdd/state/<FEAT-ID>/state.json. Enables resumability, audit, and budget enforcement.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "feat_id",
+    "started_at",
+    "source",
+    "mode",
+    "phase",
+    "phases",
+    "budget",
+    "consumed"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "description": "Schema version. Bump on breaking changes."
+    },
+    "feat_id": {
+      "type": "string",
+      "pattern": "^FEAT-[0-9]{3,}$",
+      "description": "Stable feature ID, allocated in Phase 0 and reused by /sdd-spec."
+    },
+    "feature_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "kebab-case slug, derived from the synthesis summary."
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "object",
+      "required": ["kind", "raw_path"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"enum": ["jira", "inline", "file"]},
+        "jira_key": {"type": ["string", "null"]},
+        "jira_url": {"type": ["string", "null"]},
+        "file_path": {"type": ["string", "null"]},
+        "raw_path": {
+          "type": "string",
+          "description": "Always sdd/state/<FEAT-ID>/source.md"
+        },
+        "fetched_at": {"type": "string", "format": "date-time"},
+        "summary_oneline": {"type": "string", "maxLength": 200}
+      }
+    },
+    "mode": {
+      "enum": ["investigation", "enrichment", "auto"],
+      "description": "User-specified mode. 'auto' means the synthesis agent decides."
+    },
+    "detected_mode": {
+      "enum": ["investigation", "enrichment"],
+      "description": "Resolved mode after Phase 3 (synthesis). Always investigation or enrichment."
+    },
+    "phase": {
+      "enum": [
+        "source_resolved",
+        "plan_drafted",
+        "plan_approved",
+        "research_running",
+        "research_complete",
+        "synthesis_complete",
+        "review_gate",
+        "qa_pending",
+        "qa_complete",
+        "proposal_drafted",
+        "committed",
+        "failed"
+      ],
+      "description": "Top-level checkpoint. Reflects the last completed phase."
+    },
+    "phases": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": {"$ref": "#/$defs/phase_record"},
+        "plan": {
+          "allOf": [
+            {"$ref": "#/$defs/phase_record"},
+            {
+              "type": "object",
+              "properties": {
+                "queries_total": {"type": "integer", "minimum": 0},
+                "approved_by_user": {"type": "boolean"},
+                "edited_by_user": {"type": "boolean"},
+                "plan_path": {"type": "string"}
+              }
+            }
+          ]
+        },
+        "research": {
+          "allOf": [
+            {"$ref": "#/$defs/phase_record"},
+            {
+              "type": "object",
+              "properties": {
+                "queries_executed": {"type": "integer", "minimum": 0},
+                "queries_skipped": {"type": "integer", "minimum": 0},
+                "depth_reached": {"type": "integer", "minimum": 0},
+                "files_read": {"type": "integer", "minimum": 0},
+                "grep_calls": {"type": "integer", "minimum": 0},
+                "git_calls": {"type": "integer", "minimum": 0},
+                "truncated": {"type": "boolean"},
+                "truncation_reason": {"type": ["string", "null"]}
+              }
+            }
+          ]
+        },
+        "synthesis": {
+          "allOf": [
+            {"$ref": "#/$defs/phase_record"},
+            {
+              "type": "object",
+              "properties": {
+                "synthesis_path": {"type": "string"},
+                "thinking_path": {"type": ["string", "null"]},
+                "overall_confidence": {"enum": ["high", "medium", "low"]},
+                "claims_total": {"type": "integer", "minimum": 0},
+                "claims_high_conf": {"type": "integer", "minimum": 0},
+                "claims_medium_conf": {"type": "integer", "minimum": 0},
+                "claims_low_conf": {"type": "integer", "minimum": 0},
+                "unknowns_count": {"type": "integer", "minimum": 0, "maximum": 5},
+                "lint_passed": {"type": "boolean"},
+                "lint_iterations": {"type": "integer", "minimum": 0, "maximum": 2}
+              }
+            }
+          ]
+        },
+        "qa": {
+          "allOf": [
+            {"$ref": "#/$defs/phase_record"},
+            {
+              "type": "object",
+              "properties": {
+                "questions_total": {"type": "integer", "minimum": 0},
+                "questions_answered": {"type": "integer", "minimum": 0},
+                "skipped_reason": {"type": ["string", "null"]}
+              }
+            }
+          ]
+        },
+        "output": {
+          "allOf": [
+            {"$ref": "#/$defs/phase_record"},
+            {
+              "type": "object",
+              "properties": {
+                "proposal_path": {"type": "string"},
+                "commit_sha": {"type": ["string", "null"]},
+                "next_command_recommended": {
+                  "enum": ["sdd-spec", "sdd-brainstorm", "sdd-task", "manual-review"]
+                },
+                "next_command_rationale": {"type": "string"}
+              }
+            }
+          ]
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "description": "Hard limits enforced during research. Profile via --budget flag.",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "max_files_read",
+        "max_grep_calls",
+        "max_git_calls",
+        "max_depth",
+        "max_wall_seconds"
+      ],
+      "properties": {
+        "profile": {"enum": ["tight", "default", "loose", "custom"]},
+        "max_files_read": {"type": "integer", "minimum": 1},
+        "max_grep_calls": {"type": "integer", "minimum": 1},
+        "max_git_calls": {"type": "integer", "minimum": 0},
+        "max_depth": {"type": "integer", "minimum": 1, "maximum": 5},
+        "max_wall_seconds": {"type": "integer", "minimum": 30}
+      }
+    },
+    "consumed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files_read", "grep_calls", "git_calls", "wall_seconds"],
+      "properties": {
+        "files_read": {"type": "integer", "minimum": 0},
+        "grep_calls": {"type": "integer", "minimum": 0},
+        "git_calls": {"type": "integer", "minimum": 0},
+        "wall_seconds": {"type": "number", "minimum": 0}
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["phase", "at", "message"],
+        "additionalProperties": false,
+        "properties": {
+          "phase": {"type": "string"},
+          "at": {"type": "string", "format": "date-time"},
+          "message": {"type": "string"},
+          "recoverable": {"type": "boolean"}
+        }
+      }
+    },
+    "resume_hint": {
+      "type": "object",
+      "description": "What to do on next invocation if interrupted.",
+      "additionalProperties": false,
+      "properties": {
+        "next_phase": {"type": "string"},
+        "next_action": {"type": "string"}
+      }
+    }
+  },
+  "$defs": {
+    "phase_record": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": ["pending", "running", "completed", "skipped", "failed"]
+        },
+        "started_at": {"type": ["string", "null"], "format": "date-time"},
+        "completed_at": {"type": ["string", "null"], "format": "date-time"},
+        "duration_seconds": {"type": ["number", "null"], "minimum": 0}
+      }
+    }
+  }
+}

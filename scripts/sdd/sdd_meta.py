@@ -13,6 +13,7 @@ frontmatter is present (so legacy specs keep working), and a symmetric
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 from typing import Literal
 
@@ -157,3 +158,75 @@ def resolve_flow(
             sorted(KNOWN_BRANCHES),
         )
     return FlowMeta(type=final_type, base_branch=final_base)
+
+
+#: Every SDD worktree lives directly under this repo-relative directory.
+WORKTREE_ROOT: str = ".claude/worktrees"
+
+#: A reserved feature id, e.g. ``FEAT-552``. Bare numbers are rejected.
+_FEATURE_ID_RE = re.compile(r"^FEAT-\d+$")
+
+
+class WorktreePlan(BaseModel):
+    """Where a feature/hotfix worktree goes and what it branches from."""
+
+    name: str
+    path: str
+    base_ref: str
+
+
+def plan_worktree(
+    meta: FlowMeta,
+    *,
+    slug: str,
+    feature_id: str | None = None,
+    jira_key: str | None = None,
+) -> WorktreePlan:
+    """Resolve the canonical worktree name, path and base ref for a run.
+
+    Naming (confirmed canonical 2026-09-11 — it is what /sdd-done greps on):
+      * ``type == "feature"`` -> ``feat-<feature_id>-<slug>``, e.g.
+        ``feat-FEAT-552-worktree-creation-ownership``. The doubled
+        ``feat-FEAT-`` prefix is intentional, not a bug.
+      * ``type == "hotfix"``  -> ``hotfix-<jira_key>-<slug>`` (FEAT-466: a
+        hotfix reserves no FEAT-<NNN>; its identity is the Jira key).
+
+    ``base_ref`` is always ``origin/<meta.base_branch>`` so a worktree can
+    never inherit an unpushed local HEAD. For a hotfix that is ``origin/main``
+    by construction — ``FlowMeta`` already refuses any other base branch for
+    a hotfix (see ``_hotfix_implies_main``).
+
+    Args:
+        meta: Resolved flow metadata.
+        slug: Feature slug, kebab-case.
+        feature_id: ``FEAT-<NNN>``; required when ``meta.type == "feature"``.
+        jira_key: Jira issue key; required when ``meta.type == "hotfix"``.
+
+    Returns:
+        A ``WorktreePlan`` whose ``path`` is repo-relative.
+
+    Raises:
+        ValueError: When ``slug`` is empty or blank; when a feature run has no
+            ``feature_id`` or one not matching ``^FEAT-\\d+$``; when a hotfix
+            run has no ``jira_key``.
+    """
+    if not slug or not slug.strip():
+        raise ValueError("slug cannot be empty or blank")
+
+    if meta.type == "feature":
+        if not feature_id:
+            raise ValueError("feature_id is required for feature runs")
+        if not _FEATURE_ID_RE.match(feature_id):
+            raise ValueError(f"feature_id must match ^FEAT-\\d+$, got {feature_id!r}")
+        name = f"feat-{feature_id}-{slug}"
+    elif meta.type == "hotfix":
+        if not jira_key or not jira_key.strip():
+            raise ValueError("jira_key is required for hotfix runs")
+        name = f"hotfix-{jira_key}-{slug}"
+    else:
+        raise ValueError(f"Unsupported flow type: {meta.type}")
+
+    path = f"{WORKTREE_ROOT}/{name}"
+    base_ref = f"origin/{meta.base_branch}"
+
+    return WorktreePlan(name=name, path=path, base_ref=base_ref)

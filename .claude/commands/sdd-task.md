@@ -2,6 +2,7 @@
 
 Decompose an approved Feature Specification into atomic, assignable implementation tasks.
 
+
 ## Usage
 ```
 /sdd-task sdd/specs/<feature-name>.spec.md
@@ -11,7 +12,10 @@ Decompose an approved Feature Specification into atomic, assignable implementati
 - Only decompose specs with `status: approved`.
 - Each task must be independently implementable and testable.
 - Check `sdd/tasks/index/<feature>.json` for existing tasks to avoid duplication.
-- Do NOT write implementation code — tasks are plans, not code.
+- Do NOT write the full implementation — but every task MUST carry an
+  **Implementation Blueprint** (executor-ready per-file code blocks + why +
+  `FILL IN` checklist, see §3). Blueprints stop at the mechanical parts;
+  branches, edge cases and test bodies stay as `FILL IN` stubs.
 - Mark tasks that can run in parallel worktrees with `parallel: true`.
 - **`TASK-<NNN>` numbers are reserved via `scripts/sdd/reserve_ids.py`
   (FEAT-387), never hand-computed by scanning existing files for the
@@ -21,7 +25,9 @@ Decompose an approved Feature Specification into atomic, assignable implementati
   dev-loop planner dispatches) can silently allocate the same number to
   different features. See §4 below.
 - **Must run on the spec's `base_branch`** (read from frontmatter — `dev` for features, `main` for hotfixes). Not inside a worktree.
-- **Always commit task files and per-spec index to `base_branch`** before creating the worktree.
+- **Always commit task files and per-spec index to `base_branch`** — they are
+  versioned artifacts, and the machine that implements the feature pulls them
+  from there. This command creates no worktree (FEAT-552).
 
 ## Steps
 
@@ -111,6 +117,39 @@ For EACH task, you MUST populate its `## Codebase Contract` section:
 The implementing agent (often Sonnet or Haiku) WILL hallucinate if not given
 explicit, verified code anchors.
 
+**CRITICAL — Implementation Blueprint per Task (Executor Readiness, FEAT-545):**
+For EACH task, you MUST populate its `## Implementation Blueprint` section so a
+non-thinking executor (Haiku) can write the declared code to disk and complete
+only the marked gaps:
+
+1. **One block per file** listed in "Files to Create / Modify" — CREATE blocks
+   are whole-file starting points; MODIFY blocks quote the verified anchor line
+   they attach to (`# AFTER — insert below \`<anchor>\` (verified: path:NN)`).
+   **MODIFY blocks MUST state the anchor's occurrence count**
+   (`# occurrences: <N> (verified: grep -c '<anchor>' path)`); if `<N>` is `> 1`,
+   the block is `# FILL IN: disambiguate — quote enough surrounding context (2–3
+   lines) to make the anchor unique` instead of a bare one-line anchor.
+2. **Mechanical code is complete**: imports, class/function signatures,
+   docstrings, `self.logger` calls, registration/wiring, return types.
+3. **Judgement calls are `FILL IN` stubs**: `# FILL IN: <decision> — bounded by
+   <constraint | AC-N>`. Never leave a gap without the constraint that bounds it.
+4. **Every import comes from the task's Verified Imports** — the blueprint may
+   not introduce a symbol the Codebase Contract does not list.
+5. **Derive from the spec's Interface Skeletons** (spec §3) and re-verify the
+   anchors now; signatures fixed by the skeleton are not renegotiable.
+6. **Size cap**: no block over ~80 lines. If a file needs more, split the task.
+7. **Explain-for-executor rule**: every non-trivial decision is written as an
+   imperative instruction *plus its reason* ("do X — because Y"), in the
+   Steps list and in the **Why** paragraph under each block. Do not rely on
+   the executor to infer intent.
+8. **Steps (in order)** and the **FILL IN checklist** are mandatory even when
+   a task has a single file.
+
+**Quality bar**: A task without a populated Implementation Blueprint section is
+incomplete — same bar as the Codebase Contract. If the blueprint would be the
+full implementation, the task is too small; if it needs more than ~80 lines per
+file, the task is too big.
+
 ### 4. Generate Tasks
 1. Ensure `sdd/tasks/active/` directory exists (create if needed).
 2. Read the task template at `sdd/templates/task.md`.
@@ -157,6 +196,8 @@ explicit, verified code anchors.
    task. Use each id verbatim for both the filename and every `id` field
    in the per-spec index; never invent, recompute, or reuse a `TASK-<NNN>`
    number outside of what `reserve_ids.py` returned.
+   Fill the template's `## Implementation Blueprint` section for every task
+   per §3's rules; a task without one is incomplete.
 
 **CRITICAL — Task file header must include the Feature ID:**
 The `**Feature**:` line at the top of every task file MUST combine the formal
@@ -224,6 +265,26 @@ mkdir -p "$(dirname "$INDEX")"
   as the identity instead.
 - `feature`: Kebab-case slug (e.g., `"videoreel-visual-changes"`).
 
+#### Delegation Contract (optional, per task)
+
+Emit a `## Delegation Contract` packet ONLY for a task whose design is
+complete. `design_complete: true` is a declaration the task author signs.
+
+- List every target file with its `action` (`create`/`modify`), and give each
+  `modify` target a REAL `expected_sha256` — compute it, never guess:
+  `sha256sum <path>` or
+  `python -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" <path>`.
+- Every `create` target needs a block tagged `path=<target>` holding the new
+  file's full content; every referenced block id must exist in the task file.
+- Never leave placeholders (`...`, `TODO`, `FIXME`, `XXX`, `<angle>`,
+  `raise NotImplementedError`) in an implementation block — the validator
+  rejects them and the packet is not delegated.
+- Hashes are re-validated at execution time, after dependencies land. If they
+  are stale then, the executor refreshes the packet in the task file FIRST and
+  only then re-runs `writer_generate`.
+- Omit the section entirely when the task is not eligible. Most tasks are not,
+  and that is the normal, expected route.
+
 ### 5. Commit Tasks and Per-Spec Index to `<BASE>`
 
 > **CRITICAL — Only commit the per-spec index and the new task files. NEVER
@@ -251,24 +312,16 @@ git diff --cached --name-only
 git commit -m "sdd: add <N> tasks for FEAT-<ID> — <feature-name>"
 ```
 
-### 6. Create the Worktree
+### 6. Output
 
-After committing to `<BASE>`, create the worktree so it inherits the tasks.
-Naming and base ref depend on `TYPE` (FEAT-466 — a hotfix has no reserved
-id, so it is named from its Jira key, and always branches from
-`origin/main`, never `HEAD`):
+Before printing the summary, count the delegation-eligible tasks. This is the
+number the targeted writer will actually receive when the worker runs, so it
+is worth seeing up front:
 
 ```bash
-# type: feature
-git worktree add -b feat-<FEAT-ID>-<slug> \
-  .claude/worktrees/feat-<FEAT-ID>-<slug> HEAD
-
-# type: hotfix (the rare case /sdd-task ran directly against a hotfix spec)
-git worktree add -b hotfix-<JIRA-KEY>-<slug> \
-  .claude/worktrees/hotfix-<JIRA-KEY>-<slug> origin/main
+grep -l '^## Delegation Contract' sdd/tasks/active/TASK-*.md | wc -l
 ```
 
-### 7. Output
 ```
 ✅ Generated and committed <N> tasks for FEAT-<ID> — <feature-name>
    (hotfix: for Jira <KEY> — <feature-name>, no FEAT-<NNN>/TASK-<NNN> reserved)
@@ -277,13 +330,17 @@ Tasks created:
   TASK-<NNN> — <title> [<priority>/<effort>]      # feature
   HOTFIX-<JIRA-KEY>-<N> — <title> [<priority>/<effort>]  # hotfix
 
-Worktree created:
-  .claude/worktrees/feat-<FEAT-ID>-<slug>              # feature
-  .claude/worktrees/hotfix-<JIRA-KEY>-<slug>           # hotfix
+Blueprints: <N>/<N> tasks carry an Implementation Blueprint
+Delegated:  <D>/<N> tasks carry a Delegation Contract (targeted writer)
+            TASK-<NNN>, TASK-<NNN>          # list them, or "none"
+
+Worktree: not created. /sdd-task produces versioned artifacts only — the
+          worktree is created by whoever implements, on the machine that
+          implements (FEAT-552).
 
 Next:
-  cd .claude/worktrees/<worktree-name>
-  /sdd-start <task-id>   # begin first task
+  /sdd-start <task-id>        # creates the worktree, then begins the task
+  # or, unattended:  claude --agent sdd-worker --model sonnet --verbose
 ```
 
 ## Reference
