@@ -64,6 +64,30 @@ validate it, and close it in the same branch/worktree.
    - edit/create only task-scoped files
    - use specified classes, methods, signatures, and patterns
    - follow repo instructions in `AGENTS.md` and `.agent/CONTEXT.md`
+
+#### Delegated implementation (only when the task has `## Delegation Contract`)
+
+Use this branch ONLY when the task file contains a `## Delegation Contract`
+section AND the `parrot-targeted-writer` MCP server is available. Otherwise
+implement the task yourself — the normal route is the default.
+
+1. Call MCP tool `writer_generate` (server `parrot-targeted-writer`) with `task_path`.
+2. On `status: error` with a contract code (`stale_target`, `missing_block`,
+   `placeholder_code`, `underspecified_create`, …): fix the packet in the task file
+   (refresh hashes with `sha256sum`, complete the design) and retry once, or implement
+   the task yourself. The workflow **never silently invokes another coder** — no other
+   coding tool is substituted when delegation fails.
+3. On `ok`: read `data.patch_path` with `source_read` in ranges of at most 350 lines and
+   review EVERY hunk against the task's Codebase Contract. Never apply a patch you have
+   not fully read. If a hunk is wrong, do not apply: fix the packet/blocks and regenerate
+   at most once more, else implement normally.
+4. Call `writer_apply` with `artifact_id` and `reviewed_sha256 = data.patch_sha256`
+   (verify it equals `sha256sum artifacts/tool-optimizations/<id>/patch.diff`).
+5. Run the task's acceptance tests yourself. The writer never runs tests; a model's claim
+   that tests passed is not execution evidence.
+6. Continue with the normal validate → commit → SDD state steps. SDD files
+   (`sdd/tasks/index/*.json`, task files) are never edited by the writer.
+
 9. Validate:
    - run task-specified tests
    - run task-specified lint/format checks

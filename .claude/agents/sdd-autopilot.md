@@ -5,7 +5,7 @@
 A two-phase orchestration pipeline for Claude Code that takes a Jira ticket
 from inception to reviewed PR with minimal human intervention.
 
-**Phase 1 — Planning (interactive):** `/sdd-jira` command
+**Phase 1 — Planning (interactive):** `/sdd-fromjira` command
 **Phase 2 — Execution (autonomous):** `sdd-autopilot` agent
 
 The separation exists because planning REQUIRES human judgment (scope decisions,
@@ -32,7 +32,7 @@ invocations. This mirrors the `AgentCrew.run_flow()` DAG pattern but with:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ Phase 1: /sdd-jira (INTERACTIVE — human in the loop)           │
+│ Phase 1: /sdd-fromjira (INTERACTIVE — human in the loop)           │
 │                                                                 │
 │   Jira ticket ──► brainstorm Q&A ──► spec ──► tasks ──► approve │
 │                   (2+ rounds)        (commit)  (commit)         │
@@ -69,20 +69,28 @@ invocations. This mirrors the `AgentCrew.run_flow()` DAG pattern but with:
 
 ---
 
-## Phase 1: `/sdd-jira` Command
+## Phase 1: `/sdd-fromjira` Command
+
+> **Implementation note.** "Phase 1" is a *logical* phase, not a single
+> command. The real entry point is `/sdd-fromjira`, which produces a
+> committed brainstorm; the worker-ready spec and task decomposition are
+> then produced by the standard chain `/sdd-spec` → `/sdd-task`. This
+> section describes the combined planning outcome those three commands
+> deliver. The `--auto-approve` flag below is aspirational — `/sdd-fromjira`
+> currently supports `--complexity` and `--skip-qa`.
 
 ### Purpose
 
-Interactive planner that converts a Jira ticket into a fully specified,
+Interactive planning that converts a Jira ticket into a fully specified,
 task-decomposed, worktree-ready feature — with enough detail that `sdd-worker`
 can execute without asking questions.
 
 ### Usage
 
 ```
-/sdd-jira NAV-8036
-/sdd-jira NAV-8036 --auto-approve    # skip manual spec approval (risky)
-/sdd-jira NAV-8036 --complexity=fix  # hint: simple fix, minimal Q&A
+/sdd-fromjira NAV-8036
+/sdd-fromjira NAV-8036 --auto-approve    # skip manual spec approval (risky)
+/sdd-fromjira NAV-8036 --complexity=fix  # hint: simple fix, minimal Q&A
 ```
 
 ### Flow
@@ -242,14 +250,16 @@ After spec approval, automatically runs task decomposition.
 #### 6. Create Worktree
 
 ```bash
-git worktree add -b feat-<FEAT-ID>-<slug> \
-  .claude/worktrees/feat-<FEAT-ID>-<slug> HEAD
+python -m scripts.sdd.ensure_worktree --json \
+  --slug <slug> --feature-id FEAT-<NNN> \
+  --spec sdd/specs/<slug>.spec.md \
+  --index sdd/tasks/index/<slug>.json
 ```
 
 #### 7. Output & Handoff
 
 ```
-✅ /sdd-jira complete for NAV-8036
+✅ /sdd-fromjira complete for NAV-8036
 
    Jira: NAV-8036 — "Add OAuth 2.0 support for JiraToolkit"
    Spec: sdd/specs/jira-oauth.spec.md (committed to dev)
@@ -604,7 +614,7 @@ wrong code).
 
 ### The Solution: Task Specification Depth
 
-The `/sdd-jira` command ensures each task contains enough detail that the
+The `/sdd-fromjira` command ensures each task contains enough detail that the
 worker never needs to ask:
 
 #### Level 1 — Minimum (current sdd-task)
@@ -688,7 +698,7 @@ async def test_oauth_callback_invalid_state():
 
 ```bash
 # Human does: review Jira ticket, approve spec
-/sdd-jira NAV-8036
+/sdd-fromjira NAV-8036
 
 # Then walk away
 cd .claude/worktrees/feat-071-jira-oauth
@@ -701,7 +711,7 @@ claude --agent sdd-autopilot --verbose
 
 ```bash
 # Planning phase (interactive)
-/sdd-jira NAV-8036
+/sdd-fromjira NAV-8036
 
 # Run worker + reviewer only
 cd .claude/worktrees/feat-071-jira-oauth
@@ -773,14 +783,14 @@ curl -s -X POST "$SLACK_WEBHOOK_URL" \
 
 ---
 
-## Files to Create
+## Files
 
-| File | Type | Purpose |
-|------|------|---------|
-| `.claude/commands/sdd-jira.md` | Command | Interactive planner |
-| `.claude/agents/sdd-autopilot.md` | Agent | Autonomous orchestrator |
-| `.claude/agents/qa-runner.md` | Agent | Test execution & reporting |
-| `.claude/commands/pr-review.md` | Command | PR vs Jira AC review |
+| File | Type | Purpose | Status |
+|------|------|---------|--------|
+| `.claude/commands/sdd-fromjira.md` | Command | Interactive Jira-seeded planner | exists |
+| `.claude/agents/sdd-autopilot.md` | Agent | Autonomous orchestrator (this doc) | exists |
+| `.claude/agents/qa-runner.md` | Agent | Test execution & reporting | exists |
+| `.claude/commands/pr-review.md` | Command | PR vs Jira AC review | see `pr-review` skill |
 
 ---
 

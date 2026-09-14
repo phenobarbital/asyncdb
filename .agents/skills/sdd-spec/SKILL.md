@@ -24,9 +24,18 @@ feature or hotfix.
 - Never re-ask brainstorm questions marked `[x]`; carry answers forward
   verbatim and route them into the correct spec sections.
 - Build a verified Codebase Contract with file paths and line numbers.
+- Identify delegation-eligible modules (see the workflow note below).
 - Commit only the spec file.
 
 ## Workflow
+
+#### Identify delegation-eligible modules
+
+While writing §3 Module Breakdown, fill the "Delegation-eligible modules"
+sub-table: for each module state whether its design is complete enough that
+implementing it is mechanical, and record the decided patterns and exact
+contracts (signatures, error codes, file layout). Architecture decisions
+stay with the thinking model — eligibility never delegates a design choice.
 
 1. Parse:
    - feature slug

@@ -74,15 +74,43 @@ class NewComponent:
 > Define the discrete modules that will be implemented.
 > These directly map to Task Artifacts in Phase 2.
 
+#### Delegation-eligible modules
+
+Mark which modules can be implemented by the targeted writer from an
+already-decided TASK packet. Architecture decisions always stay with the
+thinking model; eligibility only means "the design is complete enough that
+writing the code is mechanical".
+
+| Module | Eligible? | Decided patterns / exact contracts | Why not (if no) |
+|---|---|---|---|
+| M1: <name> | yes / no | <signatures, error codes, file layout already fixed> | <open design question> |
+
+
 ### Module 1: <Name>
 - **Path**: `parrot/path/to/module.py`
 - **Responsibility**: What this module does
 - **Depends on**: existing module or Module N from this spec
+- **Interface Skeleton** *(signatures + docstrings only — bodies belong to task blueprints, FEAT-545)*:
+  ```python
+  # parrot/path/to/module.py  (new | modifies parrot/path/to/module.py:NN)
+  class NewComponent(ExistingBase):  # ExistingBase verified: parrot/base.py:NN
+      """<purpose>."""
+      async def method(self, param: Type) -> ReturnType:
+          """<contract: returns …; raises … when …>."""
+  ```
 
 ### Module 2: <Name>
 - **Path**: `parrot/path/to/module2.py`
 - **Responsibility**: ...
 - **Depends on**: Module 1
+- **Interface Skeleton** *(signatures + docstrings only — bodies belong to task blueprints, FEAT-545)*:
+  ```python
+  # parrot/path/to/module.py  (new | modifies parrot/path/to/module.py:NN)
+  class NewComponent(ExistingBase):  # ExistingBase verified: parrot/base.py:NN
+      """<purpose>."""
+      async def method(self, param: Type) -> ReturnType:
+          """<contract: returns …; raises … when …>."""
+  ```
 
 ---
 
@@ -161,6 +189,11 @@ class ExistingClass(BaseClass):
 
 ## 7. Implementation Notes & Constraints
 
+> Architecture decisions stay with the thinking model. A delegated
+> implementation may only express a decision already recorded here and in
+> the TASK's implementation blocks — it must never invent an API, choose a
+> file, or resolve an open design question.
+
 
 ### Patterns to Follow
 - Use `AbstractBase` pattern from `parrot/base/`
@@ -185,6 +218,24 @@ class ExistingClass(BaseClass):
 
 - [ ] Question 1 — *Owner: name*
 - [ ] Question 2 — *Owner: name*
+
+---
+
+## 9. Design Research Cross-Check
+
+> Independent design opinion from the `codex` seat over the **accepted exploration
+> doc** (never over this spec). Model: `<model>` · Status: completed | skipped (<reason>)
+> · Transcript: `sdd/state/<FEAT-ID>/design_research/`
+> Every row is a suggestion the reviewer made; the disposition is the spec author's
+> call (CONFIRM = folded into the spec, REJECT = reason recorded, ESCALATE = §8 question).
+
+| # | Suggestion (kind) | Disposition | Reason | Landed in |
+|---|---|---|---|---|
+| S1 | <title> (architecture) | CONFIRM | <why adopted> | §2 Overview |
+| S2 | <title> (testing) | REJECT | <why not> | — |
+| S3 | <title> (risk) | ESCALATE | <what the human must decide> | §8 Q<N> |
+
+Summary: **<C>** confirmed · **<R>** rejected · **<E>** escalated.
 
 ---
 

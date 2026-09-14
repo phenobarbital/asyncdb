@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "wikitoolkit": {
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "-c",
+        "r=\"$CLAUDE_PROJECT_DIR\"; [ -x \"$r/.venv/bin/wikitoolkit\" ] || r=\"$(git rev-parse --show-toplevel 2>/dev/null)\"; [ -x \"$r/.venv/bin/wikitoolkit\" ] || r=\"$(cd \"$(git rev-parse --git-common-dir 2>/dev/null)/..\" 2>/dev/null && pwd)\"; cd \"$r\" && exec \"$r/.venv/bin/wikitoolkit\" mcp"
+      ],
+      "env": {}
+    },
+    "bookstore": {
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "-c",
+        "r=\"$CLAUDE_PROJECT_DIR\"; [ -x \"$r/.venv/bin/bookstore\" ] || r=\"$(git rev-parse --show-toplevel 2>/dev/null)\"; [ -x \"$r/.venv/bin/bookstore\" ] || r=\"$(cd \"$(git rev-parse --git-common-dir 2>/dev/null)/..\" 2>/dev/null && pwd)\"; cd \"$r\" && exec \"$r/.venv/bin/bookstore\" mcp"
+      ],
+      "env": {}
+    }
+  }
+}

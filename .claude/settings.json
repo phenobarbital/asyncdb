@@ -1,0 +1,65 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ruff:*)",
+      "Bash(touch:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Grep|Glob|Read|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/jesuslara/proyectos/ai-parrot/.venv/bin/wikitoolkit claude-hook",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/dangerous-actions-blocker.sh\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/jesuslara/proyectos/ai-parrot/.venv/bin/python -m parrot_tools.tool_optimizations.hooks --host claude",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "sdd-worker",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/sdd-worker-format.sh\"",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/sdd-worker-format.sh\"",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}

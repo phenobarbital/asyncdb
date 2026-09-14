@@ -61,6 +61,27 @@ them to the spec's base branch before creating a worktree.
    - re-read each referenced file to verify freshness
    - add task-specific references for touched files
    - include "Does NOT Exist" entries
+
+#### Delegation Contract (optional, per task)
+
+Emit a `## Delegation Contract` packet ONLY for a task whose design is
+complete. `design_complete: true` is a declaration the task author signs.
+
+- List every target file with its `action` (`create`/`modify`), and give each
+  `modify` target a REAL `expected_sha256` — compute it, never guess:
+  `sha256sum <path>` or
+  `python -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" <path>`.
+- Every `create` target needs a block tagged `path=<target>` holding the new
+  file's full content; every referenced block id must exist in the task file.
+- Never leave placeholders (`...`, `TODO`, `FIXME`, `XXX`, `<angle>`,
+  `raise NotImplementedError`) in an implementation block — the validator
+  rejects them and the packet is not delegated.
+- Hashes are re-validated at execution time, after dependencies land. If they
+  are stale then, the executor refreshes the packet in the task file FIRST and
+  only then re-runs `writer_generate`.
+- Omit the section entirely when the task is not eligible. Most tasks are not,
+  and that is the normal, expected route.
+
 7. Reserve task IDs:
    - For `type: feature`, run:
      `python -m scripts.sdd.reserve_ids --kind task --count <N> --base-branch <base_branch> --label <feature-slug>`.
@@ -94,12 +115,20 @@ them to the spec's base branch before creating a worktree.
 
 ## Output
 
+Count the delegation-eligible tasks first, so the report shows how many tasks
+the targeted writer will receive when the worker runs:
+
+```bash
+grep -l '^## Delegation Contract' sdd/tasks/active/TASK-*.md | wc -l
+```
+
 Report:
 
 ```text
 Generated and committed <N> tasks for FEAT-NNN - <feature-slug>
 Tasks created:
   TASK-NNN - <title> [priority/effort]
+Delegated: <D>/<N> tasks carry a Delegation Contract (list them, or "none")
 Worktree created:
   .claude/worktrees/feat-<FEAT-ID>-<slug>
 Next:

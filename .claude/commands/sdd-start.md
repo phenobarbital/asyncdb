@@ -47,20 +47,38 @@ Check:
   ```
   and STOP.
 
-### 3. Detect Context
+### 3. Ensure the Worktree
 
-With per-spec indexes (FEAT-145), commits land in whatever branch you are on
-— worktree or main repo. Both are safe because each feature owns its own
-index file, so there is no shared mutable state to collide on.
+The worktree is created by whoever is about to write code in it — not at
+planning time (FEAT-552). `/sdd-task` no longer creates one, so this step
+provisions it, idempotently: already inside the right worktree, it is a no-op
+that prints the path you are already in.
+
+Everything the step needs is in the per-spec index header resolved in §1
+(`feature_id`, `feature`, `spec`, `type`, `base_branch`):
 
 ```bash
-CURRENT_DIR=$(pwd)
-CURRENT_BRANCH=$(git branch --show-current)
+WT=$(python -m scripts.sdd.ensure_worktree \
+       --slug "<feature-slug>" \
+       --feature-id "<FEAT-ID>" \
+       --spec "<spec-path>" \
+       --index "sdd/tasks/index/<feature-slug>.json")
+cd "$WT"
 ```
 
-For the recommended layout, you should be inside a feature worktree (path
-contains `.claude/worktrees/`). If not, that's fine — just confirm the
-branch matches the feature you intend to work on.
+For a hotfix (`type: hotfix` in the index header) pass `--jira-key <KEY>`
+instead of `--feature-id`; the CLI applies the FEAT-466 naming and branches
+from `origin/main`.
+
+If the command exits non-zero, **STOP** and show its message verbatim. Do NOT
+fall back to implementing on `<base_branch>` — an un-isolated implementation is
+exactly what this step exists to prevent. The two messages you are most likely
+to see are a leftover branch with no worktree, and task artifacts missing from
+the base you branched off (fetch and re-run).
+
+With per-spec indexes (FEAT-145), commits then land in the worktree's own
+branch. Each feature owns its own index file, so parallel worktrees never
+collide on shared mutable state.
 
 ### 4. Mark In-Progress (in place)
 
@@ -165,6 +183,30 @@ Follow the **Agent Instructions** section in the task file:
 - Tests are failing and you cannot determine the fix.
 
 Otherwise, keep going until the task is **done**.
+
+
+#### Delegated implementation (only when the task has `## Delegation Contract`)
+
+Use this branch ONLY when the task file contains a `## Delegation Contract`
+section AND the `parrot-targeted-writer` MCP server is available. Otherwise
+implement the task yourself — the normal route is the default.
+
+1. Call MCP tool `writer_generate` (server `parrot-targeted-writer`) with `task_path`.
+2. On `status: error` with a contract code (`stale_target`, `missing_block`,
+   `placeholder_code`, `underspecified_create`, …): fix the packet in the task file
+   (refresh hashes with `sha256sum`, complete the design) and retry once, or implement
+   the task yourself. The workflow **never silently invokes another coder** — no other
+   coding tool is substituted when delegation fails.
+3. On `ok`: read `data.patch_path` with `source_read` in ranges of at most 350 lines and
+   review EVERY hunk against the task's Codebase Contract. Never apply a patch you have
+   not fully read. If a hunk is wrong, do not apply: fix the packet/blocks and regenerate
+   at most once more, else implement normally.
+4. Call `writer_apply` with `artifact_id` and `reviewed_sha256 = data.patch_sha256`
+   (verify it equals `sha256sum artifacts/tool-optimizations/<id>/patch.diff`).
+5. Run the task's acceptance tests yourself. The writer never runs tests; a model's claim
+   that tests passed is not execution evidence.
+6. Continue with the normal validate → commit → SDD state steps. SDD files
+   (`sdd/tasks/index/*.json`, task files) are never edited by the writer.
 
 ### 8. Mark Done (in place)
 
