@@ -7,6 +7,12 @@ from .utils import install_uvloop
 
 
 T_aobj = TypeVar("T_aobj", bound="asyncdb")
+
+# Activate uvloop automatically when it is installed and the current
+# platform supports it (POSIX only). `install_uvloop()` is guaranteed to
+# never raise, so this import-time call is safe on every platform,
+# including Windows, where it is a no-op and the standard asyncio event
+# loop policy remains active.
 install_uvloop()
 
 

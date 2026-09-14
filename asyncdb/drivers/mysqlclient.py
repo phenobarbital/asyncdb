@@ -6,8 +6,6 @@ from typing import Optional, Union, Any
 from collections.abc import Callable, Iterable
 import ssl
 from concurrent.futures import ThreadPoolExecutor
-import MySQLdb
-from MySQLdb.cursors import DictCursor
 from asyncdb.exceptions import (
     ConnectionTimeout,
     NoDataFound,
@@ -16,6 +14,15 @@ from asyncdb.exceptions import (
 from ..interfaces.cursors import DBCursorBackend
 from .base import BasePool
 from .sql import SQLCursor, SQLDriver
+
+try:
+    import MySQLdb
+    from MySQLdb.cursors import DictCursor
+except ImportError as _import_err:
+    raise DriverError(
+        "MySQLdb driver requires 'mysqlclient'. "
+        "Install with: pip install asyncdb[mysql]"
+    ) from _import_err
 
 
 class mysqlCursor(SQLCursor):

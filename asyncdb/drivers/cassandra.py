@@ -11,30 +11,38 @@ import asyncio
 from typing import Any, Union
 from ssl import PROTOCOL_TLSv1
 import pandas as pd
-from cassandra import ReadTimeout
-from cassandra.cluster import Cluster, EXEC_PROFILE_DEFAULT, ExecutionProfile, NoHostAvailable, ResultSet
-from cassandra.io.asyncorereactor import AsyncoreConnection
-from cassandra.io.asyncioreactor import AsyncioConnection
-
-from cassandra.auth import PlainTextAuthProvider
-from cassandra.policies import (
-    DCAwareRoundRobinPolicy,
-    WhiteListRoundRobinPolicy,
-    DowngradingConsistencyRetryPolicy,
-    # RetryPolicy
-)
-from cassandra.query import (
-    dict_factory,
-    ordered_dict_factory,
-    named_tuple_factory,
-    ConsistencyLevel,
-    PreparedStatement,
-    BatchStatement,
-    SimpleStatement,
-    BatchType,
-)
-from asyncdb.meta import Recordset
 from asyncdb.exceptions import NoDataFound, DriverError
+
+try:
+    from cassandra import ReadTimeout
+    from cassandra.cluster import Cluster, EXEC_PROFILE_DEFAULT, ExecutionProfile, NoHostAvailable, ResultSet
+    from cassandra.io.asyncorereactor import AsyncoreConnection
+    from cassandra.io.asyncioreactor import AsyncioConnection
+
+    from cassandra.auth import PlainTextAuthProvider
+    from cassandra.policies import (
+        DCAwareRoundRobinPolicy,
+        WhiteListRoundRobinPolicy,
+        DowngradingConsistencyRetryPolicy,
+        # RetryPolicy
+    )
+    from cassandra.query import (
+        dict_factory,
+        ordered_dict_factory,
+        named_tuple_factory,
+        ConsistencyLevel,
+        PreparedStatement,
+        BatchStatement,
+        SimpleStatement,
+        BatchType,
+    )
+except ImportError as _import_err:
+    raise DriverError(
+        "Cassandra driver requires 'cassandra-driver'. "
+        "Install with: pip install asyncdb[cassandra]"
+    ) from _import_err
+
+from asyncdb.meta import Recordset
 from .base import InitDriver
 
 

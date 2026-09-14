@@ -10,51 +10,57 @@ import logging
 from pathlib import PurePath
 import aiofiles
 import pandas as pd
-
-# async driver:
-import acsylla as c
-
-# Cassandra:
-from cassandra import ReadTimeout
-from cassandra.io.asyncorereactor import AsyncoreConnection
-
-# from cassandra.io.asyncioreactor import AsyncioConnection
-try:
-    from cassandra.io.libevreactor import LibevConnection
-
-    LIBEV = True
-except ImportError:
-    LIBEV = False
-from cassandra.concurrent import execute_concurrent
-from cassandra.policies import (
-    DCAwareRoundRobinPolicy,
-    WhiteListRoundRobinPolicy,
-    DowngradingConsistencyRetryPolicy,
-    ConstantReconnectionPolicy,
-    TokenAwarePolicy,
-    RoundRobinPolicy,
-)
-from cassandra.cluster import Cluster, EXEC_PROFILE_DEFAULT, ExecutionProfile, NoHostAvailable, ResultSet
-from cassandra.query import (
-    tuple_factory,
-    dict_factory,
-    ordered_dict_factory,
-    named_tuple_factory,
-    ConsistencyLevel,
-    PreparedStatement,
-    BatchStatement,
-    SimpleStatement,
-    BatchType,
-)
-from cassandra.auth import PlainTextAuthProvider
-from cassandra.query import SimpleStatement
-from cassandra import ConsistencyLevel
 from .base import InitDriver
 from ..meta.recordset import Recordset
 from ..exceptions import NoDataFound, DriverError
 from ..interfaces.model import ModelBackend
 from ..models import Model
 from ..utils.types import Entity
+
+try:
+    # async driver:
+    import acsylla as c
+
+    # Cassandra:
+    from cassandra import ReadTimeout
+    from cassandra.io.asyncorereactor import AsyncoreConnection
+
+    # from cassandra.io.asyncioreactor import AsyncioConnection
+    try:
+        from cassandra.io.libevreactor import LibevConnection
+
+        LIBEV = True
+    except ImportError:
+        LIBEV = False
+    from cassandra.concurrent import execute_concurrent
+    from cassandra.policies import (
+        DCAwareRoundRobinPolicy,
+        WhiteListRoundRobinPolicy,
+        DowngradingConsistencyRetryPolicy,
+        ConstantReconnectionPolicy,
+        TokenAwarePolicy,
+        RoundRobinPolicy,
+    )
+    from cassandra.cluster import Cluster, EXEC_PROFILE_DEFAULT, ExecutionProfile, NoHostAvailable, ResultSet
+    from cassandra.query import (
+        tuple_factory,
+        dict_factory,
+        ordered_dict_factory,
+        named_tuple_factory,
+        ConsistencyLevel,
+        PreparedStatement,
+        BatchStatement,
+        SimpleStatement,
+        BatchType,
+    )
+    from cassandra.auth import PlainTextAuthProvider
+    from cassandra.query import SimpleStatement
+    from cassandra import ConsistencyLevel
+except ImportError as _import_err:
+    raise DriverError(
+        "ScyllaDB driver requires 'acsylla' and 'cassandra-driver'. "
+        "Install with: pip install asyncdb[scylla]"
+    ) from _import_err
 
 
 logging.getLogger("cassandra").setLevel(logging.INFO)
