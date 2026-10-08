@@ -72,7 +72,7 @@ dependencies = [
 
 [project.optional-dependencies]
 uvloop = [
-    "uvloop==0.21.0"
+    "uvloop>=0.21.0"
 ]
 default = [
     "aiosqlite>=0.18.0",
@@ -116,10 +116,8 @@ postgresql = [
     "psycopg[binary,pool]>=3.1.8",
 ]
 mysql = [
-    # NOTE (security): asyncmy <=0.2.11 has no patched release for GHSA-qhqw-rrw9-25rm
-    # (SQL injection via crafted dict keys). Risk accepted: do NOT pass dicts with
-    # untrusted/attacker-controlled keys as query parameters. See SECURITY.md.
-    "asyncmy==0.2.11",
+    # asyncmy >=0.2.12 fixes GHSA-qhqw-rrw9-25rm (SQL injection via crafted dict keys).
+    "asyncmy>=0.2.12",
     "mysqlclient==2.2.7"
 ]
 mariadb = [
@@ -163,7 +161,7 @@ oracle = [
     "oracledb==2.5.1"
 ]
 sqlalchemy = [
-    "sqlalchemy[asyncio]==2.0.34",
+    "sqlalchemy[asyncio]>=2.0.36",
 ]
 elasticsearch = [
     "elasticsearch[async]==8.15.1",
