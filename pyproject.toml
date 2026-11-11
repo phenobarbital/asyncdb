@@ -115,10 +115,16 @@ postgres = [
 postgresql = [
     "psycopg[binary,pool]>=3.1.8",
 ]
+# Default "mysql" driver: asyncmy ships prebuilt wheels (no system libraries).
 mysql = [
     # asyncmy >=0.2.12 fixes GHSA-qhqw-rrw9-25rm (SQL injection via crafted dict keys).
     "asyncmy>=0.2.12",
-    "mysqlclient==2.2.7"
+]
+# "mysqlclient" driver (MySQLdb): builds against the MariaDB/MySQL client
+# libraries (libmariadb-dev / default-libmysqlclient-dev), so it is kept out
+# of "all" and must be requested explicitly.
+mysqlclient = [
+    "mysqlclient==2.2.7",
 ]
 mariadb = [
     "aiomysql==0.3.2"
@@ -195,6 +201,7 @@ clickhouse = [
 redpanda = [
     "aiokafka==0.11.0"
 ]
+# Excludes "mysqlclient" on purpose (needs system MariaDB/MySQL libraries).
 all = [
     "asyncdb[uvloop,default,dataframe,sqlite,memcache,redis,rethinkdb,postgres,postgresql,mysql,mariadb,boto3,bigquery,cassandra,arangodb,influxdb,odbc,jdbc,oracle,sqlalchemy,elasticsearch,mongodb,msqlserver,couchdb,hazelcast,scylla,clickhouse,redpanda]"
 ]

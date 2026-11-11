@@ -43,7 +43,7 @@ Currently AsyncDB supports the following databases:
 
 * PostgreSQL (supporting two different connectors: asyncpg or aiopg)
 * SQLite (requires aiosqlite)
-* mySQL/MariaDB (requires aiomysql and mysqlclient)
+* mySQL/MariaDB (asyncmy: `pip install asyncdb[mysql]`; optional MySQLdb driver: `pip install asyncdb[mysqlclient]`, needs the MariaDB/MySQL client libraries)
 * ODBC (using aioodbc)
 * JDBC(using JayDeBeApi and JPype)
 * RethinkDB (requires rethinkdb)
@@ -77,7 +77,9 @@ JDBC, ClickHouse, etc.) depend on native or platform-sensitive client
 libraries and are not guaranteed to be installable or fully supported on
 every platform, including Windows. Selecting a driver whose optional
 dependency is not installed raises a focused error naming the provider and
-the extra required to install it (e.g. `pip install asyncdb[mysql]`).
+the extra required to install it (e.g. `pip install asyncdb[mysqlclient]`).
+`asyncdb[all]` installs every extra except `mysqlclient`, which builds
+against the MariaDB/MySQL client libraries and must be requested explicitly.
 
 ### Quick Tutorial ###
 
@@ -105,7 +107,8 @@ And that's it!, we are using the same methods on all drivers, maintaining a cons
 Every Driver has a simple name to call it:
 * pg: AsyncPG (PostgreSQL)
 * postgres: aiopg (PostgreSQL)
-* mysql: aiomysql (mySQL)
+* mysql: asyncmy (MySQL/MariaDB)
+* mysqlclient: MySQLdb (MySQL/MariaDB, `asyncdb[mysqlclient]`)
 * influx: influxdb (InfluxDB)
 * redis: redis-py (Redis)
 * memcache: aiomcache (Memcache, async, no system libraries required)

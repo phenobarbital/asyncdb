@@ -51,7 +51,7 @@ def test_core_import_without_unrelated_provider_dependency():
     [
         ("asyncdb.drivers.mssql", "pymssql", "msqlserver"),
         ("asyncdb.drivers.sqlserver", "pymssql", "msqlserver"),
-        ("asyncdb.drivers.mysqlclient", "MySQLdb", "mysql"),
+        ("asyncdb.drivers.mysqlclient", "MySQLdb", "asyncdb[mysqlclient]"),
         ("asyncdb.drivers.odbc", "aioodbc", "odbc"),
         ("asyncdb.drivers.cassandra", "cassandra", "cassandra"),
         ("asyncdb.drivers.scylladb", "acsylla", "scylla"),
