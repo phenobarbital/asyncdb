@@ -3,7 +3,8 @@ gcc python3.9-dev python3.9-venv zlib1g-dev build-essential libffi-dev unixodbc 
 # Only the deprecated "mcache" driver (pylibmc, installed manually) requires: libmemcached-dev
 sudo apt install python3-cassandra
 apt install pkg-config
-# For MySQL is required:
+# MySQL: the default "mysql" driver (asyncmy, pip install asyncdb[mysql]) ships prebuilt wheels.
+# Only the "mysqlclient" driver (MySQLdb, pip install asyncdb[mysqlclient]) requires:
 sudo apt-get install python3-dev default-libmysqlclient-dev build-essential libmariadb-dev libmysqlclient-dev
 ###  For JDBC is required:
 sudo apt install openjdk-17-jre java-package

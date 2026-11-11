@@ -21,7 +21,7 @@ try:
 except ImportError as _import_err:
     raise DriverError(
         "MySQLdb driver requires 'mysqlclient'. "
-        "Install with: pip install asyncdb[mysql]"
+        "Install with: pip install asyncdb[mysqlclient]"
     ) from _import_err
 
 

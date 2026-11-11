@@ -108,3 +108,25 @@ def test_core_dependency_contract_is_portable():
     names = {_package_name(dep) for dep in dependencies}
 
     assert not (names & _NATIVE_PROVIDER_PACKAGES)
+
+
+def test_mysqlclient_is_isolated_from_mysql_and_all_extras():
+    """`mysqlclient` needs the MariaDB/MySQL client libraries, so it must
+    live in its own extra; `mysql` (asyncmy, prebuilt wheels) and `all`
+    must not pull it in."""
+    data = _load_pyproject()
+    optional = data["project"]["optional-dependencies"]
+
+    mysql_names = {_package_name(dep) for dep in optional["mysql"]}
+    assert "asyncmy" in mysql_names
+    assert "mysqlclient" not in mysql_names
+
+    mysqlclient_names = {_package_name(dep) for dep in optional["mysqlclient"]}
+    assert "mysqlclient" in mysqlclient_names
+
+    (all_req,) = optional["all"]
+    all_extras = {
+        extra.strip() for extra in all_req.split("[", 1)[1].rstrip("]").split(",")
+    }
+    assert "mysql" in all_extras
+    assert "mysqlclient" not in all_extras
